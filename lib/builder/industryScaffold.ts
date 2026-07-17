@@ -308,12 +308,43 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     blocks.splice(1, 0, createDefaultBlock('listings_grid') as any, createDefaultBlock('listing_card') as any);
   }
 
-  // General contractors (incl. deck builders) get the DeckSketch instant-estimate
-  // widget after the hero — homeowner enters dimensions, gets a ballpark materials
-  // range, the builder gets a qualified lead. The seam behind the DeckSketch↔QS pitch
+  // General contractors + deck builders get the DeckSketch instant-estimate widget
+  // after the hero — homeowner enters dimensions, gets a ballpark materials range, the
+  // builder gets a qualified lead. The seam behind the DeckSketch↔QS pitch
   // (crosstalk/contracts/deck-estimate-embed.md). Owner sets the lead recipient email.
-  if (industryKey === 'general_contractor') {
+  if (industryKey === 'general_contractor' || industryKey === 'deck_builder') {
     blocks.splice(1, 0, createDefaultBlock('deck_estimate') as any);
+  }
+
+  // Deck builders are a first-class DeckSketch outreach vertical: after the estimator,
+  // a "Recent Decks" portfolio (project spotlights with image slots ready for the
+  // builder's real photos — or DeckSketch-provided reference decks). Image URLs left
+  // empty so the editor's "add your project photos" prompt shows; copy is deck-specific.
+  if (industryKey === 'deck_builder') {
+    const portfolio: any = createDefaultBlock('story');
+    portfolio.content = {
+      ...portfolio.content,
+      title: 'Recent Decks',
+      sections: [
+        {
+          heading: 'Multi-level cedar deck with built-in seating',
+          body: 'A sloped backyard turned into two living levels — cedar decking, a wraparound bench, and a pergola for shade. Add your own photos of a project like this.',
+          image_url: '', cta_text: 'Start your estimate', cta_link: '#deck-estimate',
+        },
+        {
+          heading: 'Low-maintenance composite deck & railing',
+          body: 'Composite boards and aluminum railing for a deck that never needs staining. Great for busy families who want the look without the upkeep.',
+          image_url: '', cta_text: '', cta_link: '',
+        },
+        {
+          heading: 'Poolside pressure-treated deck',
+          body: 'A durable, budget-friendly pressure-treated deck wrapping an above-ground pool — safe steps, wide landings, and room to lounge.',
+          image_url: '', cta_text: '', cta_link: '',
+        },
+      ],
+    };
+    // After the estimator (which is now at index 1), so: hero → estimate → portfolio.
+    blocks.splice(2, 0, portfolio);
   }
 
   // Split-layout themes (heroLayout: 'split' — warm/professional) get a real

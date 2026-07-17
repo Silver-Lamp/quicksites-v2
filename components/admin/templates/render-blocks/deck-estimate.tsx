@@ -125,7 +125,7 @@ export default function RenderDeckEstimate({ block, content, template, previewOn
   const inputCls = 'rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary';
 
   return (
-    <section className="mx-auto w-full max-w-2xl px-4 py-8">
+    <section id="deck-estimate" className="mx-auto w-full max-w-2xl px-4 py-8">
       <div className="rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-sm">
         <h2 className="text-xl font-bold tracking-tight">{title}</h2>
         {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}

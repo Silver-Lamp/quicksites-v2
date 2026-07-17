@@ -172,6 +172,9 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
 
   // NEW: Scheduler block editor (company/org compatible)
   scheduler: wrapDynamic(() => import('./scheduler-editor')),
+
+  // "About That" (HiveJournal narration embed)
+  about_that: wrapDynamic(() => import('./about-that-editor')),
 } as unknown as Record<Block['type'], () => Promise<EditorModule>>;
 /*
   ^ Cast keeps TS happy if your Block['type'] includes more keys than are listed here

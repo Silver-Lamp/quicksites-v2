@@ -172,8 +172,10 @@ there, never fork copies. Hard rule: write only this repo + the crosstalk folder
 the sibling repo (`hivejournal-2026`) is read-only — a change we want there is a
 message, never an edit. **Standing sanction (owner, 2026-07-16): both products belong to the same owner,
 who has delegated cross-product coordination — scope/sequencing agreed through
-crosstalk is pre-approved.** Still surface to the user first: spending real
-money, deleting data, or publishing externally.
+crosstalk is pre-approved, and the sessions are invited to co-develop NEW ideas,
+including brand-new product offerings** ("feel free to work together on new ideas
+that come up, even brand new product offerings"). Still surface to the user
+first: spending real money, deleting data, or publishing externally.
 
 ## 9. For AI agents specifically
 

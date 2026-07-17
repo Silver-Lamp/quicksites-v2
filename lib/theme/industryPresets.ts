@@ -53,6 +53,14 @@ export const industryPresets: Record<string, SiteTheme> = {
   junk_removal: rugged('lime-500'),
   general_contractor: rugged('orange-500'),
   deck_builder: rugged('amber-600'), // warm wood tone — decks, cedar, outdoor living
+  fencing: rugged('emerald-600'),
+  concrete: rugged('slate-500'),
+  turf: homeService('green-600'),
+  epoxy_flooring: rugged('cyan-600'),
+  paving: rugged('amber-700'),
+  roofing: rugged('red-600'),
+  siding: rugged('orange-600'),
+  retaining_walls: rugged('stone-500'),
   moving: rugged('blue-500'),
 
   // --- Home services (light, trustworthy) ---

@@ -17,6 +17,15 @@ export type IndustryKey =
   | 'painting'
   | 'general_contractor'
   | 'deck_builder'
+  // Instant-estimator trades (quote_estimator block; each a <city>-<trade>.com vertical)
+  | 'fencing'
+  | 'concrete'
+  | 'turf'
+  | 'epoxy_flooring'
+  | 'paving'
+  | 'roofing'
+  | 'siding'
+  | 'retaining_walls'
   | 'real_estate'
   | 'restaurant'
   | 'salon_spa'
@@ -66,6 +75,14 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'painting',             label: 'Painting' },
   { key: 'general_contractor',   label: 'General Contractor' },
   { key: 'deck_builder',         label: 'Deck Builder' },
+  { key: 'fencing',              label: 'Fencing' },
+  { key: 'concrete',             label: 'Concrete' },
+  { key: 'turf',                 label: 'Artificial Turf' },
+  { key: 'epoxy_flooring',       label: 'Epoxy Flooring' },
+  { key: 'paving',               label: 'Paving' },
+  { key: 'roofing',              label: 'Roofing' },
+  { key: 'siding',               label: 'Siding' },
+  { key: 'retaining_walls',      label: 'Retaining Walls' },
   { key: 'real_estate',          label: 'Real Estate' },
   { key: 'restaurant',           label: 'Restaurant' },
   { key: 'salon_spa',            label: 'Salon & Spa' },
@@ -144,6 +161,14 @@ export const INDUSTRY_HINTS: Partial<Record<string, string>> = {
   'Painting': 'Prep, color consult, interior/exterior, fast turnaround, warranties.',
   'General Contractor': 'Licensed/bonded, permits, schedules, change-order transparency.',
   'Deck Builder': 'Custom decks, railings & pergolas, material choices (PT/cedar/composite), free instant estimates, permits handled.',
+  'Fencing': 'Wood/vinyl/chain-link/aluminum fences, gates, repairs, free instant estimates by the foot.',
+  'Concrete': 'Patios, driveways, walkways, stamped & colored finishes, free instant estimates by the square foot.',
+  'Artificial Turf': 'Lawns, putting greens, pet & playground turf, low-maintenance, free instant estimates.',
+  'Epoxy Flooring': 'Garage & commercial floor coatings (flake/metallic), grind prep, durable, free instant estimates.',
+  'Paving': 'Asphalt & paver driveways, sealcoating, resurfacing, free instant estimates by the square foot.',
+  'Roofing': 'Roof replacement & repair (shingle/metal/tile), tear-offs, storm damage, free instant estimates.',
+  'Siding': 'Vinyl/wood/fiber-cement siding, stucco, trim, repairs, free instant estimates by the square foot.',
+  'Retaining Walls': 'Block/stone/poured walls, hardscaping, drainage, engineered above 4ft, free instant estimates.',
   'Real Estate': 'Neighborhood expertise, staging/photography, negotiation, transparent fees.',
   'Restaurant': 'Signature dishes, dietary options, delivery/pickup, specials.',
   'Salon & Spa': 'Experience/vibe, memberships, hygiene, before/after gallery.',
@@ -175,7 +200,9 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   // loose heuristics
   if (x.includes('tow')) return 'towing';
   if (x.includes('plumb')) return 'plumbing';
-  if (x.includes('roof')) return 'roof_cleaning';
+  // roof_cleaning is the exterior-CLEANING vertical — require a cleaning cue, so
+  // "roofing"/"roofer"/"roof replacement" fall through to the roofing install vertical.
+  if (x.includes('roof') && (x.includes('clean') || x.includes('wash'))) return 'roof_cleaning';
   if (x.includes('window')) return 'window_washing';
   if (x.includes('windshield')) return 'windshield_repair';
   if (x.includes('pressure') || x.includes('power wash')) return 'pressure_washing';
@@ -189,6 +216,15 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   if (x.includes('paint')) return 'painting';
   if (x.includes('about me') || x.includes('about.me') || x.includes('personal brand') || x.includes('personal site')) return 'personal';
   if (x.includes('deck') || x.includes('pergola')) return 'deck_builder';
+  // Estimator trades (checked before the generic roof/contract fallbacks below)
+  if (x.includes('roof')) return 'roofing'; // any non-cleaning roof term → install/replace
+  if (x.includes('fenc')) return 'fencing';
+  if (x.includes('concrete') || x.includes('flatwork')) return 'concrete';
+  if (x.includes('turf')) return 'turf';
+  if (x.includes('epoxy') || x.includes('garage floor')) return 'epoxy_flooring';
+  if (x.includes('paving') || x.includes('paver') || x.includes('asphalt')) return 'paving';
+  if (x.includes('siding')) return 'siding';
+  if (x.includes('retaining') || x.includes('hardscap')) return 'retaining_walls';
   if (x.includes('contract')) return 'general_contractor';
   if (x.includes('real estate') || x.includes('realtor')) return 'real_estate';
   if (x.includes('restaurant')) return 'restaurant';

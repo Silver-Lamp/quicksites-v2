@@ -111,12 +111,16 @@ export function postcardBenefits(industry: IndustryKey): string[] {
       'Found on Google when locals search nearby',
     ];
   }
-  if (industry === 'deck_builder') {
-    // The estimator is the hook: it turns a browsing homeowner into a priced lead.
+  // Estimator-trade verticals — the free instant estimate is the hook that turns a
+  // browsing homeowner into a priced lead (all 9 trades live on the DeckSketch endpoint).
+  const ESTIMATOR_TRADES = new Set<IndustryKey>([
+    'deck_builder', 'fencing', 'concrete', 'turf', 'epoxy_flooring', 'paving', 'roofing', 'siding', 'retaining_walls',
+  ]);
+  if (ESTIMATOR_TRADES.has(industry)) {
     return [
       'A free instant estimate turns visitors into real leads',
-      'Homeowners get a ballpark deck price on the spot',
-      'Found on Google when locals search “deck builder near me”',
+      'Homeowners get a ballpark price on the spot — before they call',
+      'Found on Google when locals search for you nearby',
     ];
   }
   return [

@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/email';
+import { screenListing } from '@/lib/safety/prohibitedContent';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -66,6 +67,15 @@ export async function POST(req: NextRequest) {
   if (!block) return NextResponse.json({ error: 'Gig not found.' }, { status: 404 });
 
   const c: any = block.content ?? {};
+
+  // Trust & safety: a prohibited GIG can't function — refuse to process applications
+  // for one (defense in depth; the gig text is screened server-side here even though
+  // the block was authored in the editor). Also screen the applicant's own note.
+  const gigScreen = screenListing({ title: c.title || c.store_name, description: c.instructions, extra: [note] });
+  if (!gigScreen.ok && gigScreen.severity === 'block') {
+    return NextResponse.json({ error: 'This gig isn’t available.', code: 'prohibited_content' }, { status: 422 });
+  }
+
   const recipient = typeof c.recipient_email === 'string' && EMAIL_RX.test(c.recipient_email.trim())
     ? c.recipient_email.trim()
     : '';

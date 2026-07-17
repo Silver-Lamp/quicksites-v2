@@ -112,6 +112,7 @@ export const industryPresets: Record<string, SiteTheme> = {
   // --- Fallback ---
   personal: warm('rose-500'), // a warm, human "about me" page
   faith: warm('violet-600', 'serif'), // warm + reverent — church/faith community
+  auto_dealer: rugged('blue-600'), // inventory-forward dealer lot
   other: homeService('indigo-600'),
 
   // --- Legacy aliases (kept for back-compat with older callers) ---

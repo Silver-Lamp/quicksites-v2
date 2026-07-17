@@ -112,6 +112,7 @@ export const DYNAMIC_RENDERERS: Record<
   daily_artifact: () => import('@/components/admin/templates/render-blocks/daily-artifact'),
   listing_card: () => import('@/components/admin/templates/render-blocks/listing-card'),
   listings_grid: () => import('@/components/admin/templates/render-blocks/listings-grid'),
+  vehicles_grid: () => import('@/components/admin/templates/render-blocks/vehicles-grid'),
   announcement_bar: () => import('@/components/admin/templates/render-blocks/announcement-bar'),
   sticky_cart: () => import('@/components/admin/templates/render-blocks/sticky-cart'),
   reviews: () => import('@/components/admin/templates/render-blocks/reviews'),

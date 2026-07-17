@@ -793,6 +793,36 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Vehicle inventory — the auto-dealer sibling of listings_grid. Each vehicle has a
+  // per-car About That "hear the walkaround" audio slot (the salesperson talks through
+  // THIS car, in their voice — the real-estate audio-tour pattern applied to cars).
+  // Freeform display strings on purpose ("$18,995", "42,150 mi"). Emits Vehicle JSON-LD.
+  vehicles_grid: {
+    label: 'Vehicle Inventory',
+    icon: '🚗',
+    schema: z.object({
+      title: z.string().optional().default('Current Inventory'),
+      columns: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 3 : v), z.number().min(2).max(3).optional().default(3)),
+      vehicles: z
+        .array(
+          z.object({
+            year: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+            make: z.string().optional().default(''),
+            model: z.string().optional().default(''),
+            trim: z.string().optional().default(''),
+            price: z.string().optional().default(''),
+            mileage: z.string().optional().default(''),
+            status: z.string().optional().default('Available'),
+            image_url: z.string().optional().default(''),
+            cta_link: z.string().optional().default('#contact'),
+            /** Per-vehicle About That audio-walkaround embed id. */
+            about_that_embed_id: z.string().optional().default(''),
+          }),
+        )
+        .default([]),
+    }),
+  },
+
   // Real-estate listing card: the on-domain listing page most agent sites lack —
   // address/price/beds/baths/gallery/inquiry CTA with a built-in About That
   // agent-preset player slot (the HiveJournal narration embed; see BLOCKS_BACKLOG.md

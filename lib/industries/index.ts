@@ -57,6 +57,7 @@ export type IndustryKey =
   | 'author'
   | 'personal'
   | 'faith'
+  | 'auto_dealer'
   | 'other';
 
 /** Key → Label (display only; we store the key in DB) */
@@ -119,6 +120,7 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'author',               label: 'Author' },
   { key: 'personal',             label: 'Personal / About Me' },
   { key: 'faith',                label: 'Church / Faith Community' },
+  { key: 'auto_dealer',          label: 'Auto Dealer' },
 
   { key: 'other',                label: 'Other' },
 ] as const;
@@ -182,6 +184,7 @@ export const INDUSTRY_HINTS: Partial<Record<string, string>> = {
   'Retail - Boutique': 'Curated apparel & accessories, limited drops, styling, lookbooks.',
   'Personal / About Me': 'Who you are and what you’re about — a warm, audio-forward personal page that can speak in your own voice.',
   'Church / Faith Community': 'Service times, upcoming events, a welcoming word, and a message you can hear — plus an easy way to give and plan a visit.',
+  'Auto Dealer': 'Browsable inventory with photos, price & mileage, an audio walkaround for each car, and one-tap “ask about this one”.',
 };
 
 /* ----------------------------- key/label helpers ---------------------------- */
@@ -212,6 +215,7 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   if (x.includes('lawn') || x.includes('landsc')) return 'landscaping';
   if (x.includes('hvac')) return 'hvac';
   if (x.includes('elect')) return 'electrical';
+  if (x.includes('dealership') || x.includes('dealer') || x.includes('used car') || x.includes('car lot') || x.includes('car sales') || x.includes('pre-owned')) return 'auto_dealer';
   if (x.includes('auto')) return 'auto_repair';
   if (x.includes('carpet')) return 'carpet_cleaning';
   if (x.includes('move')) return 'moving';

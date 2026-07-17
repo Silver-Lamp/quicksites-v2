@@ -389,6 +389,14 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     blocks.splice(1, 0, createDefaultBlock('listings_grid') as any, createDefaultBlock('listing_card') as any);
   }
 
+  // Auto dealer: inventory up front — a browsable vehicle grid where each car has a
+  // "hear the walkaround" audio slot (the salesperson talks through it, in their voice —
+  // the real-estate audio-tour pattern applied to cars). QuickSites becomes the
+  // on-domain inventory pages small lots lack.
+  if (industryKey === 'auto_dealer') {
+    blocks.splice(1, 0, createDefaultBlock('vehicles_grid') as any);
+  }
+
   // General contractors + deck builders get the DeckSketch instant-estimate widget
   // after the hero — homeowner enters dimensions, gets a ballpark materials range, the
   // builder gets a qualified lead. The seam behind the DeckSketch↔QS pitch

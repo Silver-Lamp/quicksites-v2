@@ -113,6 +113,7 @@ export const DYNAMIC_RENDERERS: Record<
   sticky_cart: () => import('@/components/admin/templates/render-blocks/sticky-cart'),
   reviews: () => import('@/components/admin/templates/render-blocks/reviews'),
   job_listing: () => import('@/components/admin/templates/render-blocks/job-listing'),
+  comments: () => import('@/components/admin/templates/render-blocks/comments'),
   demo_embed: () => import('@/components/admin/templates/render-blocks/demo-embed'),
   service_offer: () => import('@/components/admin/templates/render-blocks/service-offer'),
   scheduler: async () => {

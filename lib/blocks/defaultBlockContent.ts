@@ -247,6 +247,7 @@ export const DEFAULT_BLOCK_CONTENT = {
   about_that: { embed_id: '', url: '', width: '' },
   audio_faq: { embed_id: '', title: 'Ask about this page', url: '' },
   quote_of_the_day: { align: 'center' },
+  daily_artifact: { embed: '', show_caption: true },
   announcement_bar: {
     message: 'Free local delivery on orders over $50',
     link_text: '',

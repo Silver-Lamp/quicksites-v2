@@ -703,6 +703,21 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Daily Artifact (crosstalk/contracts/daily-artifact-embed.md → LIVE): a person's
+  // OWN HiveJournal daily artifact on their about-me site. v1 kind = comic of the day
+  // (Daily Buzz — stars "Buzz", never real names). CONSENT-GATED entirely on HJ's side:
+  // opt-in off by default, opaque per-user token, 404 (render nothing) when not opted
+  // in / no artifact. The block only holds the token the person pastes from HJ.
+  daily_artifact: {
+    label: 'Daily Comic (HiveJournal)',
+    icon: '🐝',
+    schema: z.object({
+      /** The person's embed token OR full embed URL, from their HJ comics dashboard. */
+      embed: z.string().optional().default(''),
+      show_caption: z.boolean().optional().default(true),
+    }),
+  },
+
   // Quote of the Day (crosstalk/contracts/quote-of-the-day.md → LIVE): a rotating
   // inspirational quote from HiveJournal's cached daily-quote endpoint. Zero-consent
   // (not journal-derived), cost-safe (HJ caches ~1 external call/day). No config

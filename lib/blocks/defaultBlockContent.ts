@@ -254,6 +254,7 @@ export const DEFAULT_BLOCK_CONTENT = {
     dismissible: true,
   },
   sticky_cart: { productId: '', cta_text: 'Add to cart', label: '', price_cents: 0, show_on_desktop: false, enabled: true },
+  demo_embed: { slug: '', width: '' },
   reviews: {
     title: 'What customers say',
     product_name: '',

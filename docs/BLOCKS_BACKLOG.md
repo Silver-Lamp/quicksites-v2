@@ -15,6 +15,11 @@
 > (#201), `restaurants_directory` (#443, live-data pattern), `about_that`
 > (#467, third-party embed-loader pattern).
 
+> **Contracts source of truth**: cross-product API specs live in
+> `~/Desktop/_SilverLamp/crosstalk/contracts/` (`about-that-embed.md`,
+> `voice-welcome-endpoint.md`, more as they land) — the summary below is
+> orientation, the contract files win on conflict. See CLAUDE.md §8b.
+
 ## Integration contract for HiveJournal-powered blocks
 
 One script tag; nothing server-side in quicksites (player, rendering, caching, rate

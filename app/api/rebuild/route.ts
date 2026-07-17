@@ -18,6 +18,7 @@ import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import { scrapeSite, scrapeMenuPages, ScrapeError } from '@/lib/rebuild/scrapeSite';
 import { inferSiteSpec } from '@/lib/rebuild/inferSiteSpec';
+import { looksLikeProfileUrl, profileFromScrape, rebuildSpecFromProfile } from '@/lib/rebuild/importProfile';
 import { buildRebuildTemplate, wireCatalogIntoTemplate } from '@/lib/rebuild/assembleDraft';
 import { importShopifyProducts } from '@/lib/rebuild/importShopify';
 import { productsFromScrape } from '@/lib/rebuild/importJsonLd';
@@ -165,36 +166,48 @@ export async function POST(req: Request) {
   // Funnel: a real rebuild attempt began (scrape succeeded → we'll spend an AI call).
   void captureServer(EVENTS.REBUILD_STARTED, { host: hostOnly(scraped.finalUrl), is_anonymous: isAnonymous }, ownerId);
 
-  // 1b) If the site looks like it has a menu (restaurant), follow a few menu
-  //     subpages so the AI can reconstruct the real menu. Best-effort.
-  // 1c) If it's a Shopify store, pull the REAL catalog (title/price/images/variants)
-  //     straight from /products.json — deterministic, no AI. Both best-effort.
-  const [menuPages, products] = await Promise.all([
-    scrapeMenuPages(scraped).catch(() => []),
-    importShopifyProducts(scraped.finalUrl).catch(() => []),
-  ]);
+  // A personal profile (LinkedIn /in/, about.me, or an explicit hint) takes a
+  // DETERMINISTIC path — no AI. The bio is the person's own words, so we carry it
+  // verbatim into the `personal` audio-forward scaffold (crosstalk ideas.md §13).
+  const wantProfile = looksLikeProfileUrl(url) || body?.industryHint === 'personal';
 
-  // 2) One metered AI call → structured rebuild spec (incl. a menu when food).
-  let spec;
-  try {
-    spec = await inferSiteSpec(scraped, ownerId, menuPages);
-  } catch (e: any) {
-    // meterLLMCall throws LLMBudgetExceededError when the budget guard trips.
-    const msg = e?.name === 'LLMBudgetExceededError' ? 'AI is busy right now — try again shortly.' : 'Could not generate the site.';
-    return NextResponse.json({ error: msg, code: 'ai_failed' }, { status: 503 });
-  }
-  // Real products override the AI's generic services brochure with a live storefront.
-  // Shopify (/products.json) is exact; for every other cart we fall back to schema.org
-  // Product JSON-LD / OpenGraph product meta parsed from the page.
-  const importedProducts = products.length ? products : productsFromScrape(scraped);
-  if (importedProducts.length) spec.products = importedProducts;
-
-  // 2b) Optionally generate a fresh, on-brand hero (flag-gated; best-effort). Falls
-  //     back to the scraped og:image so a failure never breaks the rebuild.
+  let spec: any;
   let heroImage = scraped.heroImage;
-  if (rebuildHeroEnabled()) {
-    const fresh = await generateRebuildHero(spec, ownerId);
-    if (fresh) heroImage = fresh;
+
+  if (wantProfile) {
+    const profile = profileFromScrape(scraped);
+    spec = rebuildSpecFromProfile(profile);
+    if (profile.photoUrl) heroImage = profile.photoUrl;
+  } else {
+    // 1b) If the site looks like it has a menu (restaurant), follow a few menu
+    //     subpages so the AI can reconstruct the real menu. Best-effort.
+    // 1c) If it's a Shopify store, pull the REAL catalog (title/price/images/variants)
+    //     straight from /products.json — deterministic, no AI. Both best-effort.
+    const [menuPages, products] = await Promise.all([
+      scrapeMenuPages(scraped).catch(() => []),
+      importShopifyProducts(scraped.finalUrl).catch(() => []),
+    ]);
+
+    // 2) One metered AI call → structured rebuild spec (incl. a menu when food).
+    try {
+      spec = await inferSiteSpec(scraped, ownerId, menuPages);
+    } catch (e: any) {
+      // meterLLMCall throws LLMBudgetExceededError when the budget guard trips.
+      const msg = e?.name === 'LLMBudgetExceededError' ? 'AI is busy right now — try again shortly.' : 'Could not generate the site.';
+      return NextResponse.json({ error: msg, code: 'ai_failed' }, { status: 503 });
+    }
+    // Real products override the AI's generic services brochure with a live storefront.
+    // Shopify (/products.json) is exact; for every other cart we fall back to schema.org
+    // Product JSON-LD / OpenGraph product meta parsed from the page.
+    const importedProducts = products.length ? products : productsFromScrape(scraped);
+    if (importedProducts.length) spec.products = importedProducts;
+
+    // 2b) Optionally generate a fresh, on-brand hero (flag-gated; best-effort). Falls
+    //     back to the scraped og:image so a failure never breaks the rebuild.
+    if (rebuildHeroEnabled()) {
+      const fresh = await generateRebuildHero(spec, ownerId);
+      if (fresh) heroImage = fresh;
+    }
   }
 
   // 3) Assemble + insert the draft (service role; INSERT isn't guarded). Stamp
@@ -202,7 +215,7 @@ export async function POST(req: Request) {
   //    Extra images (product photos beyond the hero + scraped images) illustrate the
   //    story sections.
   const galleryImages = Array.from(
-    new Set([...(spec.products ?? []).flatMap((p) => p.images), ...scraped.images]),
+    new Set([...(spec.products ?? []).flatMap((p: any) => p.images), ...scraped.images]),
   );
   const tpl = buildRebuildTemplate({
     spec,

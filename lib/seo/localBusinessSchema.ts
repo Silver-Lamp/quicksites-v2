@@ -43,6 +43,53 @@ function obj(v: any): any {
   return v && typeof v === 'object' ? v : {};
 }
 
+const SCHEMA_DAY: Record<string, string> = {
+  mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday',
+  fri: 'Friday', sat: 'Saturday', sun: 'Sunday',
+};
+
+/** First hours block on the site (canonical blocks, legacy content_blocks fallback). */
+function findHoursContent(d: any): any | null {
+  const pages: any[] = Array.isArray(d?.pages) ? d.pages : [];
+  for (const p of pages) {
+    const blocks: any[] = Array.isArray(p?.blocks) ? p.blocks : Array.isArray(p?.content_blocks) ? p.content_blocks : [];
+    const hit = blocks.find((b: any) => b?.type === 'hours' && b?.content);
+    if (hit) return hit.content;
+  }
+  return null;
+}
+
+/**
+ * openingHoursSpecification from the site's hours block — a signal Google actually
+ * consumes for local results (unlike, say, self-serving review markup). One spec per
+ * open period; alwaysOpen collapses to a single all-week 00:00–23:59 entry.
+ */
+function openingHoursFrom(hours: any): Array<Record<string, any>> {
+  if (!hours) return [];
+  if (hours.alwaysOpen === true) {
+    return [{
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: Object.values(SCHEMA_DAY),
+      opens: '00:00',
+      closes: '23:59',
+    }];
+  }
+  const out: Array<Record<string, any>> = [];
+  const days: any[] = Array.isArray(hours.days) ? hours.days : [];
+  for (const day of days) {
+    if (!day || day.closed === true) continue;
+    const dow = SCHEMA_DAY[String(day.key)];
+    if (!dow) continue;
+    const periods: any[] = Array.isArray(day.periods) ? day.periods : [];
+    for (const p of periods) {
+      if (typeof p?.open === 'string' && typeof p?.close === 'string') {
+        out.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: dow, opens: p.open, closes: p.close });
+      }
+    }
+  }
+  return out;
+}
+
 /** Is LocalBusiness schema turned on for this site? (Matches onPage.hasLocalBusinessSchema.) */
 export function localBusinessSchemaEnabled(data: any): boolean {
   const m = obj(data?.meta);
@@ -99,6 +146,11 @@ export function buildLocalBusinessSchema(data: any, opts?: { url?: string }): Re
   if (city) schema.areaServed = region ? `${city}, ${region}` : city;
   const desc = firstStr(meta.description, d.description);
   if (desc) schema.description = desc;
+
+  // Opening hours ride along whenever the site has an hours block — stays live
+  // because the whole schema is rebuilt from data at render time.
+  const opening = openingHoursFrom(findHoursContent(d));
+  if (opening.length) schema.openingHoursSpecification = opening;
 
   return schema;
 }

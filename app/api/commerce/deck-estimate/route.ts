@@ -15,6 +15,13 @@ import {
   hasMinimumInputs,
   requestDeckEstimate,
 } from '@/lib/commerce/deckEstimate';
+import {
+  isTradeKey,
+  isLiveTrade,
+  normalizeTradeInput,
+  hasRequiredInputs,
+  requestQuoteEstimate,
+} from '@/lib/commerce/quoteEstimator';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,6 +40,38 @@ export async function POST(req: NextRequest) {
 
   // site_ref = the QS template id, attached SERVER-SIDE (client can't spoof attribution).
   const siteRef = typeof body?.templateId === 'string' ? body.templateId.slice(0, 64) : '';
+
+  // Multi-trade (contract quote-estimate-embed.md): `trade` defaults to deck. Only trades
+  // whose DeckSketch model is LIVE are estimable — gated trades return a clean "not yet"
+  // (never a speculative call against an undeployed model). Unknown trade → 400.
+  const trade = typeof body?.trade === 'string' && body.trade ? body.trade : 'deck';
+  if (!isTradeKey(trade)) {
+    return NextResponse.json({ error: 'Unknown estimate type.' }, { status: 400 });
+  }
+  if (!isLiveTrade(trade)) {
+    return NextResponse.json(
+      { error: 'Instant estimates for this trade aren’t available yet.', code: 'trade_not_live' },
+      { status: 400 },
+    );
+  }
+
+  // Non-deck LIVE trades go through the generic registry path; deck keeps its exact,
+  // byte-identical shipped path (no risk to the money-adjacent live estimate).
+  if (trade !== 'deck') {
+    const tinput = normalizeTradeInput(trade, body);
+    if (!hasRequiredInputs(trade, tinput)) {
+      return NextResponse.json({ error: 'Fill in the required fields to get an estimate.' }, { status: 400 });
+    }
+    const r = await requestQuoteEstimate(trade, tinput, siteRef);
+    if (!r.ok) {
+      const status = r.status === 400 ? 400 : r.status === 429 ? 429 : 502;
+      const error = status === 400 ? r.error
+        : status === 429 ? 'Too many estimates right now — try again in a moment.'
+        : 'Estimates are temporarily unavailable. Please try again shortly.';
+      return NextResponse.json({ error }, { status });
+    }
+    return NextResponse.json({ estimate: r.estimate }, { headers: { 'Cache-Control': 'private, max-age=60' } });
+  }
 
   const input = normalizeEstimateInput(body);
   if (!hasMinimumInputs(input)) {

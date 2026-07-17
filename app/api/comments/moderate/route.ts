@@ -49,9 +49,16 @@ export async function POST(req: NextRequest) {
   if (!gate.ok) return gate.response;
 
   // Scope the update to this template so an owner can only moderate their own comments.
+  // Approving also DISMISSES any accumulated reports (clears report_count/reported_at)
+  // so a re-approved comment doesn't linger in the "reported" queue.
   const { error } = await supabaseAdmin
     .from('site_comments')
-    .update({ status: action, moderated_by: gate.userId, moderated_at: new Date().toISOString() })
+    .update({
+      status: action,
+      moderated_by: gate.userId,
+      moderated_at: new Date().toISOString(),
+      ...(action === 'approved' ? { report_count: 0, reported_at: null } : {}),
+    })
     .eq('id', commentId)
     .eq('template_id', templateId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

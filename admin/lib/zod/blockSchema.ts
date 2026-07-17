@@ -774,6 +774,26 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Comments / discussion — the platform's public UGC surface. Anti-abuse is
+  // structural (see migration 20260725 + /api/comments): approve-before-publish by
+  // default, content screened, per-IP rate-limited, recipient derived server-side.
+  // The block only holds display config + the moderation toggles.
+  comments: {
+    label: 'Comments / Discussion',
+    icon: '💬',
+    schema: z.object({
+      title: z.string().optional().default('Comments'),
+      /** Approve-before-publish — the load-bearing anti-abuse default. */
+      moderation: z.boolean().optional().default(true),
+      /** Strip URLs/emails from posted comments (link-spam guard). */
+      allow_links: z.boolean().optional().default(false),
+      /** Closed = read-only, no new comments. */
+      closed: z.boolean().optional().default(false),
+      /** Owner notification recipient — READ SERVER-SIDE only (never trusted from client). */
+      notify_email: z.string().optional().default(''),
+    }),
+  },
+
   // Job / gig listing (crosstalk ideas.md §10 odd-jobs board, wedge vertical #1 =
   // AisleAsk store-cataloging gig; contract: crosstalk/contracts/aisleask-catalog-gig.md).
   // v0 = post + apply + submit, NO payments. `deliverable:'ordered_sections'` renders the

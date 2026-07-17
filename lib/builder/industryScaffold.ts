@@ -389,6 +389,13 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     blocks.splice(1, 0, createDefaultBlock('listings_grid') as any, createDefaultBlock('listing_card') as any);
   }
 
+  // Photographers lead with their work — a photo gallery right after the hero (the
+  // portfolio a photographer site is nothing without). The gallery block is addable on
+  // any visual site; this just seeds it where it's most load-bearing.
+  if (industryKey === 'photography') {
+    blocks.splice(1, 0, createDefaultBlock('gallery') as any);
+  }
+
   // Auto dealer: inventory up front — a browsable vehicle grid where each car has a
   // "hear the walkaround" audio slot (the salesperson talks through it, in their voice —
   // the real-estate audio-tour pattern applied to cars). QuickSites becomes the

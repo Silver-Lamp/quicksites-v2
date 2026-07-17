@@ -204,8 +204,8 @@ export default function RebuildTool({ initialUrl = '' }: { initialUrl?: string }
           inputMode="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="yourclient.com"
-          aria-label="Existing website URL"
+          placeholder="yourclient.com  ·  or  linkedin.com/in/you"
+          aria-label="A website or profile URL to build from"
           disabled={loading}
           className="flex-1 rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-4 text-lg text-white placeholder:text-zinc-500 focus:border-sky-400/60 focus:outline-none"
         />
@@ -225,7 +225,8 @@ export default function RebuildTool({ initialUrl = '' }: { initialUrl?: string }
       )}
       {!loading && (
         <p className="mt-4 text-sm text-zinc-400">
-          Paste any business website. We'll generate a fresh QuickSites draft from it in seconds —
+          Paste any business website — or a <span className="text-zinc-300">LinkedIn</span> / <span className="text-zinc-300">about.me</span> profile
+          for an “About Me” page. We'll generate a fresh QuickSites draft in seconds —
           no credit card, sign up only when you're ready to go live.
         </p>
       )}

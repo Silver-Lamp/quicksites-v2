@@ -659,7 +659,8 @@ export const blockContentSchemaMap = {
       sections: z.array(z.object({
         heading: z.string().min(1),
         body: z.string().default(''),
-        image_url: z.union([z.string().url(), z.literal('')]).optional(),
+        // Root-relative asset paths (/images/…) are valid, not just absolute URLs.
+        image_url: z.union([RelativeOrAbsoluteUrl, z.literal('')]).optional(),
         cta_text: z.string().optional(),
         // Empty string → undefined so a section with no CTA validates cleanly.
         cta_link: z.preprocess(

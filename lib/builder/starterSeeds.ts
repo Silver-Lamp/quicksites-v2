@@ -217,6 +217,7 @@ const STARTER_NAMES: Partial<Record<IndustryKey, string>> = {
   author: 'C.M. Hartwell — Author',
   personal: 'Alex Rivera',
   faith: 'Grace Community Church',
+  auto_dealer: 'Maple Street Motors',
 };
 
 const FALLBACK_ADJ = ['Summit', 'Harbor', 'Cedar', 'Beacon', 'Bluebird', 'Ridgeline', 'Lantern', 'Compass', 'Prairie', 'Golden'];

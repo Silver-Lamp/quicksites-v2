@@ -316,6 +316,15 @@ export const DEFAULT_BLOCK_CONTENT = {
       { headline: 'Lakeside retreat', address: '5 Cove Rd, Your City, ST', price: '$742,500', status: 'Pending', beds: '4', baths: '3', sqft: '2,600', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
     ],
   },
+  vehicles_grid: {
+    title: 'Current Inventory',
+    columns: 3,
+    vehicles: [
+      { year: '2021', make: 'Toyota', model: 'RAV4', trim: 'XLE AWD', price: '$26,995', mileage: '38,420 mi', status: 'Available', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
+      { year: '2019', make: 'Honda', model: 'Civic', trim: 'EX', price: '$18,995', mileage: '52,110 mi', status: 'Available', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
+      { year: '2020', make: 'Ford', model: 'F-150', trim: 'XLT 4x4', price: '$34,500', mileage: '41,780 mi', status: 'Available', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
+    ],
+  },
   listing_card: {
     headline: 'Sun-filled craftsman on a quiet street',
     address: '123 Maple Street, Your City, ST',

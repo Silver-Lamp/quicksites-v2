@@ -20,7 +20,11 @@ export type TradeKey =
   | 'concrete_patio'
   | 'turf'
   | 'epoxy_floor'
-  | 'paving';
+  | 'paving'
+  // v2 ("messier" trades — built + verified, gated with the rest until deploy)
+  | 'roofing'
+  | 'siding'
+  | 'retaining_wall';
 
 export type FieldDef = {
   key: string; // the body field name sent to /api/estimate
@@ -40,6 +44,8 @@ export type TradeDef = {
   live: boolean;
   /** Whether this trade takes an area input (sqft OR length_ft×width_ft). */
   area: boolean;
+  /** At least one of these fields must be present (e.g. roofing: squares OR roof_sqft). */
+  requiresOneOf?: string[];
   /** Non-area fields (dimensions/enums/refiners), in display order. */
   fields: FieldDef[];
 };
@@ -127,6 +133,39 @@ export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
       { key: 'depth_in', label: 'Depth', type: 'number', unit: 'in', min: 0 },
     ],
   },
+  roofing: {
+    key: 'roofing', label: 'Roofing', live: false, area: false, requiresOneOf: ['squares', 'roof_sqft'],
+    fields: [
+      { key: 'squares', label: 'Roofing squares', type: 'number', min: 0 },
+      { key: 'roof_sqft', label: 'Roof area', type: 'number', unit: 'sq ft', min: 0 },
+      MATERIAL([['asphalt_shingle', 'Asphalt shingle'], ['architectural_shingle', 'Architectural shingle'], ['metal', 'Metal'], ['tile', 'Tile'], ['flat_membrane', 'Flat membrane']]),
+      { key: 'pitch', label: 'Pitch', type: 'select', default: 'medium',
+        options: [
+          { value: 'low', label: 'Low' },
+          { value: 'medium', label: 'Medium' },
+          { value: 'steep', label: 'Steep' },
+        ] },
+      { key: 'tear_off', label: 'Tear off the old roof', type: 'boolean' },
+    ],
+  },
+  siding: {
+    key: 'siding', label: 'Siding', live: false, area: true,
+    fields: [
+      MATERIAL([['vinyl', 'Vinyl'], ['wood', 'Wood'], ['fiber_cement', 'Fiber cement'], ['stucco', 'Stucco'], ['brick_veneer', 'Brick veneer']]),
+      { key: 'stories', label: 'Stories', type: 'number', default: 1, min: 0 },
+      { key: 'trim_lf', label: 'Trim', type: 'number', unit: 'ft', min: 0 },
+    ],
+  },
+  retaining_wall: {
+    // Above 4 ft, DeckSketch auto-adds an engineering + drainage factor (surfaced in
+    // `assumptions`) — the honest handling of the "swings 2-3×" concern. QS just renders it.
+    key: 'retaining_wall', label: 'Retaining wall', live: false, area: false,
+    fields: [
+      { key: 'length_ft', label: 'Length', type: 'number', unit: 'ft', required: true, min: 0 },
+      { key: 'height_ft', label: 'Height', type: 'number', unit: 'ft', required: true, min: 0 },
+      MATERIAL([['timber', 'Timber'], ['block_concrete', 'Concrete block'], ['poured_concrete', 'Poured concrete'], ['natural_stone', 'Natural stone']]),
+    ],
+  },
 };
 
 export const ALL_TRADES = Object.keys(TRADE_REGISTRY) as TradeKey[];
@@ -177,6 +216,7 @@ export function hasRequiredInputs(trade: TradeKey, body: Record<string, any>): b
     const hasArea = !!body.sqft || (!!body.length_ft && !!body.width_ft);
     if (!hasArea) return false;
   }
+  if (def.requiresOneOf && !def.requiresOneOf.some((k) => body[k] != null)) return false;
   for (const f of def.fields) {
     if (f.required && body[f.key] == null) return false;
   }

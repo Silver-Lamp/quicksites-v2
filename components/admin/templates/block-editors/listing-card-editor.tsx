@@ -16,6 +16,11 @@ type Props = { block: Block; onSave?: (b: Block) => void; onClose?: () => void }
 
 const UUID_RX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function getTplId(): string {
+  const t = (window as any).__QS_TPL_REF__?.current ?? (window as any).__QS_TEMPLATE__ ?? null;
+  return String(t?.id ?? '');
+}
+
 function fromBlock(c: any) {
   const s = (v: any) => (typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '');
   return {
@@ -165,6 +170,19 @@ export default function ListingCardEditor({ block, onSave, onClose }: Props) {
           onChange={(e) => apply({ about_that_width: e.target.value })}
           placeholder='Player width (optional, e.g. 480 or 100%)'
         />
+        {/* Yard-sign QR pack: printable assets whose QR opens the hosted listen page
+            for THIS listing — buyer at the curb hears the agent talk about the house.
+            Only offered with a valid embed id (renders 403 without one). */}
+        {UUID_RX.test(local.about_that_embed_id.trim()) && getTplId() && (
+          <a
+            href={`/api/templates/${encodeURIComponent(getTplId())}/listing-qr-pack?block=${encodeURIComponent(String(block._id ?? ''))}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 inline-flex w-fit items-center rounded-md border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-sky-600 hover:bg-sky-500/20 dark:text-sky-300"
+          >
+            🖨 Print QR pack — yard sign, flyer, cards
+          </a>
+        )}
       </div>
 
       <div className="mt-2 flex justify-end gap-2">

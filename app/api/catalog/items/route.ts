@@ -5,6 +5,7 @@ import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 import { normalizeVariants, type InputAxis, type InputVariant } from '@/lib/commerce/variants';
 import { normalizeStock } from '@/lib/commerce/inventory';
+import { screenListing, prohibitedMessage } from '@/lib/safety/prohibitedContent';
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as {
@@ -30,6 +31,18 @@ export async function POST(req: NextRequest) {
 
   if (!body.merchantId || !body.type || !body.title || !body.slug) {
     return NextResponse.json({ error: 'missing fields' }, { status: 400 });
+  }
+
+  // Trust & safety: refuse to LIST prohibited/illegal items or services for sale.
+  // First-line heuristic (lib/safety/prohibitedContent) — high-confidence categories
+  // only; 'review'-severity dual-use matches are allowed through (a human moderation
+  // pass is the follow-up), 'block' is refused with a non-echoing message.
+  const screen = screenListing({ title: body.title, description: body.description, extra: [body.sku, body.barcode] });
+  if (!screen.ok && screen.severity === 'block' && screen.category) {
+    return NextResponse.json(
+      { error: prohibitedMessage(screen.category), code: 'prohibited_content', category: screen.category },
+      { status: 422 },
+    );
   }
 
   // RLS protects owner: use normal client (no service role)

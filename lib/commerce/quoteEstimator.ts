@@ -6,11 +6,11 @@
 // ONE response contract — each trade is a net-new DeckSketch parametric model; only the
 // QS rendering is config, and THIS registry is that config.
 //
-// GATING: `live` says whether DeckSketch's model for a trade is deployed. `deck` is LIVE
-// (prod). The 5 phase-1 trades are BUILT + locally verified on DeckSketch's branch but
-// NOT deployed — so they're `live:false` here until DeckSketch pings "deployed", at which
-// point flipping the flag is the whole activation. We never offer a trade whose endpoint
-// isn't live (no speculative estimates against a non-existent model).
+// GATING: `live` says whether DeckSketch's model for a trade is deployed. ALL 9 trades
+// went LIVE + prod-verified 2026-07-17 (DeckSketch deployed enh-multi-trade-estimate;
+// contract quote-estimate-embed.md Status: LIVE) — every trade's first call hit byte-parity
+// with its contract sample. `live` stays as the switch: if DeckSketch ever pulls a trade,
+// flip it false and QS stops offering it (gated 400, no speculative call).
 
 import { DECK_ESTIMATE_BASE_URL } from './deckEstimate';
 
@@ -76,7 +76,7 @@ export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
     ],
   },
   fence: {
-    key: 'fence', label: 'Fence', live: false, area: false,
+    key: 'fence', label: 'Fence', live: true, area: false,
     fields: [
       { key: 'linear_ft', label: 'Length', type: 'number', unit: 'ft', required: true, min: 0 },
       MATERIAL([['wood_pt', 'Wood (pressure-treated)'], ['cedar', 'Cedar'], ['vinyl', 'Vinyl'], ['chain_link', 'Chain link'], ['aluminum', 'Aluminum']]),
@@ -85,7 +85,7 @@ export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
     ],
   },
   concrete_patio: {
-    key: 'concrete_patio', label: 'Concrete patio', live: false, area: true,
+    key: 'concrete_patio', label: 'Concrete patio', live: true, area: true,
     fields: [
       { key: 'thickness_in', label: 'Thickness', type: 'number', unit: 'in', default: 4, min: 0 },
       { key: 'finish', label: 'Finish', type: 'select', default: 'broom',
@@ -98,7 +98,7 @@ export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
     ],
   },
   turf: {
-    key: 'turf', label: 'Artificial turf', live: false, area: true,
+    key: 'turf', label: 'Artificial turf', live: true, area: true,
     fields: [
       { key: 'pile', label: 'Pile', type: 'select', default: 'standard',
         options: [
@@ -109,7 +109,7 @@ export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
     ],
   },
   epoxy_floor: {
-    key: 'epoxy_floor', label: 'Epoxy floor', live: false, area: true,
+    key: 'epoxy_floor', label: 'Epoxy floor', live: true, area: true,
     fields: [
       { key: 'system', label: 'System', type: 'select', default: 'standard',
         options: [
@@ -121,7 +121,7 @@ export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
     ],
   },
   paving: {
-    key: 'paving', label: 'Paving', live: false, area: true,
+    key: 'paving', label: 'Paving', live: true, area: true,
     fields: [
       { key: 'material', label: 'Material', type: 'select', default: 'concrete',
         options: [
@@ -134,7 +134,7 @@ export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
     ],
   },
   roofing: {
-    key: 'roofing', label: 'Roofing', live: false, area: false, requiresOneOf: ['squares', 'roof_sqft'],
+    key: 'roofing', label: 'Roofing', live: true, area: false, requiresOneOf: ['squares', 'roof_sqft'],
     fields: [
       { key: 'squares', label: 'Roofing squares', type: 'number', min: 0 },
       { key: 'roof_sqft', label: 'Roof area', type: 'number', unit: 'sq ft', min: 0 },
@@ -149,7 +149,7 @@ export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
     ],
   },
   siding: {
-    key: 'siding', label: 'Siding', live: false, area: true,
+    key: 'siding', label: 'Siding', live: true, area: true,
     fields: [
       MATERIAL([['vinyl', 'Vinyl'], ['wood', 'Wood'], ['fiber_cement', 'Fiber cement'], ['stucco', 'Stucco'], ['brick_veneer', 'Brick veneer']]),
       { key: 'stories', label: 'Stories', type: 'number', default: 1, min: 0 },
@@ -159,7 +159,7 @@ export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
   retaining_wall: {
     // Above 4 ft, DeckSketch auto-adds an engineering + drainage factor (surfaced in
     // `assumptions`) — the honest handling of the "swings 2-3×" concern. QS just renders it.
-    key: 'retaining_wall', label: 'Retaining wall', live: false, area: false,
+    key: 'retaining_wall', label: 'Retaining wall', live: true, area: false,
     fields: [
       { key: 'length_ft', label: 'Length', type: 'number', unit: 'ft', required: true, min: 0 },
       { key: 'height_ft', label: 'Height', type: 'number', unit: 'ft', required: true, min: 0 },

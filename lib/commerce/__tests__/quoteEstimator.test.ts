@@ -19,28 +19,20 @@ import {
 } from '@/lib/commerce/quoteEstimator';
 
 describe('trade gating', () => {
-  it('only deck is live until DeckSketch deploys the phase-1 models', () => {
-    expect(isLiveTrade('deck')).toBe(true);
-    for (const t of ['fence', 'concrete_patio', 'turf', 'epoxy_floor', 'paving']) {
-      expect(isLiveTrade(t)).toBe(false);
-    }
-    expect(liveTrades().map((t) => t.key)).toEqual(['deck']);
+  it('all 9 trades are live (DeckSketch deployed the full set 2026-07-17)', () => {
+    for (const t of ALL_TRADES) expect(isLiveTrade(t)).toBe(true);
+    expect(liveTrades().map((t) => t.key).sort()).toEqual([...ALL_TRADES].sort());
   });
-  it('rejects unknown trades', () => {
+  it('rejects unknown trades but keeps `live` as the kill switch', () => {
     expect(isTradeKey('solar')).toBe(false); // out of scope — never built
     expect(isTradeKey('landscaping')).toBe(false); // not a quote-estimator trade
     expect(isTradeKey('deck')).toBe(true);
-    expect(isTradeKey('roofing')).toBe(true); // v2, built + registered (still gated live:false)
+    expect(isTradeKey('roofing')).toBe(true);
   });
   it('registers all 9 trades (deck + 5 phase-1 + 3 v2) with contract-accurate enums', () => {
     expect(ALL_TRADES).toHaveLength(9);
     const fenceMat = TRADE_REGISTRY.fence.fields.find((f) => f.key === 'material');
     expect(fenceMat?.options?.map((o) => o.value)).toEqual(['wood_pt', 'cedar', 'vinyl', 'chain_link', 'aluminum']);
-    // v2 trades present + gated
-    for (const t of ['roofing', 'siding', 'retaining_wall']) {
-      expect(isTradeKey(t)).toBe(true);
-      expect(isLiveTrade(t)).toBe(false);
-    }
   });
 });
 

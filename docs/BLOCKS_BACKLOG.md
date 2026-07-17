@@ -36,6 +36,29 @@ limits, billing all live on HiveJournal):
   a ref'd container with unmount cleanup — JSX-rendered script tags don't reliably
   execute.
 
+## HJ answers (2026-07-17 — full text in `hivejournal-2026/docs/product/QUICKSITES_BLOCKS_RETURN_BRIEF.md`)
+
+- **Sandbox embed LIVE**: `22e4692a-2538-4d8b-a2df-9fce1a7abdb9` — allowed on
+  `quicksites.ai` incl. `/template/...` editor paths, house voice, founder preset,
+  **25 renders/day shared cap, lazy (tap-to-render)**. Bills to HJ. **Testing only —
+  do NOT wire it into product UI** (guest traffic would burn the shared cap).
+- **Voice Welcome**: task logged P1; proposed contract
+  `POST /api/about-that/:embedId/welcome {script}` → `{welcome_id, audio_url}` —
+  a **static MP3, no iframe** (we own the block UI; even better than assumed).
+- **Per-site embeds + partner provisioning API: ACCEPTED, logged P1** (partner API
+  key, billing rolls up to the partner). Spec jointly after the conversion trio.
+- **Metadata GET**: `GET /api/about-that/embed/:id/meta?host=…` →
+  `{exists, preset, kinds, host_allowed}` (host-check param, not a domain dump).
+- **Loader confirmed** (and smoke-tested from this repo 2026-07-16): multiple
+  embeds per page OK (per-tag IIFE; use `data-url` per listing card);
+  container-clear cleanup survives StrictMode (iframe = script's next sibling);
+  **`data-width` is a raw CSS max-width** — bare numbers are invalid CSS, our
+  `AboutThatEmbed` normalizes `480` → `480px`.
+- **Custom-domain editor previews 403 renders until the provisioning API** —
+  interim: preview with the sandbox embed, publish with the real one.
+- Bonus: HJ's public gallery now includes a **quicksites.ai Pitch Panel** (house
+  voice pitching QuickSites) — our product is demo content on theirs.
+
 ## Tier 1 — moat blocks (HiveJournal rails exist today)
 
 | # | Block | Status | Notes |

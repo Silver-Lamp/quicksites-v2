@@ -17,15 +17,29 @@ export default function RoutePlanner({ initialStops, initialStart }: { initialSt
   const [error, setError] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<Result | null>(null);
 
+  // A stop line is either an address, or coordinates the caller already has:
+  //   "Store A @30.26,-97.74"  (label + coords)  ·  "30.26,-97.74"  (bare coords)
+  // Coords skip geocoding entirely — how AisleAsk hands us catalogs that carry lat/lng.
+  const parseStop = (line: string): { label?: string; address?: string; latitude?: number; longitude?: number } => {
+    const at = line.split('@');
+    if (at.length === 2) {
+      const m = at[1].match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+      if (m) return { label: at[0].trim() || 'Stop', latitude: Number(m[1]), longitude: Number(m[2]) };
+    }
+    const bare = line.match(/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/);
+    if (bare) return { label: line.trim(), latitude: Number(bare[1]), longitude: Number(bare[2]) };
+    return { address: line };
+  };
+
   const optimize = async () => {
     if (busy) return;
-    const stops = text.split('\n').map((l) => l.trim()).filter(Boolean).map((address) => ({ address }));
+    const stops = text.split('\n').map((l) => l.trim()).filter(Boolean).map(parseStop);
     if (!stops.length) { setError('Add at least one stop, one address per line.'); return; }
     setBusy(true); setError(null); setResult(null);
     try {
       const res = await fetch('/api/tools/route-optimize', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stops, start: start.trim() ? { address: start.trim() } : undefined, round_trip: roundTrip }),
+        body: JSON.stringify({ stops, start: start.trim() ? parseStop(start.trim()) : undefined, round_trip: roundTrip }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Could not plan the route.');
@@ -48,7 +62,7 @@ export default function RoutePlanner({ initialStops, initialStart }: { initialSt
           <input value={start} onChange={(e) => setStart(e.target.value)} placeholder="123 Main St, Springfield, IL" className={`mt-1 ${inputCls}`} />
         </label>
         <label className="block">
-          <span className="text-xs font-semibold text-zinc-600">Stops (one address per line)</span>
+          <span className="text-xs font-semibold text-zinc-600">Stops (one per line — an address, or “Name @lat,lng”)</span>
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8}
             placeholder={'Store A, 500 Oak Ave, Springfield, IL\nStore B, 88 Elm St, Springfield, IL'} className={`mt-1 font-mono ${inputCls}`} />
         </label>

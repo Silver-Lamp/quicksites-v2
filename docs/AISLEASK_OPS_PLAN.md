@@ -44,6 +44,22 @@ to the owner: **spending real money, deleting data, publishing externally.** Fea
 
 ---
 
+## Status (2026-07-17): BUILT + comp model decided
+
+Both features shipped (PR #522): `/admin/aisleask` (sweep → seed gigs → coverage), public
+`/gigs/[id]` + `/gigs` + `/api/gigs/feed`, the per-channel content generator, and the
+`gig_posts` tracking table (migration `20260728`, applied). `tsc` + `next build` green.
+
+**Comp model — DECIDED: paid, but gated on a self-proof.** Taskers get **paid** (not an unpaid
+pilot). BUT the owner **dogfoods the store walk himself first** — runs a real walk solo
+(claim → route → glasses catalog → ingest) to prove the loop — and only **once proven** does
+recruiting open. **Do not cross-post to recruit taskers until that self-run is signed off.**
+Nothing auto-recruits (cross-posting is operator-triggered; the public `/gigs` pages just
+exist), so this is an operating gate, not a code change. Set `payNote` to "self-test" on the
+owner's own gigs; recruiting copy carries the real paid rate (TBD when he sets it).
+
+---
+
 ## Feature A — AisleAsk location planning (QS admin)
 
 **Goal:** an operator plans *which stores/areas to catalog* and seeds them as `catalog_gigs`,

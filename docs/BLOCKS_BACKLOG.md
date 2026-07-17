@@ -92,16 +92,19 @@ limits, billing all live on HiveJournal):
 
 - **Trust badges strip** · **logo marquee** · **founder story** (pairs with Voice
   Welcome: read it or hear it) — all new, all thin renderers.
-- **FAQ accordion + FAQPage schema** — `faq` block EXISTS; the delta is emitting
-  FAQPage JSON-LD on the published render.
+- **FAQ accordion + FAQPage schema** — ✅ SHIPPED #479 (FAQPage JSON-LD on the
+  faq render; honestly framed — Google restricted FAQ rich results 2023, value
+  is Bing + AI-search crawlers).
 - **Comparison table** — honesty-first template (same DNA as `/compare`).
 - **Before/after slider** — new; strong for the service verticals (pressure washing,
   detailing, roof cleaning).
 - **Calculator block** — configurable estimators; each one is an SEO magnet.
 - **Booking embed** — ✅ effectively covered: native `scheduler` block already
   exists; a Cal.com/Calendly wrapper is only worth it if prospects demand it.
-- **Map + hours + open-now** — `location` + `hours` blocks and LocalBusiness JSON-LD
-  already exist; the delta is an **open-now indicator** and/or a combined block.
+- **Map + hours + open-now** — ✅ fully covered: open-now chip already shipped in
+  the hours block (live isOpenNow, 60s refresh — found during #479 scoping), and
+  #479 added `openingHoursSpecification` to the LocalBusiness schema (the signal
+  Google actually consumes).
 - **Live activity ticker** — only if backed by REAL events (`orders`,
   `demand_events`); fabricated urgency is off the table product-wide.
 

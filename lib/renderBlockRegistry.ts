@@ -117,6 +117,7 @@ export const DYNAMIC_RENDERERS: Record<
   reviews: () => import('@/components/admin/templates/render-blocks/reviews'),
   job_listing: () => import('@/components/admin/templates/render-blocks/job-listing'),
   comments: () => import('@/components/admin/templates/render-blocks/comments'),
+  deck_estimate: () => import('@/components/admin/templates/render-blocks/deck-estimate'),
   demo_embed: () => import('@/components/admin/templates/render-blocks/demo-embed'),
   service_offer: () => import('@/components/admin/templates/render-blocks/service-offer'),
   scheduler: async () => {

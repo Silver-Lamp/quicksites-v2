@@ -308,6 +308,14 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     blocks.splice(1, 0, createDefaultBlock('listings_grid') as any, createDefaultBlock('listing_card') as any);
   }
 
+  // General contractors (incl. deck builders) get the DeckSketch instant-estimate
+  // widget after the hero — homeowner enters dimensions, gets a ballpark materials
+  // range, the builder gets a qualified lead. The seam behind the DeckSketch↔QS pitch
+  // (crosstalk/contracts/deck-estimate-embed.md). Owner sets the lead recipient email.
+  if (industryKey === 'general_contractor') {
+    blocks.splice(1, 0, createDefaultBlock('deck_estimate') as any);
+  }
+
   // Split-layout themes (heroLayout: 'split' — warm/professional) get a real
   // side-by-side "About | Why choose us" section after the hero, so the page
   // isn't a pure vertical stack (L4 sections; see docs/LAYOUT_L4_PLAN.md).

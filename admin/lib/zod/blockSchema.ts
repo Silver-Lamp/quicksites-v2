@@ -876,6 +876,30 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Instant deck estimate (crosstalk/contracts/deck-estimate-embed.md, Status: LIVE) —
+  // the DeckSketch↔QuickSites seam. A deck builder's site carries a widget: homeowner
+  // enters a few dimensions, gets a ballpark price RANGE (backed by DeckSketch's BOM
+  // engine), and the builder gets a qualified lead. The block calls the QS proxy
+  // (/api/commerce/deck-estimate) server-side; the lead step (name/email/phone) fires
+  // the hardened submission rail to the builder. recipient_email is read SERVER-SIDE at
+  // submit (never client-trusted). Estimate call is stateless + PII-free.
+  deck_estimate: {
+    label: 'Instant Deck Estimate',
+    icon: '📐',
+    schema: z.object({
+      title: z.string().optional().default('Instant deck estimate'),
+      subtitle: z.string().optional().default('Enter a few dimensions for a ballpark materials price — then we’ll follow up with a real quote.'),
+      /** Default material tier the widget opens on. */
+      default_material_tier: z.enum(['pressure_treated', 'cedar', 'composite']).optional().default('pressure_treated'),
+      /** Show the optional refiners (stairs, railing) that tighten the range. */
+      show_refiners: z.boolean().optional().default(true),
+      /** Lead CTA copy shown under the estimate. */
+      cta_text: z.string().optional().default('Get this quote from us'),
+      /** Owner notification recipient — READ SERVER-SIDE only (never trusted from client). */
+      recipient_email: z.string().optional().default(''),
+    }),
+  },
+
   /* ───────────────── Conversion trio (BLOCKS_BACKLOG Tier 2) ───────────────── */
 
   // Dismissible site-wide announcement: free-shipping threshold, promo code, sale

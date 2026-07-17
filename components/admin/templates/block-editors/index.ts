@@ -191,6 +191,8 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
   // Odd-jobs board gig (ideas.md §10 / AisleAsk cataloging wedge)
   job_listing: wrapDynamic(() => import('./job-listing-editor')),
 
+  deck_estimate: wrapDynamic(() => import('./deck-estimate-editor')),
+
   // Comments / discussion (public UGC, moderated)
   comments: wrapDynamic(() => import('./comments-editor')),
 

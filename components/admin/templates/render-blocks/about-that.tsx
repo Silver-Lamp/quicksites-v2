@@ -44,6 +44,13 @@ export function AboutThatEmbed({
   const valid = UUID_RX.test((embedId || '').trim());
   const hostRef = React.useRef<HTMLDivElement>(null);
 
+  // The loader uses data-width as a raw CSS max-width (default 560px) — a bare
+  // number like "480" is invalid CSS and silently ignored, so normalize it to px.
+  const normWidth = React.useMemo(() => {
+    const w = (width || '').trim();
+    return /^\d+(\.\d+)?$/.test(w) ? `${w}px` : w;
+  }, [width]);
+
   React.useEffect(() => {
     const host = hostRef.current;
     if (!host || !valid) return;
@@ -52,13 +59,13 @@ export function AboutThatEmbed({
     s.src = LOADER_SRC;
     s.setAttribute('data-embed', embedId.trim());
     if (url) s.setAttribute('data-url', url);
-    if (width) s.setAttribute('data-width', width);
+    if (normWidth) s.setAttribute('data-width', normWidth);
     host.appendChild(s);
     return () => {
       // Remove the loader AND whatever it injected next to itself.
       host.innerHTML = '';
     };
-  }, [valid, embedId, url, width]);
+  }, [valid, embedId, url, normWidth]);
 
   if (!valid) return null;
   return <div ref={hostRef} data-about-that-embed={embedId.trim()} className={className} />;

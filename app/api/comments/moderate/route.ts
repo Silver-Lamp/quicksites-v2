@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   let q = supabaseAdmin
     .from('site_comments')
-    .select('id, block_id, author_name, body, created_at')
+    .select('id, block_id, author_name, body, created_at, report_count')
     .eq('template_id', templateId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })

@@ -328,18 +328,18 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
       sections: [
         {
           heading: 'Multi-level cedar deck with built-in seating',
-          body: 'A sloped backyard turned into two living levels — cedar decking, a wraparound bench, and a pergola for shade. Add your own photos of a project like this.',
-          image_url: '', cta_text: 'Start your estimate', cta_link: '#deck-estimate',
+          body: 'A sloped backyard turned into two living levels — cedar decking, wraparound bench seating, and planter boxes. Sample projects shown to illustrate the style; every deck we build is custom, so swap in your own photos once you claim the site.',
+          image_url: '/images/deck-portfolio/cedar.jpg', cta_text: 'Start your estimate', cta_link: '#deck-estimate',
         },
         {
           heading: 'Low-maintenance composite deck & railing',
-          body: 'Composite boards and aluminum railing for a deck that never needs staining. Great for busy families who want the look without the upkeep.',
-          image_url: '', cta_text: '', cta_link: '',
+          body: 'Composite boards and dark metal railing for a deck that never needs staining. Great for busy families who want the look without the upkeep.',
+          image_url: '/images/deck-portfolio/composite.jpg', cta_text: '', cta_link: '',
         },
         {
           heading: 'Poolside pressure-treated deck',
-          body: 'A durable, budget-friendly pressure-treated deck wrapping an above-ground pool — safe steps, wide landings, and room to lounge.',
-          image_url: '', cta_text: '', cta_link: '',
+          body: 'A durable, budget-friendly pressure-treated deck beside the pool — clean railing, wide landings, and room to lounge.',
+          image_url: '/images/deck-portfolio/pressure-treated.jpg', cta_text: '', cta_link: '',
         },
       ],
     };

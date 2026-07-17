@@ -91,6 +91,7 @@ const SERVICE_ALIASES: Partial<Record<IndustryKey, string[]>> = {
   roof_cleaning: ['roofing', 'roof', 'roofer', 'roofers', 'roofrepair', 'roofcleaning', 'roofclean'],
   windshield_repair: ['autoglass', 'windshield', 'windshieldrepair', 'glass'],
   general_contractor: ['contractor', 'contractors', 'generalcontractor', 'construction', 'gc'],
+  deck_builder: ['decks', 'deck', 'deckbuilder', 'deckbuilders', 'deckbuilding', 'deckcontractor', 'deckco'],
   electrical: ['electrical', 'electric', 'electrician', 'electricians'],
   landscaping: ['landscaping', 'landscape', 'landscaper', 'landscapers', 'lawncare', 'lawn'],
   auto_repair: ['autorepair', 'auto', 'mechanic', 'autoshop', 'autoservice'],

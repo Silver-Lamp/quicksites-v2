@@ -111,6 +111,14 @@ export function postcardBenefits(industry: IndustryKey): string[] {
       'Found on Google when locals search nearby',
     ];
   }
+  if (industry === 'deck_builder') {
+    // The estimator is the hook: it turns a browsing homeowner into a priced lead.
+    return [
+      'A free instant estimate turns visitors into real leads',
+      'Homeowners get a ballpark deck price on the spot',
+      'Found on Google when locals search “deck builder near me”',
+    ];
+  }
   return [
     'Customers find you first when they search Google',
     'Request a quote or call you in one tap',

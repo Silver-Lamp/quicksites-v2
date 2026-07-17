@@ -27,8 +27,22 @@ export default function RenderComments({ block, content, template, previewOnly }
   const [comments, setComments] = React.useState<Comment[]>([]);
   const [name, setName] = React.useState('');
   const [text, setText] = React.useState('');
+  const [hp, setHp] = React.useState(''); // honeypot — real users never fill this
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState<{ ok: boolean; text: string } | null>(null);
+  const [reported, setReported] = React.useState<Set<string>>(new Set());
+
+  const report = async (id: string) => {
+    if (previewOnly || reported.has(id)) return;
+    setReported((s) => new Set(s).add(id));
+    try {
+      await fetch('/api/comments/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId: id }),
+      });
+    } catch { /* opaque either way */ }
+  };
 
   const load = React.useCallback(async () => {
     if (!templateId || !blockId) return;
@@ -48,7 +62,7 @@ export default function RenderComments({ block, content, template, previewOnly }
       const res = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId, blockId, author: name, body: text }),
+        body: JSON.stringify({ templateId, blockId, author: name, body: text, website: hp }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.error || 'Could not post.');
@@ -83,6 +97,16 @@ export default function RenderComments({ block, content, template, previewOnly }
               </div>
               {/* Plain text only — rendered as a text node, never HTML. */}
               <p className="mt-1 whitespace-pre-wrap text-sm text-foreground/90">{cm.body}</p>
+              {!previewOnly && (
+                <button
+                  type="button"
+                  onClick={() => void report(cm.id)}
+                  disabled={reported.has(cm.id)}
+                  className="mt-1 text-[11px] text-muted-foreground/60 hover:text-muted-foreground disabled:opacity-60"
+                >
+                  {reported.has(cm.id) ? 'Reported ✓' : 'Report'}
+                </button>
+              )}
             </div>
           ))
         )}
@@ -98,6 +122,17 @@ export default function RenderComments({ block, content, template, previewOnly }
           </div>
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={2000} placeholder="Add a comment…"
             className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary" />
+          {/* Honeypot: hidden from humans, catnip for bots. aria-hidden + off-screen + no tab. */}
+          <input
+            type="text"
+            value={hp}
+            onChange={(e) => setHp(e.target.value)}
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+          />
           {msg && <p className={`text-sm ${msg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>{msg.text}</p>}
           <button type="button" onClick={submit} disabled={busy}
             className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">

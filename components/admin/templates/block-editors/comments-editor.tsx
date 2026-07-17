@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 
 type Props = { block: Block; onSave?: (b: Block) => void; onClose?: () => void };
-type Pending = { id: string; author_name: string; body: string; created_at: string };
+type Pending = { id: string; author_name: string; body: string; created_at: string; report_count?: number };
 
 function getTplId(): string {
   const t = (window as any).__QS_TPL_REF__?.current ?? (window as any).__QS_TEMPLATE__ ?? null;
@@ -127,7 +127,12 @@ export default function CommentsEditor({ block, onSave, onClose }: Props) {
         ) : (
           pending.map((p) => (
             <div key={p.id} className="rounded-md border border-border bg-background p-2">
-              <div className="text-xs font-semibold">{p.author_name}</div>
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                {p.author_name}
+                {(p.report_count ?? 0) > 0 && (
+                  <span className="rounded-full bg-red-500/15 px-1.5 py-0.5 text-[10px] font-medium text-red-500">⚠ reported {p.report_count}×</span>
+                )}
+              </div>
               <p className="mt-0.5 whitespace-pre-wrap text-sm">{p.body}</p>
               <div className="mt-1.5 flex gap-2">
                 <button type="button" disabled={modBusy === p.id} onClick={() => moderate(p.id, 'approve')}

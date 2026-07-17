@@ -63,6 +63,12 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
+  // Honeypot: a hidden field real users never see. A filled `website` = a bot →
+  // pretend success (don't tip the bot off) and drop silently.
+  if (typeof body.website === 'string' && body.website.trim() !== '') {
+    return NextResponse.json({ ok: true, status: 'pending' });
+  }
+
   const templateId = typeof body.templateId === 'string' ? body.templateId : '';
   const blockId = typeof body.blockId === 'string' ? body.blockId : '';
   const author = toPlainText(typeof body.author === 'string' ? body.author : '', 80);
@@ -91,6 +97,20 @@ export async function POST(req: NextRequest) {
   // Link-spam guard: strip links unless the block explicitly allows them.
   if (c.allow_links !== true && containsLinks(text)) text = stripLinks(text);
   if (text.length < 2) return NextResponse.json({ error: 'Add a comment (links aren’t allowed here).' }, { status: 400 });
+
+  // Duplicate-flood guard: the same body on the same block within the last hour is
+  // spam (or a double-submit) — drop silently rather than store a dupe.
+  const sinceIso = new Date(Date.now() - 3600_000).toISOString();
+  const { data: dupe } = await supabaseAdmin
+    .from('site_comments')
+    .select('id')
+    .eq('template_id', templateId)
+    .eq('block_id', blockId)
+    .eq('body', text)
+    .gte('created_at', sinceIso)
+    .limit(1)
+    .maybeSingle();
+  if (dupe) return NextResponse.json({ ok: true, status: 'pending' });
 
   // Approve-before-publish is the default; only an explicit moderation:false auto-approves.
   const moderationOn = c.moderation !== false;

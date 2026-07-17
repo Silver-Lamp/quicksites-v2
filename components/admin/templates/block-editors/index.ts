@@ -178,6 +178,11 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
 
   // Real-estate listing card (w/ About That agent-preset slot)
   listing_card: wrapDynamic(() => import('./listing-card-editor')),
+
+  // Conversion trio (BLOCKS_BACKLOG Tier 2)
+  announcement_bar: wrapDynamic(() => import('./announcement-bar-editor')),
+  sticky_cart: wrapDynamic(() => import('./sticky-cart-editor')),
+  reviews: wrapDynamic(() => import('./reviews-editor')),
 } as unknown as Record<Block['type'], () => Promise<EditorModule>>;
 /*
   ^ Cast keeps TS happy if your Block['type'] includes more keys than are listed here

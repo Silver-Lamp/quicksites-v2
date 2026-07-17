@@ -27,14 +27,32 @@ describe('trade gating', () => {
     expect(liveTrades().map((t) => t.key)).toEqual(['deck']);
   });
   it('rejects unknown trades', () => {
-    expect(isTradeKey('roofing')).toBe(false); // v2, not built
-    expect(isTradeKey('solar')).toBe(false); // out of scope
+    expect(isTradeKey('solar')).toBe(false); // out of scope — never built
+    expect(isTradeKey('landscaping')).toBe(false); // not a quote-estimator trade
     expect(isTradeKey('deck')).toBe(true);
+    expect(isTradeKey('roofing')).toBe(true); // v2, built + registered (still gated live:false)
   });
-  it('registers all 6 phase-1 trades with contract-accurate enums', () => {
-    expect(ALL_TRADES).toHaveLength(6);
+  it('registers all 9 trades (deck + 5 phase-1 + 3 v2) with contract-accurate enums', () => {
+    expect(ALL_TRADES).toHaveLength(9);
     const fenceMat = TRADE_REGISTRY.fence.fields.find((f) => f.key === 'material');
     expect(fenceMat?.options?.map((o) => o.value)).toEqual(['wood_pt', 'cedar', 'vinyl', 'chain_link', 'aluminum']);
+    // v2 trades present + gated
+    for (const t of ['roofing', 'siding', 'retaining_wall']) {
+      expect(isTradeKey(t)).toBe(true);
+      expect(isLiveTrade(t)).toBe(false);
+    }
+  });
+});
+
+describe('roofing requiresOneOf (squares | roof_sqft)', () => {
+  it('accepts either squares or roof_sqft, needs one', () => {
+    expect(hasRequiredInputs('roofing', { squares: 20, material: 'metal' })).toBe(true);
+    expect(hasRequiredInputs('roofing', { roof_sqft: 2000, material: 'metal' })).toBe(true);
+    expect(hasRequiredInputs('roofing', { material: 'metal' })).toBe(false); // neither dimension
+  });
+  it('retaining_wall needs length + height + material', () => {
+    expect(hasRequiredInputs('retaining_wall', { length_ft: 40, height_ft: 6, material: 'natural_stone' })).toBe(true);
+    expect(hasRequiredInputs('retaining_wall', { length_ft: 40, material: 'natural_stone' })).toBe(false);
   });
 });
 

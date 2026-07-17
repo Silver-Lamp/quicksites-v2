@@ -178,6 +178,7 @@ const STARTER_NAMES: Partial<Record<IndustryKey, string>> = {
   pest_control: 'Sentinel Pest Control',
   painting: 'Second Coat Painting',
   general_contractor: 'Cornerstone Contracting',
+  deck_builder: 'Timberline Decks & Outdoor Living',
   real_estate: 'Front Porch Realty',
   restaurant: 'The Copper Kettle',
   salon_spa: 'Golden Hour Salon & Spa',

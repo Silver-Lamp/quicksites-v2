@@ -52,6 +52,7 @@ export const industryPresets: Record<string, SiteTheme> = {
   windshield_repair: rugged('sky-500'),
   junk_removal: rugged('lime-500'),
   general_contractor: rugged('orange-500'),
+  deck_builder: rugged('amber-600'), // warm wood tone — decks, cedar, outdoor living
   moving: rugged('blue-500'),
 
   // --- Home services (light, trustworthy) ---

@@ -16,6 +16,7 @@ export type IndustryKey =
   | 'pest_control'
   | 'painting'
   | 'general_contractor'
+  | 'deck_builder'
   | 'real_estate'
   | 'restaurant'
   | 'salon_spa'
@@ -63,6 +64,7 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'pest_control',         label: 'Pest Control' },
   { key: 'painting',             label: 'Painting' },
   { key: 'general_contractor',   label: 'General Contractor' },
+  { key: 'deck_builder',         label: 'Deck Builder' },
   { key: 'real_estate',          label: 'Real Estate' },
   { key: 'restaurant',           label: 'Restaurant' },
   { key: 'salon_spa',            label: 'Salon & Spa' },
@@ -139,6 +141,7 @@ export const INDUSTRY_HINTS: Partial<Record<string, string>> = {
   'Pest Control': 'Eco-aware treatments, quarterly plans, rodent exclusion, same-day service.',
   'Painting': 'Prep, color consult, interior/exterior, fast turnaround, warranties.',
   'General Contractor': 'Licensed/bonded, permits, schedules, change-order transparency.',
+  'Deck Builder': 'Custom decks, railings & pergolas, material choices (PT/cedar/composite), free instant estimates, permits handled.',
   'Real Estate': 'Neighborhood expertise, staging/photography, negotiation, transparent fees.',
   'Restaurant': 'Signature dishes, dietary options, delivery/pickup, specials.',
   'Salon & Spa': 'Experience/vibe, memberships, hygiene, before/after gallery.',
@@ -181,6 +184,7 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   if (x.includes('move')) return 'moving';
   if (x.includes('pest')) return 'pest_control';
   if (x.includes('paint')) return 'painting';
+  if (x.includes('deck') || x.includes('pergola')) return 'deck_builder';
   if (x.includes('contract')) return 'general_contractor';
   if (x.includes('real estate') || x.includes('realtor')) return 'real_estate';
   if (x.includes('restaurant')) return 'restaurant';

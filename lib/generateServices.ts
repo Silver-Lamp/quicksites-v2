@@ -49,6 +49,7 @@ const SERVICE_NAMES: Partial<Record<IndustryKey, string[]>> = {
   pest_control: ['Quarterly Plans', 'Rodent Control', 'Ant Treatments', 'Termite Inspection', 'Bed Bug Treatment'],
   painting: ['Interior Painting', 'Exterior Painting', 'Cabinet Refinishing', 'Drywall Repair', 'Color Consultation'],
   general_contractor: ['Kitchen Remodel', 'Bathroom Remodel', 'Room Additions', 'Basement Finish', 'Permit Handling'],
+  deck_builder: ['Custom Deck Design', 'New Deck Construction', 'Railings & Pergolas', 'Deck Repair & Restaining', 'Composite & Cedar Decks'],
   real_estate: ['Home Valuation', 'Buyer Representation', 'Listing Services', 'Open Houses', 'Staging & Photos'],
   restaurant: ['Catering', 'Online Ordering', 'Daily Specials', 'Private Events', 'Delivery & Pickup'],
   salon_spa: ['Haircut & Style', 'Color & Highlights', 'Facials', 'Massage Therapy', 'Manicure & Pedicure'],

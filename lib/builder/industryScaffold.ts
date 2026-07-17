@@ -154,6 +154,9 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   const STOREFRONT_INDUSTRIES = new Set<IndustryKey>([
     'author', 'retail_boutique', 'retail_home_goods', 'handmade', 'etsy_style', 'print_on_demand', 'custom_apparel',
     'crafts', 'artisan_goods', 'gifts_stationery',
+    // retail/resale — anything whose site should lead with sellable goods
+    'retail_electronics', 'retail_thrift', 'art_supplies', 'antiques_vintage', 'collectibles',
+    'pet_boutique', 'pop_up_shop', 'farmers_market_vendor', 'online_reseller',
   ]);
   // Food industries get a menu-forward layout (menu + hours) instead of a services
   // list — this is what makes a restaurant site read like an ordering site.

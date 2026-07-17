@@ -7,6 +7,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import TemplatesListClient from '@/components/admin/templates/TemplatesListClient';
 import RefreshTemplatesButton from '@/components/admin/templates/RefreshTemplatesButton';
 import GenerateDemosButton from '@/components/admin/templates/generate-demos-button';
+import SeedStartersButton from '@/components/admin/templates/seed-starters-button';
 
 type SearchParams = { date?: string; versions?: string };
 
@@ -55,6 +56,7 @@ export default async function TemplatesIndexPage({ searchParams }: { searchParam
         includeVersions={includeVersions}
       />
       <GenerateDemosButton />
+      <SeedStartersButton />
       </div>
       <TemplatesListClient
         initialRows={initialRows}

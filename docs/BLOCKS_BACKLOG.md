@@ -135,6 +135,37 @@ limits, billing all live on HiveJournal):
    hours, alt-text readiness action.
 6. Everything else by demand.
 
+## Cross-product integration candidates (beyond blocks — from hivejournal.com/features, reviewed 2026-07-16)
+
+1. **The author-commerce bridge (EmberKiln ↔ QuickSites catalog) — the big one.**
+   Both platforms already use the SAME POD providers: HJ's print-on-demand paperback
+   is **Lulu**, its story-as-merch is **Gelato** — exactly our `pod_spec` rails. An
+   author who writes/renders on HJ (book, audiobook MP3, cover-art merch) should
+   sell it on their QuickSites author site: paperback → `catalog_items` w/ Lulu
+   pod_spec, merch → Gelato pod_spec, audiobook → `type='digital'`. HJ makes the
+   artifacts; we're the storefront + take-rate. Mirrors the real-estate loop —
+   author vertical: Emberkiln audio card block + author starter + this bridge.
+   Ask HJ for: an export/API of a story's sellable artifacts (lulu interior/cover
+   URLs, gelato productUid/fileUrl, audio file, cover art).
+2. **JQ Form Creator as a block** — "photo of a paper form → hosted fillable web
+   form." Local businesses LIVE on paper forms (catering orders, intake, waivers,
+   service requests). A `form_embed` block (or an import path into `contact_form`)
+   turns that into an onboarding wow for exactly our customers.
+3. **Graphene presence on author sites** — show-poster grid, follow capture,
+   "📕 on kindle" pills, per-writer hubs already exist on HJ with public URLs; an
+   author QuickSites site should surface their Graphene catalog (subsumed by #1 if
+   the artifact API includes shows).
+4. **Podcast Discussions embed** — "AI host interviews the owner, in the owner's
+   voice" as a content block = the local-business trust artifact (the butcher's
+   10-minute story on the About page). Rails exist (podcast library + share pages).
+5. Already sequenced as blocks, powered by their rails: Voice Welcome (lovio clone
+   + render-once cache), testimonial audio strip (their house-voice TTS is the same
+   ElevenLabs render-once pattern they use for contest winners).
+
+Weak/no fit (checked, deliberately skipped): journaling suite, Life Map, Odessa,
+Looking Glass, write.cafe contests/battles, Drift coins, Rehearsal Room — consumer
+surfaces with no local-business buyer.
+
 ## Standing rules (from the brief; consistent with this repo's honesty stance)
 
 - No fabricated urgency anywhere: countdowns use real end times, activity tickers

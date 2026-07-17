@@ -1008,7 +1008,7 @@ export const blockContentSchemaMap = {
        *  other trades activate as DeckSketch deploys their models. Absent ⇒ deck. */
       trade: z.enum(['deck', 'fence', 'concrete_patio', 'turf', 'epoxy_floor', 'paving', 'roofing', 'siding', 'retaining_wall']).optional().default('deck'),
       title: z.string().optional().default('Instant deck estimate'),
-      subtitle: z.string().optional().default('Enter a few dimensions for a ballpark materials price — then we’ll follow up with a real quote.'),
+      subtitle: z.string().optional().default('Enter a few dimensions for a ballpark price — then we’ll follow up with a real quote.'),
       /** Default material tier the widget opens on. */
       default_material_tier: z.enum(['pressure_treated', 'cedar', 'composite']).optional().default('pressure_treated'),
       /** Show the optional refiners (stairs, railing) that tighten the range. */

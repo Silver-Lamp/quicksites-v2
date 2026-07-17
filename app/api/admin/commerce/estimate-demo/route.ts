@@ -52,7 +52,9 @@ export async function POST(req: NextRequest) {
   const results = await Promise.all(
     trades.map(async (trade) => {
       const sample = SAMPLES[trade];
-      const input = normalizeTradeInput(trade, sample.input);
+      // Parity samples are the MATERIALS basis; pin to it so parity survives the
+      // installed-pricing default switch (DeckSketch bumped coeff_version v1→v2).
+      const input = { ...normalizeTradeInput(trade, sample.input), ...(expectParity ? { pricing_mode: 'materials' } : {}) };
       const r = await requestQuoteEstimate(trade, input, siteRef);
       if (!r.ok) return { trade, ok: false, error: r.error, status: r.status };
       const e = r.estimate;

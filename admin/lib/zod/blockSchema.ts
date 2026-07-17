@@ -1091,6 +1091,21 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Before / After slider — two images with a draggable divider that wipes between
+  // them. The classic high-converter for transformation trades (deck, fence, concrete,
+  // roofing, siding, painting, pressure-washing, epoxy, cleaning). Proof at a glance.
+  before_after: {
+    label: 'Before / After',
+    icon: '↔️',
+    schema: z.object({
+      title: z.string().optional().default('See the difference'),
+      before_url: z.string().optional().default(''),
+      after_url: z.string().optional().default(''),
+      before_label: z.string().optional().default('Before'),
+      after_label: z.string().optional().default('After'),
+    }),
+  },
+
   // Product-page sticky add-to-cart (mobile-first sibling of order_bar): fixed
   // bottom bar wired to the shared qs:cart:add event. Live title/price come from
   // the public products API so the bar never shows a stale price.

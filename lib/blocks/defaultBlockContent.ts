@@ -282,6 +282,13 @@ export const DEFAULT_BLOCK_CONTENT = {
     columns: 3,
     images: [],
   },
+  before_after: {
+    title: 'See the difference',
+    before_url: '',
+    after_url: '',
+    before_label: 'Before',
+    after_label: 'After',
+  },
   comments: { title: 'Comments', moderation: true, allow_links: false, closed: false, notify_email: '' },
   job_listing: {
     kind: 'general',

@@ -305,7 +305,7 @@ export const DEFAULT_BLOCK_CONTENT = {
   deck_estimate: {
     trade: 'deck',
     title: 'Instant deck estimate',
-    subtitle: 'Enter a few dimensions for a ballpark materials price — then we’ll follow up with a real quote.',
+    subtitle: 'Enter a few dimensions for a ballpark price — then we’ll follow up with a real quote.',
     default_material_tier: 'pressure_treated',
     show_refiners: true,
     cta_text: 'Get this quote from us',

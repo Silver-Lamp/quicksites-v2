@@ -168,7 +168,7 @@ export default function QuoteEstimatorForm({ trade, title, subtitle, ctaText, te
 
         {est && (
           <div className="mt-6 rounded-xl border border-border bg-background p-5">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ballpark materials cost</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ballpark estimate</div>
             <div className="mt-1 text-2xl font-extrabold tabular-nums">{est.label}</div>
             <div className="mt-0.5 text-xs text-muted-foreground">{est.confidence === 'refined' ? 'Refined estimate' : 'Rough estimate'} — a range, not a quote.</div>
             {est.assumptions?.length > 0 && (
@@ -196,7 +196,7 @@ export default function QuoteEstimatorForm({ trade, title, subtitle, ctaText, te
           </div>
         )}
 
-        <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">Estimates are ballpark materials costs only and don’t replace a site visit. Powered by DeckSketch.</p>
+        <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">Estimates are ballpark figures and don’t replace a site visit. Powered by DeckSketch.</p>
       </div>
     </section>
   );

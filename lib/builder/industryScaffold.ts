@@ -432,7 +432,7 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
       ...est.content,
       trade: estTrade,
       title: `Instant ${label.toLowerCase()} estimate`,
-      subtitle: 'Enter a few dimensions for a ballpark materials price — then we’ll follow up with a real quote.',
+      subtitle: 'Enter a few dimensions for a ballpark price — then we’ll follow up with a real quote.',
     };
     blocks.splice(1, 0, est);
   }

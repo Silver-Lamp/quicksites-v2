@@ -703,6 +703,18 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Quote of the Day (crosstalk/contracts/quote-of-the-day.md → LIVE): a rotating
+  // inspirational quote from HiveJournal's cached daily-quote endpoint. Zero-consent
+  // (not journal-derived), cost-safe (HJ caches ~1 external call/day). No config
+  // needed; the site id rides as ?ref for HJ's per-embedder usage tracking.
+  quote_of_the_day: {
+    label: 'Quote of the Day',
+    icon: '❝',
+    schema: z.object({
+      align: z.enum(['left', 'center']).optional().default('center'),
+    }),
+  },
+
   // Audio FAQ (HiveJournal /ask, crosstalk/contracts/about-that-embed.md → LIVE):
   // visitor asks a question, answered STRICTLY from the page's own content, in the
   // owner's voice. Single-question/stateless by design (the concierge is separate).

@@ -246,6 +246,7 @@ export const DEFAULT_BLOCK_CONTENT = {
   restaurants_directory: { title: 'Order from local restaurants', campaign_id: '', entries: [] },
   about_that: { embed_id: '', url: '', width: '' },
   audio_faq: { embed_id: '', title: 'Ask about this page', url: '' },
+  quote_of_the_day: { align: 'center' },
   announcement_bar: {
     message: 'Free local delivery on orders over $50',
     link_text: '',

@@ -79,11 +79,11 @@ limits, billing all live on HiveJournal):
 
 | Block | Status | Notes |
 |---|---|---|
-| Announcement bar | new | Dismissible; free-shipping threshold / promo code / sale window. |
+| Announcement bar | ✅ SHIPPED #477 (`announcement_bar`) | Dismissible (content-hash keyed), copyable promo chip, REAL end times (past = renders nothing). |
 | Countdown timer | new | **Real end times only — no fake-resetting scarcity** (brand + regulatory line, same honesty rule as the demand-capture flow). |
-| Sticky add-to-cart | partial | `order_bar` already does the mobile sticky bar for restaurants — build the product-page variant on the same pattern (emit `qs:cart:add`, the shared cart event). |
+| Sticky add-to-cart | ✅ SHIPPED #477 (`sticky_cart`) | order_bar sibling; live price via `/api/public/products`; store-treatment editor. |
 | Bundle / bought-together | new | Owner-picked pairs v1 (ids from the owner's catalog via `/api/commerce/site-merchant`); algorithmic later. |
-| Reviews + schema.org | new | The Google star snippet IS the feature — `AggregateRating`/`Review` JSON-LD emitted on the published render (follow the LocalBusiness-schema pattern in `app/sites/[slug]`). |
+| Reviews + schema.org | ✅ SHIPPED #477 (`reviews`) | Honest schema: Product JSON-LD only when tied to a named product (Google ignores self-serving LocalBusiness review markup — we don't ship dead markup). |
 | Shoppable gallery | new | Image grid with product hotspots → `qs:cart:add`. |
 | Size/spec table | new | With unit toggle. Boring; endlessly requested. |
 | Back-in-stock / waitlist | new | Per-product email capture; doubles as a demand signal (kin to `demand_events`). Needs a small public rate-limited capture endpoint — the one Tier-2 item with server surface. |

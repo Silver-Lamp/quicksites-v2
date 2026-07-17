@@ -106,6 +106,7 @@ export const DYNAMIC_RENDERERS: Record<
   order_bar:    () => import('@/components/admin/templates/render-blocks/order-bar'),
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
   restaurants_directory: () => import('@/components/admin/templates/render-blocks/restaurants-directory'),
+  about_that: () => import('@/components/admin/templates/render-blocks/about-that'),
   service_offer: () => import('@/components/admin/templates/render-blocks/service-offer'),
   scheduler: async () => {
     const [AdminPreview, SiteLive] = await Promise.all([

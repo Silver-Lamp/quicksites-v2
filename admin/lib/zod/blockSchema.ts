@@ -703,6 +703,23 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // "About That" (HiveJournal): AI narration of the page, embedded via HiveJournal's
+  // loader script — the player, rendering, caching, and rate limits all live on
+  // HiveJournal; this block only emits <script … data-embed>. embed_id must be a real
+  // HiveJournal embed uuid for a working player, but the DATA layer accepts '' so a
+  // freshly-inserted block validates — the renderer shows a setup hint until set.
+  about_that: {
+    label: 'About That (narration)',
+    icon: '🎙️',
+    schema: z.object({
+      embed_id: z.string().optional().default(''),
+      /** Overrides the narrated URL (data-url); empty = the page's own address. */
+      url: z.string().optional().default(''),
+      /** Sizes the player iframe (data-width), e.g. "480" or "100%". */
+      width: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+    }),
+  },
+
   /* ───────────────────────────── NEW: Commerce blocks ─────────────────────── */
 
   products_grid: {

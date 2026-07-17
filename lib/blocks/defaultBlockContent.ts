@@ -244,6 +244,7 @@ export const DEFAULT_BLOCK_CONTENT = {
 
   // Apex portal directory — campaign_id drives the live fetch; entries is the snapshot fallback.
   restaurants_directory: { title: 'Order from local restaurants', campaign_id: '', entries: [] },
+  about_that: { embed_id: '', url: '', width: '' },
 
   service_offer: {
     title: 'Book a Service',

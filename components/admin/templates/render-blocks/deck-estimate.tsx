@@ -13,6 +13,8 @@
 
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
+import { isTradeKey, type TradeKey } from '@/lib/commerce/quoteEstimator';
+import QuoteEstimatorForm from './quote-estimator-form';
 
 type Props = { block?: Block; content?: Block['content']; template?: any; previewOnly?: boolean };
 type Tier = 'pressure_treated' | 'cedar' | 'composite';
@@ -41,6 +43,23 @@ export default function RenderDeckEstimate({ block, content, template, previewOn
   const templateId: string =
     (template as any)?.id ?? (typeof window !== 'undefined' ? (window as any).__QS_TEMPLATE__?.id : '') ?? '';
   const blockId: string = String((block as any)?._id ?? (block as any)?.id ?? '');
+
+  // Non-deck trades (fence/concrete/roofing/…) render the generic registry-driven form;
+  // deck keeps its own hand-tuned UI below. All 9 trades are LIVE on the DeckSketch endpoint.
+  const trade: TradeKey = isTradeKey(c.trade) ? c.trade : 'deck';
+  if (trade !== 'deck') {
+    return (
+      <QuoteEstimatorForm
+        trade={trade}
+        title={title}
+        subtitle={subtitle}
+        ctaText={ctaText}
+        templateId={templateId}
+        blockId={blockId}
+        previewOnly={previewOnly}
+      />
+    );
+  }
 
   // dimensions
   const [lengthFt, setLengthFt] = React.useState('');

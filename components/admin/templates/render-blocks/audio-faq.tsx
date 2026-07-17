@@ -18,7 +18,10 @@
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
 
-const ASK_BASE = 'https://www.hivejournal.com/api/about-that/embed';
+// The /ask API lives on the HJ backend host (same as the studio-demos endpoints),
+// NOT www.hivejournal.com (which serves only the loader script + player pages and
+// 404s this path). Smoke-verified 2026-07-17; contract host corrected same day.
+const ASK_BASE = 'https://hivejournalbackend-production.up.railway.app/api/about-that/embed';
 const UUID_RX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Props = { block?: Block; content?: Block['content']; previewOnly?: boolean };

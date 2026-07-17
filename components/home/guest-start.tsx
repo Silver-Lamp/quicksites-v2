@@ -53,6 +53,7 @@ export default function GuestStart() {
   const [industry, setIndustry] = useState<string>('');
   const [url, setUrl] = useState('');
   const [parkedDomain, setParkedDomain] = useState('');
+  const [parkedRef, setParkedRef] = useState(''); // optional FB/public page to build FROM
   const [loading, setLoading] = useState(false);
   const [stage, setStage] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +87,11 @@ export default function GuestStart() {
         setError('Enter the domain you already own.');
         return;
       }
-      window.location.assign(`/bring-your-domain?domain=${encodeURIComponent(d)}`);
+      // The Amy combo: parked domain + a Facebook page. Carry the page along so the
+      // BYO flow builds the first draft FROM it (rebuild-first) instead of a scaffold.
+      const ref = parkedRef.trim();
+      const qs = `domain=${encodeURIComponent(d)}${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`;
+      window.location.assign(`/bring-your-domain?${qs}`);
       return;
     }
 
@@ -271,16 +276,28 @@ export default function GuestStart() {
           className="w-full rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-6 sm:text-2xl"
         />
       ) : (
-        <input
-          type="text"
-          inputMode="url"
-          value={parkedDomain}
-          onChange={(e) => setParkedDomain(e.target.value)}
-          placeholder="yourdomain.com"
-          aria-label="Domain you already own"
-          disabled={loading}
-          className="w-full rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-6 sm:text-2xl"
-        />
+        <div className="flex flex-col gap-3">
+          <input
+            type="text"
+            inputMode="url"
+            value={parkedDomain}
+            onChange={(e) => setParkedDomain(e.target.value)}
+            placeholder="yourdomain.com"
+            aria-label="Domain you already own"
+            disabled={loading}
+            className="w-full rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-6 sm:text-2xl"
+          />
+          <input
+            type="text"
+            inputMode="url"
+            value={parkedRef}
+            onChange={(e) => setParkedRef(e.target.value)}
+            placeholder="facebook.com/yourpage — we’ll build from it (optional)"
+            aria-label="Facebook or other public page to build from (optional)"
+            disabled={loading}
+            className="w-full rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3 text-sm text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-4 sm:text-lg"
+          />
+        </div>
       )}
 
       <button
@@ -312,7 +329,7 @@ export default function GuestStart() {
           {mode === 'convert'
             ? 'Paste any business site OR public page — Wix, WordPress, Squarespace, even a Facebook page. We rebuild it here — edit everything after.'
             : mode === 'domain'
-              ? 'Paying for a domain that still shows “under construction”? Keep your registrar and your email — we’ll check it and show the exact records for the website and mail.'
+              ? 'Paying for a domain that still shows “under construction”? Keep your registrar and your email. Add your Facebook page and we’ll build your site FROM it — your photos and voice, on your domain.'
               : 'No credit card. Sign up only when you’re ready to go live.'}
         </p>
       )}

@@ -265,6 +265,12 @@ export const DEFAULT_BLOCK_CONTENT = {
       { quote: 'Replace this with a real review — word-for-word from Google, Yelp, or an email.', author: 'A happy customer', audio_url: '', testimonial_id: '' },
     ],
   },
+  route_optimizer: {
+    title: 'Plan your route',
+    start: { label: 'Start', latitude: undefined, longitude: undefined },
+    stops: [],
+    round_trip: false,
+  },
   comments: { title: 'Comments', moderation: true, allow_links: false, closed: false, notify_email: '' },
   job_listing: {
     kind: 'general',

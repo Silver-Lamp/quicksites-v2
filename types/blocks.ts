@@ -70,6 +70,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   demo_embed: 'content',        // HJ studio demo by slug (MP4 or live caption-player)
   voice_welcome: 'content',     // HJ render-once TTS "hello" player (narrator default → owner clone)
   testimonial_audio: 'content', // HJ narrator-read reviews — written quote + "hear this review" ▶
+  route_optimizer: 'interactive', // PorchHearth nearest-neighbor stop ordering ($0, straight-line)
 
   /* ───────── ElectInfo (candidate) blocks ───────── */
   candidate_hero: 'layout',

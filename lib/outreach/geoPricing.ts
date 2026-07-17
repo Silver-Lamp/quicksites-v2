@@ -21,6 +21,7 @@ const TIER_LOW: PriceTier = { fullCents: 9900, lockedCents: 4900 };
 // (highest unlockable rent) without re-listing the keys and risking drift.
 export const PREMIUM_INDUSTRIES: readonly IndustryKey[] = [
   'towing', 'plumbing', 'hvac', 'roof_cleaning', 'windshield_repair', 'general_contractor', 'electrical',
+  'deck_builder', // a deck is a $5k–$30k job — premium unlockable rent
 ];
 export const MID_INDUSTRIES: readonly IndustryKey[] = [
   'landscaping', 'auto_repair', 'moving', 'pest_control', 'carpet_cleaning',

@@ -14,6 +14,7 @@ export const INDUSTRY_DOMAIN_WORD: Partial<Record<IndustryKey, string>> = {
   salon_spa: 'salon',
   medical_dental: 'dental',
   general_contractor: 'contractor',
+  deck_builder: 'decks',
   auto_repair: 'auto-repair',
   real_estate: 'real-estate',
   carpet_cleaning: 'carpet-cleaning',

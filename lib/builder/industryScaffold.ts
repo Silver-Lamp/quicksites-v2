@@ -264,14 +264,14 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     // Ask-me-anything in your own voice (HJ /ask). Optional; empty until configured.
     const askMe: any = createDefaultBlock('audio_faq');
 
-    // The nudge: turn this page into one that talks in YOUR voice. Interim target is
-    // the HiveJournal home; swap in the real EmberKiln "record your clone" deep-link
-    // once HJ provides it (ideas.md §13 open item).
+    // The nudge: turn this page into one that talks in YOUR voice. Points at HJ's
+    // consented clone-recording flow (EmberKiln / lovio voice setup; HJ confirmed this
+    // deep-link, ideas.md §13). A ?name= prefill is a small future add.
     const cloneNudge: any = createDefaultBlock('cta');
     cloneNudge.content = {
       ...cloneNudge.content,
       label: 'Record your voice — make this page talk',
-      link: 'https://hivejournal.com',
+      link: 'https://hivejournal.com/dashboard/lovio/voice-setup',
     };
 
     blocks = [hero, bio, voiceAbout, askMe, cloneNudge, contact];

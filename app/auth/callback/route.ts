@@ -5,6 +5,7 @@ import { createServerClient } from '@supabase/ssr';
 import { captureSignupIfNew } from '@/lib/analytics/funnel';
 import { claimPendingGuestDraft } from '@/lib/auth/claimGuestDraft';
 import { claimPendingSiteDraft } from '@/lib/auth/claimPendingSiteDraft';
+import { provisionPendingAuthorSite } from '@/lib/authorSites/provisionPendingAuthorSite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,7 +46,11 @@ export async function GET(req: NextRequest) {
     await claimPendingGuestDraft(data.user, store);
     // Transfer an operator-assembled outreach draft (CedarSites) if one was armed.
     await claimPendingSiteDraft(data.user, store);
-    return NextResponse.redirect(new URL(next, url.origin));
+    // Provision an HJ author storefront if an author-handoff link was armed; land the
+    // author in their new editor when one was created.
+    const authorTemplateId = await provisionPendingAuthorSite(data.user, store);
+    const dest = authorTemplateId ? `/admin/templates/${authorTemplateId}` : next;
+    return NextResponse.redirect(new URL(dest, url.origin));
   }
 
   // Case B: Magic link (tokens are in the fragment; server can't see them).
@@ -75,7 +80,7 @@ export async function GET(req: NextRequest) {
           credentials: 'include',
           body: JSON.stringify({ access_token: at, refresh_token: rt })
         }).then(function(r){ return r.json(); })
-          .then(function(){ location.replace(${JSON.stringify(dest)}); })
+          .then(function(j){ location.replace(j && j.redirect ? j.redirect : ${JSON.stringify(dest)}); })
           .catch(function(){ location.replace(${JSON.stringify('/login?error=cookie_set_failed')}); });
       })();
      </script>`,

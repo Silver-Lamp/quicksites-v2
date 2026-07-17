@@ -299,12 +299,13 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     }
   }
 
-  // Real estate: the on-domain listing page most agent sites lack. A featured
-  // listing card lands right after the hero (sample content from the block default;
-  // the About That agent-preset player slot rides on the block). This is the
-  // strategic pairing with HiveJournal's real-estate tier — see BLOCKS_BACKLOG.md §4.
+  // Real estate: an AGENT site — a portfolio of homes (each with an About That
+  // audio-tour slot) right after the hero, then a featured single listing. QuickSites
+  // becomes the on-domain listing pages most agent sites lack, and the audio tours are
+  // the differentiator (agent talks through each home in their voice). Strategic
+  // pairing with HiveJournal's real-estate tier — see BLOCKS_BACKLOG.md §4.
   if (industryKey === 'real_estate') {
-    blocks.splice(1, 0, createDefaultBlock('listing_card') as any);
+    blocks.splice(1, 0, createDefaultBlock('listings_grid') as any, createDefaultBlock('listing_card') as any);
   }
 
   // Split-layout themes (heroLayout: 'split' — warm/professional) get a real

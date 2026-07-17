@@ -60,6 +60,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   quote_of_the_day: 'content',  // HiveJournal cached daily quote (zero-consent)
   daily_artifact: 'content',    // HiveJournal daily comic (consent-gated, opt-in token)
   listing_card: 'content',      // real-estate listing w/ built-in About That agent slot
+  listings_grid: 'content',     // agent portfolio: many homes, per-home audio tours
   announcement_bar: 'interactive', // dismissible site-wide promo/notice bar
   sticky_cart: 'interactive',   // product-page sticky add-to-cart (order_bar sibling)
   reviews: 'content',           // owner-curated reviews (+ product JSON-LD when tied to one)

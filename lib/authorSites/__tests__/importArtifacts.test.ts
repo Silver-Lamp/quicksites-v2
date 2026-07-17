@@ -6,51 +6,9 @@
 // side drifted from crosstalk/contracts/sellable-artifacts-export.md.
 
 import { mapArtifactsToCatalogItems, type HjArtifactsPayload } from '../importArtifacts';
-
-// Verbatim from crosstalk message 20260717-050917 (URLs HEAD-verified 200).
-const PROD_PAYLOAD: HjArtifactsPayload = {
-  work: {
-    id: '805492fc-7ec9-4496-857b-07886ec81ed4',
-    title: 'The Flickering Screen',
-    author_name: 'Jordan K.',
-  },
-  artifacts: [
-    {
-      artifact_id: 'art_805492fc-7ec9-4496-857b-07886ec81ed4_paperback',
-      type: 'paperback',
-      provider: 'lulu',
-      status: 'ready',
-      title: 'The Flickering Screen',
-      description:
-        'In a dystopian society where every aspect of life is broadcast, a group of individuals begins questioning the authenticity of their existence. As they uncover layers of reality, they must decide whether to embrace their roles or rebel against the unseen forces controlling them.',
-      cover_image_url:
-        'https://pfyocleyejmtxmbxrdcm.supabase.co/storage/v1/object/public/season-assets/posters/805492fc-7ec9-4496-857b-07886ec81ed4/1779472430662-n4pxlk.png',
-      spec: {
-        interiorUrl:
-          'https://pfyocleyejmtxmbxrdcm.supabase.co/storage/v1/object/public/season-assets/print/805492fc-7ec9-4496-857b-07886ec81ed4/export-interior.pdf',
-        coverUrl:
-          'https://pfyocleyejmtxmbxrdcm.supabase.co/storage/v1/object/public/season-assets/print/805492fc-7ec9-4496-857b-07886ec81ed4/export-cover.pdf',
-        pageCount: 40,
-        podPackageId: '0600X0900BWSTDPB060UW444MXX',
-      },
-    },
-    {
-      artifact_id: 'art_805492fc-7ec9-4496-857b-07886ec81ed4_audiobook',
-      type: 'audiobook',
-      provider: 'digital',
-      status: 'ready',
-      title: 'The Flickering Screen',
-      description:
-        'In a dystopian society where every aspect of life is broadcast, a group of individuals begins questioning the authenticity of their existence. As they uncover layers of reality, they must decide whether to embrace their roles or rebel against the unseen forces controlling them.',
-      cover_image_url:
-        'https://pfyocleyejmtxmbxrdcm.supabase.co/storage/v1/object/public/season-assets/posters/805492fc-7ec9-4496-857b-07886ec81ed4/1779472430662-n4pxlk.png',
-      spec: {
-        asset_url:
-          'https://pfyocleyejmtxmbxrdcm.supabase.co/storage/v1/object/public/season-assets/audio/805492fc-7ec9-4496-857b-07886ec81ed4/book-full.mp3',
-      },
-    },
-  ],
-};
+// The verbatim prod payload lives in the shared fixture (also consumed by the
+// seed-author-demo storefront) — one source, so demo and test can't diverge.
+import { ARLO_PAYLOAD as PROD_PAYLOAD } from '../arloDemo';
 
 const OPTS = { merchantId: 'merch-demo', siteSlug: 'arlo-v-books' };
 

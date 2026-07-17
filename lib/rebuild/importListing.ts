@@ -72,6 +72,21 @@ export function mapTypes(types: unknown): string[] {
 }
 
 /**
+ * Humanize a single category label for user-facing copy: underscores → spaces, collapse
+ * whitespace, sentence-case the first letter. Idempotent — a label that's already nice
+ * ("Bars", "American (Traditional)") passes through unchanged, so it's safe to apply even
+ * when the source already ran mapTypes. Guards against raw Places types ("bar_and_grill")
+ * leaking into headlines/services on any import path.
+ */
+export function prettyCategory(cat: string): string {
+  const t = String(cat ?? '')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return t ? t[0].toUpperCase() + t.slice(1) : t;
+}
+
+/**
  * Map a listing (+ optional photo-extracted menu) into a full RebuildSpec. Pure.
  *
  * `industryKey` is derived from the listing categories (Google Places types) so a
@@ -90,19 +105,25 @@ export function buildSpecFromListing(
   const isRestaurant = industryKey === 'restaurant';
   const name = (listing?.name ?? '').trim() || (isRestaurant ? 'Restaurant' : industryLabel);
 
+  // Categories can arrive as raw Places types ("bar_and_grill") depending on the source
+  // path. Humanize them for anything user-facing (idempotent — already-nice labels like
+  // "Bars" pass through unchanged) so no snake_case ever leaks into copy or services. Keep
+  // the RAW `cats` for typeToIndustryKey above, which matches on the raw Places type ids.
+  const displayCats = cats.map(prettyCategory);
+
   const contact: ContactSpec = {};
   if (listing.phone) contact.phone = listing.phone;
   if (listing.address) contact.address = listing.address;
 
-  const catLead = cats.length ? cats.slice(0, 2).join(' · ') : industryLabel;
+  const catLead = displayCats.length ? displayCats.slice(0, 2).join(' · ') : industryLabel;
   const subheadline = isRestaurant
-    ? cats.length
-      ? `${cats.slice(0, 2).join(' · ')} — order online or stop by.`
+    ? displayCats.length
+      ? `${displayCats.slice(0, 2).join(' · ')} — order online or stop by.`
       : 'Fresh food, made daily — order online or stop by.'
     : `${catLead} — call or stop by today.`;
   const about = isRestaurant
-    ? `${name}${cats.length ? ` — ${cats[0].toLowerCase()}` : ''}. Order online for pickup, or come visit us.`
-    : `${name}${cats.length ? ` — ${cats[0].toLowerCase()}` : ` — ${industryLabel.toLowerCase()}`}. Get in touch to learn more.`;
+    ? `${name}${displayCats.length ? ` — ${displayCats[0].toLowerCase()}` : ''}. Order online for pickup, or come visit us.`
+    : `${name}${displayCats.length ? ` — ${displayCats[0].toLowerCase()}` : ` — ${industryLabel.toLowerCase()}`}. Get in touch to learn more.`;
 
   return {
     businessName: name,
@@ -111,7 +132,7 @@ export function buildSpecFromListing(
     headline: name,
     subheadline,
     about,
-    services: cats,
+    services: displayCats,
     faqs: [],
     // Menu only rides food specs; a non-restaurant listing never carries one.
     menu: isRestaurant && menu?.sections?.length ? menu : undefined,

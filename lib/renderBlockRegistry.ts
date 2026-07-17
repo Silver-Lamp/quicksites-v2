@@ -125,6 +125,7 @@ export const DYNAMIC_RENDERERS: Record<
   route_optimizer: () => import('@/components/admin/templates/render-blocks/route-optimizer'),
   events: () => import('@/components/admin/templates/render-blocks/events'),
   gallery: () => import('@/components/admin/templates/render-blocks/gallery'),
+  before_after: () => import('@/components/admin/templates/render-blocks/before-after'),
   service_offer: () => import('@/components/admin/templates/render-blocks/service-offer'),
   scheduler: async () => {
     const [AdminPreview, SiteLive] = await Promise.all([

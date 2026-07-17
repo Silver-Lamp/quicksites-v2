@@ -74,6 +74,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   route_optimizer: 'interactive', // PorchHearth nearest-neighbor stop ordering ($0, straight-line)
   events: 'content',            // upcoming + recurring schedule (service times, classes, gatherings)
   gallery: 'content',           // responsive photo grid + lightbox (every visual business)
+  before_after: 'interactive',  // draggable before/after reveal (transformation trades)
 
   /* ───────── ElectInfo (candidate) blocks ───────── */
   candidate_hero: 'layout',

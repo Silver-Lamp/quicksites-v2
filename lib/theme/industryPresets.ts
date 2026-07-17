@@ -102,6 +102,7 @@ export const industryPresets: Record<string, SiteTheme> = {
   author: { fontFamily: 'serif', accentColor: 'indigo-600', borderRadius: 'sm', glow: [], darkMode: 'dark' },
 
   // --- Fallback ---
+  personal: warm('rose-500'), // a warm, human "about me" page
   other: homeService('indigo-600'),
 
   // --- Legacy aliases (kept for back-compat with older callers) ---

@@ -233,6 +233,48 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     }
 
     blocks = [hero, menu, location, hours, contact, orderBar];
+  } else if (industryKey === 'personal') {
+    // "About Me" personal site — audio-forward, no services/FAQ. The differentiator
+    // is HiveJournal's owner-voice moat: the page can talk in your own voice via an
+    // EmberKiln clone. Ships with the voice + Q&A slots (empty until the person
+    // records a clone) and a nudge to record one. See crosstalk ideas.md §13.
+    const who = businessName || label;
+    setIfPresent(hero.content, 'headline', who);
+    setIfPresent(hero.content, 'subheadline', `Hi, I’m ${who} — here’s a little about me.`);
+    setIfPresent(hero.content, 'cta_text', 'Get in touch');
+    setIfPresent(hero.content, 'cta_link', '#contact');
+
+    const bio: any = createDefaultBlock('story');
+    bio.content = {
+      ...bio.content,
+      title: 'About me',
+      sections: [
+        {
+          heading: `A bit about ${who}`,
+          body: 'Share who you are, what you care about, and what you’re working on. This is your story in your words — or paste your LinkedIn / about.me and we’ll draft it for you.',
+          image_url: '', cta_text: '', cta_link: '',
+        },
+      ],
+    };
+
+    // Voice "about me" — an About That slot the person fills with their EmberKiln
+    // clone once recorded (renders nothing until an embed_id is set).
+    const voiceAbout: any = createDefaultBlock('about_that');
+
+    // Ask-me-anything in your own voice (HJ /ask). Optional; empty until configured.
+    const askMe: any = createDefaultBlock('audio_faq');
+
+    // The nudge: turn this page into one that talks in YOUR voice. Interim target is
+    // the HiveJournal home; swap in the real EmberKiln "record your clone" deep-link
+    // once HJ provides it (ideas.md §13 open item).
+    const cloneNudge: any = createDefaultBlock('cta');
+    cloneNudge.content = {
+      ...cloneNudge.content,
+      label: 'Record your voice — make this page talk',
+      link: 'https://hivejournal.com',
+    };
+
+    blocks = [hero, bio, voiceAbout, askMe, cloneNudge, contact];
   } else if (STOREFRONT_INDUSTRIES.has(industryKey)) {
     blocks = [hero, createDefaultBlock('products_grid') as any, services, faq, contact];
   } else {
@@ -350,7 +392,7 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   // Split-layout themes (heroLayout: 'split' — warm/professional) get a real
   // side-by-side "About | Why choose us" section after the hero, so the page
   // isn't a pure vertical stack (L4 sections; see docs/LAYOUT_L4_PLAN.md).
-  if (theme.stamped.layout?.heroLayout === 'split' && blocks.length > 1 && !FOOD_INDUSTRIES.has(industryKey)) {
+  if (theme.stamped.layout?.heroLayout === 'split' && blocks.length > 1 && !FOOD_INDUSTRIES.has(industryKey) && industryKey !== 'personal') {
     const bn = businessName || label;
     const aboutCol: any = createDefaultBlock('text');
     aboutCol.content = {

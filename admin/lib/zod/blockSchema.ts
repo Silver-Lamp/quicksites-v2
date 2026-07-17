@@ -858,6 +858,33 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Testimonial audio (crosstalk/contracts/testimonial-audio-endpoint.md, HJ #1329) —
+  // written reviews with a "hear this review" ▶ that plays an HJ-rendered permanent MP3.
+  // BINDING GUARDRAIL: testimonials are read in a NARRATOR voice, ALWAYS — never the site
+  // owner's clone (they're the customer's words; cloning them would be fabrication). HJ
+  // enforces this server-side; the block copy frames it as "read aloud", the reviewer's
+  // name is TEXT next to the player (never implied to be them speaking). Pure player, like
+  // voice_welcome: config stores audio_url per quote, plays it with its own UI.
+  testimonial_audio: {
+    label: 'Audio Reviews (HiveJournal)',
+    icon: '🗣️',
+    schema: z.object({
+      title: z.string().optional().default('What customers say'),
+      testimonials: z
+        .array(
+          z.object({
+            quote: z.string().optional().default(''),
+            author: z.string().optional().default(''),
+            /** Permanent public MP3 from the testimonial endpoint (narrator voice). */
+            audio_url: z.string().optional().default(''),
+            testimonial_id: z.string().optional().default(''),
+          }),
+        )
+        .optional()
+        .default([]),
+    }),
+  },
+
   // Comments / discussion — the platform's public UGC surface. Anti-abuse is
   // structural (see migration 20260725 + /api/comments): approve-before-publish by
   // default, content screened, per-IP rate-limited, recipient derived server-side.

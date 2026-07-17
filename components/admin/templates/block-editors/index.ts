@@ -190,6 +190,8 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
 
   voice_welcome: wrapDynamic(() => import('./voice-welcome-editor')),
 
+  testimonial_audio: wrapDynamic(() => import('./testimonial-audio-editor')),
+
   // Odd-jobs board gig (ideas.md §10 / AisleAsk cataloging wedge)
   job_listing: wrapDynamic(() => import('./job-listing-editor')),
 

@@ -179,6 +179,9 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
   // Real-estate listing card (w/ About That agent-preset slot)
   listing_card: wrapDynamic(() => import('./listing-card-editor')),
 
+  // HJ demo embed (contracts/demo-embed.md)
+  demo_embed: wrapDynamic(() => import('./demo-embed-editor')),
+
   // Conversion trio (BLOCKS_BACKLOG Tier 2)
   announcement_bar: wrapDynamic(() => import('./announcement-bar-editor')),
   sticky_cart: wrapDynamic(() => import('./sticky-cart-editor')),

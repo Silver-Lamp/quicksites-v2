@@ -746,6 +746,19 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // HJ demo embed (crosstalk/contracts/demo-embed.md, Status: LIVE): renders an
+  // approved+published HiveJournal studio demo by slug — the MP4 (poster + video)
+  // when rendered, else the live caption-player against the public prepared
+  // endpoint. Zero server-side here; permanence + labeling rules are contract-bound.
+  demo_embed: {
+    label: 'Demo (HiveJournal)',
+    icon: '🎬',
+    schema: z.object({
+      slug: z.string().optional().default(''),
+      width: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+    }),
+  },
+
   /* ───────────────── Conversion trio (BLOCKS_BACKLOG Tier 2) ───────────────── */
 
   // Dismissible site-wide announcement: free-shipping threshold, promo code, sale

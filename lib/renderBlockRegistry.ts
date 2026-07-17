@@ -111,6 +111,7 @@ export const DYNAMIC_RENDERERS: Record<
   announcement_bar: () => import('@/components/admin/templates/render-blocks/announcement-bar'),
   sticky_cart: () => import('@/components/admin/templates/render-blocks/sticky-cart'),
   reviews: () => import('@/components/admin/templates/render-blocks/reviews'),
+  demo_embed: () => import('@/components/admin/templates/render-blocks/demo-embed'),
   service_offer: () => import('@/components/admin/templates/render-blocks/service-offer'),
   scheduler: async () => {
     const [AdminPreview, SiteLive] = await Promise.all([

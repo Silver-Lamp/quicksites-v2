@@ -17,6 +17,7 @@ import type { OpsSnapshot } from '@/lib/ops/opsSnapshotServer';
 import DomainSpendChart from '@/components/admin/domain-spend-chart';
 import RevenueSimulator from '@/components/admin/ops/revenue-simulator';
 import { KpiTile, Gauge, SegmentBar, SeverityTag, formatMoney, type Tone } from '@/components/admin/ops/ops-widgets';
+import SuperAdminSetupAlerts from '@/components/admin/super-admin-setup-alerts';
 
 /** Count no-website competition clusters (city×industry, ≥2) with no live campaign. */
 function countOpenCompetition(prospects: OpsSnapshot['markets']['prospects'], campaigns: OpsSnapshot['markets']['campaigns']): number {
@@ -144,6 +145,11 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
         <div className="text-xs text-neutral-500">
           {gscLoaded ? (page1Count > 0 ? `${page1Count} domain${page1Count === 1 ? '' : 's'} on Google page 1` : 'Rank synced') : 'Loading live rank…'}
         </div>
+      </div>
+
+      {/* One-time super-admin setup actions (seed demos/starters) — self-hides when done. */}
+      <div className="mt-6">
+        <SuperAdminSetupAlerts />
       </div>
 
       {/* Headline KPIs */}

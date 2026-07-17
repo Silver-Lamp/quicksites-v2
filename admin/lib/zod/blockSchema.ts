@@ -703,6 +703,21 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Audio FAQ (HiveJournal /ask, crosstalk/contracts/about-that-embed.md → LIVE):
+  // visitor asks a question, answered STRICTLY from the page's own content, in the
+  // owner's voice. Single-question/stateless by design (the concierge is separate).
+  // Same embed_id as about_that; the embed must have faq_enabled on HJ's side.
+  audio_faq: {
+    label: 'Audio FAQ (ask this page)',
+    icon: '💬',
+    schema: z.object({
+      embed_id: z.string().optional().default(''),
+      title: z.string().optional().default('Ask about this page'),
+      /** Narrated-URL override (data-url equivalent); empty = the page's own address. */
+      url: z.string().optional().default(''),
+    }),
+  },
+
   // "About That" (HiveJournal): AI narration of the page, embedded via HiveJournal's
   // loader script — the player, rendering, caching, and rate limits all live on
   // HiveJournal; this block only emits <script … data-embed>. embed_id must be a real

@@ -176,6 +176,9 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
   // "About That" (HiveJournal narration embed)
   about_that: wrapDynamic(() => import('./about-that-editor')),
 
+  // Audio FAQ (HiveJournal /ask register)
+  audio_faq: wrapDynamic(() => import('./audio-faq-editor')),
+
   // Real-estate listing card (w/ About That agent-preset slot)
   listing_card: wrapDynamic(() => import('./listing-card-editor')),
 

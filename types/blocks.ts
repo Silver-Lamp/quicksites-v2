@@ -56,6 +56,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   service_offer: 'interactive', // single service/product CTA (planned)
   story: 'content',             // alternating image+text brand storytelling
   about_that: 'content',        // HiveJournal narrated-audio embed (loader script only)
+  audio_faq: 'interactive',     // HiveJournal /ask — grounded owner-voice Q&A on the page
   listing_card: 'content',      // real-estate listing w/ built-in About That agent slot
   announcement_bar: 'interactive', // dismissible site-wide promo/notice bar
   sticky_cart: 'interactive',   // product-page sticky add-to-cart (order_bar sibling)

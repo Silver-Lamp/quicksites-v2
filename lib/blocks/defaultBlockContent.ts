@@ -271,6 +271,14 @@ export const DEFAULT_BLOCK_CONTENT = {
     submit_url: '',
     permission_confirmed: false,
   },
+  deck_estimate: {
+    title: 'Instant deck estimate',
+    subtitle: 'Enter a few dimensions for a ballpark materials price — then we’ll follow up with a real quote.',
+    default_material_tier: 'pressure_treated',
+    show_refiners: true,
+    cta_text: 'Get this quote from us',
+    recipient_email: '',
+  },
   reviews: {
     title: 'What customers say',
     product_name: '',

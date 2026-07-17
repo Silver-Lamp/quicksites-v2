@@ -832,6 +832,32 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Voice Welcome (crosstalk/contracts/voice-welcome-endpoint.md, Status: LIVE — HJ
+  // #1326). A render-once TTS "hello" in the embed's resolved voice (HOUSE NARRATOR by
+  // default, the owner's consented CLONE once recorded — the §13 "about-me audio by
+  // default"). The block is a pure PLAYER: it plays a PERMANENT public `audio_url` with
+  // its own UI (no iframe, no playback compute). The MP3 is rendered/owned on HJ's side
+  // (owner writes the script in the HJ dashboard → audio_url); QS just stores + plays it.
+  // HONESTY: `voice` labels whose voice it is — never present the narrator as the person.
+  voice_welcome: {
+    label: 'Voice Welcome (HiveJournal)',
+    icon: '🎙️',
+    schema: z.object({
+      /** Permanent public MP3 from the welcome endpoint — the only field needed to play. */
+      audio_url: z.string().optional().default(''),
+      /** The About That embed this welcome belongs to (for future re-render/upgrade). */
+      embed_id: z.string().optional().default(''),
+      /** Returned by the endpoint; lets us detect a stale audio_url after a script edit. */
+      welcome_id: z.string().optional().default(''),
+      /** The spoken script (display/reference; the render happens HJ-side). */
+      script: z.string().optional().default(''),
+      /** Whose voice the MP3 is in — drives the honest on-player label. */
+      voice: z.enum(['narrator', 'owner']).optional().default('narrator'),
+      /** Optional heading above the player. */
+      title: z.string().optional().default(''),
+    }),
+  },
+
   // Comments / discussion — the platform's public UGC surface. Anti-abuse is
   // structural (see migration 20260725 + /api/comments): approve-before-publish by
   // default, content screened, per-IP rate-limited, recipient derived server-side.

@@ -258,6 +258,7 @@ export const DEFAULT_BLOCK_CONTENT = {
   },
   sticky_cart: { productId: '', cta_text: 'Add to cart', label: '', price_cents: 0, show_on_desktop: false, enabled: true },
   demo_embed: { slug: '', width: '' },
+  voice_welcome: { audio_url: '', embed_id: '', welcome_id: '', script: '', voice: 'narrator', title: '' },
   comments: { title: 'Comments', moderation: true, allow_links: false, closed: false, notify_email: '' },
   job_listing: {
     kind: 'general',

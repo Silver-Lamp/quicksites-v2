@@ -245,6 +245,22 @@ export const DEFAULT_BLOCK_CONTENT = {
   // Apex portal directory — campaign_id drives the live fetch; entries is the snapshot fallback.
   restaurants_directory: { title: 'Order from local restaurants', campaign_id: '', entries: [] },
   about_that: { embed_id: '', url: '', width: '' },
+  listing_card: {
+    headline: 'Sun-filled craftsman on a quiet street',
+    address: '123 Maple Street, Your City, ST',
+    price: '$524,900',
+    status: 'For sale',
+    beds: '3',
+    baths: '2.5',
+    sqft: '1,850',
+    description:
+      'Bright open floor plan, refinished oak floors, and a level backyard made for summer evenings. Minutes to schools, parks, and the Saturday market.',
+    images: [],
+    cta_text: 'Request a showing',
+    cta_link: '#contact',
+    about_that_embed_id: '',
+    about_that_width: '',
+  },
 
   service_offer: {
     title: 'Book a Service',

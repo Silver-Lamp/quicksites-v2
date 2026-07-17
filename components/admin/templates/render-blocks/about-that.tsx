@@ -21,6 +21,49 @@ import type { Block } from '@/types/blocks';
 const LOADER_SRC = 'https://www.hivejournal.com/about-that.js';
 const UUID_RX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export function isValidEmbedId(id: string): boolean {
+  return UUID_RX.test(id);
+}
+
+/**
+ * The bare HiveJournal embed (no section wrapper) — reusable by other blocks that
+ * carry a player slot (e.g. the real-estate listing card's agent-preset player).
+ * Renders nothing when the id isn't a valid uuid.
+ */
+export function AboutThatEmbed({
+  embedId,
+  url = '',
+  width = '',
+  className,
+}: {
+  embedId: string;
+  url?: string;
+  width?: string;
+  className?: string;
+}) {
+  const valid = UUID_RX.test((embedId || '').trim());
+  const hostRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const host = hostRef.current;
+    if (!host || !valid) return;
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = LOADER_SRC;
+    s.setAttribute('data-embed', embedId.trim());
+    if (url) s.setAttribute('data-url', url);
+    if (width) s.setAttribute('data-width', width);
+    host.appendChild(s);
+    return () => {
+      // Remove the loader AND whatever it injected next to itself.
+      host.innerHTML = '';
+    };
+  }, [valid, embedId, url, width]);
+
+  if (!valid) return null;
+  return <div ref={hostRef} data-about-that-embed={embedId.trim()} className={className} />;
+}
+
 type Props = {
   block?: Block;
   content?: Block['content'];
@@ -33,24 +76,6 @@ export default function RenderAboutThat({ block, content, previewOnly }: Props) 
   const url: string = typeof c.url === 'string' ? c.url.trim() : '';
   const width: string = typeof c.width === 'string' ? c.width.trim() : typeof c.width === 'number' ? String(c.width) : '';
   const valid = UUID_RX.test(embedId);
-
-  const hostRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const host = hostRef.current;
-    if (!host || !valid) return;
-    const s = document.createElement('script');
-    s.async = true;
-    s.src = LOADER_SRC;
-    s.setAttribute('data-embed', embedId);
-    if (url) s.setAttribute('data-url', url);
-    if (width) s.setAttribute('data-width', width);
-    host.appendChild(s);
-    return () => {
-      // Remove the loader AND whatever it injected next to itself.
-      host.innerHTML = '';
-    };
-  }, [valid, embedId, url, width]);
 
   if (!valid) {
     // Editor/preview: a setup hint. Public site: render nothing at all.
@@ -68,7 +93,7 @@ export default function RenderAboutThat({ block, content, previewOnly }: Props) 
 
   return (
     <section className="mx-auto w-full max-w-3xl px-4 py-4">
-      <div ref={hostRef} data-about-that-embed={embedId} />
+      <AboutThatEmbed embedId={embedId} url={url} width={width} />
     </section>
   );
 }

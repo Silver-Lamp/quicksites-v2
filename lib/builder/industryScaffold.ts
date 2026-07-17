@@ -360,6 +360,31 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     blocks.splice(1, 0, createDefaultBlock('deck_estimate') as any);
   }
 
+  // The estimator-trade verticals each seed the quote_estimator block wired to THEIR
+  // trade (all 9 trades LIVE on the DeckSketch endpoint; contract quote-estimate-embed.md).
+  // Each is a <city>-<trade>.com geo-domain outreach vertical, same pattern as deck_builder.
+  const TRADE_INDUSTRY: Partial<Record<IndustryKey, string>> = {
+    fencing: 'fence',
+    concrete: 'concrete_patio',
+    turf: 'turf',
+    epoxy_flooring: 'epoxy_floor',
+    paving: 'paving',
+    roofing: 'roofing',
+    siding: 'siding',
+    retaining_walls: 'retaining_wall',
+  };
+  const estTrade = TRADE_INDUSTRY[industryKey];
+  if (estTrade) {
+    const est: any = createDefaultBlock('deck_estimate');
+    est.content = {
+      ...est.content,
+      trade: estTrade,
+      title: `Instant ${label.toLowerCase()} estimate`,
+      subtitle: 'Enter a few dimensions for a ballpark materials price — then we’ll follow up with a real quote.',
+    };
+    blocks.splice(1, 0, est);
+  }
+
   // Deck builders are a first-class DeckSketch outreach vertical: after the estimator,
   // a "Recent Decks" portfolio (project spotlights with image slots ready for the
   // builder's real photos — or DeckSketch-provided reference decks). Image URLs left

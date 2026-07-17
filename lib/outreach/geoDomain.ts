@@ -15,13 +15,21 @@ export const INDUSTRY_DOMAIN_WORD: Partial<Record<IndustryKey, string>> = {
   medical_dental: 'dental',
   general_contractor: 'contractor',
   deck_builder: 'decks',
+  fencing: 'fence',
+  concrete: 'concrete',
+  turf: 'turf',
+  epoxy_flooring: 'epoxy',
+  paving: 'paving',
+  roofing: 'roofing', // install/replace (roof_cleaning now uses 'roof-cleaning')
+  siding: 'siding',
+  retaining_walls: 'retaining-walls',
   auto_repair: 'auto-repair',
   real_estate: 'real-estate',
   carpet_cleaning: 'carpet-cleaning',
   window_washing: 'window-cleaning',
   pressure_washing: 'pressure-washing',
   junk_removal: 'junk-removal',
-  roof_cleaning: 'roofing',
+  roof_cleaning: 'roof-cleaning', // freed 'roofing' for the roofing install vertical
   windshield_repair: 'auto-glass',
   pest_control: 'pest-control',
 };

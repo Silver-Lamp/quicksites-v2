@@ -22,6 +22,8 @@ const TIER_LOW: PriceTier = { fullCents: 9900, lockedCents: 4900 };
 export const PREMIUM_INDUSTRIES: readonly IndustryKey[] = [
   'towing', 'plumbing', 'hvac', 'roof_cleaning', 'windshield_repair', 'general_contractor', 'electrical',
   'deck_builder', // a deck is a $5k–$30k job — premium unlockable rent
+  // Estimator trades — all high-ticket ($5k–$40k jobs) → premium
+  'fencing', 'concrete', 'turf', 'epoxy_flooring', 'paving', 'roofing', 'siding', 'retaining_walls',
 ];
 export const MID_INDUSTRIES: readonly IndustryKey[] = [
   'landscaping', 'auto_repair', 'moving', 'pest_control', 'carpet_cleaning',

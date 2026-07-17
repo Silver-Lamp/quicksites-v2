@@ -108,6 +108,7 @@ export const DYNAMIC_RENDERERS: Record<
   restaurants_directory: () => import('@/components/admin/templates/render-blocks/restaurants-directory'),
   about_that: () => import('@/components/admin/templates/render-blocks/about-that'),
   audio_faq: () => import('@/components/admin/templates/render-blocks/audio-faq'),
+  quote_of_the_day: () => import('@/components/admin/templates/render-blocks/quote-of-the-day'),
   listing_card: () => import('@/components/admin/templates/render-blocks/listing-card'),
   announcement_bar: () => import('@/components/admin/templates/render-blocks/announcement-bar'),
   sticky_cart: () => import('@/components/admin/templates/render-blocks/sticky-cart'),

@@ -885,6 +885,39 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Route Optimizer (crosstalk ideas.md §19; PorchHearth's borrowed nearest-neighbor +
+  // Haversine seam). Client-side, $0, no vendor. Takes a start + coord-carrying stops →
+  // shows a nearest-stop order + straight-line total. HONEST LABEL (contract-agreed):
+  // "straight-line estimate, nearest-stop order — not driving directions." Stops carry
+  // lat/lon (v1 works on coord-bearing lists e.g. Places-sourced AisleAsk stores; typing
+  // addresses → geocoding is a later free-vs-paid decision, driving distance/time a paid v2).
+  route_optimizer: {
+    label: 'Route Optimizer',
+    icon: '🗺️',
+    schema: z.object({
+      title: z.string().optional().default('Plan your route'),
+      start: z
+        .object({
+          label: z.string().optional().default('Start'),
+          latitude: z.preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number()).optional(),
+          longitude: z.preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number()).optional(),
+        })
+        .optional()
+        .default({ label: 'Start' }),
+      stops: z
+        .array(
+          z.object({
+            label: z.string().optional().default(''),
+            latitude: z.preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number()).optional(),
+            longitude: z.preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number()).optional(),
+          }),
+        )
+        .optional()
+        .default([]),
+      round_trip: z.boolean().optional().default(false),
+    }),
+  },
+
   // Comments / discussion — the platform's public UGC surface. Anti-abuse is
   // structural (see migration 20260725 + /api/comments): approve-before-publish by
   // default, content screened, per-IP rate-limited, recipient derived server-side.

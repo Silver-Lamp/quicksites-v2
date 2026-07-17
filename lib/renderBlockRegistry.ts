@@ -121,6 +121,7 @@ export const DYNAMIC_RENDERERS: Record<
   demo_embed: () => import('@/components/admin/templates/render-blocks/demo-embed'),
   voice_welcome: () => import('@/components/admin/templates/render-blocks/voice-welcome'),
   testimonial_audio: () => import('@/components/admin/templates/render-blocks/testimonial-audio'),
+  route_optimizer: () => import('@/components/admin/templates/render-blocks/route-optimizer'),
   service_offer: () => import('@/components/admin/templates/render-blocks/service-offer'),
   scheduler: async () => {
     const [AdminPreview, SiteLive] = await Promise.all([

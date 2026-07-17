@@ -5,6 +5,7 @@ import { createServerClient } from '@supabase/ssr';
 import { captureSignupIfNew } from '@/lib/analytics/funnel';
 import { claimPendingGuestDraft } from '@/lib/auth/claimGuestDraft';
 import { claimPendingSiteDraft } from '@/lib/auth/claimPendingSiteDraft';
+import { provisionPendingAuthorSite } from '@/lib/authorSites/provisionPendingAuthorSite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,6 +44,10 @@ export async function POST(req: NextRequest) {
   // client redirects to the editor), so they land owning their work.
   await claimPendingGuestDraft(data.user, store);
   await claimPendingSiteDraft(data.user, store);
+  // Provision an HJ author storefront if an author-handoff link was armed; hand the
+  // client a redirect into the new editor (the magic-link page honors `redirect`).
+  const authorTemplateId = await provisionPendingAuthorSite(data.user, store);
+  const redirect = authorTemplateId ? `/admin/templates/${authorTemplateId}` : undefined;
 
-  return NextResponse.json({ ok: true }, { headers: { 'cache-control': 'no-store' } });
+  return NextResponse.json({ ok: true, redirect }, { headers: { 'cache-control': 'no-store' } });
 }

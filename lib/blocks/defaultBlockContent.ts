@@ -256,6 +256,18 @@ export const DEFAULT_BLOCK_CONTENT = {
   },
   sticky_cart: { productId: '', cta_text: 'Add to cart', label: '', price_cents: 0, show_on_desktop: false, enabled: true },
   demo_embed: { slug: '', width: '' },
+  job_listing: {
+    kind: 'general',
+    title: 'Help wanted — one-time gig',
+    store_name: '',
+    location: '',
+    pay: '',
+    instructions: 'Describe the job, when it needs doing, and how you’ll pay. Post real gigs only.',
+    deliverable: 'message',
+    recipient_email: '',
+    submit_url: '',
+    permission_confirmed: false,
+  },
   reviews: {
     title: 'What customers say',
     product_name: '',

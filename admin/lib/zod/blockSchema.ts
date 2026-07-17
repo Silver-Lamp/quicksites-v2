@@ -774,6 +774,31 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Job / gig listing (crosstalk ideas.md §10 odd-jobs board, wedge vertical #1 =
+  // AisleAsk store-cataloging gig; contract: crosstalk/contracts/aisleask-catalog-gig.md).
+  // v0 = post + apply + submit, NO payments. `deliverable:'ordered_sections'` renders the
+  // AisleAsk walk-order input; 'message' is a generic gig cover-note. recipient_email +
+  // submit_url are read SERVER-SIDE at submit time (never trusted from the client), so this
+  // reuses the hardened contact-relay posture (no open relay).
+  job_listing: {
+    label: 'Job / Gig Listing',
+    icon: '🧰',
+    schema: z.object({
+      kind: z.string().optional().default('general'),
+      title: z.string().optional().default(''),
+      store_name: z.string().optional().default(''),
+      location: z.string().optional().default(''),
+      pay: z.string().optional().default(''),
+      instructions: z.string().optional().default(''),
+      deliverable: z.enum(['message', 'ordered_sections']).optional().default('message'),
+      recipient_email: z.string().optional().default(''),
+      /** Optional structured auto-ingest endpoint (e.g. HJ's aisleask catalog token URL). */
+      submit_url: z.string().optional().default(''),
+      /** Poster attests store permission (honesty line — no cataloging a store uninvited). */
+      permission_confirmed: z.boolean().optional().default(false),
+    }),
+  },
+
   /* ───────────────── Conversion trio (BLOCKS_BACKLOG Tier 2) ───────────────── */
 
   // Dismissible site-wide announcement: free-shipping threshold, promo code, sale

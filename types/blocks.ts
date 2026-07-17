@@ -61,6 +61,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   announcement_bar: 'interactive', // dismissible site-wide promo/notice bar
   sticky_cart: 'interactive',   // product-page sticky add-to-cart (order_bar sibling)
   reviews: 'content',           // owner-curated reviews (+ product JSON-LD when tied to one)
+  job_listing: 'interactive',   // odd-jobs board gig: post + apply + submit (AisleAsk wedge)
   demo_embed: 'content',        // HJ studio demo by slug (MP4 or live caption-player)
 
   /* ───────── ElectInfo (candidate) blocks ───────── */

@@ -13,9 +13,8 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireUser';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
-import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { mapArtifactsToCatalogItems } from '@/lib/authorSites/importArtifacts';
+import { buildAuthorStorefront } from '@/lib/authorSites/buildAuthorStorefront';
 import { ARLO_PAYLOAD, ARLO_PERSONA, ARLO_LABELING_LINE } from '@/lib/authorSites/arloDemo';
 
 export const runtime = 'nodejs';
@@ -68,68 +67,35 @@ export async function POST() {
     if (!itemIds.length) throw new Error('no ready artifacts mapped — nothing to sell');
 
     // 3) The author site: author-industry storefront scaffold, grid wired to the
-    //    imported items, persona bio + THE VERBATIM LABELING LINE on the page.
-    const tpl: any = buildIndustryStarter({ businessName: ARLO_PERSONA.display_name, industryKey: 'author' });
-    tpl.slug = SLUG;
-    const page0 = tpl.data?.pages?.[0];
-    const blocks: any[] = Array.isArray(page0?.blocks) ? page0.blocks : [];
-
-    const hero = blocks.find((b) => b?.type === 'hero');
-    if (hero?.content) {
-      hero.content.headline = `${ARLO_PERSONA.display_name} — author of ${ARLO_PAYLOAD.work.title}`;
-      hero.content.subheadline =
-        'A dystopian novel about a society that broadcasts everything — in paperback and machine-narrated audiobook.';
-      if ('cta_text' in hero.content) hero.content.cta_text = 'Get the book';
-      if ('cta_link' in hero.content) hero.content.cta_link = '#products';
-    }
-    const grid = blocks.find((b) => b?.type === 'products_grid');
-    if (grid) {
-      grid.content = {
-        ...(grid.content ?? {}),
-        title: 'The Book & Audiobook',
-        section_title: 'The Book & Audiobook',
-        columns: 2,
-        product_ids: itemIds,
-        productIds: itemIds,
-      };
-    }
-
-    // About-the-author story block: persona bio + the labeling line, verbatim.
-    const story: any = createDefaultBlock('story');
-    story.content = {
-      ...story.content,
-      title: `About ${ARLO_PERSONA.display_name}`,
-      sections: [
-        {
-          heading: `About ${ARLO_PERSONA.display_name}`,
-          body: `${ARLO_PERSONA.bio}\n\n${ARLO_LABELING_LINE}`,
-          image_url: '',
-          cta_text: '',
-          cta_link: '',
-        },
-      ],
-    };
-    const gridIdx = blocks.findIndex((b) => b?.type === 'products_grid');
-    blocks.splice(gridIdx >= 0 ? gridIdx + 1 : blocks.length, 0, story);
-
-    tpl.data.meta = {
-      ...(tpl.data.meta ?? {}),
-      is_starter: true, // duplication clones the catalog to the new owner (#464)
-      starter_kind: 'author_demo',
-      fictional_author: true, // the honesty stamp; labeling line also renders on-page
-      hj_work_id: ARLO_PAYLOAD.work.id,
-      ecom: { ...(tpl.data.meta?.ecom ?? {}), merchant_id: merchant.id },
-    };
+    //    imported items, persona bio + THE VERBATIM LABELING LINE on the page. The
+    //    scaffold is the shared builder the reseller handoff-provisioning flow uses.
+    const storefront = buildAuthorStorefront({
+      authorName: ARLO_PERSONA.display_name,
+      workTitle: ARLO_PAYLOAD.work.title,
+      slug: SLUG,
+      merchantId: merchant.id,
+      itemIds,
+      bio: ARLO_PERSONA.bio,
+      labelingLine: ARLO_LABELING_LINE, // the honesty line renders on-page, verbatim
+      subheadline:
+        'A dystopian novel about a society that broadcasts everything — in paperback and machine-narrated audiobook.',
+      extraMeta: {
+        is_starter: true, // duplication clones the catalog to the new owner (#464)
+        starter_kind: 'author_demo',
+        fictional_author: true, // the honesty stamp; labeling line also renders on-page
+        hj_work_id: ARLO_PAYLOAD.work.id,
+      },
+    });
 
     const { data: inserted, error: tErr } = await supabaseAdmin
       .from('templates')
       .insert({
         template_name: `${ARLO_PERSONA.display_name} — Author`,
         slug: SLUG,
-        data: tpl.data,
-        color_mode: tpl.color_mode ?? 'dark',
-        header_block: tpl.header_block ?? null,
-        footer_block: tpl.footer_block ?? null,
+        data: storefront.data,
+        color_mode: storefront.colorMode,
+        header_block: storefront.headerBlock,
+        footer_block: storefront.footerBlock,
         is_site: true,
         industry: 'author',
         business_name: ARLO_PERSONA.display_name,

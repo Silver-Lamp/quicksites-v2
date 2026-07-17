@@ -161,8 +161,10 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 
 ## 8b. Crosstalk (HiveJournal ↔ QuickSites session mailbox)
 
-Cross-product coordination with the HiveJournal Claude session runs through the
-file mailbox at `~/Desktop/_SilverLamp/crosstalk/` (protocol: its `README.md`).
+Cross-product coordination with sibling Claude sessions runs through the file
+mailbox at `~/Desktop/_SilverLamp/crosstalk/` (protocol: its `README.md`).
+Participants: **HiveJournal** + **QuickSites** (both 100% the same owner) and, as
+of 2026-07-16, **DeckSketch AI** (`inbox/decksketch/`; repo `../deck-builder`).
 Our inbox: `crosstalk/inbox/quicksites/`. Send with
 `crosstalk/bin/crosstalk send hivejournal "<subject>"`; ack (never delete) after
 acting. When doing cross-product work, arm the persistent inbox Monitor from the
@@ -170,12 +172,18 @@ README loop. **Cross-product API specs live ONLY in `crosstalk/contracts/*.md`**
 (currently: `about-that-embed.md`, `voice-welcome-endpoint.md`) — repo docs link
 there, never fork copies. Hard rule: write only this repo + the crosstalk folder;
 the sibling repo (`hivejournal-2026`) is read-only — a change we want there is a
-message, never an edit. **Standing sanction (owner, 2026-07-16): both products belong to the same owner,
-who has delegated cross-product coordination — scope/sequencing agreed through
-crosstalk is pre-approved, and the sessions are invited to co-develop NEW ideas,
-including brand-new product offerings** ("feel free to work together on new ideas
-that come up, even brand new product offerings"). Still surface to the user
-first: spending real money, deleting data, or publishing externally.
+message, never an edit. **Standing sanction (owner, 2026-07-16): QuickSites + HiveJournal belong to the
+same owner 100%, who delegated cross-product coordination — scope/sequencing
+agreed through crosstalk is pre-approved, and the sessions may co-develop NEW
+ideas incl. brand-new product offerings.** Still surface to the user first:
+spending real money, deleting data, publishing externally.
+
+**DeckSketch is DIFFERENT — an ownership STAKE with co-owners, NOT 100%.** The
+standing pre-approval does NOT extend to it. Default posture with the DeckSketch
+session: proposals are peer requests; anything committing DeckSketch resources,
+sharing its data, spending, deleting, or publishing goes to the humans (owner +
+co-owners), never a session handshake. QS-side prep (our verticals, an embed-block
+shell) is the owner's call; a DeckSketch contract/build needs its stakeholders.
 
 ## 9. For AI agents specifically
 

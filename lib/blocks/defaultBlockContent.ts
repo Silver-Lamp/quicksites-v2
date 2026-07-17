@@ -277,6 +277,11 @@ export const DEFAULT_BLOCK_CONTENT = {
       { name: 'Weekly gathering', date: '', when: 'Sundays, 10:00 AM', location: '', description: 'Everyone welcome.', cta_text: '', cta_link: '' },
     ],
   },
+  gallery: {
+    title: 'Gallery',
+    columns: 3,
+    images: [],
+  },
   comments: { title: 'Comments', moderation: true, allow_links: false, closed: false, notify_email: '' },
   job_listing: {
     kind: 'general',

@@ -1069,6 +1069,28 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Photo gallery — a responsive image grid with click-to-enlarge lightbox. The block
+  // nearly every visual business needs (photographers, restaurants, salons, real estate,
+  // contractors' before/after). Emits ImageGallery JSON-LD.
+  gallery: {
+    label: 'Photo Gallery',
+    icon: '🖼️',
+    schema: z.object({
+      title: z.string().optional().default('Gallery'),
+      columns: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 3 : v), z.number().min(2).max(4).optional().default(3)),
+      images: z
+        .array(
+          z.object({
+            url: z.string().optional().default(''),
+            caption: z.string().optional().default(''),
+            alt: z.string().optional().default(''),
+          }),
+        )
+        .optional()
+        .default([]),
+    }),
+  },
+
   // Product-page sticky add-to-cart (mobile-first sibling of order_bar): fixed
   // bottom bar wired to the shared qs:cart:add event. Live title/price come from
   // the public products API so the bar never shows a stale price.

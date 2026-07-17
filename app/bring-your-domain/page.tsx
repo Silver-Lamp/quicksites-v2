@@ -23,12 +23,14 @@ export default async function BringYourDomainPage({
   searchParams,
 }: {
   // Next 15: searchParams is async. Entry points (homepage tab, /admin/templates/new
-  // card) pass ?domain= so the check runs the moment the page opens.
-  searchParams: Promise<{ domain?: string }>;
+  // card) pass ?domain= so the check runs the moment the page opens; ?ref= carries a
+  // public page (Facebook etc.) to build the draft FROM (the parked-domain + FB combo).
+  searchParams: Promise<{ domain?: string; ref?: string }>;
 }) {
   if (!guestBuildEnabled()) redirect('/login');
   const sp = await searchParams;
   const initialDomain = typeof sp?.domain === 'string' ? sp.domain.slice(0, 253) : '';
+  const initialRef = typeof sp?.ref === 'string' ? sp.ref.slice(0, 500) : '';
 
   return (
     <>
@@ -41,7 +43,7 @@ export default async function BringYourDomainPage({
           Keep your registrar, keep your email, keep paying exactly what you pay now. We'll build the site and show you
           the two DNS records that point your domain at it.
         </p>
-        <BringYourDomainClient initialDomain={initialDomain} />
+        <BringYourDomainClient initialDomain={initialDomain} initialRef={initialRef} />
       </main>
     </>
   );

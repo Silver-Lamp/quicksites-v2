@@ -202,7 +202,15 @@ function EmailProviderInfo({ check }: { check: Check }) {
   );
 }
 
-export default function BringYourDomainClient({ initialDomain = '' }: { initialDomain?: string }) {
+export default function BringYourDomainClient({
+  initialDomain = '',
+  initialRef = '',
+}: {
+  initialDomain?: string;
+  /** Public page (Facebook etc.) handed in by the entry point — prefills step 2 and
+   *  fast-tracks the parked-domain + FB combo straight to "what should the site be". */
+  initialRef?: string;
+}) {
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [domainInput, setDomainInput] = React.useState(initialDomain);
   const [check, setCheck] = React.useState<Check | null>(null);
@@ -211,7 +219,7 @@ export default function BringYourDomainClient({ initialDomain = '' }: { initialD
   const [businessName, setBusinessName] = React.useState('');
   const [industry, setIndustry] = React.useState('');
   const [goal, setGoal] = React.useState('');
-  const [refPages, setRefPages] = React.useState('');
+  const [refPages, setRefPages] = React.useState(initialRef);
 
   const [templateId, setTemplateId] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -220,6 +228,7 @@ export default function BringYourDomainClient({ initialDomain = '' }: { initialD
   // Entry points (homepage tab, admin chooser card) pass ?domain= — check it on arrival
   // so the visitor lands straight on their answer.
   const autoRan = React.useRef(false);
+  const autoAdvanced = React.useRef(false);
   React.useEffect(() => {
     if (initialDomain && !autoRan.current) {
       autoRan.current = true;
@@ -243,6 +252,12 @@ export default function BringYourDomainClient({ initialDomain = '' }: { initialD
       if (!res.ok) throw new Error(j?.error || 'Could not check that domain.');
       setCheck(j.result);
       setBusinessName((prev) => prev || nameFromDomain(j.result.domain));
+      // Domain + page arrived together (the combo entry) → the visitor already told
+      // us where they exist online; skip straight to "what should the site be".
+      if (initialRef && !autoAdvanced.current) {
+        autoAdvanced.current = true;
+        setStep(2);
+      }
     } catch (err: any) {
       setError(err?.message || 'Could not check that domain.');
     } finally {
@@ -481,7 +496,9 @@ export default function BringYourDomainClient({ initialDomain = '' }: { initialD
                 ? buildingFromPage
                   ? 'Building from your page… (~20s)'
                   : 'Building your starter site…'
-                : 'Build my starter site'}
+                : refPages.trim()
+                  ? '✨ Build my site from my page'
+                  : 'Build my starter site'}
             </button>
             <button type="button" onClick={() => setStep(1)} className="text-sm text-zinc-400 hover:text-zinc-200">
               ← Back

@@ -224,6 +224,27 @@ export function buildRebuildTemplate(opts: {
     rebuild_source: 'ai_rebuild',
   };
 
+  // SEO title/description: lead with the business name + locale so the auto-built site
+  // ranks for brand + "<category> in <city>" searches. generateMetadata reads the
+  // PAGE-level meta first (data.pages[0].meta), which the scaffold leaves unset — so
+  // without this the <title> falls back to the page title "Home". Mirror into data.meta
+  // too (siteTitle + LocalBusiness schema read from there).
+  if (spec.seoTitle || spec.seoDescription) {
+    if (spec.seoTitle) {
+      tpl.data.meta.siteTitle = spec.seoTitle;
+      tpl.data.meta.title = spec.seoTitle;
+    }
+    if (spec.seoDescription) tpl.data.meta.description = spec.seoDescription;
+    const homePage = tpl.data?.pages?.[0];
+    if (homePage) {
+      homePage.meta = {
+        ...(homePage.meta ?? {}),
+        ...(spec.seoTitle ? { title: spec.seoTitle } : {}),
+        ...(spec.seoDescription ? { description: spec.seoDescription } : {}),
+      };
+    }
+  }
+
   return {
     template_name: spec.businessName,
     slug: `${slugify(spec.businessName)}-${rand()}`,

@@ -18,6 +18,7 @@ import {
 import { typeToIndustryKey } from '@/lib/places/typeToIndustry';
 import { augmentListingWithYelp } from '@/lib/rebuild/importListingYelp';
 import { menuFromPhotos, pickMenuPhotos } from '@/lib/rebuild/menuFromPhotos';
+import { enrichListingCopy } from '@/lib/rebuild/enrichListingCopy';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
 import type { IndustryKey } from '@/lib/industries';
 
@@ -90,8 +91,11 @@ export async function buildDraftFromListing(input: BuildDraftInput): Promise<Bui
     }
   }
 
-  // Map → spec → assemble the draft (same blocks as URL conversion).
-  const spec = buildSpecFromListing(listing, menu, industryKey);
+  // Map → spec → assemble the draft (same blocks as URL conversion). The pure mapper
+  // produces templated copy (name + category slugs); upgrade it to clean, name+locale
+  // SEO-grounded copy in one metered LLM call (best-effort — falls back to templated).
+  const baseSpec = buildSpecFromListing(listing, menu, industryKey);
+  const spec = await enrichListingCopy(baseSpec, { menu, operatorId: input.operatorId });
   const heroImage = listing.photos?.[0] ?? null;
   const tpl = buildRebuildTemplate({ spec, heroImage, sourceUrl: listing.website ?? null });
 

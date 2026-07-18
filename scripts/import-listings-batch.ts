@@ -60,6 +60,7 @@ async function main() {
   const { fetchGooglePlace, findPlace, buildSpecFromListing, ListingImportError } = await import('@/lib/rebuild/importListing');
   const { menuFromPhotos, pickMenuPhotos } = await import('@/lib/rebuild/menuFromPhotos');
   const { augmentListingWithYelp } = await import('@/lib/rebuild/importListingYelp');
+  const { enrichListingCopy } = await import('@/lib/rebuild/enrichListingCopy');
   const { buildRebuildTemplate } = await import('@/lib/rebuild/assembleDraft');
   const { mintSiteClaimToken } = await import('@/lib/auth/siteClaimToken');
   const { menuSiteUrl, MENU_BASE_DOMAIN } = await import('@/lib/menu/deliveredMenu');
@@ -111,8 +112,10 @@ async function main() {
         menu = undefined;
       }
 
-      // 3) Assemble + insert a claimable draft.
-      const spec = buildSpecFromListing(listing, menu);
+      // 3) Assemble + insert a claimable draft. Upgrade the templated copy to clean,
+      //    name+locale SEO-grounded copy (best-effort LLM; falls back to templated).
+      const baseSpec = buildSpecFromListing(listing, menu);
+      const spec = await enrichListingCopy(baseSpec, { menu, operatorId: ownerId });
       const tpl = buildRebuildTemplate({ spec, heroImage: listing.photos?.[0] ?? null, sourceUrl: listing.website ?? null });
 
       let insertedId: string | null = null;

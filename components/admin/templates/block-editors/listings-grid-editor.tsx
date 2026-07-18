@@ -67,6 +67,12 @@ export default function ListingsGridEditor({ block, onSave, onClose }: Props) {
         </div>
       </div>
 
+      <p className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+        🎧 <span className="font-medium text-foreground">Audio tours:</span> paste each home&rsquo;s
+        HiveJournal embed id below. Create the embed with the <span className="font-medium">agent</span>{' '}
+        preset — you pitch the home in your own voice and a skeptical AI buyer probes. Leave blank to skip.
+      </p>
+
       <div className="space-y-3">
         {local.listings.map((l, i) => (
           <div key={i} className="grid gap-2 rounded-lg border border-border p-3">

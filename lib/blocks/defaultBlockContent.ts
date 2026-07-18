@@ -625,4 +625,7 @@ export const DEFAULT_BLOCK_CONTENT = {
     cta_label: 'Talk to me about your budget',
     cta_href: '#contact',
   },
+  listing_search: {
+    title: 'Search homes for sale',
+  },
 } as const satisfies Record<BlockType, any>;

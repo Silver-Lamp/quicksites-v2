@@ -137,6 +137,7 @@ export const DYNAMIC_RENDERERS: Record<
   listing_alert: () => import('@/components/admin/templates/render-blocks/listing-alert'),
   affordability_calculator: () =>
     import('@/components/admin/templates/render-blocks/affordability-calculator'),
+  listing_search: () => import('@/components/admin/templates/render-blocks/listing-search'),
   hours: () => import('@/components/admin/templates/render-blocks/hours'),
   menu: () => import('@/components/admin/templates/render-blocks/menu'),
   location: () => import('@/components/admin/templates/render-blocks/location'),

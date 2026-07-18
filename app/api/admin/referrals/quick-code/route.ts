@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     code: String(body?.code ?? ''),
     label: typeof body?.label === 'string' ? body.label : undefined,
     ownerEmail: typeof body?.ownerEmail === 'string' ? body.ownerEmail : undefined,
-    ratePct: Number.isFinite(Number(body?.ratePct)) ? Number(body.ratePct) : 20,
+    ratePct: Number.isFinite(Number(body?.ratePct)) ? Number(body.ratePct) : 25,
     durationMonths: lifetime
       ? 0
       : Number.isFinite(Number(body?.durationMonths))

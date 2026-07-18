@@ -118,7 +118,7 @@ export default function ForDanielPage() {
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="text-lg font-bold text-white">Your referral code</h2>
               <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-medium text-amber-300">
-                lifetime · 20%
+                lifetime residual
               </span>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-zinc-300">
@@ -132,12 +132,14 @@ export default function ForDanielPage() {
               www.quicksites.ai/?ref=daniel
             </div>
             <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-              Anyone who signs up under it is tied to you, and you earn{' '}
+              Anyone who signs up under it is tied to you, and you earn a{' '}
               <span className="text-zinc-200">
-                20% of the platform&apos;s cut on their activity, for the life of the account
+                lifetime share of what QuickSites earns on their orders
               </span>{' '}
-              — not for a year, for good. It&apos;s already recording signups, so you don&apos;t
-              have to do anything to &ldquo;turn it on.&rdquo;
+              — for as long as their account lives, not just year one. As a founding partner
+              you&apos;re locked in at the top rate. It&apos;s already recording signups, so
+              there&apos;s nothing to &ldquo;turn on.&rdquo; Your exact cut + projections are on the
+              dashboard below — I&apos;d rather you see live numbers than a number on a page.
             </p>
 
             <More label="How you get paid (and the escrow bit)">

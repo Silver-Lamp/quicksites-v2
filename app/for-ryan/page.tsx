@@ -7,7 +7,12 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
-import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE, QS_FEE_SHARE, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
+import {
+  MAX_PLATFORM_FEE_PERCENT,
+  PARTNER_FEE_SHARE,
+  QS_FEE_SHARE,
+  RESIDUAL_MONTHS,
+} from '@/lib/commerce/partner-terms';
 
 const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
 const keepPct = Math.round(PARTNER_FEE_SHARE * 100);
@@ -16,19 +21,30 @@ const residualLabel = RESIDUAL_MONTHS > 0 ? `for ${RESIDUAL_MONTHS} months` : 'f
 
 export const metadata: Metadata = {
   title: 'QuickSites — for Ryan',
-  description: 'A personal tour of the QuickSites business models.',
+  description:
+    'A free agent site + live MLS listings, and the QuickSites business models — for Ryan.',
   robots: { index: false, follow: false }, // unlisted: public URL, invisible to search
 };
 
 /** Native-details expander — server-rendered, zero JS. */
-function More({ label = 'More detail + an example', children }: { label?: string; children: React.ReactNode }) {
+function More({
+  label = 'More detail + an example',
+  children,
+}: {
+  label?: string;
+  children: React.ReactNode;
+}) {
   return (
     <details className="group mt-3 rounded-lg border border-zinc-800/80 bg-zinc-950/40">
       <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300 [&::-webkit-details-marker]:hidden">
-        <span aria-hidden className="inline-block transition-transform group-open:rotate-90">›</span>
+        <span aria-hidden className="inline-block transition-transform group-open:rotate-90">
+          ›
+        </span>
         {label}
       </summary>
-      <div className="space-y-3 px-4 pb-4 pt-1 text-sm leading-relaxed text-zinc-400">{children}</div>
+      <div className="space-y-3 px-4 pb-4 pt-1 text-sm leading-relaxed text-zinc-400">
+        {children}
+      </div>
     </details>
   );
 }
@@ -36,7 +52,9 @@ function More({ label = 'More detail + an example', children }: { label?: string
 function Example({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-3 text-sm leading-relaxed text-zinc-400">
-      <span className="mr-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-400">Example</span>
+      <span className="mr-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-400">
+        Example
+      </span>
       {children}
     </div>
   );
@@ -116,12 +134,22 @@ export default function ForRyanPage() {
             mechanics. Every card expands if you want the gears.
           </p>
           <p className="mt-3 text-sm text-zinc-500">
-            The one-liner: <span className="text-zinc-300">websites are the free bait; the business is a
-            small cut of the commerce that flows through them.</span> Hosting costs us almost nothing, so
-            we give sites away and earn on orders instead of rent-seeking on hosting.
+            The one-liner:{' '}
+            <span className="text-zinc-300">
+              websites are the free bait; the business is a small cut of the commerce that flows
+              through them.
+            </span>{' '}
+            Hosting costs us almost nothing, so we give sites away and earn on orders instead of
+            rent-seeking on hosting.
           </p>
           <p className="mt-3 text-sm text-zinc-500">
             And the zero-effort way in — your own referral code — is set up and live right now. 👇
+          </p>
+          <p className="mt-3 text-sm text-zinc-500">
+            But there&apos;s a version of this that&apos;s{' '}
+            <span className="text-zinc-300">specifically for you as a realtor</span> — use it
+            yourself, free, with tools most agent sites don&apos;t have (and one thing I think you
+            can uniquely help unlock). That&apos;s the section right after your code. 🏡
           </p>
         </section>
 
@@ -136,7 +164,9 @@ export default function ForRyanPage() {
             </div>
             <p className="mt-3 text-sm leading-relaxed text-zinc-300">
               If you ever mention QuickSites to anyone, just tell them to use the code{' '}
-              <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-sm font-semibold text-emerald-200">ryan</code>{' '}
+              <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-sm font-semibold text-emerald-200">
+                ryan
+              </code>{' '}
               when they sign up — or send them your link:
             </p>
             <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-sm text-zinc-200">
@@ -144,34 +174,148 @@ export default function ForRyanPage() {
             </div>
             <p className="mt-3 text-sm leading-relaxed text-zinc-400">
               Anyone who signs up under it is tied to you, and you earn a{' '}
-              <span className="text-zinc-200">lifetime residual on the platform&apos;s cut of their
-              commerce</span> — for as long as their account lives, not just year one. It&apos;s already
-              recording signups, so there&apos;s nothing to &ldquo;turn on.&rdquo; This is the passive
+              <span className="text-zinc-200">
+                lifetime residual on the platform&apos;s cut of their commerce
+              </span>{' '}
+              — for as long as their account lives, not just year one. It&apos;s already recording
+              signups, so there&apos;s nothing to &ldquo;turn on.&rdquo; This is the passive
               version; the models below are what you earn if you want to go deeper and operate.
             </p>
 
             <More label="How you get paid (and the escrow bit)">
               <p>
-                You don&apos;t need Stripe set up to start — the code accrues the whole time. When you
-                connect Stripe Connect, anything accrued since we started transfers to you then; if
-                you&apos;re already connected when a sale happens, it transfers at that sale. Until then
-                it&apos;s simply held for you, and you&apos;ll see the running total on your dashboard.
+                You don&apos;t need Stripe set up to start — the code accrues the whole time. When
+                you connect Stripe Connect, anything accrued since we started transfers to you then;
+                if you&apos;re already connected when a sale happens, it transfers at that sale.
+                Until then it&apos;s simply held for you, and you&apos;ll see the running total on
+                your dashboard.
               </p>
               <p>
-                Your exact cut + projections are on the dashboard and the calculator below — I&apos;d
-                rather you see live numbers than trust a number on a page.
+                Your exact cut + projections are on the dashboard and the calculator below —
+                I&apos;d rather you see live numbers than trust a number on a page.
               </p>
             </More>
 
             <div className="mt-4 flex flex-wrap gap-2 text-sm">
-              <Link href="/referrals/dashboard" className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 font-medium text-emerald-200 hover:bg-emerald-500/20">
+              <Link
+                href="/referrals/dashboard"
+                className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 font-medium text-emerald-200 hover:bg-emerald-500/20"
+              >
                 Your earnings dashboard →
               </Link>
-              <Link href="/partners/calculator" className="rounded-lg border border-zinc-700 px-4 py-2 text-zinc-200 hover:bg-zinc-800">
+              <Link
+                href="/partners/calculator"
+                className="rounded-lg border border-zinc-700 px-4 py-2 text-zinc-200 hover:bg-zinc-800"
+              >
                 Earnings calculator
               </Link>
             </div>
           </div>
+        </section>
+
+        {/* For you, as a realtor */}
+        <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+            The part that&apos;s actually for you — as a realtor
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            Forget referring anyone for a second. The fastest value is just{' '}
+            <span className="text-zinc-200">using it yourself as your own agent site</span> — free
+            to host, and loaded with things most agent sites (and the $99/mo IDX templates)
+            don&apos;t do:
+          </p>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+              <h3 className="text-sm font-semibold text-white">🔊 Your voice on every listing</h3>
+              <p className="mt-1.5 text-sm text-zinc-400">
+                A buyer scans the QR on your yard sign and <em>hears you</em> walk them through the
+                home — real voice, 24/7. One click makes the printable sign rider + cards. No other
+                template gives you this.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+              <h3 className="text-sm font-semibold text-white">🏷️ Leads on autopilot</h3>
+              <p className="mt-1.5 text-sm text-zinc-400">
+                A &ldquo;what&apos;s your home worth?&rdquo; seller-lead magnet + new-listing buyer
+                alerts, both landing straight in your inbox. Plus an affordability calculator that
+                keeps buyers on your site.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+              <h3 className="text-sm font-semibold text-white">🗺️ Showing-day tools</h3>
+              <p className="mt-1.5 text-sm text-zinc-400">
+                Plan a day of showings into one optimized route and share it with your buyer, and
+                let people book showings/consults from your real availability.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+              <h3 className="text-sm font-semibold text-white">📍 Hyperlocal SEO</h3>
+              <p className="mt-1.5 text-sm text-zinc-400">
+                One click generates &ldquo;Homes for sale in &lt;neighborhood&gt;&rdquo; guide pages
+                that rank for the exact searches your buyers and sellers make.
+              </p>
+            </div>
+          </div>
+
+          {/* The IDX design-partner ask */}
+          <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6">
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="text-lg font-bold text-white">
+                The one thing you can uniquely unlock: live MLS listings
+              </h3>
+              <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+                design partner?
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+              I just built the IDX integration — live MLS listings + a real home-search on your own
+              domain (not a Zillow profile, not an iframe). It&apos;s done and tested, but it&apos;s{' '}
+              <span className="text-zinc-200">
+                deliberately switched off until a real MLS feed is connected
+              </span>
+              , because that data is licensed agent-by-agent, MLS-by-MLS.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              Here&apos;s where you come in:{' '}
+              <span className="text-zinc-200">you&apos;re a working realtor with IDX access.</span>{' '}
+              If you&apos;re up for being the design partner, your MLS feed becomes our pilot — you
+              get a genuinely great agent site with live search + everything above, for free, and
+              you help me prove and shape it for every agent after you. That&apos;s the real ask,
+              and I think you&apos;re the perfect person for it.
+            </p>
+
+            <More label="The honest mechanics (licensing, cost, what I'd need from you)">
+              <p>
+                IDX data flows from <em>your</em> MLS to <em>you</em> (as a member who signs their
+                IDX/data agreement); QuickSites is just the tech that displays it, with the required
+                disclaimers and &ldquo;courtesy of&rdquo; attribution baked in. So the only real
+                gate is the paperwork on your side — the code is ready.
+              </p>
+              <p>
+                For a pilot I&apos;d start on a feed provider with no vendor fee (Bridge
+                Interactive) or the fastest one to wire up (SimplyRETS, ~$99 one-time) — I&apos;d
+                cover the pilot setup. From you I&apos;d need: which MLS you&apos;re in, and a
+                little time to walk through their IDX approval. That&apos;s it.
+              </p>
+              <Example>
+                You get: your own branded agent site at your domain, with live MLS search, your
+                voice on the listings, the lead magnets, the showing-route tool, and the
+                neighborhood pages — the whole stack, free, while we pilot. I get: a real feed to
+                prove it on, and your feedback as we build it right.
+              </Example>
+            </More>
+
+            <p className="mt-4 text-sm text-zinc-300">
+              Want to spin up your agent site and be the IDX design partner? Just reply — I&apos;ll
+              get you set up and we&apos;ll figure out the MLS piece together.
+            </p>
+          </div>
+
+          <p className="mt-4 text-sm text-zinc-500">
+            And of course, using it yourself makes the referral stuff below a lot more natural —
+            you&apos;d be recommending something you actually run your own business on.
+          </p>
         </section>
 
         {/* The models */}
@@ -194,15 +338,16 @@ export default function ForRyanPage() {
                     off photos. Custom domains attach when they&apos;re ready.
                   </p>
                   <p>
-                    There&apos;s no trial wall: a visitor can build a full draft site from the homepage
-                    without creating an account — the account happens when they want to publish. That
-                    ungated first taste is deliberate; it&apos;s the top of every funnel below.
+                    There&apos;s no trial wall: a visitor can build a full draft site from the
+                    homepage without creating an account — the account happens when they want to
+                    publish. That ungated first taste is deliberate; it&apos;s the top of every
+                    funnel below.
                   </p>
                   <Example>
                     A landscaper clicks &ldquo;start building&rdquo; on the homepage, picks
-                    &ldquo;Landscaping,&rdquo; and 90 seconds later is looking at a working site with
-                    her services, seasonal FAQ, and a quote form — before she&apos;s typed an email
-                    address. Publishing it is what creates the account.
+                    &ldquo;Landscaping,&rdquo; and 90 seconds later is looking at a working site
+                    with her services, seasonal FAQ, and a quote form — before she&apos;s typed an
+                    email address. Publishing it is what creates the account.
                   </Example>
                 </>
               }
@@ -221,9 +366,10 @@ export default function ForRyanPage() {
                   <p>
                     Any site can list things to sell — meals, physical products, services, digital
                     downloads, print-on-demand books and posters. Checkout runs on Stripe Connect:
-                    the customer&apos;s money goes <em>directly to the merchant&apos;s own Stripe
-                    account</em>, and the platform fee is carved out automatically in the same
-                    transaction. We never hold their funds.
+                    the customer&apos;s money goes{' '}
+                    <em>directly to the merchant&apos;s own Stripe account</em>, and the platform
+                    fee is carved out automatically in the same transaction. We never hold their
+                    funds.
                   </p>
                   <p>
                     The fee is honest by construction: locked in when the order is created, charged
@@ -254,9 +400,9 @@ export default function ForRyanPage() {
                     The pipeline, start to finish: find restaurants with <em>no website at all</em>{' '}
                     from their public listings → AI reads their menu off the listing photos → a full
                     ordering site goes up as a draft at their own delivered.menu address → real
-                    diners find it and try to order → those &ldquo;order intents&rdquo; are counted →
-                    the claim pitch writes itself: &ldquo;5 people tried to order from you this week.
-                    Claim your site and start collecting.&rdquo;
+                    diners find it and try to order → those &ldquo;order intents&rdquo; are counted
+                    → the claim pitch writes itself: &ldquo;5 people tried to order from you this
+                    week. Claim your site and start collecting.&rdquo;
                   </p>
                   <p>
                     The city domain contest stacks scarcity on top: we put a premium apex like
@@ -275,13 +421,13 @@ export default function ForRyanPage() {
               }
             >
               The flagship vertical. Tons of great local restaurants have no website at all — we
-              build them a full ordering site <em>before ever talking to them</em> (menu OCR&apos;d from
-              their public listing photos), park it at delivered.menu, and let real order demand
-              accumulate. The claim pitch becomes &ldquo;5 people tried to order from you this week —
-              claim your site.&rdquo; We also run <span className="text-zinc-300">city domain contests</span>:
-              a premium apex like renton-restaurant.com becomes the prize the first restaurant to
-              claim wins, and the domain fronts a live directory of all of them, earning rank while
-              they decide.
+              build them a full ordering site <em>before ever talking to them</em> (menu OCR&apos;d
+              from their public listing photos), park it at delivered.menu, and let real order
+              demand accumulate. The claim pitch becomes &ldquo;5 people tried to order from you
+              this week — claim your site.&rdquo; We also run{' '}
+              <span className="text-zinc-300">city domain contests</span>: a premium apex like
+              renton-restaurant.com becomes the prize the first restaurant to claim wins, and the
+              domain fronts a live directory of all of them, earning rank while they decide.
             </Model>
 
             <Model
@@ -315,7 +461,8 @@ export default function ForRyanPage() {
               For trades (towing, plumbing, roofing…), we buy exact-match domains like
               boston-towing.com, stand up a pitch site, and let it rank. Local businesses with no
               web presence rent the ranking asset. Different economics from restaurants — rent
-              instead of take-rate — because service jobs don&apos;t flow through an online checkout.
+              instead of take-rate — because service jobs don&apos;t flow through an online
+              checkout.
             </Model>
 
             <Model
@@ -332,8 +479,8 @@ export default function ForRyanPage() {
                   </p>
                   <p>
                     The money: the reseller sets the order fee for their merchants (anywhere up to{' '}
-                    {maxFeePct}%) and keeps {keepPct}% of every fee {residualLabel}. We keep{' '}
-                    {qsPct}% for running the rails — hosting, checkout, payouts, the AI. They own the
+                    {maxFeePct}%) and keeps {keepPct}% of every fee {residualLabel}. We keep {qsPct}
+                    % for running the rails — hosting, checkout, payouts, the AI. They own the
                     relationship; we&apos;re invisible infrastructure.
                   </p>
                   <Example>
@@ -359,7 +506,8 @@ export default function ForRyanPage() {
             Where you could plug in
           </h2>
           <p className="mt-2 text-sm text-zinc-500">
-            Three lanes, not mutually exclusive — plenty of people start in the first and drift right.
+            Three lanes, not mutually exclusive — plenty of people start in the first and drift
+            right.
           </p>
           <div className="mt-4 space-y-4">
             <Path
@@ -372,10 +520,10 @@ export default function ForRyanPage() {
                     <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-300">
                       quicksites.ai/?ref=ryan
                     </code>
-                    . When a business signs up through it, they&apos;re locked to your code. From then
-                    on, every paid order they process writes your {keepPct}% share of the platform
-                    fee to a commission ledger — automatically, at the moment the payment webhook
-                    lands. Refunded orders reverse; nothing is hand-counted.
+                    . When a business signs up through it, they&apos;re locked to your code. From
+                    then on, every paid order they process writes your {keepPct}% share of the
+                    platform fee to a commission ledger — automatically, at the moment the payment
+                    webhook lands. Refunded orders reverse; nothing is hand-counted.
                   </p>
                   <p>
                     Getting paid: you connect a Stripe account once (two minutes), and payout runs
@@ -411,8 +559,8 @@ export default function ForRyanPage() {
                     </code>
                     ). Each one becomes a full partner in their own right — {keepPct}% residuals on
                     their merchants, untouched. Your override is a negotiated slice carved{' '}
-                    <em>out of QuickSites&apos; {qsPct}%</em> (it can be up to that entire share), on
-                    every order their whole book processes, for as long as those merchants sell.
+                    <em>out of QuickSites&apos; {qsPct}%</em> (it can be up to that entire share),
+                    on every order their whole book processes, for as long as those merchants sell.
                   </p>
                   <p>
                     Why this isn&apos;t MLM math: there are exactly two tiers, your cut never comes
@@ -422,18 +570,18 @@ export default function ForRyanPage() {
                   <Example>
                     You recruit one hungry freelancer who signs 15 local merchants over a year.
                     Their book grows to $40k/mo in orders at an average 6% fee = $2,400/mo in fees.
-                    Your override at, say, half of QuickSites&apos; share would be $240/mo — from one
-                    recruit, while they do the selling.
+                    Your override at, say, half of QuickSites&apos; share would be $240/mo — from
+                    one recruit, while they do the selling.
                   </Example>
                 </>
               }
             >
               <p>
                 Bigger lever: recruit the people who <em>bring</em> merchants — freelancers,
-                agencies, community organizers. As their &ldquo;hub,&rdquo; you earn a lifetime override on
-                every order their whole book of merchants processes. The override comes out of
-                QuickSites&apos; {qsPct}% share, so it never touches what your recruits earn — no MLM
-                math, just a second-tier finder&apos;s fee that compounds as they grow.
+                agencies, community organizers. As their &ldquo;hub,&rdquo; you earn a lifetime
+                override on every order their whole book of merchants processes. The override comes
+                out of QuickSites&apos; {qsPct}% share, so it never touches what your recruits earn
+                — no MLM math, just a second-tier finder&apos;s fee that compounds as they grow.
               </p>
             </Path>
 
@@ -444,11 +592,11 @@ export default function ForRyanPage() {
                 <>
                   <p>
                     A day in the cockpit looks like: sweep a city (&ldquo;Austin, TX, 10km,
-                    restaurants + towing&rdquo;) and get back every business with no website; bulk-build
-                    draft sites for the promising ones (AI reads the menus); launch a domain contest
-                    or a geo campaign; mail QR postcards with per-prospect tracking; then watch the
-                    funnel — link scans, order intents, claims — and the revenue page reconcile
-                    against Stripe to the cent.
+                    restaurants + towing&rdquo;) and get back every business with no website;
+                    bulk-build draft sites for the promising ones (AI reads the menus); launch a
+                    domain contest or a geo campaign; mail QR postcards with per-prospect tracking;
+                    then watch the funnel — link scans, order intents, claims — and the revenue page
+                    reconcile against Stripe to the cent.
                   </p>
                   <p>
                     It&apos;s all one dashboard: discovery map, outreach pipeline, demand funnel,
@@ -467,8 +615,8 @@ export default function ForRyanPage() {
                 Behind the marketing site there&apos;s a full operator cockpit: sweep any city for
                 businesses with no website, auto-build their sites in bulk, run the domain contests,
                 mail QR postcards, watch demand and revenue reconcile against Stripe. If this turns
-                into something you want to run rather than refer into, that seat exists — it&apos;s how
-                I work the funnel today, and it&apos;s built to be handed to more operators.
+                into something you want to run rather than refer into, that seat exists — it&apos;s
+                how I work the funnel today, and it&apos;s built to be handed to more operators.
               </p>
             </Path>
           </div>
@@ -477,13 +625,18 @@ export default function ForRyanPage() {
         {/* Worked example */}
         <section className="mx-auto max-w-3xl px-6 pt-10 pb-4">
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
-            <h3 className="text-base font-semibold text-white">The math on one referred restaurant</h3>
+            <h3 className="text-base font-semibold text-white">
+              The math on one referred restaurant
+            </h3>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
               Say a taqueria you referred does $4,000/mo in online orders at a 5% platform fee.
-              That&apos;s $200/mo in fees — <span className="text-emerald-300">${(200 * PARTNER_FEE_SHARE).toFixed(0)}/mo
-              to you</span>, {residualLabel}, for one introduction. Ten of those is a car payment
-              that doesn&apos;t care whether you got out of bed. The reseller/hub lanes multiply the
-              same mechanic across someone else&apos;s hustle.
+              That&apos;s $200/mo in fees —{' '}
+              <span className="text-emerald-300">
+                ${(200 * PARTNER_FEE_SHARE).toFixed(0)}/mo to you
+              </span>
+              , {residualLabel}, for one introduction. Ten of those is a car payment that
+              doesn&apos;t care whether you got out of bed. The reseller/hub lanes multiply the same
+              mechanic across someone else&apos;s hustle.
             </p>
           </div>
         </section>
@@ -495,31 +648,48 @@ export default function ForRyanPage() {
           </h2>
           <ul className="mt-4 space-y-2 text-sm">
             <li>
-              <Link href="/" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+              <Link
+                href="/"
+                className="text-sky-400 underline underline-offset-4 hover:text-sky-300"
+              >
                 The homepage
               </Link>{' '}
-              <span className="text-zinc-500">— build a site as a guest, no account, see the product in 2 minutes</span>
+              <span className="text-zinc-500">
+                — build a site as a guest, no account, see the product in 2 minutes
+              </span>
             </li>
             <li>
-              <Link href="/partners" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+              <Link
+                href="/partners"
+                className="text-sky-400 underline underline-offset-4 hover:text-sky-300"
+              >
                 /partners
               </Link>{' '}
               <span className="text-zinc-500">— the reseller program in full</span>
             </li>
             <li>
-              <Link href="/partners/calculator" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+              <Link
+                href="/partners/calculator"
+                className="text-sky-400 underline underline-offset-4 hover:text-sky-300"
+              >
                 /partners/calculator
               </Link>{' '}
               <span className="text-zinc-500">— drag the sliders, see the earnings curves</span>
             </li>
             <li>
-              <Link href="/restaurants" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+              <Link
+                href="/restaurants"
+                className="text-sky-400 underline underline-offset-4 hover:text-sky-300"
+              >
                 /restaurants
               </Link>{' '}
               <span className="text-zinc-500">— the restaurant owner offer</span>
             </li>
             <li>
-              <Link href="/compare" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+              <Link
+                href="/compare"
+                className="text-sky-400 underline underline-offset-4 hover:text-sky-300"
+              >
                 /compare
               </Link>{' '}
               <span className="text-zinc-500">— honest feature chart vs Duda / GoHighLevel</span>
@@ -529,8 +699,8 @@ export default function ForRyanPage() {
           <div className="mt-10 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6 text-center">
             <p className="text-lg font-semibold text-white">Want your referral link right now?</p>
             <p className="mt-1 text-sm text-zinc-400">
-              It&apos;s self-serve — create an account and the partner dashboard mints your code, gives
-              you the shareable link, and connects payouts (Stripe). Takes about two minutes.
+              It&apos;s self-serve — create an account and the partner dashboard mints your code,
+              gives you the shareable link, and connects payouts (Stripe). Takes about two minutes.
             </p>
             <Link
               href="/partners/dashboard"

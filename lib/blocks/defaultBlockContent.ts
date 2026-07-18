@@ -620,4 +620,9 @@ export const DEFAULT_BLOCK_CONTENT = {
     cta_label: 'Notify me of new listings',
     disclaimer: 'No spam, no obligation — just the homes that fit. Unsubscribe anytime.',
   },
+  affordability_calculator: {
+    title: 'How much home can I afford?',
+    cta_label: 'Talk to me about your budget',
+    cta_href: '#contact',
+  },
 } as const satisfies Record<BlockType, any>;

@@ -63,6 +63,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   reviews: 'content', // owner-curated reviews (+ product JSON-LD when tied to one)
   home_valuation: 'interactive', // real-estate seller-lead magnet: "what's your home worth?"
   listing_alert: 'interactive', // real-estate buyer-lead: "get new listings first"
+  affordability_calculator: 'interactive', // buyer tool: "how much home can I afford?" (28/36)
   job_listing: 'interactive', // odd-jobs board gig: post + apply + submit (AisleAsk wedge)
   deck_estimate: 'interactive', // DeckSketch ballpark widget: dims in → price range + builder lead
   comments: 'interactive', // public UGC: moderated visitor comments/discussion

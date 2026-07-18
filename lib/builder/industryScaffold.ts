@@ -486,6 +486,7 @@ export function buildIndustryStarter(opts: {
       at,
       0,
       createDefaultBlock('home_valuation') as any,
+      createDefaultBlock('affordability_calculator') as any,
       createDefaultBlock('listing_alert') as any
     );
   }

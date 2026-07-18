@@ -613,4 +613,11 @@ export const DEFAULT_BLOCK_CONTENT = {
     disclaimer:
       "Your info comes straight to me — no spam, no obligation. I'll prepare a comparative market analysis for your home and follow up personally.",
   },
+  listing_alert: {
+    title: 'Get new listings first',
+    subtitle:
+      'Tell me what you’re looking for and I’ll send you matching homes the moment they hit the market.',
+    cta_label: 'Notify me of new listings',
+    disclaimer: 'No spam, no obligation — just the homes that fit. Unsubscribe anytime.',
+  },
 } as const satisfies Record<BlockType, any>;

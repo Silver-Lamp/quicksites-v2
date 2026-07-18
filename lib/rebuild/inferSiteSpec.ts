@@ -52,6 +52,13 @@ export type RebuildSpec = {
   menu?: { sections: MenuSectionSpec[] };
   contact?: ContactSpec;
   hours?: HoursDaySpec[];
+  // SEO-facing page title + meta description, name- and locale-grounded (e.g.
+  // "Rogue Ales Public House — Brewpub in Portland, OR"). When present, assembleDraft
+  // writes them into the home page's meta so the site ranks for brand + "<cuisine> in
+  // <city>" searches instead of the generic scaffold title. Populated by
+  // enrichListingCopy (LLM) on the listing-import path; optional everywhere else.
+  seoTitle?: string;
+  seoDescription?: string;
   // Brand storytelling — 2-4 image+text panels ("Created by…", "How it works").
   story?: { heading: string; body: string }[];
   // The VERBATIM existing copy from the source site (not rewritten), so the user can

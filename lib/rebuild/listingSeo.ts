@@ -32,6 +32,20 @@ export function cap(s: string, n: number): string {
 }
 
 /**
+ * Strip invented placeholder locales the LLM sometimes emits when it has no real place
+ * ("… in Your City", ", ST", "… in Your Area") so a location-less site never ships a fake
+ * one. The seo_title/description already fall back to the (locale-less) deterministic copy
+ * when no place is known; this defends the free-text headline/subheadline too.
+ */
+export function stripPlaceholderLocale(s: string): string {
+  return String(s ?? '')
+    .replace(/\s*[—-]?\s*\bin\s+Your\s+(City|Area)\b/gi, '')
+    .replace(/,\s*ST\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Deterministic name + locale SEO title/description from what we already know — no LLM.
  * Applied unconditionally so the auto-built page title always leads with the business name.
  *   title  → "Rogue Ales — Brewpub in Portland, OR"

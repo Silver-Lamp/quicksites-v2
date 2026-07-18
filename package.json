@@ -24,6 +24,7 @@
     "smoke:menu-photo": "tsx scripts/menu-photo-smoke.ts",
     "smoke:listing": "tsx scripts/listing-smoke.ts",
     "import:listings": "tsx scripts/import-listings-batch.ts",
+    "regenerate:listing-copy": "tsx scripts/regenerate-listing-copy.ts",
     "backfill:customers": "tsx scripts/backfill-customers.ts",
     "backfill:media": "tsx scripts/backfill-media-assets.ts",
     "backfill:seo": "tsx scripts/backfill-seo-readiness.ts",

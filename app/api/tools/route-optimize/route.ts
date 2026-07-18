@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 import { geocodeAddress } from '@/lib/route/geocodeAddress';
 import { optimizeRoute, totalStraightLineMiles } from '@/lib/route/optimizeRoute';
+import { buildMapsDirUrl } from '@/lib/route/mapsUrl';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,20 +39,6 @@ async function resolve(stop: InStop): Promise<Resolved | null> {
   if (!addr) return null;
   const g = await geocodeAddress(addr);
   return g ? { label, address: addr, latitude: g.latitude, longitude: g.longitude } : null;
-}
-
-function mapsDirUrl(ordered: Resolved[], start: Resolved): string {
-  const pt = (r: { latitude: number; longitude: number }) => `${r.latitude},${r.longitude}`;
-  const origin = pt(start);
-  const dest = ordered.length ? pt(ordered[ordered.length - 1]) : origin;
-  const waypoints = ordered.slice(0, -1).map(pt).join('|');
-  const u = new URL('https://www.google.com/maps/dir/');
-  u.searchParams.set('api', '1');
-  u.searchParams.set('origin', origin);
-  u.searchParams.set('destination', dest);
-  if (waypoints) u.searchParams.set('waypoints', waypoints);
-  u.searchParams.set('travelmode', 'driving');
-  return u.toString();
 }
 
 export async function POST(req: NextRequest) {
@@ -103,7 +90,7 @@ export async function POST(req: NextRequest) {
     start: { label: start.label, address: start.address, latitude: start.latitude, longitude: start.longitude },
     ordered: ordered.map((r) => ({ label: r.label, address: r.address, latitude: r.latitude, longitude: r.longitude })),
     total_miles: Math.round(miles * 10) / 10,
-    maps_url: mapsDirUrl(ordered, start),
+    maps_url: buildMapsDirUrl(ordered, start),
     unresolved,
     note: 'Straight-line order; distance is as-the-crow-flies, not driving miles.',
   });

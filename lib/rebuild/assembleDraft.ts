@@ -8,6 +8,7 @@
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import type { RebuildSpec } from '@/lib/rebuild/inferSiteSpec';
+import { formatContactAddress } from '@/lib/rebuild/parseAddress';
 import type { ProductSpec } from '@/lib/rebuild/importShopify';
 
 export type RebuildTemplate = {
@@ -22,11 +23,13 @@ export type RebuildTemplate = {
 };
 
 function slugify(s: string): string {
-  return (s || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 48) || 'site';
+  return (
+    (s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      .slice(0, 48) || 'site'
+  );
 }
 
 function rand(): string {
@@ -120,8 +123,11 @@ export function buildRebuildTemplate(opts: {
     if (loc?.content) {
       loc.content.business_name = loc.content.business_name || spec.businessName;
       if (spec.contact.address) {
-        loc.content.address = spec.contact.address;
-        loc.content.map_query = spec.contact.address;
+        // Display + geocode use the FULL single-line address (reconstructed from the parsed
+        // parts) so the map still resolves even though address/city/state/postal are split.
+        const fullAddress = formatContactAddress(spec.contact);
+        loc.content.address = fullAddress;
+        loc.content.map_query = fullAddress;
       }
       if (spec.contact.phone) loc.content.phone = spec.contact.phone;
       if (spec.contact.email) loc.content.email = spec.contact.email;
@@ -137,7 +143,9 @@ export function buildRebuildTemplate(opts: {
       const footerBlk =
         (tpl as any)?.data?.footerBlock ?? (tpl as any)?.footerBlock ?? (tpl as any)?.footer_block;
       if (digits && footerBlk?.content && Array.isArray(footerBlk.content.links)) {
-        const hasTel = footerBlk.content.links.some((l: any) => String(l?.href || '').startsWith('tel:'));
+        const hasTel = footerBlk.content.links.some((l: any) =>
+          String(l?.href || '').startsWith('tel:')
+        );
         if (!hasTel) {
           footerBlk.content.links.push({
             label: `Call ${spec.contact.phone}`,
@@ -154,7 +162,13 @@ export function buildRebuildTemplate(opts: {
     const hoursBlock = blocks.find((b) => b?.type === 'hours');
     if (hoursBlock?.content) {
       const LABEL: Record<string, string> = {
-        mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun',
+        mon: 'Mon',
+        tue: 'Tue',
+        wed: 'Wed',
+        thu: 'Thu',
+        fri: 'Fri',
+        sat: 'Sat',
+        sun: 'Sun',
       };
       hoursBlock.content.days = spec.hours.map((h) => ({
         key: h.day,
@@ -173,6 +187,11 @@ export function buildRebuildTemplate(opts: {
   // so without this the auto-built footer shows blanks even though "location" is filled.
   const metaContact: Record<string, string> = { ...(tpl.data?.meta?.contact ?? {}) };
   if (spec.contact?.address) metaContact.address = spec.contact.address;
+  // Structured parts so the footer "Company Info" city/state/postal fields fill in.
+  if (spec.contact?.address2) metaContact.address2 = spec.contact.address2;
+  if (spec.contact?.city) metaContact.city = spec.contact.city;
+  if (spec.contact?.state) metaContact.state = spec.contact.state;
+  if (spec.contact?.postal) metaContact.postal = spec.contact.postal;
   if (spec.contact?.phone) metaContact.phone = spec.contact.phone;
   if (spec.contact?.email) metaContact.email = spec.contact.email;
 
@@ -194,7 +213,9 @@ export function buildRebuildTemplate(opts: {
     site_type: 'small_business',
     industry: spec.industryKey,
     industry_label: spec.industryLabel,
-    ...(spec.industryKey === 'other' && spec.industryLabel ? { industry_other: spec.industryLabel } : {}),
+    ...(spec.industryKey === 'other' && spec.industryLabel
+      ? { industry_other: spec.industryLabel }
+      : {}),
     ...(Object.keys(metaContact).length ? { contact: metaContact } : {}),
     ...(copyVersions ? { copy: copyVersions } : {}),
     // Provenance: mark this as a rebuild + where it came from (useful for the
@@ -215,7 +236,13 @@ export function buildRebuildTemplate(opts: {
   };
 }
 
-export type CopyField = { headline?: string; subheadline?: string; about?: string; services?: string[]; faqs?: { q: string; a: string }[] };
+export type CopyField = {
+  headline?: string;
+  subheadline?: string;
+  about?: string;
+  services?: string[];
+  faqs?: { q: string; a: string }[];
+};
 export type CopyVersions = { original: CopyField; generated: CopyField };
 
 /**
@@ -225,7 +252,8 @@ export type CopyVersions = { original: CopyField; generated: CopyField };
  */
 export function buildCopyVersions(spec: RebuildSpec, services: string[]): CopyVersions | null {
   const o = spec.original;
-  if (!o || !(o.headline || o.subheadline || o.about || o.services?.length || o.faqs?.length)) return null;
+  if (!o || !(o.headline || o.subheadline || o.about || o.services?.length || o.faqs?.length))
+    return null;
   const original: CopyField = {
     ...(o.headline ? { headline: o.headline } : {}),
     ...(o.subheadline ? { subheadline: o.subheadline } : {}),
@@ -280,7 +308,11 @@ function applyProductBlocks(blocks: any[], products: ProductSpec[]): void {
  * section, in order; sections past the image count render text-only), and insert it
  * just before the FAQ/contact so the page flows hero → shop → story → faq → contact.
  */
-function applyStoryBlock(blocks: any[], story: { heading: string; body: string }[], images: string[]): void {
+function applyStoryBlock(
+  blocks: any[],
+  story: { heading: string; body: string }[],
+  images: string[]
+): void {
   const block: any = createDefaultBlock('story');
   block.content = {
     sections: story.map((s, i) => ({
@@ -317,7 +349,7 @@ function applyStoryBlock(blocks: any[], story: { heading: string; body: string }
 export function wireCatalogIntoTemplate(
   data: any,
   merchantId: string,
-  idByHandle: Record<string, string>,
+  idByHandle: Record<string, string>
 ): any {
   if (!data || !merchantId) return data;
   const blocks: any[] = data?.pages?.[0]?.blocks ?? [];

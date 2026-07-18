@@ -6,6 +6,7 @@ import { captureSignupIfNew } from '@/lib/analytics/funnel';
 import { claimPendingGuestDraft } from '@/lib/auth/claimGuestDraft';
 import { claimPendingSiteDraft } from '@/lib/auth/claimPendingSiteDraft';
 import { provisionPendingAuthorSite } from '@/lib/authorSites/provisionPendingAuthorSite';
+import { recordSignup } from '@/lib/referrals/codes';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,13 @@ export async function POST(req: NextRequest) {
   // Best-effort funnel: fire SIGNUP for a brand-new account (magic-link is the
   // primary signup path). Never blocks the session write.
   try { await captureSignupIfNew(data.user); } catch {}
+
+  // Referral attribution: if they arrived under a referral code (qs_ref cookie, set from
+  // ?ref=/join/<code> or the signup field), record the user-level signup (first-touch).
+  try {
+    const ref = store.get('qs_ref')?.value;
+    if (ref && data.user) await recordSignup({ userId: data.user.id, code: ref, email: data.user.email, source: 'ref_cookie' });
+  } catch {}
 
   // If a guest handed off a draft before logging in, transfer it now (before the
   // client redirects to the editor), so they land owning their work.

@@ -187,6 +187,7 @@ const NAV_ADMIN: NavItem[] = [
       { label: 'New Payout', href: '/admin/tax/payouts/new' },
     ],
   },
+  { type: 'item', label: 'Referral Codes', href: '/admin/referral-codes', icon: <BadgeIcon size={18} />, adminOnly: true },
   { type: 'item', label: 'Referrals', href: '/admin/referrals', icon: <User size={18} />, adminOnly: true },
   { type: 'item', label: 'Billing Map', href: '/admin/billing/map', icon: <ChartBar size={18} />, adminOnly: true },
 

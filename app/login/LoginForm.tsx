@@ -31,6 +31,12 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
   const [isLoading, setIsLoading] = useState(false);
   const [branding, setBranding] = useState<OrgBranding | null>(null);
 
+  // Referral code: prefilled from ?ref=, or shown behind a toggle. On send, we validate it +
+  // set the qs_ref cookie so attribution flows when they later create a store.
+  const [refCode, setRefCode] = useState('');
+  const [showRef, setShowRef] = useState(false);
+  const [refNote, setRefNote] = useState<string | null>(null);
+
   // Browser Supabase client (inherits user session from local storage)
   const sb = useMemo(
     () =>
@@ -132,6 +138,36 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
     }
   }, [sp]);
 
+  // Prefill the referral code from ?ref= (or an existing qs_ref cookie) and reveal the field.
+  useEffect(() => {
+    const fromParam = sp.get('ref');
+    const fromCookie = typeof document !== 'undefined'
+      ? document.cookie.split('; ').find((c) => c.startsWith('qs_ref='))?.split('=')[1]
+      : undefined;
+    const code = (fromParam || (fromCookie ? decodeURIComponent(fromCookie) : '') || '').trim();
+    if (code) {
+      setRefCode(code);
+      setShowRef(true);
+    }
+  }, [sp]);
+
+  /** Validate the referral code + set the qs_ref cookie. Best-effort — never blocks sign-in. */
+  const applyRefCode = async (): Promise<void> => {
+    const code = refCode.trim();
+    if (!code) return;
+    try {
+      const r = await fetch('/api/referrals/apply-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      if (r.ok) setRefNote(`✓ Referral code “${code}” applied.`);
+      else setRefNote('That referral code isn’t recognized — you can still sign in.');
+    } catch {
+      /* ignore — attribution is best-effort */
+    }
+  };
+
   const onSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (isLoading) return;
@@ -144,6 +180,9 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
 
     setIsLoading(true);
     setStatus('Sending magic link…');
+
+    // Apply the referral code first (sets qs_ref) so attribution is in place before signup.
+    if (refCode.trim()) await applyRefCode();
 
     try {
       const origin = window.location.origin;
@@ -237,6 +276,36 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
             className="w-full px-4 py-2 rounded-md bg-zinc-800 text-white border border-zinc-700 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             disabled={isLoading}
           />
+
+          {/* Referral code — optional, revealed by a toggle unless prefilled from ?ref/cookie */}
+          {showRef ? (
+            <div>
+              <label htmlFor="refCode" className="block text-xs text-zinc-400 mb-1">Referral code</label>
+              <input
+                id="refCode"
+                type="text"
+                value={refCode}
+                onChange={(e) => { setRefCode(e.target.value); setRefNote(null); }}
+                onBlur={applyRefCode}
+                placeholder="e.g. daniel"
+                autoCapitalize="none"
+                spellCheck={false}
+                className="w-full px-4 py-2 rounded-md bg-zinc-800 text-white border border-zinc-700 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                disabled={isLoading}
+              />
+              {refNote && (
+                <p className={`mt-1 text-xs ${refNote.startsWith('✓') ? 'text-green-400' : 'text-yellow-400'}`}>{refNote}</p>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowRef(true)}
+              className="text-xs text-zinc-400 hover:text-zinc-200 underline underline-offset-4"
+            >
+              Have a referral code?
+            </button>
+          )}
 
           <button
             type="submit"

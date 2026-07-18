@@ -6,6 +6,7 @@ import { captureSignupIfNew } from '@/lib/analytics/funnel';
 import { claimPendingGuestDraft } from '@/lib/auth/claimGuestDraft';
 import { claimPendingSiteDraft } from '@/lib/auth/claimPendingSiteDraft';
 import { provisionPendingAuthorSite } from '@/lib/authorSites/provisionPendingAuthorSite';
+import { recordSignup } from '@/lib/referrals/codes';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,11 @@ export async function GET(req: NextRequest) {
     }
     // Best-effort funnel: fire SIGNUP for a brand-new account (never blocks auth).
     try { await captureSignupIfNew(data.user); } catch {}
+    // Referral attribution: record a user-level signup if they arrived under a code.
+    try {
+      const ref = store.get('qs_ref')?.value;
+      if (ref && data.user) await recordSignup({ userId: data.user.id, code: ref, email: data.user.email, source: 'ref_cookie' });
+    } catch {}
     // Transfer a handed-off guest draft into this account before redirecting.
     await claimPendingGuestDraft(data.user, store);
     // Transfer an operator-assembled outreach draft (CedarSites) if one was armed.

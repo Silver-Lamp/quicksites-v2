@@ -120,6 +120,58 @@ export default function ForRyanPage() {
             small cut of the commerce that flows through them.</span> Hosting costs us almost nothing, so
             we give sites away and earn on orders instead of rent-seeking on hosting.
           </p>
+          <p className="mt-3 text-sm text-zinc-500">
+            And the zero-effort way in — your own referral code — is set up and live right now. 👇
+          </p>
+        </section>
+
+        {/* Your referral code — the no-effort option */}
+        <section className="mx-auto max-w-3xl px-6 pb-4">
+          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-lg font-bold text-white">Your referral code</h2>
+              <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+                lifetime residual
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+              If you ever mention QuickSites to anyone, just tell them to use the code{' '}
+              <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-sm font-semibold text-emerald-200">ryan</code>{' '}
+              when they sign up — or send them your link:
+            </p>
+            <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-sm text-zinc-200">
+              www.quicksites.ai/?ref=ryan
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              Anyone who signs up under it is tied to you, and you earn a{' '}
+              <span className="text-zinc-200">lifetime residual on the platform&apos;s cut of their
+              commerce</span> — for as long as their account lives, not just year one. It&apos;s already
+              recording signups, so there&apos;s nothing to &ldquo;turn on.&rdquo; This is the passive
+              version; the models below are what you earn if you want to go deeper and operate.
+            </p>
+
+            <More label="How you get paid (and the escrow bit)">
+              <p>
+                You don&apos;t need Stripe set up to start — the code accrues the whole time. When you
+                connect Stripe Connect, anything accrued since we started transfers to you then; if
+                you&apos;re already connected when a sale happens, it transfers at that sale. Until then
+                it&apos;s simply held for you, and you&apos;ll see the running total on your dashboard.
+              </p>
+              <p>
+                Your exact cut + projections are on the dashboard and the calculator below — I&apos;d
+                rather you see live numbers than trust a number on a page.
+              </p>
+            </More>
+
+            <div className="mt-4 flex flex-wrap gap-2 text-sm">
+              <Link href="/referrals/dashboard" className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 font-medium text-emerald-200 hover:bg-emerald-500/20">
+                Your earnings dashboard →
+              </Link>
+              <Link href="/partners/calculator" className="rounded-lg border border-zinc-700 px-4 py-2 text-zinc-200 hover:bg-zinc-800">
+                Earnings calculator
+              </Link>
+            </div>
+          </div>
         </section>
 
         {/* The models */}

@@ -11,7 +11,13 @@
 // Do NOT scrape Yelp/Google HTML directly (Cloudflare + ToS). Use the official APIs
 // here, or accept a pasted listing JSON.
 
-import type { RebuildSpec, ContactSpec, HoursDaySpec, MenuSectionSpec } from '@/lib/rebuild/inferSiteSpec';
+import type {
+  RebuildSpec,
+  ContactSpec,
+  HoursDaySpec,
+  MenuSectionSpec,
+} from '@/lib/rebuild/inferSiteSpec';
+import { parseUsAddress } from '@/lib/rebuild/parseAddress';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { typeToIndustryKey } from '@/lib/places/typeToIndustry';
 
@@ -97,7 +103,7 @@ export function prettyCategory(cat: string): string {
 export function buildSpecFromListing(
   listing: Listing,
   menu?: { sections: MenuSectionSpec[] } | undefined,
-  industryOverride?: IndustryKey,
+  industryOverride?: IndustryKey
 ): RebuildSpec {
   const cats = (listing.categories ?? []).filter(Boolean);
   const industryKey = industryOverride ?? typeToIndustryKey(cats);
@@ -113,7 +119,15 @@ export function buildSpecFromListing(
 
   const contact: ContactSpec = {};
   if (listing.phone) contact.phone = listing.phone;
-  if (listing.address) contact.address = listing.address;
+  if (listing.address) {
+    // Split the formatted listing address so city/state/postal land in the structured
+    // location + footer fields (was: the whole string dumped into `address`).
+    const parsed = parseUsAddress(listing.address);
+    contact.address = parsed.address;
+    if (parsed.city) contact.city = parsed.city;
+    if (parsed.state) contact.state = parsed.state;
+    if (parsed.postal) contact.postal = parsed.postal;
+  }
 
   const catLead = displayCats.length ? displayCats.slice(0, 2).join(' · ') : industryLabel;
   const subheadline = isRestaurant
@@ -146,7 +160,10 @@ export function buildSpecFromListing(
  * Place ID, so batch import can work from names instead of hand-looked-up ids.
  * Gated behind GOOGLE_PLACES_API_KEY.
  */
-export async function findPlace(query: string, fetchImpl: typeof fetch = fetch): Promise<{ placeId: string; name: string }> {
+export async function findPlace(
+  query: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<{ placeId: string; name: string }> {
   const key = process.env.GOOGLE_PLACES_API_KEY;
   if (!key) throw new ListingImportError('not_configured', 'GOOGLE_PLACES_API_KEY is not set.');
   const q = (query ?? '').trim();
@@ -170,7 +187,10 @@ export async function findPlace(query: string, fetchImpl: typeof fetch = fetch):
  * — throws ListingImportError('not_configured') until it's set, so the route can
  * fall back to a pasted listing JSON. `fetchImpl` is injectable for tests.
  */
-export async function fetchGooglePlace(placeId: string, fetchImpl: typeof fetch = fetch): Promise<Listing> {
+export async function fetchGooglePlace(
+  placeId: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<Listing> {
   const key = process.env.GOOGLE_PLACES_API_KEY;
   if (!key) throw new ListingImportError('not_configured', 'GOOGLE_PLACES_API_KEY is not set.');
   if (!placeId) throw new ListingImportError('invalid', 'A Google Place ID is required.');
@@ -186,12 +206,18 @@ export async function fetchGooglePlace(placeId: string, fetchImpl: typeof fetch 
     throw new ListingImportError('fetch_failed', e?.message || 'Places request failed.');
   }
   if (json?.status !== 'OK' || !json.result) {
-    throw new ListingImportError('not_found', json?.error_message || json?.status || 'Place not found.');
+    throw new ListingImportError(
+      'not_found',
+      json?.error_message || json?.status || 'Place not found.'
+    );
   }
   const r = json.result;
   const photos = (Array.isArray(r.photos) ? r.photos : [])
     .slice(0, 10) // more candidates so the menu-photo classifier has options
-    .map((p: any) => `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photo_reference=${p.photo_reference}&key=${key}`);
+    .map(
+      (p: any) =>
+        `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photo_reference=${p.photo_reference}&key=${key}`
+    );
 
   return {
     name: r.name,

@@ -15,12 +15,29 @@ import { meterLLMCall } from '@/lib/ai/meter';
 import { LABEL_TO_KEY, KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { ScrapedSite, MenuPage } from '@/lib/rebuild/scrapeSite';
 import type { ProductSpec } from '@/lib/rebuild/importShopify';
+import { parseUsAddress } from './parseAddress';
 
 const ROUTE = '/api/rebuild';
 
 export type MenuItemSpec = { name: string; description?: string; price?: string };
 export type MenuSectionSpec = { name: string; items: MenuItemSpec[] };
-export type ContactSpec = { phone?: string; address?: string; email?: string };
+export type ContactSpec = {
+  phone?: string;
+  /** Street line (line 1). A full formatted address is split into these parts via parseUsAddress. */
+  address?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  postal?: string;
+  email?: string;
+};
+
+// The address splitter lives in a pure, import-free module (imported above) so value-import
+// callers don't drag in this file's heavy transitive deps (AI meter → supabase). Re-export for
+// back-compat with existing `from inferSiteSpec` imports.
+export { parseUsAddress };
+export { formatContactAddress } from './parseAddress';
+
 export type HoursDaySpec = { day: string; open?: string; close?: string; closed?: boolean };
 
 export type RebuildSpec = {
@@ -58,7 +75,7 @@ export type RebuildSpec = {
 export async function inferSiteSpec(
   scraped: ScrapedSite,
   userId: string | null,
-  menuPages: MenuPage[] = [],
+  menuPages: MenuPage[] = []
 ): Promise<RebuildSpec> {
   const knownLabels = Object.values(KEY_TO_LABEL).join(', ');
   const hasMenuPages = menuPages.length > 0;
@@ -98,21 +115,28 @@ export async function inferSiteSpec(
       menuPages.map((p) => `## ${p.label}\n${p.text.slice(0, 2500)}`).join('\n\n')
     : '';
 
-  const user = [
-    scraped.businessName ? `Current name/title: ${scraped.businessName}` : null,
-    scraped.description ? `Meta description: ${scraped.description}` : null,
-    scraped.headings.length ? `Headings: ${scraped.headings.join(' | ')}` : null,
-    scraped.navLabels.length ? `Navigation: ${scraped.navLabels.join(', ')}` : null,
-    scraped.bodyText ? `Page text (truncated): ${scraped.bodyText}` : null,
-    `Source URL: ${scraped.sourceUrl}`,
-  ]
-    .filter(Boolean)
-    .join('\n') + menuBlock;
+  const user =
+    [
+      scraped.businessName ? `Current name/title: ${scraped.businessName}` : null,
+      scraped.description ? `Meta description: ${scraped.description}` : null,
+      scraped.headings.length ? `Headings: ${scraped.headings.join(' | ')}` : null,
+      scraped.navLabels.length ? `Navigation: ${scraped.navLabels.join(', ')}` : null,
+      scraped.bodyText ? `Page text (truncated): ${scraped.bodyText}` : null,
+      `Source URL: ${scraped.sourceUrl}`,
+    ]
+      .filter(Boolean)
+      .join('\n') + menuBlock;
 
   const fallbackName = scraped.businessName || hostFromUrl(scraped.sourceUrl) || 'Your Business';
 
   return meterLLMCall<RebuildSpec>(
-    { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', user_id: userId, route: ROUTE },
+    {
+      provider: 'openai',
+      model_code: 'gpt-4o-mini',
+      modality: 'chat',
+      user_id: userId,
+      route: ROUTE,
+    },
     async () => {
       const openai = getOpenAI('chat');
       const r = await openai.chat.completions.create({
@@ -140,12 +164,22 @@ export async function inferSiteSpec(
         industryKey: key,
         industryLabel: label,
         headline: String(parsed.headline || businessName).slice(0, 80),
-        subheadline: String(parsed.subheadline || scraped.description || `Trusted ${label.toLowerCase()}.`).slice(0, 160),
+        subheadline: String(
+          parsed.subheadline || scraped.description || `Trusted ${label.toLowerCase()}.`
+        ).slice(0, 160),
         about: String(parsed.about || '').slice(0, 600),
-        services: Array.isArray(parsed.services) ? parsed.services.map(String).map((s: string) => s.slice(0, 60)).slice(0, 6) : [],
+        services: Array.isArray(parsed.services)
+          ? parsed.services
+              .map(String)
+              .map((s: string) => s.slice(0, 60))
+              .slice(0, 6)
+          : [],
         faqs: Array.isArray(parsed.faqs)
           ? parsed.faqs
-              .map((f: any) => ({ q: String(f?.q ?? '').slice(0, 160), a: String(f?.a ?? '').slice(0, 400) }))
+              .map((f: any) => ({
+                q: String(f?.q ?? '').slice(0, 160),
+                a: String(f?.a ?? '').slice(0, 400),
+              }))
               .filter((f: { q: string }) => f.q)
               .slice(0, 3)
           : [],
@@ -160,7 +194,7 @@ export async function inferSiteSpec(
         value,
         usage: { input_tokens: r.usage?.prompt_tokens, output_tokens: r.usage?.completion_tokens },
       };
-    },
+    }
   );
 }
 
@@ -170,15 +204,27 @@ export function parseMenu(raw: any): { sections: MenuSectionSpec[] } | undefined
   const rawSections = Array.isArray(raw?.sections) ? raw.sections : Array.isArray(raw) ? raw : [];
   const sections: MenuSectionSpec[] = [];
   for (const s of rawSections.slice(0, 12)) {
-    const name = String(s?.name ?? '').trim().slice(0, 60);
+    const name = String(s?.name ?? '')
+      .trim()
+      .slice(0, 60);
     const rawItems = Array.isArray(s?.items) ? s.items : [];
     const items: MenuItemSpec[] = [];
     for (const it of rawItems.slice(0, 40)) {
-      const itemName = String(it?.name ?? '').trim().slice(0, 120);
+      const itemName = String(it?.name ?? '')
+        .trim()
+        .slice(0, 120);
       if (!itemName) continue;
-      const description = String(it?.description ?? '').trim().slice(0, 300);
-      const price = String(it?.price ?? '').trim().slice(0, 24);
-      items.push({ name: itemName, ...(description ? { description } : {}), ...(price ? { price } : {}) });
+      const description = String(it?.description ?? '')
+        .trim()
+        .slice(0, 300);
+      const price = String(it?.price ?? '')
+        .trim()
+        .slice(0, 24);
+      items.push({
+        name: itemName,
+        ...(description ? { description } : {}),
+        ...(price ? { price } : {}),
+      });
     }
     if (name && items.length) sections.push({ name, items });
   }
@@ -189,19 +235,39 @@ export function parseMenu(raw: any): { sections: MenuSectionSpec[] } | undefined
 export function parseOriginal(raw: any): RebuildSpec['original'] | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const out: NonNullable<RebuildSpec['original']> = {};
-  const headline = String(raw.headline ?? '').trim().slice(0, 200);
-  const subheadline = String(raw.subheadline ?? '').trim().slice(0, 300);
-  const about = String(raw.about ?? '').trim().slice(0, 1000);
+  const headline = String(raw.headline ?? '')
+    .trim()
+    .slice(0, 200);
+  const subheadline = String(raw.subheadline ?? '')
+    .trim()
+    .slice(0, 300);
+  const about = String(raw.about ?? '')
+    .trim()
+    .slice(0, 1000);
   if (headline) out.headline = headline;
   if (subheadline) out.subheadline = subheadline;
   if (about) out.about = about;
   if (Array.isArray(raw.services)) {
-    const services = raw.services.map((s: any) => String(s ?? '').trim().slice(0, 80)).filter(Boolean).slice(0, 12);
+    const services = raw.services
+      .map((s: any) =>
+        String(s ?? '')
+          .trim()
+          .slice(0, 80)
+      )
+      .filter(Boolean)
+      .slice(0, 12);
     if (services.length) out.services = services;
   }
   if (Array.isArray(raw.faqs)) {
     const faqs = raw.faqs
-      .map((f: any) => ({ q: String(f?.q ?? '').trim().slice(0, 200), a: String(f?.a ?? '').trim().slice(0, 600) }))
+      .map((f: any) => ({
+        q: String(f?.q ?? '')
+          .trim()
+          .slice(0, 200),
+        a: String(f?.a ?? '')
+          .trim()
+          .slice(0, 600),
+      }))
       .filter((f: { q: string }) => f.q)
       .slice(0, 8);
     if (faqs.length) out.faqs = faqs;
@@ -214,8 +280,12 @@ export function parseStory(raw: any): { heading: string; body: string }[] | unde
   if (!Array.isArray(raw)) return undefined;
   const out: { heading: string; body: string }[] = [];
   for (const s of raw.slice(0, 4)) {
-    const heading = String(s?.heading ?? '').trim().slice(0, 80);
-    const body = String(s?.body ?? '').trim().slice(0, 500);
+    const heading = String(s?.heading ?? '')
+      .trim()
+      .slice(0, 80);
+    const body = String(s?.body ?? '')
+      .trim()
+      .slice(0, 500);
     if (heading || body) out.push({ heading: heading || 'Our Story', body });
   }
   return out.length ? out : undefined;
@@ -224,12 +294,26 @@ export function parseStory(raw: any): { heading: string; body: string }[] | unde
 /** Pick the string contact fields the model found; undefined if none. */
 export function parseContact(raw: any): ContactSpec | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
-  const phone = String(raw.phone ?? '').trim().slice(0, 40);
-  const address = String(raw.address ?? '').trim().slice(0, 200);
-  const email = String(raw.email ?? '').trim().slice(0, 120);
+  const phone = String(raw.phone ?? '')
+    .trim()
+    .slice(0, 40);
+  const address = String(raw.address ?? '')
+    .trim()
+    .slice(0, 200);
+  const email = String(raw.email ?? '')
+    .trim()
+    .slice(0, 120);
   const out: ContactSpec = {};
   if (phone) out.phone = phone;
-  if (address) out.address = address;
+  if (address) {
+    // Split a full formatted address into structured parts so city/state/postal populate the
+    // location + footer fields (falls back to the whole string as `address`).
+    const parsed = parseUsAddress(address);
+    out.address = parsed.address;
+    if (parsed.city) out.city = parsed.city;
+    if (parsed.state) out.state = parsed.state;
+    if (parsed.postal) out.postal = parsed.postal;
+  }
   if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) out.email = email;
   return Object.keys(out).length ? out : undefined;
 }
@@ -243,7 +327,10 @@ export function parseHours(raw: any): HoursDaySpec[] | undefined {
   const out: HoursDaySpec[] = [];
   const seen = new Set<string>();
   for (const h of raw) {
-    const day = String(h?.day ?? '').trim().toLowerCase().slice(0, 3);
+    const day = String(h?.day ?? '')
+      .trim()
+      .toLowerCase()
+      .slice(0, 3);
     if (!DAY_KEYS.has(day) || seen.has(day)) continue;
     if (h?.closed === true) {
       seen.add(day);

@@ -103,13 +103,21 @@ const nextConfig = {
 
   async redirects() {
     const isLocal = process.env.NODE_ENV === 'development';
+    // Canonicalize ONLY the bare marketing apex to www. This rule was previously a
+    // catch-all (`^(?!www\.).*` → `www.:host`) that force-prepended www to EVERY
+    // non-www host — which broke every bare tenant subdomain (`<slug>.quicksites.ai`
+    // → `www.<slug>.quicksites.ai`, uncovered by the one-label `*.quicksites.ai`
+    // wildcard cert + unserved) plus custom + delivered.menu hosts. Scope it to the
+    // apex so `*.quicksites.ai` and custom domains are served as-is. (Vercel also has
+    // a domain-level `quicksites.ai → www.quicksites.ai` redirect; this is belt-and-
+    // suspenders and matches that intent.)
     return isLocal
       ? []
       : [
           {
             source: '/:path*',
-            has: [{ type: 'host', value: '^(?!www\\.).*' }],
-            destination: 'https://www.:host/:path*',
+            has: [{ type: 'host', value: '^quicksites\\.ai$' }],
+            destination: 'https://www.quicksites.ai/:path*',
             permanent: true,
           },
         ];

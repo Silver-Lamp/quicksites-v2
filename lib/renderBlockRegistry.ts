@@ -135,6 +135,8 @@ export const DYNAMIC_RENDERERS: Record<
   contact_form: () => import('@/components/admin/templates/render-blocks/contact-form'),
   home_valuation: () => import('@/components/admin/templates/render-blocks/home-valuation'),
   listing_alert: () => import('@/components/admin/templates/render-blocks/listing-alert'),
+  affordability_calculator: () =>
+    import('@/components/admin/templates/render-blocks/affordability-calculator'),
   hours: () => import('@/components/admin/templates/render-blocks/hours'),
   menu: () => import('@/components/admin/templates/render-blocks/menu'),
   location: () => import('@/components/admin/templates/render-blocks/location'),

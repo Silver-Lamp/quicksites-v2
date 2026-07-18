@@ -1662,6 +1662,18 @@ export const blockContentSchemaMap = {
       disclaimer: z.string().optional(),
     }),
   },
+
+  // Buyer affordability calculator: "how much home can I afford?" (28/36 guideline, pure
+  // client math). Distinct from a mortgage_calculator (payment-from-price).
+  affordability_calculator: {
+    label: 'Affordability Calculator',
+    icon: '🧮',
+    schema: z.object({
+      title: z.string().optional(),
+      cta_label: z.string().optional(),
+      cta_href: z.string().optional(),
+    }),
+  },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
 /* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ───────────── */

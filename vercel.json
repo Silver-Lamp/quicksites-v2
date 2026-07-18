@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/design-partner-nudges",
+      "schedule": "0 15 * * *"
+    },
+    {
       "path": "/api/cron/email-drain",
       "schedule": "0 10 * * *"
     },

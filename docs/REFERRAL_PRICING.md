@@ -96,12 +96,20 @@ admin).
    Stripe. The affiliate tier is already net-safe; the reseller tier is not, and it
    predates this doc. Decide before scaling resellers.
 
-2. **Recommended: set `on_behalf_of` on the charge.** Adding
-   `on_behalf_of: connectedAccountId` makes the **merchant** the settlement merchant
-   of record, so **Stripe fees come out of the merchant's side, not QS's**. QS would
-   then keep the full application fee, which (a) fixes the reseller-80% math and
-   (b) lets us be _more_ generous on affiliate cuts. Tradeoffs: changes the
-   statement descriptor / merchant-of-record, dispute liability, and tax reporting
-   for the connected account, and needs the right Connect capabilities — so it's an
-   **owner + Stripe-config decision**, not a silent flip. Not implemented; flagged
-   here.
+2. **`on_behalf_of` — implemented behind a flag (`QS_STRIPE_ON_BEHALF_OF`, OFF).**
+   Setting `on_behalf_of: connectedAccountId` makes the **merchant** the settlement
+   merchant of record, so **Stripe fees come out of the merchant's side, not QS's**.
+   QS then keeps the full application fee, which (a) fixes the reseller-80% math and
+   (b) lets us be _more_ generous on affiliate cuts. Both charge sites honor the flag
+   (`lib/payments/stripe.ts`, `lib/commerce/adapters/stripeAdapter.ts`) via
+   `lib/payments/onBehalfOf.ts`. Tradeoffs: changes the statement descriptor /
+   merchant-of-record, dispute liability, and tax reporting for the connected
+   account, and the exact fee flow depends on Connect config — so it stays **OFF in
+   prod**. **To adopt:** set `QS_STRIPE_ON_BEHALF_OF=1` in a **test-mode** Connect
+   account, run a charge, and confirm the balance-transaction fee lands on the
+   connected account before enabling in production.
+
+   **If `on_behalf_of` is adopted, the reseller-80% concern in (1) goes away** — QS
+   keeps the full fee, so 80%-of-gross to the reseller is sustainable again. The two
+   items are the same root cause (Stripe fee incidence); this is the cleaner fix
+   because it doesn't reduce anyone's payout.

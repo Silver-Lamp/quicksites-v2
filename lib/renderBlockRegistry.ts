@@ -134,6 +134,7 @@ export const DYNAMIC_RENDERERS: Record<
   faq: () => import('@/components/admin/templates/render-blocks/faq'),
   contact_form: () => import('@/components/admin/templates/render-blocks/contact-form'),
   home_valuation: () => import('@/components/admin/templates/render-blocks/home-valuation'),
+  listing_alert: () => import('@/components/admin/templates/render-blocks/listing-alert'),
   hours: () => import('@/components/admin/templates/render-blocks/hours'),
   menu: () => import('@/components/admin/templates/render-blocks/menu'),
   location: () => import('@/components/admin/templates/render-blocks/location'),

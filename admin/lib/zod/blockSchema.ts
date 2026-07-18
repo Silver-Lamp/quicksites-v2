@@ -1648,6 +1648,20 @@ export const blockContentSchemaMap = {
       disclaimer: z.string().optional(),
     }),
   },
+
+  // Real-estate buyer-lead capture: "get new listings first" — buyer's search criteria in,
+  // qualified buyer lead to the agent out (agent follows up with matches; becomes a real
+  // saved search if an IDX/listing feed is wired later).
+  listing_alert: {
+    label: 'New-listing Alerts',
+    icon: '🔔',
+    schema: z.object({
+      title: z.string().optional(),
+      subtitle: z.string().optional(),
+      cta_label: z.string().optional(),
+      disclaimer: z.string().optional(),
+    }),
+  },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
 /* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ───────────── */

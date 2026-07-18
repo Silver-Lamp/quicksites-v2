@@ -478,11 +478,16 @@ export function buildIndustryStarter(opts: {
       createDefaultBlock('listings_grid') as any,
       createDefaultBlock('listing_card') as any
     );
-    // The seller-lead magnet ("what's your home worth?") — highest-value tool on an agent site.
-    // Land it just before the contact block so it's the primary conversion CTA.
+    // The lead magnets — seller-side ("what's your home worth?") + buyer-side ("get new
+    // listings first") — just before the contact block, as the primary conversion CTAs.
     const contactIdx = blocks.findIndex((b: any) => b?.type === 'contact_form');
     const at = contactIdx >= 0 ? contactIdx : blocks.length;
-    blocks.splice(at, 0, createDefaultBlock('home_valuation') as any);
+    blocks.splice(
+      at,
+      0,
+      createDefaultBlock('home_valuation') as any,
+      createDefaultBlock('listing_alert') as any
+    );
   }
 
   // Photographers lead with their work — a photo gallery right after the hero (the

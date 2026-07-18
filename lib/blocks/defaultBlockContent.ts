@@ -183,8 +183,6 @@ export const DEFAULT_BLOCK_CONTENT = {
     services: [],
   },
 
-
-
   /* ───────── hours (matches HoursOfOperationSchema) ───────── */
 
   hours: {
@@ -215,7 +213,12 @@ export const DEFAULT_BLOCK_CONTENT = {
         name: 'Popular',
         description: '',
         items: [
-          { name: 'House Favorite', description: 'A short, appetizing description.', price: '$12', tags: [] },
+          {
+            name: 'House Favorite',
+            description: 'A short, appetizing description.',
+            price: '$12',
+            tags: [],
+          },
         ],
       },
     ],
@@ -236,7 +239,13 @@ export const DEFAULT_BLOCK_CONTENT = {
 
   /* ───────── order bar (restaurant) ───────── */
 
-  order_bar: { phone: '', call_label: 'Call', cta_label: 'View Menu', cta_href: '#menu', enabled: true },
+  order_bar: {
+    phone: '',
+    call_label: 'Call',
+    cta_label: 'View Menu',
+    cta_href: '#menu',
+    enabled: true,
+  },
 
   /* ───────── commerce ───────── */
 
@@ -256,13 +265,32 @@ export const DEFAULT_BLOCK_CONTENT = {
     ends_at: '',
     dismissible: true,
   },
-  sticky_cart: { productId: '', cta_text: 'Add to cart', label: '', price_cents: 0, show_on_desktop: false, enabled: true },
+  sticky_cart: {
+    productId: '',
+    cta_text: 'Add to cart',
+    label: '',
+    price_cents: 0,
+    show_on_desktop: false,
+    enabled: true,
+  },
   demo_embed: { slug: '', width: '' },
-  voice_welcome: { audio_url: '', embed_id: '', welcome_id: '', script: '', voice: 'narrator', title: '' },
+  voice_welcome: {
+    audio_url: '',
+    embed_id: '',
+    welcome_id: '',
+    script: '',
+    voice: 'narrator',
+    title: '',
+  },
   testimonial_audio: {
     title: 'What customers say',
     testimonials: [
-      { quote: 'Replace this with a real review — word-for-word from Google, Yelp, or an email.', author: 'A happy customer', audio_url: '', testimonial_id: '' },
+      {
+        quote: 'Replace this with a real review — word-for-word from Google, Yelp, or an email.',
+        author: 'A happy customer',
+        audio_url: '',
+        testimonial_id: '',
+      },
     ],
   },
   route_optimizer: {
@@ -274,7 +302,15 @@ export const DEFAULT_BLOCK_CONTENT = {
   events: {
     title: 'Upcoming events',
     events: [
-      { name: 'Weekly gathering', date: '', when: 'Sundays, 10:00 AM', location: '', description: 'Everyone welcome.', cta_text: '', cta_link: '' },
+      {
+        name: 'Weekly gathering',
+        date: '',
+        when: 'Sundays, 10:00 AM',
+        location: '',
+        description: 'Everyone welcome.',
+        cta_text: '',
+        cta_link: '',
+      },
     ],
   },
   gallery: {
@@ -289,7 +325,13 @@ export const DEFAULT_BLOCK_CONTENT = {
     before_label: 'Before',
     after_label: 'After',
   },
-  comments: { title: 'Comments', moderation: true, allow_links: false, closed: false, notify_email: '' },
+  comments: {
+    title: 'Comments',
+    moderation: true,
+    allow_links: false,
+    closed: false,
+    notify_email: '',
+  },
   job_listing: {
     kind: 'general',
     title: 'Help wanted — one-time gig',
@@ -305,7 +347,8 @@ export const DEFAULT_BLOCK_CONTENT = {
   deck_estimate: {
     trade: 'deck',
     title: 'Instant deck estimate',
-    subtitle: 'Enter a few dimensions for a ballpark price — then we’ll follow up with a real quote.',
+    subtitle:
+      'Enter a few dimensions for a ballpark price — then we’ll follow up with a real quote.',
     default_material_tier: 'pressure_treated',
     show_refiners: true,
     cta_text: 'Get this quote from us',
@@ -316,25 +359,96 @@ export const DEFAULT_BLOCK_CONTENT = {
     product_name: '',
     show_schema: true,
     reviews: [
-      { author: 'A happy customer', rating: 5, text: 'Replace this with a real review — copy it word-for-word from Google, Yelp, or an email.', date: '' },
+      {
+        author: 'A happy customer',
+        rating: 5,
+        text: 'Replace this with a real review — copy it word-for-word from Google, Yelp, or an email.',
+        date: '',
+      },
     ],
   },
   listings_grid: {
     title: 'Current Listings',
     columns: 3,
     listings: [
-      { headline: 'Sun-filled craftsman', address: '123 Maple St, Your City, ST', price: '$524,900', status: 'For sale', beds: '3', baths: '2.5', sqft: '1,850', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
-      { headline: 'Modern townhome', address: '88 Birch Ln, Your City, ST', price: '$389,000', status: 'For sale', beds: '2', baths: '1.5', sqft: '1,320', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
-      { headline: 'Lakeside retreat', address: '5 Cove Rd, Your City, ST', price: '$742,500', status: 'Pending', beds: '4', baths: '3', sqft: '2,600', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
+      {
+        headline: 'Sun-filled craftsman',
+        address: '123 Maple St, Your City, ST',
+        price: '$524,900',
+        status: 'For sale',
+        beds: '3',
+        baths: '2.5',
+        sqft: '1,850',
+        image_url: '',
+        cta_link: '#contact',
+        about_that_embed_id: '',
+      },
+      {
+        headline: 'Modern townhome',
+        address: '88 Birch Ln, Your City, ST',
+        price: '$389,000',
+        status: 'For sale',
+        beds: '2',
+        baths: '1.5',
+        sqft: '1,320',
+        image_url: '',
+        cta_link: '#contact',
+        about_that_embed_id: '',
+      },
+      {
+        headline: 'Lakeside retreat',
+        address: '5 Cove Rd, Your City, ST',
+        price: '$742,500',
+        status: 'Pending',
+        beds: '4',
+        baths: '3',
+        sqft: '2,600',
+        image_url: '',
+        cta_link: '#contact',
+        about_that_embed_id: '',
+      },
     ],
   },
   vehicles_grid: {
     title: 'Current Inventory',
     columns: 3,
     vehicles: [
-      { year: '2021', make: 'Toyota', model: 'RAV4', trim: 'XLE AWD', price: '$26,995', mileage: '38,420 mi', status: 'Available', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
-      { year: '2019', make: 'Honda', model: 'Civic', trim: 'EX', price: '$18,995', mileage: '52,110 mi', status: 'Available', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
-      { year: '2020', make: 'Ford', model: 'F-150', trim: 'XLT 4x4', price: '$34,500', mileage: '41,780 mi', status: 'Available', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
+      {
+        year: '2021',
+        make: 'Toyota',
+        model: 'RAV4',
+        trim: 'XLE AWD',
+        price: '$26,995',
+        mileage: '38,420 mi',
+        status: 'Available',
+        image_url: '',
+        cta_link: '#contact',
+        about_that_embed_id: '',
+      },
+      {
+        year: '2019',
+        make: 'Honda',
+        model: 'Civic',
+        trim: 'EX',
+        price: '$18,995',
+        mileage: '52,110 mi',
+        status: 'Available',
+        image_url: '',
+        cta_link: '#contact',
+        about_that_embed_id: '',
+      },
+      {
+        year: '2020',
+        make: 'Ford',
+        model: 'F-150',
+        trim: 'XLT 4x4',
+        price: '$34,500',
+        mileage: '41,780 mi',
+        status: 'Available',
+        image_url: '',
+        cta_link: '#contact',
+        about_that_embed_id: '',
+      },
     ],
   },
   listing_card: {
@@ -483,7 +597,20 @@ export const DEFAULT_BLOCK_CONTENT = {
   },
   story: {
     sections: [
-      { heading: 'Our Story', body: 'Tell your story here.', image_url: '', cta_text: '', cta_link: '' },
+      {
+        heading: 'Our Story',
+        body: 'Tell your story here.',
+        image_url: '',
+        cta_text: '',
+        cta_link: '',
+      },
     ],
+  },
+  home_valuation: {
+    title: "What's your home worth?",
+    subtitle: 'Get a personalized valuation from a local expert who knows your neighborhood.',
+    cta_label: 'Get my valuation',
+    disclaimer:
+      "Your info comes straight to me — no spam, no obligation. I'll prepare a comparative market analysis for your home and follow up personally.",
   },
 } as const satisfies Record<BlockType, any>;

@@ -12,23 +12,56 @@ const wrap = (Comp: any) => (props: any) =>
   React.createElement(Comp, { content: props?.content ?? props, ...props });
 
 // ElectInfo loaders
-const loadCandidateHero         = () => import('@/components/blocks/candidate/hero')                .then(m => ({ default: wrap(m.CandidateHeroBlock) }));
-const loadCandidateAbout        = () => import('@/components/blocks/candidate/about')               .then(m => ({ default: wrap(m.CandidateAboutBlock) }));
-const loadCandidateIssues       = () => import('@/components/blocks/candidate/issues-grid')         .then(m => ({ default: wrap(m.CandidateIssuesGridBlock) }));
-const loadCandidateEndorsements = () => import('@/components/blocks/candidate/endorsements')        .then(m => ({ default: wrap(m.CandidateEndorsementsBlock) }));
-const loadCandidateEvents       = () => import('@/components/blocks/candidate/events')              .then(m => ({ default: wrap(m.CandidateEventsBlock) }));
-const loadCandidateStay         = () => import('@/components/blocks/candidate/stay-connected')      .then(m => ({ default: wrap(m.CandidateStayConnectedBlock) }));
-const loadCandidatePrintQR      = () => import('@/components/blocks/candidate/print-qr')            .then(m => ({ default: wrap(m.CandidatePrintQRBlock) }));
-const loadCandidateDonate       = () => import('@/components/blocks/candidate/donate')              .then(m => ({ default: wrap(m.CandidateDonateBlock) }));
-const loadCandidateVolunteer    = () => import('@/components/blocks/candidate/volunteer')           .then(m => ({ default: wrap(m.CandidateVolunteerBlock) }));
-const loadPublicQrInfo          = () => import('@/components/blocks/candidate/public-qr-info')      .then(m => ({ default: wrap(m.PublicQrInfoBlock) }));
-const loadPublicQrSidebar       = () => import('@/components/blocks/candidate/public-qr-sidebar')   .then(m => ({ default: wrap(m.PublicQrSidebarBlock) }));
+const loadCandidateHero = () =>
+  import('@/components/blocks/candidate/hero').then((m) => ({
+    default: wrap(m.CandidateHeroBlock),
+  }));
+const loadCandidateAbout = () =>
+  import('@/components/blocks/candidate/about').then((m) => ({
+    default: wrap(m.CandidateAboutBlock),
+  }));
+const loadCandidateIssues = () =>
+  import('@/components/blocks/candidate/issues-grid').then((m) => ({
+    default: wrap(m.CandidateIssuesGridBlock),
+  }));
+const loadCandidateEndorsements = () =>
+  import('@/components/blocks/candidate/endorsements').then((m) => ({
+    default: wrap(m.CandidateEndorsementsBlock),
+  }));
+const loadCandidateEvents = () =>
+  import('@/components/blocks/candidate/events').then((m) => ({
+    default: wrap(m.CandidateEventsBlock),
+  }));
+const loadCandidateStay = () =>
+  import('@/components/blocks/candidate/stay-connected').then((m) => ({
+    default: wrap(m.CandidateStayConnectedBlock),
+  }));
+const loadCandidatePrintQR = () =>
+  import('@/components/blocks/candidate/print-qr').then((m) => ({
+    default: wrap(m.CandidatePrintQRBlock),
+  }));
+const loadCandidateDonate = () =>
+  import('@/components/blocks/candidate/donate').then((m) => ({
+    default: wrap(m.CandidateDonateBlock),
+  }));
+const loadCandidateVolunteer = () =>
+  import('@/components/blocks/candidate/volunteer').then((m) => ({
+    default: wrap(m.CandidateVolunteerBlock),
+  }));
+const loadPublicQrInfo = () =>
+  import('@/components/blocks/candidate/public-qr-info').then((m) => ({
+    default: wrap(m.PublicQrInfoBlock),
+  }));
+const loadPublicQrSidebar = () =>
+  import('@/components/blocks/candidate/public-qr-sidebar').then((m) => ({
+    default: wrap(m.PublicQrSidebarBlock),
+  }));
 
 const LOCAL_ALIASES: Record<string, BlockType | string> = {
-  'exterior_agency': 'exterior_agency',
-  'exterior_cleaning_agency': 'exterior_agency',
+  exterior_agency: 'exterior_agency',
+  exterior_cleaning_agency: 'exterior_agency',
   'exterior-cleaning-agency': 'exterior_agency',
-  'pnw_prestige': 'exterior_agency',
+  pnw_prestige: 'exterior_agency',
   // ElectInfo (optional)
   'candidate-hero': 'candidate_hero',
   'candidate-about': 'candidate_about',
@@ -76,14 +109,14 @@ export const DYNAMIC_RENDERERS: Record<
   exterior_cleaning_agency: loadExteriorAgency,
   pnw_prestige: loadExteriorAgency,
 
-  text:   () => import('@/components/admin/templates/render-blocks/text'),
-  image:  () => import('@/components/admin/templates/render-blocks/image'),
-  video:  () => import('@/components/admin/templates/render-blocks/video'),
-  audio:  () => import('@/components/admin/templates/render-blocks/audio'),
-  quote:  () => import('@/components/admin/templates/render-blocks/quote'),
+  text: () => import('@/components/admin/templates/render-blocks/text'),
+  image: () => import('@/components/admin/templates/render-blocks/image'),
+  video: () => import('@/components/admin/templates/render-blocks/video'),
+  audio: () => import('@/components/admin/templates/render-blocks/audio'),
+  quote: () => import('@/components/admin/templates/render-blocks/quote'),
   button: () => import('@/components/admin/templates/render-blocks/button'),
-  grid:   () => import('@/components/admin/templates/render-blocks/grid'),
-  section:() => import('@/components/admin/templates/render-blocks/section'),
+  grid: () => import('@/components/admin/templates/render-blocks/grid'),
+  section: () => import('@/components/admin/templates/render-blocks/section'),
   services: () =>
     import('@/components/admin/templates/render-blocks/services').then((mod) => ({
       default: (props: any) =>
@@ -92,20 +125,22 @@ export const DYNAMIC_RENDERERS: Record<
           services: props?.services ?? props?.template?.services ?? [],
         }),
     })),
-  cta:          () => import('@/components/admin/templates/render-blocks/cta'),
-  story:        () => import('@/components/admin/templates/render-blocks/story'),
-  testimonial:  () => import('@/components/admin/templates/render-blocks/testimonial'),
-  footer:       () => import('@/components/admin/templates/render-blocks/footer'),
-  service_areas:() => import('@/components/admin/templates/render-blocks/service-areas'),
-  header:       () => import('@/components/admin/templates/render-blocks/header'),
-  faq:          () => import('@/components/admin/templates/render-blocks/faq'),
+  cta: () => import('@/components/admin/templates/render-blocks/cta'),
+  story: () => import('@/components/admin/templates/render-blocks/story'),
+  testimonial: () => import('@/components/admin/templates/render-blocks/testimonial'),
+  footer: () => import('@/components/admin/templates/render-blocks/footer'),
+  service_areas: () => import('@/components/admin/templates/render-blocks/service-areas'),
+  header: () => import('@/components/admin/templates/render-blocks/header'),
+  faq: () => import('@/components/admin/templates/render-blocks/faq'),
   contact_form: () => import('@/components/admin/templates/render-blocks/contact-form'),
-  hours:        () => import('@/components/admin/templates/render-blocks/hours'),
-  menu:         () => import('@/components/admin/templates/render-blocks/menu'),
-  location:     () => import('@/components/admin/templates/render-blocks/location'),
-  order_bar:    () => import('@/components/admin/templates/render-blocks/order-bar'),
+  home_valuation: () => import('@/components/admin/templates/render-blocks/home-valuation'),
+  hours: () => import('@/components/admin/templates/render-blocks/hours'),
+  menu: () => import('@/components/admin/templates/render-blocks/menu'),
+  location: () => import('@/components/admin/templates/render-blocks/location'),
+  order_bar: () => import('@/components/admin/templates/render-blocks/order-bar'),
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
-  restaurants_directory: () => import('@/components/admin/templates/render-blocks/restaurants-directory'),
+  restaurants_directory: () =>
+    import('@/components/admin/templates/render-blocks/restaurants-directory'),
   about_that: () => import('@/components/admin/templates/render-blocks/about-that'),
   audio_faq: () => import('@/components/admin/templates/render-blocks/audio-faq'),
   quote_of_the_day: () => import('@/components/admin/templates/render-blocks/quote-of-the-day'),
@@ -178,9 +213,7 @@ export function getDynamicRenderer(
   if (t in STATIC_RENDERERS) return undefined;
   return (DYNAMIC_RENDERERS as any)[t];
 }
-export async function loadRenderer(
-  input: string
-): Promise<{ default: BlockRenderer } | null> {
+export async function loadRenderer(input: string): Promise<{ default: BlockRenderer } | null> {
   const s = getStaticRenderer(input);
   if (s) return { default: s };
   const d = getDynamicRenderer(input);

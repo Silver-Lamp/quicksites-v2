@@ -10,7 +10,13 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { generateServices } from '@/lib/generateServices';
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
-import { getCuratedTheme, toStampedTheme, type StampedTheme, type ThemeCategory, type ThemeLayout } from '@/lib/theme/curatedThemes';
+import {
+  getCuratedTheme,
+  toStampedTheme,
+  type StampedTheme,
+  type ThemeCategory,
+  type ThemeLayout,
+} from '@/lib/theme/curatedThemes';
 import { industryStyle } from '@/lib/builder/industryStyle';
 import { pickHeroCopy, pickFaqItems, pickTestimonials } from '@/lib/builder/industryCopy';
 
@@ -27,7 +33,11 @@ export type StarterTheme = {
  *  See lib/theme/curatedThemes.ts + lib/theme/pickTheme.ts. */
 export function themeForIndustry(key: IndustryKey, themeId?: string | null): StarterTheme {
   const curated = getCuratedTheme(themeId) ?? pickCuratedTheme({ industry: key });
-  return { colorMode: curated.darkMode, stamped: toStampedTheme(curated), category: curated.category };
+  return {
+    colorMode: curated.darkMode,
+    stamped: toStampedTheme(curated),
+    category: curated.category,
+  };
 }
 
 /**
@@ -40,17 +50,17 @@ export type Archetype =
   | 'story_led'
   | 'proof_led'
   | 'conversion'
-  | 'showcase'      // long-form: everything, for a comprehensive brand page
-  | 'benefits_led'  // lead with the story/benefits + an early CTA, services after
-  | 'trust_first';  // social proof up top, then services
+  | 'showcase' // long-form: everything, for a comprehensive brand page
+  | 'benefits_led' // lead with the story/benefits + an early CTA, services after
+  | 'trust_first'; // social proof up top, then services
 
 const ARCHETYPE_WEIGHTS: Record<ThemeCategory, Partial<Record<Archetype, number>>> = {
-  editorial:    { story_led: 3, showcase: 2, classic: 1 },
-  warm:         { story_led: 2, proof_led: 2, benefits_led: 2, classic: 1 },
+  editorial: { story_led: 3, showcase: 2, classic: 1 },
+  warm: { story_led: 2, proof_led: 2, benefits_led: 2, classic: 1 },
   professional: { classic: 2, proof_led: 2, showcase: 1, trust_first: 1 },
-  playful:      { conversion: 2, proof_led: 1, benefits_led: 2, classic: 1 },
-  neon:         { conversion: 2, proof_led: 1, trust_first: 1 },
-  rugged:       { classic: 2, conversion: 2, benefits_led: 1, trust_first: 1 },
+  playful: { conversion: 2, proof_led: 1, benefits_led: 2, classic: 1 },
+  neon: { conversion: 2, proof_led: 1, trust_first: 1 },
+  rugged: { classic: 2, conversion: 2, benefits_led: 1, trust_first: 1 },
 };
 
 // Industry personality nudges the archetype on top of the theme-category base,
@@ -59,20 +69,24 @@ const ARCHETYPE_WEIGHTS: Record<ThemeCategory, Partial<Record<Archetype, number>
 // the copy picker via industryStyle().
 function industryArchetypeBias(key?: IndustryKey | null): Partial<Record<Archetype, number>> {
   switch (industryStyle(key)) {
-    case 'visual':  return { showcase: 2, story_led: 2, proof_led: 1 };
-    case 'trust':   return { trust_first: 2, proof_led: 2, classic: 1 };
-    case 'urgency': return { conversion: 2, proof_led: 1 };
-    default:        return {};
+    case 'visual':
+      return { showcase: 2, story_led: 2, proof_led: 1 };
+    case 'trust':
+      return { trust_first: 2, proof_led: 2, classic: 1 };
+    case 'urgency':
+      return { conversion: 2, proof_led: 1 };
+    default:
+      return {};
   }
 }
 
 export function pickArchetype(
   category: ThemeCategory,
   industryOrRng?: IndustryKey | (() => number) | null,
-  rng: () => number = Math.random,
+  rng: () => number = Math.random
 ): Archetype {
   // Back-compat: pickArchetype(category, rng) is still supported.
-  const industry = typeof industryOrRng === 'function' ? null : industryOrRng ?? null;
+  const industry = typeof industryOrRng === 'function' ? null : (industryOrRng ?? null);
   const rand = typeof industryOrRng === 'function' ? industryOrRng : rng;
 
   const base = ARCHETYPE_WEIGHTS[category] ?? { classic: 1 };
@@ -113,7 +127,11 @@ function setIfPresent(obj: any, key: string, val: any) {
  * Build a starter site payload for /api/templates/create from an industry +
  * business name. Returns an object shaped like the create route's `initial`.
  */
-export function buildIndustryStarter(opts: { businessName: string; industryKey: IndustryKey; themeId?: string | null }) {
+export function buildIndustryStarter(opts: {
+  businessName: string;
+  industryKey: IndustryKey;
+  themeId?: string | null;
+}) {
   const businessName = (opts.businessName || '').trim();
   const industryKey = opts.industryKey;
   const label = KEY_TO_LABEL[industryKey] ?? 'Other';
@@ -152,11 +170,26 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   // Commerce-forward industries get a storefront grid up top (e.g. authors selling
   // books + merch). Reuses the existing products_grid block.
   const STOREFRONT_INDUSTRIES = new Set<IndustryKey>([
-    'author', 'retail_boutique', 'retail_home_goods', 'handmade', 'etsy_style', 'print_on_demand', 'custom_apparel',
-    'crafts', 'artisan_goods', 'gifts_stationery',
+    'author',
+    'retail_boutique',
+    'retail_home_goods',
+    'handmade',
+    'etsy_style',
+    'print_on_demand',
+    'custom_apparel',
+    'crafts',
+    'artisan_goods',
+    'gifts_stationery',
     // retail/resale — anything whose site should lead with sellable goods
-    'retail_electronics', 'retail_thrift', 'art_supplies', 'antiques_vintage', 'collectibles',
-    'pet_boutique', 'pop_up_shop', 'farmers_market_vendor', 'online_reseller',
+    'retail_electronics',
+    'retail_thrift',
+    'art_supplies',
+    'antiques_vintage',
+    'collectibles',
+    'pet_boutique',
+    'pop_up_shop',
+    'farmers_market_vendor',
+    'online_reseller',
   ]);
   // Food industries get a menu-forward layout (menu + hours) instead of a services
   // list — this is what makes a restaurant site read like an ordering site.
@@ -184,23 +217,48 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
           name: 'Breakfast',
           description: '',
           items: [
-            { name: 'Two Eggs Any Style', description: 'With toast and breakfast potatoes.', price: '$11', tags: [] },
-            { name: 'Buttermilk Pancakes', description: 'Stack of three, real maple syrup.', price: '$10', tags: [] },
+            {
+              name: 'Two Eggs Any Style',
+              description: 'With toast and breakfast potatoes.',
+              price: '$11',
+              tags: [],
+            },
+            {
+              name: 'Buttermilk Pancakes',
+              description: 'Stack of three, real maple syrup.',
+              price: '$10',
+              tags: [],
+            },
           ],
         },
         {
           name: 'Lunch',
           description: '',
           items: [
-            { name: 'House Burger', description: 'Cheddar, lettuce, tomato, house sauce, fries.', price: '$14', tags: ['Popular'] },
-            { name: 'Garden Salad', description: 'Seasonal greens and vegetables.', price: '$9', tags: ['V'] },
+            {
+              name: 'House Burger',
+              description: 'Cheddar, lettuce, tomato, house sauce, fries.',
+              price: '$14',
+              tags: ['Popular'],
+            },
+            {
+              name: 'Garden Salad',
+              description: 'Seasonal greens and vegetables.',
+              price: '$9',
+              tags: ['V'],
+            },
           ],
         },
         {
           name: 'Dinner',
           description: '',
           items: [
-            { name: 'Signature Entrée', description: 'Describe your best seller here.', price: '$19', tags: [] },
+            {
+              name: 'Signature Entrée',
+              description: 'Describe your best seller here.',
+              price: '$19',
+              tags: [],
+            },
           ],
         },
       ],
@@ -252,7 +310,9 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
         {
           heading: `A bit about ${who}`,
           body: 'Share who you are, what you care about, and what you’re working on. This is your story in your words — or paste your LinkedIn / about.me and we’ll draft it for you.',
-          image_url: '', cta_text: '', cta_link: '',
+          image_url: '',
+          cta_text: '',
+          cta_link: '',
         },
       ],
     };
@@ -283,7 +343,11 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     // to give, and a way to reach out. No services list / FAQ filler.
     const who = businessName || label;
     setIfPresent(hero.content, 'headline', who);
-    setIfPresent(hero.content, 'subheadline', 'A place to belong. Join us this week — everyone’s welcome.');
+    setIfPresent(
+      hero.content,
+      'subheadline',
+      'A place to belong. Join us this week — everyone’s welcome.'
+    );
     setIfPresent(hero.content, 'cta_text', 'Plan your visit');
     setIfPresent(hero.content, 'cta_link', '#contact');
 
@@ -292,8 +356,24 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
       ...times.content,
       title: 'Service times',
       events: [
-        { name: 'Sunday Worship', date: '', when: 'Sundays, 9:00 & 11:00 AM', location: '', description: 'Coffee at 8:30. Kids’ programs during both services.', cta_text: '', cta_link: '' },
-        { name: 'Midweek Gathering', date: '', when: 'Wednesdays, 7:00 PM', location: '', description: 'Prayer, teaching, and small groups.', cta_text: '', cta_link: '' },
+        {
+          name: 'Sunday Worship',
+          date: '',
+          when: 'Sundays, 9:00 & 11:00 AM',
+          location: '',
+          description: 'Coffee at 8:30. Kids’ programs during both services.',
+          cta_text: '',
+          cta_link: '',
+        },
+        {
+          name: 'Midweek Gathering',
+          date: '',
+          when: 'Wednesdays, 7:00 PM',
+          location: '',
+          description: 'Prayer, teaching, and small groups.',
+          cta_text: '',
+          cta_link: '',
+        },
       ],
     };
 
@@ -302,7 +382,13 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
       ...welcome.content,
       title: 'Welcome',
       sections: [
-        { heading: `Welcome to ${who}`, body: 'Tell your community who you are and what they’ll find here — the heart behind your church, in your own words.', image_url: '', cta_text: '', cta_link: '' },
+        {
+          heading: `Welcome to ${who}`,
+          body: 'Tell your community who you are and what they’ll find here — the heart behind your church, in your own words.',
+          image_url: '',
+          cta_text: '',
+          cta_link: '',
+        },
       ],
     };
 
@@ -386,7 +472,17 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   // the differentiator (agent talks through each home in their voice). Strategic
   // pairing with HiveJournal's real-estate tier — see BLOCKS_BACKLOG.md §4.
   if (industryKey === 'real_estate') {
-    blocks.splice(1, 0, createDefaultBlock('listings_grid') as any, createDefaultBlock('listing_card') as any);
+    blocks.splice(
+      1,
+      0,
+      createDefaultBlock('listings_grid') as any,
+      createDefaultBlock('listing_card') as any
+    );
+    // The seller-lead magnet ("what's your home worth?") — highest-value tool on an agent site.
+    // Land it just before the contact block so it's the primary conversion CTA.
+    const contactIdx = blocks.findIndex((b: any) => b?.type === 'contact_form');
+    const at = contactIdx >= 0 ? contactIdx : blocks.length;
+    blocks.splice(at, 0, createDefaultBlock('home_valuation') as any);
   }
 
   // Photographers lead with their work — a photo gallery right after the hero (the
@@ -432,7 +528,8 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
       ...est.content,
       trade: estTrade,
       title: `Instant ${label.toLowerCase()} estimate`,
-      subtitle: 'Enter a few dimensions for a ballpark price — then we’ll follow up with a real quote.',
+      subtitle:
+        'Enter a few dimensions for a ballpark price — then we’ll follow up with a real quote.',
     };
     blocks.splice(1, 0, est);
   }
@@ -450,17 +547,23 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
         {
           heading: 'Multi-level cedar deck with built-in seating',
           body: 'A sloped backyard turned into two living levels — cedar decking, wraparound bench seating, and planter boxes. Sample projects shown to illustrate the style; every deck we build is custom, so swap in your own photos once you claim the site.',
-          image_url: '/images/deck-portfolio/cedar.jpg', cta_text: 'Start your estimate', cta_link: '#deck-estimate',
+          image_url: '/images/deck-portfolio/cedar.jpg',
+          cta_text: 'Start your estimate',
+          cta_link: '#deck-estimate',
         },
         {
           heading: 'Low-maintenance composite deck & railing',
           body: 'Composite boards and dark metal railing for a deck that never needs staining. Great for busy families who want the look without the upkeep.',
-          image_url: '/images/deck-portfolio/composite.jpg', cta_text: '', cta_link: '',
+          image_url: '/images/deck-portfolio/composite.jpg',
+          cta_text: '',
+          cta_link: '',
         },
         {
           heading: 'Poolside pressure-treated deck',
           body: 'A durable, budget-friendly pressure-treated deck beside the pool — clean railing, wide landings, and room to lounge.',
-          image_url: '/images/deck-portfolio/pressure-treated.jpg', cta_text: '', cta_link: '',
+          image_url: '/images/deck-portfolio/pressure-treated.jpg',
+          cta_text: '',
+          cta_link: '',
         },
       ],
     };
@@ -471,7 +574,13 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   // Split-layout themes (heroLayout: 'split' — warm/professional) get a real
   // side-by-side "About | Why choose us" section after the hero, so the page
   // isn't a pure vertical stack (L4 sections; see docs/LAYOUT_L4_PLAN.md).
-  if (theme.stamped.layout?.heroLayout === 'split' && blocks.length > 1 && !FOOD_INDUSTRIES.has(industryKey) && industryKey !== 'personal' && industryKey !== 'faith') {
+  if (
+    theme.stamped.layout?.heroLayout === 'split' &&
+    blocks.length > 1 &&
+    !FOOD_INDUSTRIES.has(industryKey) &&
+    industryKey !== 'personal' &&
+    industryKey !== 'faith'
+  ) {
     const bn = businessName || label;
     const aboutCol: any = createDefaultBlock('text');
     aboutCol.content = {
@@ -486,7 +595,10 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     const splitSection: any = createDefaultBlock('section');
     splitSection.content = {
       ...splitSection.content,
-      columns: [{ span: 1, items: [aboutCol] }, { span: 1, items: [highlightsCol] }],
+      columns: [
+        { span: 1, items: [aboutCol] },
+        { span: 1, items: [highlightsCol] },
+      ],
       gap: 'lg',
       align: 'start',
     };

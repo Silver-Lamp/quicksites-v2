@@ -5,11 +5,7 @@
 
 import type React from 'react';
 import { z } from 'zod';
-import {
-  BlockSchema,
-  blockContentSchemaMap,
-  blockMeta,
-} from '@/admin/lib/zod/blockSchema';
+import { BlockSchema, blockContentSchemaMap, blockMeta } from '@/admin/lib/zod/blockSchema';
 
 // ---------- Existing exports (preserved) ----------
 
@@ -52,29 +48,30 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   public_qr_info: 'interactive',
   public_qr_sidebar: 'interactive',
   // ----- NEW: commerce blocks -----
-  products_grid: 'content',     // grid of purchasable items/services
+  products_grid: 'content', // grid of purchasable items/services
   service_offer: 'interactive', // single service/product CTA (planned)
-  story: 'content',             // alternating image+text brand storytelling
-  about_that: 'content',        // HiveJournal narrated-audio embed (loader script only)
-  audio_faq: 'interactive',     // HiveJournal /ask — grounded owner-voice Q&A on the page
-  quote_of_the_day: 'content',  // HiveJournal cached daily quote (zero-consent)
-  daily_artifact: 'content',    // HiveJournal daily comic (consent-gated, opt-in token)
-  listing_card: 'content',      // real-estate listing w/ built-in About That agent slot
-  listings_grid: 'content',     // agent portfolio: many homes, per-home audio tours
-  vehicles_grid: 'content',     // auto-dealer inventory: many cars, per-car audio walkarounds
+  story: 'content', // alternating image+text brand storytelling
+  about_that: 'content', // HiveJournal narrated-audio embed (loader script only)
+  audio_faq: 'interactive', // HiveJournal /ask — grounded owner-voice Q&A on the page
+  quote_of_the_day: 'content', // HiveJournal cached daily quote (zero-consent)
+  daily_artifact: 'content', // HiveJournal daily comic (consent-gated, opt-in token)
+  listing_card: 'content', // real-estate listing w/ built-in About That agent slot
+  listings_grid: 'content', // agent portfolio: many homes, per-home audio tours
+  vehicles_grid: 'content', // auto-dealer inventory: many cars, per-car audio walkarounds
   announcement_bar: 'interactive', // dismissible site-wide promo/notice bar
-  sticky_cart: 'interactive',   // product-page sticky add-to-cart (order_bar sibling)
-  reviews: 'content',           // owner-curated reviews (+ product JSON-LD when tied to one)
-  job_listing: 'interactive',   // odd-jobs board gig: post + apply + submit (AisleAsk wedge)
+  sticky_cart: 'interactive', // product-page sticky add-to-cart (order_bar sibling)
+  reviews: 'content', // owner-curated reviews (+ product JSON-LD when tied to one)
+  home_valuation: 'interactive', // real-estate seller-lead magnet: "what's your home worth?"
+  job_listing: 'interactive', // odd-jobs board gig: post + apply + submit (AisleAsk wedge)
   deck_estimate: 'interactive', // DeckSketch ballpark widget: dims in → price range + builder lead
-  comments: 'interactive',      // public UGC: moderated visitor comments/discussion
-  demo_embed: 'content',        // HJ studio demo by slug (MP4 or live caption-player)
-  voice_welcome: 'content',     // HJ render-once TTS "hello" player (narrator default → owner clone)
+  comments: 'interactive', // public UGC: moderated visitor comments/discussion
+  demo_embed: 'content', // HJ studio demo by slug (MP4 or live caption-player)
+  voice_welcome: 'content', // HJ render-once TTS "hello" player (narrator default → owner clone)
   testimonial_audio: 'content', // HJ narrator-read reviews — written quote + "hear this review" ▶
   route_optimizer: 'interactive', // PorchHearth nearest-neighbor stop ordering ($0, straight-line)
-  events: 'content',            // upcoming + recurring schedule (service times, classes, gatherings)
-  gallery: 'content',           // responsive photo grid + lightbox (every visual business)
-  before_after: 'interactive',  // draggable before/after reveal (transformation trades)
+  events: 'content', // upcoming + recurring schedule (service times, classes, gatherings)
+  gallery: 'content', // responsive photo grid + lightbox (every visual business)
+  before_after: 'interactive', // draggable before/after reveal (transformation trades)
 
   /* ───────── ElectInfo (candidate) blocks ───────── */
   candidate_hero: 'layout',
@@ -132,14 +129,26 @@ export type SeedContext = {
     social?: Record<string, string>;
     images?: { hero?: string; banner?: string; team?: string };
   };
-  services?: Array<{ name: string; description?: string; price?: string | number; icon?: string; href?: string }>;
-  products?: Array<{ name: string; description?: string; price?: number | string; image?: string; href?: string }>;
+  services?: Array<{
+    name: string;
+    description?: string;
+    price?: string | number;
+    icon?: string;
+    href?: string;
+  }>;
+  products?: Array<{
+    name: string;
+    description?: string;
+    price?: number | string;
+    image?: string;
+    href?: string;
+  }>;
   assets?: { hero?: string; palette?: { accent?: string } };
   locale?: { city?: string; region?: string; state?: string; country?: string; currency?: string };
 
   /** helpers */
-  id: () => string;      // e.g., crypto.randomUUID()
-  random: () => number;  // for sampling
+  id: () => string; // e.g., crypto.randomUUID()
+  random: () => number; // for sampling
 };
 
 /** Props delivered to a block renderer (kept generic so you can reuse renderers easily) */

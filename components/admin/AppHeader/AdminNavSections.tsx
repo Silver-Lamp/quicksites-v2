@@ -42,6 +42,7 @@ import {
   Filter,
   Gauge,
   Volume2,
+  Mic,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useBrand } from '@/app/providers';
@@ -131,6 +132,7 @@ const NAV_MERCHANT: NavItem[] = [
   { type: 'section', label: 'Customers' },
   { type: 'item', label: 'Customers', href: '/merchant/customers', icon: <Users size={18} /> },
   { type: 'item', label: 'Campaigns', href: '/merchant/campaigns', icon: <Megaphone size={18} /> },
+  { type: 'item', label: 'Voice audio', href: '/merchant/audio', icon: <Mic size={18} /> },
 
   { type: 'section', label: 'Partner' },
   { type: 'item', label: 'Referrals', href: '/rep/referrals', icon: <User size={18} /> },

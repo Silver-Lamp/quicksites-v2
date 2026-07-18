@@ -6,13 +6,68 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
-import { buildCityServicePage, insertPage } from '@/lib/seo/localPages';
+import { buildCityServicePage, buildAreaGuidePage, insertPage } from '@/lib/seo/localPages';
 
 export type AddCityPageResult = { ok: boolean; changed: boolean; slug?: string; reason?: string };
 
+/**
+ * Add a "Homes for sale in <area>" area-guide page to a real-estate agent template (a real
+ * internal-linking SEO surface for a neighborhood). Idempotent by slug; committed through the
+ * sanctioned template RPC. Mirrors addCityServicePage for the realty vertical.
+ */
+export async function addAreaGuidePage(
+  input: { templateId: string; area: string; region?: string | null; highlights?: string[] },
+  actorId: string | null = null
+): Promise<AddCityPageResult> {
+  const area = (input.area ?? '').trim();
+  if (!input.templateId) return { ok: false, changed: false, reason: 'no_template' };
+  if (!area) return { ok: false, changed: false, reason: 'no_area' };
+
+  const { data: t } = await supabaseAdmin
+    .from('templates')
+    .select('id, data, rev, business_name')
+    .eq('id', input.templateId)
+    .maybeSingle();
+  if (!t) return { ok: false, changed: false, reason: 'no_template' };
+
+  const page = buildAreaGuidePage({
+    businessName: (t as any).business_name || 'Our team',
+    area,
+    region: input.region ?? null,
+    highlights: input.highlights,
+  });
+  const ins = insertPage((t as any).data ?? {}, page);
+  if (!ins.changed) return { ok: true, changed: false, slug: ins.slug, reason: 'already_exists' };
+
+  const payload = {
+    id: input.templateId,
+    base_rev: (t as any).rev ?? 0,
+    patch: { data: ins.data },
+    actor: actorId,
+    kind: 'save',
+    org_id: null,
+  };
+  let err: any = null;
+  {
+    const { error } = await (supabaseAdmin as any)
+      .schema('public')
+      .rpc('commit_template_http', { p_payload: payload });
+    err = error;
+  }
+  if (err) {
+    const { error } = await (supabaseAdmin as any)
+      .schema('app')
+      .rpc('commit_template', { p_payload: payload });
+    err = error;
+  }
+  if (err) return { ok: false, changed: false, reason: err.message || 'commit failed' };
+
+  return { ok: true, changed: true, slug: ins.slug };
+}
+
 export async function addCityServicePage(
   campaign: { template_id: string | null; city: string | null; industry_key: string },
-  actorId: string | null = null,
+  actorId: string | null = null
 ): Promise<AddCityPageResult> {
   if (!campaign.template_id) return { ok: false, changed: false, reason: 'no_template' };
   if (!campaign.city) return { ok: false, changed: false, reason: 'no_city' };
@@ -50,11 +105,15 @@ export async function addCityServicePage(
   };
   let err: any = null;
   {
-    const { error } = await (supabaseAdmin as any).schema('public').rpc('commit_template_http', { p_payload: payload });
+    const { error } = await (supabaseAdmin as any)
+      .schema('public')
+      .rpc('commit_template_http', { p_payload: payload });
     err = error;
   }
   if (err) {
-    const { error } = await (supabaseAdmin as any).schema('app').rpc('commit_template', { p_payload: payload });
+    const { error } = await (supabaseAdmin as any)
+      .schema('app')
+      .rpc('commit_template', { p_payload: payload });
     err = error;
   }
   if (err) return { ok: false, changed: false, reason: err.message || 'commit failed' };

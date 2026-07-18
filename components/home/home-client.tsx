@@ -12,6 +12,7 @@ import { useSafeAuth } from '@/hooks/useSafeAuth';
 import { SiteFlags } from '@/lib/site-config';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import SiteHeader from '@/components/site/site-header';
+import DefaultScreensaver from '@/components/brand/default-screensaver';
 import { useBrand } from '@/app/providers';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import GuestStart from '@/components/home/guest-start';
@@ -90,6 +91,9 @@ export default function HomeClient({
   return (
     <>
       <SiteHeader sticky />
+      {/* Ambient fireplace screensaver on our own homepage (default ON, opt-out) — the same
+          wow-factor site builders can enable on their sites. Only on the default brand. */}
+      {showCharacter && <DefaultScreensaver preset="fireplace" idleSeconds={150} />}
       {/* Color playground surfaced for anon/guest visitors (temporary — until we
           pick a default palette); also available to anyone via ?colorlab=1. */}
       <HomeColorLab show={!isRealUser} />

@@ -32,24 +32,25 @@ async function handle(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
   return runCron('design-partner-nudges', async () => {
-    if (!NUDGES_ENABLED()) return { skipped: 'disabled' };
+    if (!NUDGES_ENABLED()) return NextResponse.json({ skipped: 'disabled' });
 
     const partners = await listDesignPartners();
     const nudges = computeNudges(partners, { nowMs: Date.now() });
-    if (!nudges.length) return { nudges: 0 };
+    if (!nudges.length) return NextResponse.json({ nudges: 0 });
 
     // Cooldown so a daily run doesn't double-send if triggered twice.
     const cooldownHrs = Number(process.env.DESIGN_PARTNER_NUDGE_COOLDOWN_HOURS ?? '20') || 20;
     const lastSent = await getSiteSetting<string | null>(LAST_SENT_KEY, null);
     if (lastSent && Date.now() - Date.parse(lastSent) < cooldownHrs * 3600_000) {
-      return { nudges: nudges.length, skipped: 'cooldown' };
+      return NextResponse.json({ nudges: nudges.length, skipped: 'cooldown' });
     }
 
     const admins = String(process.env.ADMIN_EMAILS || '')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    if (!admins.length) return { nudges: nudges.length, skipped: 'no_admin_emails' };
+    if (!admins.length)
+      return NextResponse.json({ nudges: nudges.length, skipped: 'no_admin_emails' });
 
     const base = (
       process.env.APP_BASE_URL ||
@@ -71,7 +72,7 @@ async function handle(req: NextRequest) {
     });
     await setSiteSetting(LAST_SENT_KEY, new Date().toISOString(), null);
 
-    return { nudges: nudges.length, emailed: admins.length };
+    return NextResponse.json({ nudges: nudges.length, emailed: admins.length });
   });
 }
 

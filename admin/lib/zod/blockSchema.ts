@@ -1674,6 +1674,17 @@ export const blockContentSchemaMap = {
       cta_href: z.string().optional(),
     }),
   },
+
+  // Live MLS listing search (IDX) — buyer search + results from the agent's connected feed via the
+  // /api/realty/listings proxy. Flag-gated (docs/REALTY_IDX_PLAN.md); renders a "connect a feed"
+  // note until configured.
+  listing_search: {
+    label: 'MLS Listing Search',
+    icon: '🏘️',
+    schema: z.object({
+      title: z.string().optional(),
+    }),
+  },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
 /* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ───────────── */

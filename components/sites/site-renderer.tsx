@@ -4,6 +4,7 @@
 import * as React from 'react';
 import clsx from 'clsx';
 import RenderBlock from '@/components/admin/templates/render-block';
+import SiteScreensaver from '@/components/sites/site-screensaver';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { resolveSiteLayout } from '@/lib/theme/resolveSiteLayout';
 import type { Template } from '@/types/template';
@@ -125,6 +126,9 @@ export default function SiteRenderer({
           template={site}
         />
       )}
+
+      {/* Owner-enabled ambient screensaver — public site only, never while editing. */}
+      {!editorChrome && <SiteScreensaver template={site} />}
     </div>
   );
 

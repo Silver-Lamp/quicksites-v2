@@ -10,6 +10,7 @@ import ServicesPanel from './panels/services-panel';
 import DomainPanel from './panels/domain-panel';
 import SeoPanel from './panels/seo-panel';
 import ThemePanel from './panels/theme-panel';
+import ScreensaverPanel from './panels/screensaver-panel';
 import PaymentSettingsPanel from '../payments/payment-settings-panel';
 
 // ---------- helpers ----------
@@ -92,6 +93,11 @@ export default function TemplateSettingsPanel({ template, onChange }: Props) {
       />
 
       <SeoPanel
+        template={template}
+        onChange={(patch: any) => applyPatch(patch)}
+      />
+
+      <ScreensaverPanel
         template={template}
         onChange={(patch: any) => applyPatch(patch)}
       />

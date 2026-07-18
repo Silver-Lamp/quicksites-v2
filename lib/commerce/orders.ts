@@ -4,7 +4,14 @@ import type { LineItemInput } from './types';
 import { getMerchantPaymentConfigSafe } from './paymentRouter';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
-import { partnerCommissionCents, PARTNER_FEE_SHARE, hubOverrideCents } from './partner-terms';
+import {
+  partnerCommissionCents,
+  PARTNER_FEE_SHARE,
+  hubOverrideCents,
+  isAffiliateOwnerType,
+  affiliateResidualCents,
+  AFFILIATE_FEE_SHARE,
+} from './partner-terms';
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
 import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, computePhysicalShippingCents, parseStripeTaxTotals } from './fees';
 import { recordAdjustment } from './inventoryLedger';
@@ -297,9 +304,22 @@ export async function markOrderPaid(
         .maybeSingle();
 
       if (attr?.referral_code) {
-        // Partner residual = their share of the order's platform fee (QuickSites
-        // keeps the rest). See lib/commerce/partner-terms.ts + /partners.
-        const partnerCents = partnerCommissionCents(orderRow.platform_fee_cents);
+        // Resolve the code's tier up front (also used by the 5b hub-override below).
+        // RESELLER (owner_type != 'qs_affiliate') → keeps 80% of the fee (partner residual).
+        // AFFILIATE ('qs_affiliate') → a smaller share-of-fee residual, net-safety-capped so
+        // the order never goes underwater after Stripe. See docs/REFERRAL_PRICING.md.
+        const { data: codeRow } = await supabase
+          .from('referral_codes')
+          .select('owner_type, plan, parent_code, override_share')
+          .eq('code', attr.referral_code)
+          .maybeSingle();
+        const affiliate = isAffiliateOwnerType((codeRow as any)?.owner_type);
+        const affiliateShare = Number((codeRow as any)?.plan?.rate) || AFFILIATE_FEE_SHARE;
+        const orderTotalForStripe = Number((orderRow as any).total_cents) || 0;
+
+        const partnerCents = affiliate
+          ? affiliateResidualCents(orderRow.platform_fee_cents, orderTotalForStripe, affiliateShare)
+          : partnerCommissionCents(orderRow.platform_fee_cents);
         const up = await supabase.from('commission_ledger').upsert(
           {
             referral_code: attr.referral_code,
@@ -308,11 +328,17 @@ export async function markOrderPaid(
             amount_cents: partnerCents,
             currency: orderRow.currency || 'USD',
             status: 'pending',
-            adjustments: {
-              note: 'partner residual',
-              platform_fee_cents: orderRow.platform_fee_cents,
-              partner_share: PARTNER_FEE_SHARE,
-            },
+            adjustments: affiliate
+              ? {
+                  note: 'affiliate residual',
+                  platform_fee_cents: orderRow.platform_fee_cents,
+                  affiliate_share: affiliateShare,
+                }
+              : {
+                  note: 'partner residual',
+                  platform_fee_cents: orderRow.platform_fee_cents,
+                  partner_share: PARTNER_FEE_SHARE,
+                },
           },
           { onConflict: 'referral_code,subject,subject_id' }
         );
@@ -344,11 +370,7 @@ export async function markOrderPaid(
         // 5b) Hub override: if this reseller was recruited by an upline (parent_code),
         //     pay the hub a configurable cut — funded OUT OF QuickSites' share
         //     (clamped to QS_FEE_SHARE), so the reseller residual above is untouched.
-        const { data: codeRow } = await supabase
-          .from('referral_codes')
-          .select('parent_code, override_share')
-          .eq('code', attr.referral_code)
-          .maybeSingle();
+        //     (codeRow was already fetched above with parent_code + override_share.)
         if ((codeRow as any)?.parent_code && Number((codeRow as any).override_share) > 0) {
           const overrideCents = hubOverrideCents(orderRow.platform_fee_cents, Number((codeRow as any).override_share));
           if (overrideCents > 0) {

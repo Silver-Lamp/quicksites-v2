@@ -3,6 +3,7 @@ import { PaymentsAdapter } from '../paymentAdapter';
 import { CreateCheckoutParams, CheckoutResult, WebhookEvent } from '../types';
 import { stripe } from '@/lib/stripe/server';
 import Stripe from 'stripe';
+import { stripeOnBehalfOfEnabled } from '@/lib/payments/onBehalfOf';
 
 export class StripeAdapter implements PaymentsAdapter {
   provider() { return 'stripe' as const; }
@@ -21,6 +22,9 @@ export class StripeAdapter implements PaymentsAdapter {
     if (p.platformFeeCents != null && p.connectAccountId) {
       piData.application_fee_amount = p.platformFeeCents;
       piData.transfer_data = { destination: p.connectAccountId };
+      // Flag-gated: shift Stripe's fee incidence + merchant-of-record to the connected account
+      // so QS keeps the full application fee (docs/REFERRAL_PRICING.md). OFF by default.
+      if (stripeOnBehalfOfEnabled()) piData.on_behalf_of = p.connectAccountId;
     }
 
     // Physical/POD carts need a shipping address for fulfillment (Lulu/Gelato).

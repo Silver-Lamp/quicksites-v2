@@ -2,6 +2,7 @@
 import type Stripe from 'stripe';
 import type { PaymentProvider, CreateCheckoutParams, WebhookResult } from './types';
 import { stripe } from '@/lib/stripe/server';
+import { stripeOnBehalfOfEnabled } from './onBehalfOf';
 
 function toLowerCurrency(cur: string) {
   return (cur || 'USD').toLowerCase();
@@ -38,6 +39,9 @@ export const StripeProvider: PaymentProvider = {
     if (connectedAccountId && typeof feeAmt === 'number') {
       piData.application_fee_amount = feeAmt;
       piData.transfer_data = { destination: connectedAccountId };
+      // Flag-gated: make the merchant the settlement merchant of record so Stripe fees land on
+      // their side, not QS's (docs/REFERRAL_PRICING.md). OFF by default.
+      if (stripeOnBehalfOfEnabled()) piData.on_behalf_of = connectedAccountId;
     }
 
     const session = await stripe.checkout.sessions.create({

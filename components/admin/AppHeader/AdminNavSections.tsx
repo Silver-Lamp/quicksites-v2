@@ -72,7 +72,7 @@ const safeLS = {
 const OPEN_MENUS_KEY = 'qs:nav:open_menus:v1';
 const INBOX_COUNT_KEY = 'qs:nav:inbox_new_count:v1';
 const ADMIN_TTL_MS = 5 * 60_000; // 5 min
-const INBOX_TTL_MS = 60_000;     // 60 sec
+const INBOX_TTL_MS = 60_000; // 60 sec
 
 const slugify = (s: string) =>
   String(s || '')
@@ -144,36 +144,118 @@ const NAV_MERCHANT: NavItem[] = [
 const NAV_ADMIN: NavItem[] = [
   /* Overview — the cross-domain ops dashboard (inventory · markets · clients + next steps). */
   { type: 'section', label: 'Overview', adminOnly: true },
-  { type: 'item', label: 'Operations', href: '/admin/ops', icon: <Activity size={18} />, adminOnly: true },
-  { type: 'item', label: 'Domain Costs', href: '/admin/domains/costs', icon: <Globe size={18} />, adminOnly: true },
+  {
+    type: 'item',
+    label: 'Operations',
+    href: '/admin/ops',
+    icon: <Activity size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Design Partners',
+    href: '/admin/design-partners',
+    icon: <Users size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Domain Costs',
+    href: '/admin/domains/costs',
+    icon: <Globe size={18} />,
+    adminOnly: true,
+  },
 
   /* Growth — the lead-gen + outreach engine, unified into one workspace (/admin/growth).
      The old scattered surfaces (Map of Opportunities, Leads, legacy Campaigns) ran on the
      retired leads/campaigns tables; they're folded out of the nav in favor of the new
      outreach_prospects/geo_industry_campaigns stack. Both items open the same workspace. */
   { type: 'section', label: 'Growth', adminOnly: true },
-  { type: 'item', label: 'Businesses Near Me', href: '/admin/growth?tab=prospects', icon: <MapPinned size={18} />, adminOnly: true },
-  { type: 'item', label: 'Outreach Pipeline', href: '/admin/growth?tab=pipeline', icon: <Rocket size={18} />, adminOnly: true },
-  { type: 'item', label: 'AisleAsk Ops', href: '/admin/aisleask', icon: <ShoppingCart size={18} />, adminOnly: true },
-  { type: 'item', label: 'Local-services Offer', href: '/local-services', icon: <Megaphone size={18} />, adminOnly: true },
-  { type: 'item', label: 'Print Orders', href: '/admin/print-orders', icon: <Printer size={18} />, adminOnly: true },
+  {
+    type: 'item',
+    label: 'Businesses Near Me',
+    href: '/admin/growth?tab=prospects',
+    icon: <MapPinned size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Outreach Pipeline',
+    href: '/admin/growth?tab=pipeline',
+    icon: <Rocket size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'AisleAsk Ops',
+    href: '/admin/aisleask',
+    icon: <ShoppingCart size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Local-services Offer',
+    href: '/local-services',
+    icon: <Megaphone size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Print Orders',
+    href: '/admin/print-orders',
+    icon: <Printer size={18} />,
+    adminOnly: true,
+  },
 
   /* Restaurants — the delivered.menu / per-order business, split out from Growth because
      the model is entirely different (a take-rate on online orders, not geo-domain rent).
      Its own funnel cockpits (order-intent demand → launch readiness) + the owner offer.
      Discovery + the outreach pipeline stay in Growth: they feed both businesses. */
   { type: 'section', label: 'Restaurants', adminOnly: true },
-  { type: 'item', label: 'Location Domains', href: '/admin/restaurant-domains', icon: <Trophy size={18} />, adminOnly: true },
-  { type: 'item', label: 'Demand Funnel', href: '/admin/demand-funnel', icon: <Filter size={18} />, adminOnly: true },
-  { type: 'item', label: 'Go-live Readiness', href: '/admin/go-live', icon: <Gauge size={18} />, adminOnly: true },
-  { type: 'item', label: 'Restaurant Offer', href: '/restaurants', icon: <ChefHat size={18} />, adminOnly: true },
+  {
+    type: 'item',
+    label: 'Location Domains',
+    href: '/admin/restaurant-domains',
+    icon: <Trophy size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Demand Funnel',
+    href: '/admin/demand-funnel',
+    icon: <Filter size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Go-live Readiness',
+    href: '/admin/go-live',
+    icon: <Gauge size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Restaurant Offer',
+    href: '/restaurants',
+    icon: <ChefHat size={18} />,
+    adminOnly: true,
+  },
 
   /* Revenue, payouts & taxes. (The per-merchant Orders/Catalog/Payments admin pages
      don't exist yet — merchants use the /merchant/* surfaces in NAV_MERCHANT.) */
   { type: 'section', label: 'Revenue & Payouts', adminOnly: true },
-  { type: 'item', label: 'Platform Revenue', href: '/admin/revenue', icon: <DollarSign size={18} />, adminOnly: true },
   {
-    type: 'item', label: 'Payouts', icon: <DollarSign size={18} />, adminOnly: true,
+    type: 'item',
+    label: 'Platform Revenue',
+    href: '/admin/revenue',
+    icon: <DollarSign size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Payouts',
+    icon: <DollarSign size={18} />,
+    adminOnly: true,
     children: [
       { label: 'Partner Payouts', href: '/admin/partners/payouts' },
       { label: 'Referral Payout Runs', href: '/admin/referrals/payout-runs' },
@@ -181,30 +263,70 @@ const NAV_ADMIN: NavItem[] = [
     ],
   },
   {
-    type: 'item', label: 'Taxes', icon: <FileText size={18} />, adminOnly: true,
+    type: 'item',
+    label: 'Taxes',
+    icon: <FileText size={18} />,
+    adminOnly: true,
     children: [
       { label: 'Admin Taxes', href: '/admin/tax' },
       { label: 'New Payout', href: '/admin/tax/payouts/new' },
     ],
   },
-  { type: 'item', label: 'Referral Codes', href: '/admin/referral-codes', icon: <BadgeIcon size={18} />, adminOnly: true },
-  { type: 'item', label: 'Referrals', href: '/admin/referrals', icon: <User size={18} />, adminOnly: true },
-  { type: 'item', label: 'Billing Map', href: '/admin/billing/map', icon: <ChartBar size={18} />, adminOnly: true },
+  {
+    type: 'item',
+    label: 'Referral Codes',
+    href: '/admin/referral-codes',
+    icon: <BadgeIcon size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Referrals',
+    href: '/admin/referrals',
+    icon: <User size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Billing Map',
+    href: '/admin/billing/map',
+    icon: <ChartBar size={18} />,
+    adminOnly: true,
+  },
 
   /* Communications. */
   { type: 'section', label: 'Communications', adminOnly: true },
   {
-    type: 'item', label: 'Google Search Console', icon: <Globe size={18} />, adminOnly: true,
+    type: 'item',
+    label: 'Google Search Console',
+    icon: <Globe size={18} />,
+    adminOnly: true,
     children: [
       { label: 'Stats', href: '/admin/templates/gsc-bulk-stats' },
       { label: 'Sites', href: '/admin/gsc/sites' },
       { label: '(re)Connect', href: '/api/gsc/auth-url' },
     ],
   },
-  { type: 'item', label: 'Contact Form Email Logs', href: '/admin/email-logs', icon: <Mail size={18} />, adminOnly: true },
-  { type: 'item', label: 'Twilio Call Logs', href: '/admin/call-logs', icon: <Phone size={18} />, adminOnly: true },
   {
-    type: 'item', label: 'Platform Inbox', href: '/admin/inbox', icon: <Mail size={18} />, adminOnly: true,
+    type: 'item',
+    label: 'Contact Form Email Logs',
+    href: '/admin/email-logs',
+    icon: <Mail size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Twilio Call Logs',
+    href: '/admin/call-logs',
+    icon: <Phone size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Platform Inbox',
+    href: '/admin/inbox',
+    icon: <Mail size={18} />,
+    adminOnly: true,
     children: [
       { label: 'All', href: '/admin/inbox?status=all' },
       { label: 'New', href: '/admin/inbox?status=new' },
@@ -215,20 +337,80 @@ const NAV_ADMIN: NavItem[] = [
 
   /* System — ops + dev tooling. */
   { type: 'section', label: 'System', adminOnly: true },
-  { type: 'item', label: 'AI Spend', href: '/admin/ai-costs', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'AI Pricing', href: '/admin/settings/ai-pricing', icon: <ChartBar size={18} />, adminOnly: true },
-  { type: 'item', label: 'Cron Health', href: '/admin/cron', icon: <Activity size={18} />, adminOnly: true },
-  { type: 'item', label: 'Tasks', href: '/admin/tasks', icon: <Check size={18} />, adminOnly: true },
-  { type: 'item', label: 'Users', href: '/admin/users', icon: <Users size={18} />, adminOnly: true },
-  { type: 'item', label: 'Admin Tools', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
-  { type: 'item', label: 'Agent Runner', href: '/admin/agents/block', icon: <Wrench size={18} />, adminOnly: true },
+  {
+    type: 'item',
+    label: 'AI Spend',
+    href: '/admin/ai-costs',
+    icon: <DollarSign size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'AI Pricing',
+    href: '/admin/settings/ai-pricing',
+    icon: <ChartBar size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Cron Health',
+    href: '/admin/cron',
+    icon: <Activity size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Tasks',
+    href: '/admin/tasks',
+    icon: <Check size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Users',
+    href: '/admin/users',
+    icon: <Users size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Admin Tools',
+    href: '/admin/tools',
+    icon: <Wrench size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Agent Runner',
+    href: '/admin/agents/block',
+    icon: <Wrench size={18} />,
+    adminOnly: true,
+  },
   { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} />, adminOnly: true },
 
   /* Platform — public marketing surfaces. */
   { type: 'section', label: 'Platform', adminOnly: true },
-  { type: 'item', label: 'Features', href: '/features', icon: <PlayCircle size={18} />, adminOnly: true },
-  { type: 'item', label: 'Feature Videos', href: '/admin/features/manage', icon: <Video size={18} />, adminOnly: true },
-  { type: 'item', label: 'Platform Pricing', href: '/pricing', icon: <DollarSign size={18} />, adminOnly: true },
+  {
+    type: 'item',
+    label: 'Features',
+    href: '/features',
+    icon: <PlayCircle size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Feature Videos',
+    href: '/admin/features/manage',
+    icon: <Video size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Platform Pricing',
+    href: '/pricing',
+    icon: <DollarSign size={18} />,
+    adminOnly: true,
+  },
   { type: 'item', label: 'Book a demo', href: '/book', icon: <Book size={18} />, adminOnly: true },
   { type: 'item', label: 'Contact', href: '/contact', icon: <Mail size={18} />, adminOnly: true },
 ];
@@ -240,7 +422,10 @@ function flattenNavLeaves(list: NavItem[]): NavLeaf[] {
   const out: NavLeaf[] = [];
   let group = '';
   for (const it of list) {
-    if (it.type === 'section') { group = it.label; continue; }
+    if (it.type === 'section') {
+      group = it.label;
+      continue;
+    }
     if (it.href) out.push({ label: it.label, href: it.href, icon: it.icon, group });
     for (const c of it.children ?? []) {
       if (c.label.startsWith('__')) continue; // skip inline tool slots
@@ -262,7 +447,7 @@ const NAV_ELECTINFO: NavItem[] = [
     adminOnly: true,
     children: [
       { label: 'New Candidate', href: '/admin/candidates/new', adminOnly: true },
-      { label: 'Demo Page',     href: '/candidate/demo',       adminOnly: false },
+      { label: 'Demo Page', href: '/candidate/demo', adminOnly: false },
     ],
   },
 
@@ -277,9 +462,7 @@ const NAV_ELECTINFO: NavItem[] = [
       { label: '__quick_slug_jump__', href: '#', adminOnly: true },
     ],
   },
-
 ];
-
 
 /* ---------------- Role helper (cached) ---------------- */
 function useIsAdmin(): boolean {
@@ -409,7 +592,9 @@ function BrandSwitcher({
       if (!open) return;
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
     window.addEventListener('mousedown', onDown);
     window.addEventListener('keydown', onEsc);
     return () => {
@@ -419,7 +604,10 @@ function BrandSwitcher({
   }, [open]);
 
   const switchTo = (newSlug: string) => {
-    if (!newSlug || newSlug === slug) { setOpen(false); return; }
+    if (!newSlug || newSlug === slug) {
+      setOpen(false);
+      return;
+    }
     onWillSwitch();
     const url = new URL(window.location.href);
     url.searchParams.set('org', newSlug); // middleware captures and sets cookie
@@ -443,8 +631,14 @@ function BrandSwitcher({
         aria-expanded={open}
         title={name}
       >
-        <div className={clsx('shrink-0 flex items-center justify-center', collapsed ? 'w-10' : 'w-10')}>
-          <img src={brandLogo} alt={`${name} logo`} className="h-10 w-auto block pointer-events-none select-none" />
+        <div
+          className={clsx('shrink-0 flex items-center justify-center', collapsed ? 'w-10' : 'w-10')}
+        >
+          <img
+            src={brandLogo}
+            alt={`${name} logo`}
+            className="h-10 w-auto block pointer-events-none select-none"
+          />
         </div>
         <span
           className={clsx(
@@ -455,7 +649,10 @@ function BrandSwitcher({
           {name}
         </span>
         {!collapsed && (
-          <ChevronDown size={16} className={clsx('transition-transform', open ? 'rotate-180' : 'rotate-0')} />
+          <ChevronDown
+            size={16}
+            className={clsx('transition-transform', open ? 'rotate-180' : 'rotate-0')}
+          />
         )}
         {collapsed && (
           <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 shadow-md pointer-events-none">
@@ -475,30 +672,39 @@ function BrandSwitcher({
         >
           <div className="max-h-72 overflow-auto py-1">
             {loading && <div className="px-3 py-2 text-xs text-zinc-400">Loading orgs…</div>}
-            {!loading && (orgs ?? []).map((o) => {
-              const active = o.slug === slug;
-              return (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => switchTo(o.slug)}
-                  className={clsx(
-                    'w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-zinc-800',
-                    active && 'bg-zinc-800'
-                  )}
-                >
-                  <img src={o.logo_url || '/logo_v1.png'} alt="" className="h-5 w-5 rounded-sm object-contain" />
-                  <span className="flex-1">{o.name}</span>
-                  {active && <Check size={14} className="text-emerald-400" />}
-                </button>
-              );
-            })}
+            {!loading &&
+              (orgs ?? []).map((o) => {
+                const active = o.slug === slug;
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => switchTo(o.slug)}
+                    className={clsx(
+                      'w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-zinc-800',
+                      active && 'bg-zinc-800'
+                    )}
+                  >
+                    <img
+                      src={o.logo_url || '/logo_v1.png'}
+                      alt=""
+                      className="h-5 w-5 rounded-sm object-contain"
+                    />
+                    <span className="flex-1">{o.name}</span>
+                    {active && <Check size={14} className="text-emerald-400" />}
+                  </button>
+                );
+              })}
             {!loading && (orgs ?? []).length === 0 && (
               <div className="px-3 py-2 text-xs text-zinc-400">No organizations.</div>
             )}
           </div>
           <div className="border-t border-white/10 px-3 py-2">
-            <Link href="/admin/org" className="block text-xs text-zinc-300 hover:text-white" onClick={() => setOpen(false)}>
+            <Link
+              href="/admin/org"
+              className="block text-xs text-zinc-300 hover:text-white"
+              onClick={() => setOpen(false)}
+            >
               Manage organization
             </Link>
           </div>
@@ -507,7 +713,6 @@ function BrandSwitcher({
     </div>
   );
 }
-
 
 /* ---------------- Child Button/Link ---------------- */
 function NavItemButtonOrLink({
@@ -518,8 +723,8 @@ function NavItemButtonOrLink({
   toggleMenu,
   onNavigateStart,
   inboxNewCount,
-  domId,        // NEW
-  kbdSelected,  // NEW
+  domId, // NEW
+  kbdSelected, // NEW
 }: {
   item: Extract<NavItem, { type: 'item' }>;
   isActive: boolean;
@@ -528,7 +733,7 @@ function NavItemButtonOrLink({
   toggleMenu: () => void;
   onNavigateStart: (href: string) => void;
   inboxNewCount?: number | null;
-  domId?: string;        // NEW
+  domId?: string; // NEW
   kbdSelected?: boolean; // NEW
 }) {
   const pathname = usePathname();
@@ -572,12 +777,11 @@ function NavItemButtonOrLink({
     </span>
   );
 
-  const tooltip =
-    collapsed && (
-      <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 shadow-md pointer-events-none">
-        {item.children ? `${item.label} → ${firstChild?.label ?? ''}` : item.label}
-      </span>
-    );
+  const tooltip = collapsed && (
+    <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 shadow-md pointer-events-none">
+      {item.children ? `${item.label} → ${firstChild?.label ?? ''}` : item.label}
+    </span>
+  );
 
   return (
     <Link
@@ -608,7 +812,10 @@ function NavItemButtonOrLink({
       {icon}
       {label}
       {item.children && !collapsed && (
-        <ChevronDown className={clsx('transition-transform duration-300', isOpen ? 'rotate-180' : 'rotate-0')} size={16} />
+        <ChevronDown
+          className={clsx('transition-transform duration-300', isOpen ? 'rotate-180' : 'rotate-0')}
+          size={16}
+        />
       )}
       {tooltip}
     </Link>
@@ -630,7 +837,11 @@ function QuickSlugJump({
   }, [open]);
 
   const go = () => {
-    const s = (slug || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+    const s = (slug || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
     if (!s) return;
     setOpen(false);
     const href = `/admin/candidate/${s}/print`;
@@ -695,8 +906,8 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const [query, setQuery] = useState('');
   const isAdmin = useIsAdmin();
 
-  const navRef = useRef<HTMLDivElement | null>(null);           // NEW
-  const [selectedIdx, setSelectedIdx] = useState<number>(0);    // NEW
+  const navRef = useRef<HTMLDivElement | null>(null); // NEW
+  const [selectedIdx, setSelectedIdx] = useState<number>(0); // NEW
 
   const { name: brandName, logoUrl } = useBrand();
   const brandLogo = logoUrl || '/logo_v1.png';
@@ -707,7 +918,12 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const coreItems = useMemo<NavItem[]>(
     () => [
       { type: 'section', label: 'Sites' },
-      { type: 'item', label: 'Browse sites', href: '/admin/templates/list', icon: <LayoutGrid size={18} /> },
+      {
+        type: 'item',
+        label: 'Browse sites',
+        href: '/admin/templates/list',
+        icon: <LayoutGrid size={18} />,
+      },
       { type: 'item', label: 'New site', href: '/admin/templates/new', icon: <Plus size={18} /> },
     ],
     []
@@ -726,8 +942,13 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const leaves = useMemo(() => flattenNavLeaves(items), [items]);
   const q = query.trim().toLowerCase();
   const results = useMemo(
-    () => (q ? leaves.filter((l) => l.label.toLowerCase().includes(q) || l.group.toLowerCase().includes(q)) : []),
-    [leaves, q],
+    () =>
+      q
+        ? leaves.filter(
+            (l) => l.label.toLowerCase().includes(q) || l.group.toLowerCase().includes(q)
+          )
+        : [],
+    [leaves, q]
   );
 
   /* -------- persist/restore open submenu state -------- */
@@ -741,7 +962,9 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
 
   // Auto-open matching submenus based on current path (merge with cache)
   useEffect(() => {
-    const merged: Record<string, boolean> = { ...(safeLS.get<Record<string, boolean>>(OPEN_MENUS_KEY) || {}) };
+    const merged: Record<string, boolean> = {
+      ...(safeLS.get<Record<string, boolean>>(OPEN_MENUS_KEY) || {}),
+    };
     items.forEach((item) => {
       if (item.type === 'item' && item.children) {
         const matchChild = item.children.some((c) => pathname?.startsWith(c.href.split('?')[0]));
@@ -860,7 +1083,13 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   }, []);
 
   /* -------- Keyboard navigation (↑/↓/Enter) -------- */
-  type FocusRow = { id: string; kind: 'parent' | 'child'; label: string; href?: string; parentLabel?: string };
+  type FocusRow = {
+    id: string;
+    kind: 'parent' | 'child';
+    label: string;
+    href?: string;
+    parentLabel?: string;
+  };
 
   const focusRows = useMemo<FocusRow[]>(() => {
     const rows: FocusRow[] = [];
@@ -874,7 +1103,13 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
       if (!collapsed && open && it.children?.length) {
         it.children.forEach((ch, ci) => {
           const cid = `nav-child-${slugify(it.label)}-${ci}`;
-          rows.push({ id: cid, kind: 'child', label: ch.label, href: ch.href, parentLabel: it.label });
+          rows.push({
+            id: cid,
+            kind: 'child',
+            label: ch.label,
+            href: ch.href,
+            parentLabel: it.label,
+          });
         });
       }
     });
@@ -891,7 +1126,9 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   // choose initial selection based on current path
   useEffect(() => {
     if (!focusRows.length) return;
-    const current = focusRows.findIndex(r => r.href && pathname?.startsWith(r.href.split('?')[0]));
+    const current = focusRows.findIndex(
+      (r) => r.href && pathname?.startsWith(r.href.split('?')[0])
+    );
     if (current >= 0) setSelectedIdx(current);
   }, [pathname, focusRows]);
 
@@ -957,13 +1194,19 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
       {!collapsed && (
         <div className="px-2 pb-2 pt-1">
           <div className="relative">
-            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search
+              size={14}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500"
+            />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') setQuery('');
-                if (e.key === 'Enter' && results[0]) { handleNavigateStart(results[0].href); window.location.assign(results[0].href); }
+                if (e.key === 'Enter' && results[0]) {
+                  handleNavigateStart(results[0].href);
+                  window.location.assign(results[0].href);
+                }
               }}
               placeholder="Find a feature…"
               aria-label="Find a feature"
@@ -983,122 +1226,131 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
               <Link
                 key={`${r.group}-${r.label}-${r.href}`}
                 href={r.href}
-                onClick={() => { if (r.href !== pathname) handleNavigateStart(r.href); }}
+                onClick={() => {
+                  if (r.href !== pathname) handleNavigateStart(r.href);
+                }}
                 className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white"
               >
-                <span className="flex w-10 shrink-0 items-center justify-center [&_svg]:h-[18px] [&_svg]:w-[18px]">{r.icon}</span>
+                <span className="flex w-10 shrink-0 items-center justify-center [&_svg]:h-[18px] [&_svg]:w-[18px]">
+                  {r.icon}
+                </span>
                 <span className="min-w-0 flex-1 truncate">{r.label}</span>
-                <span className="shrink-0 text-[10px] uppercase tracking-wide text-zinc-600">{r.group}</span>
+                <span className="shrink-0 text-[10px] uppercase tracking-wide text-zinc-600">
+                  {r.group}
+                </span>
               </Link>
             ))
           )}
         </div>
       ) : (
-      items.map((item, idx) => {
-        if (item.type === 'section') {
-          return !collapsed ? (
-            <div
-              key={`section-${item.label}-${idx}`}
-              className="px-3 pt-5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500"
-            >
-              {item.label}
-            </div>
-          ) : (
-            // Collapsed rail: a thin divider stands in for the section label.
-            <div key={`section-${item.label}-${idx}`} className="mx-auto my-2 h-px w-6 bg-white/10" />
-          );
-        }
+        items.map((item, idx) => {
+          if (item.type === 'section') {
+            return !collapsed ? (
+              <div
+                key={`section-${item.label}-${idx}`}
+                className="px-3 pt-5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500"
+              >
+                {item.label}
+              </div>
+            ) : (
+              // Collapsed rail: a thin divider stands in for the section label.
+              <div
+                key={`section-${item.label}-${idx}`}
+                className="mx-auto my-2 h-px w-6 bg-white/10"
+              />
+            );
+          }
 
-        const isActive =
-          (item.href && pathname?.startsWith(item.href)) ||
-          (item.children?.some((c) => pathname?.startsWith(c.href.split('?')[0])) ?? false);
+          const isActive =
+            (item.href && pathname?.startsWith(item.href)) ||
+            (item.children?.some((c) => pathname?.startsWith(c.href.split('?')[0])) ?? false);
 
-        const isOpen = openMenus[item.label];
+          const isOpen = openMenus[item.label];
 
-        const parentId = `nav-parent-${slugify(item.label)}`;
-        const parentSelected = focusRows[selectedIdx]?.id === parentId;
+          const parentId = `nav-parent-${slugify(item.label)}`;
+          const parentSelected = focusRows[selectedIdx]?.id === parentId;
 
-        return (
-          <div key={`item-${item.label}`}>
-            <NavItemButtonOrLink
-              item={item}
-              isActive={!!isActive}
-              isOpen={!!isOpen}
-              collapsed={collapsed}
-              toggleMenu={() => item.children && toggleMenu(item.label)}
-              onNavigateStart={handleNavigateStart}
-              inboxNewCount={inboxNewCount ?? undefined}
-              domId={parentId}              // NEW
-              kbdSelected={parentSelected}  // NEW
-            />
+          return (
+            <div key={`item-${item.label}`}>
+              <NavItemButtonOrLink
+                item={item}
+                isActive={!!isActive}
+                isOpen={!!isOpen}
+                collapsed={collapsed}
+                toggleMenu={() => item.children && toggleMenu(item.label)}
+                onNavigateStart={handleNavigateStart}
+                inboxNewCount={inboxNewCount ?? undefined}
+                domId={parentId} // NEW
+                kbdSelected={parentSelected} // NEW
+              />
 
-            <div
-              className={clsx(
-                'ml-8 transition-all duration-300 overflow-hidden',
-                collapsed || !isOpen ? 'max-h-0' : 'max-h-64 mt-1'
-              )}
-            >
-              {!collapsed &&
-                item.children?.map((child, ci) => {
-                  // Special inline tool for Elect Info quick jump
-                  if (child.label === '__quick_slug_jump__') {
-                    return (
-                      <div key={`quick-jump-${ci}`} className="mt-1">
-                        <QuickSlugJump
-                          collapsed={collapsed}
-                          onNavigateStart={handleNavigateStart}
-                        />
-                      </div>
+              <div
+                className={clsx(
+                  'ml-8 transition-all duration-300 overflow-hidden',
+                  collapsed || !isOpen ? 'max-h-0' : 'max-h-64 mt-1'
+                )}
+              >
+                {!collapsed &&
+                  item.children?.map((child, ci) => {
+                    // Special inline tool for Elect Info quick jump
+                    if (child.label === '__quick_slug_jump__') {
+                      return (
+                        <div key={`quick-jump-${ci}`} className="mt-1">
+                          <QuickSlugJump
+                            collapsed={collapsed}
+                            onNavigateStart={handleNavigateStart}
+                          />
+                        </div>
+                      );
+                    }
+
+                    const isActiveChild = pathname?.startsWith(child.href.split('?')[0]);
+                    const isNewTemplate = child.href === '/admin/templates/new';
+
+                    const rowId = `nav-child-${slugify(item.label)}-${ci}`;
+                    const kbdSelected = focusRows[selectedIdx]?.id === rowId;
+
+                    const baseChild = 'block text-sm px-3 py-1 rounded transition';
+                    const ringIfSelected = kbdSelected ? 'ring-2 ring-purple-500' : '';
+
+                    const newBtnClasses = clsx(
+                      'mt-1 inline-flex items-center gap-2 rounded-md px-3 py-1.5 font-medium shadow-sm',
+                      ringIfSelected,
+                      isActiveChild
+                        ? 'bg-emerald-700 text-white ring-1 ring-emerald-300/30'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-500'
                     );
-                  }
+                    const normalClasses = clsx(
+                      baseChild,
+                      ringIfSelected,
+                      isActiveChild
+                        ? 'bg-zinc-800 text-white font-medium'
+                        : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                    );
 
-                  const isActiveChild = pathname?.startsWith(child.href.split('?')[0]);
-                  const isNewTemplate = child.href === '/admin/templates/new';
-
-                  const rowId = `nav-child-${slugify(item.label)}-${ci}`;
-                  const kbdSelected = focusRows[selectedIdx]?.id === rowId;
-
-                  const baseChild = 'block text-sm px-3 py-1 rounded transition';
-                  const ringIfSelected = kbdSelected ? 'ring-2 ring-purple-500' : '';
-
-                  const newBtnClasses = clsx(
-                    'mt-1 inline-flex items-center gap-2 rounded-md px-3 py-1.5 font-medium shadow-sm',
-                    ringIfSelected,
-                    isActiveChild
-                      ? 'bg-emerald-700 text-white ring-1 ring-emerald-300/30'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-500'
-                  );
-                  const normalClasses = clsx(
-                    baseChild,
-                    ringIfSelected,
-                    isActiveChild
-                      ? 'bg-zinc-800 text-white font-medium'
-                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
-                  );
-
-                  return (
-                    <Link
-                      id={rowId}
-                      role="menuitem"
-                      tabIndex={-1}
-                      key={child.href}
-                      href={child.href}
-                      className={isNewTemplate ? newBtnClasses : normalClasses}
-                      title={isNewTemplate ? 'Create a new site' : child.label}
-                      onClick={() => {
-                        if (child.href && child.href !== pathname) handleNavigateStart(child.href);
-                      }}
-                    >
-                      {isNewTemplate && <Plus size={14} />}
-                      {child.label}
-                    </Link>
-                  );
-                })}
-
+                    return (
+                      <Link
+                        id={rowId}
+                        role="menuitem"
+                        tabIndex={-1}
+                        key={child.href}
+                        href={child.href}
+                        className={isNewTemplate ? newBtnClasses : normalClasses}
+                        title={isNewTemplate ? 'Create a new site' : child.label}
+                        onClick={() => {
+                          if (child.href && child.href !== pathname)
+                            handleNavigateStart(child.href);
+                        }}
+                      >
+                        {isNewTemplate && <Plus size={14} />}
+                        {child.label}
+                      </Link>
+                    );
+                  })}
+              </div>
             </div>
-          </div>
-        );
-      })
+          );
+        })
       )}
 
       {/* Dev-only: Clear nav cache */}

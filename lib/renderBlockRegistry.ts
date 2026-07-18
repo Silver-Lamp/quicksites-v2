@@ -111,6 +111,7 @@ export const DYNAMIC_RENDERERS: Record<
   quote_of_the_day: () => import('@/components/admin/templates/render-blocks/quote-of-the-day'),
   daily_artifact: () => import('@/components/admin/templates/render-blocks/daily-artifact'),
   listing_card: () => import('@/components/admin/templates/render-blocks/listing-card'),
+  mortgage_calculator: () => import('@/components/admin/templates/render-blocks/mortgage-calculator'),
   listings_grid: () => import('@/components/admin/templates/render-blocks/listings-grid'),
   vehicles_grid: () => import('@/components/admin/templates/render-blocks/vehicles-grid'),
   announcement_bar: () => import('@/components/admin/templates/render-blocks/announcement-bar'),

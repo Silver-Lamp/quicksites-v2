@@ -380,13 +380,49 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     }
   }
 
-  // Real estate: an AGENT site — a portfolio of homes (each with an About That
-  // audio-tour slot) right after the hero, then a featured single listing. QuickSites
-  // becomes the on-domain listing pages most agent sites lack, and the audio tours are
-  // the differentiator (agent talks through each home in their voice). Strategic
-  // pairing with HiveJournal's real-estate tier — see BLOCKS_BACKLOG.md §4.
+  // Real estate: a full AGENT site, not a brochure — the /realtors pitch made
+  // concrete. QuickSites becomes the on-domain listing pages most agent sites lack,
+  // and the owner-voice audio is the differentiator. The stack:
+  //   hero → voice_welcome (agent greets buyers in their own voice) → listings_grid
+  //   (portfolio, per-home audio tours) → a featured listing_card → mortgage_calculator
+  //   (the affordability magnet) → "Meet the agent" story → scheduler (book a showing)
+  //   → audio_faq (ask about a home, hear the answer) → contact.
+  // Audio blocks seed inert (empty embed → render nothing on the public site) until
+  // the agent sets a HiveJournal embed, same pattern as the church about_that.
+  // Strategic pairing with HiveJournal's real-estate tier — see BLOCKS_BACKLOG.md §4.
   if (industryKey === 'real_estate') {
-    blocks.splice(1, 0, createDefaultBlock('listings_grid') as any, createDefaultBlock('listing_card') as any);
+    const meetAgent: any = createDefaultBlock('story');
+    meetAgent.content = {
+      ...meetAgent.content,
+      title: `Meet ${businessName || label}`,
+      sections: [
+        {
+          heading: 'Your agent, in your corner',
+          body: 'A little about who you are, how you work, and why buyers and sellers trust you. Add your photo and make it personal — this is the block people scroll to.',
+          image_url: '',
+          cta_text: '',
+          cta_link: '',
+        },
+      ],
+    };
+    const bookShowing: any = createDefaultBlock('scheduler');
+    bookShowing.content = {
+      ...bookShowing.content,
+      title: 'Book a showing',
+      subtitle: 'Pick a time to tour a home or talk through your search.',
+    };
+    blocks = [
+      hero,
+      createDefaultBlock('voice_welcome') as any,
+      createDefaultBlock('listings_grid') as any,
+      createDefaultBlock('listing_card') as any,
+      createDefaultBlock('mortgage_calculator') as any,
+      meetAgent,
+      services, // Home Valuation / Buyer Representation / Listing Services / Open Houses…
+      bookShowing,
+      createDefaultBlock('audio_faq') as any,
+      contact,
+    ];
   }
 
   // Photographers lead with their work — a photo gallery right after the hero (the

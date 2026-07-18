@@ -181,6 +181,7 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
 
   // Real-estate listing card (w/ About That agent-preset slot)
   listing_card: wrapDynamic(() => import('./listing-card-editor')),
+  mortgage_calculator: wrapDynamic(() => import('./mortgage-calculator-editor')),
 
   // Home listings grid (agent portfolio, per-home audio tours)
   listings_grid: wrapDynamic(() => import('./listings-grid-editor')),

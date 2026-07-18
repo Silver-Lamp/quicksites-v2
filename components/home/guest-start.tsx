@@ -47,10 +47,15 @@ const CONVERT_STAGES = [
  *
  * Gated by the guest-build feature flag at the call site (components/home/home-client.tsx).
  */
-export default function GuestStart() {
+export default function GuestStart({ initialIndustry }: { initialIndustry?: string } = {}) {
   const [mode, setMode] = useState<Mode>('fresh');
   const [businessName, setBusinessName] = useState('');
-  const [industry, setIndustry] = useState<string>('');
+  // Preselect the industry when a vertical landing deep-links in (e.g. /realtors →
+  // /build?industry=real_estate), so the visitor lands on that industry's full
+  // starter scaffold. Ignore an unknown key.
+  const [industry, setIndustry] = useState<string>(() =>
+    initialIndustry && INDUSTRIES.some((i) => i.key === initialIndustry) ? initialIndustry : '',
+  );
   const [url, setUrl] = useState('');
   const [parkedDomain, setParkedDomain] = useState('');
   const [parkedRef, setParkedRef] = useState(''); // optional FB/public page to build FROM

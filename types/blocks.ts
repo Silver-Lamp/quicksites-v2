@@ -62,6 +62,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   listing_card: 'content',      // real-estate listing w/ built-in About That agent slot
   listings_grid: 'content',     // agent portfolio: many homes, per-home audio tours
   vehicles_grid: 'content',     // auto-dealer inventory: many cars, per-car audio walkarounds
+  mortgage_calculator: 'interactive', // real-estate affordability magnet: live monthly-payment estimator
   announcement_bar: 'interactive', // dismissible site-wide promo/notice bar
   sticky_cart: 'interactive',   // product-page sticky add-to-cart (order_bar sibling)
   reviews: 'content',           // owner-curated reviews (+ product JSON-LD when tied to one)

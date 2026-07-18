@@ -849,6 +849,31 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Mortgage / affordability calculator — the classic real-estate SEO + conversion
+  // magnet (docs/BLOCKS_BACKLOG.md Tier 3 "Calculator block"). Content seeds the
+  // DEFAULTS a visitor lands on (this listing's price, a current rate); the renderer
+  // is interactive (visitor tweaks price/down/rate/term, monthly P&I updates live).
+  // Numeric fields are real numbers — the renderer does honest amortization math and
+  // only folds in taxes/insurance/HOA the agent actually entered.
+  mortgage_calculator: {
+    label: 'Mortgage Calculator',
+    icon: '🏦',
+    schema: z.object({
+      title: z.string().optional().default('Estimate your monthly payment'),
+      subtitle: z.string().optional().default(''),
+      price: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('$500,000')),
+      down_payment_percent: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 20 : v), z.number().min(0).max(100).optional().default(20)),
+      interest_rate: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 6.8 : v), z.number().min(0).max(25).optional().default(6.8)),
+      loan_term_years: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 30 : v), z.number().min(1).max(40).optional().default(30)),
+      property_tax_rate: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 0 : v), z.number().min(0).max(10).optional().default(0)),
+      home_insurance_monthly: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 0 : v), z.number().min(0).optional().default(0)),
+      hoa_monthly: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 0 : v), z.number().min(0).optional().default(0)),
+      cta_text: z.string().optional().default('Get pre-approved'),
+      cta_link: z.string().optional().default('#contact'),
+      disclaimer: z.string().optional().default('Estimate only — not a loan offer or a commitment to lend. Actual rates, taxes, and insurance vary.'),
+    }),
+  },
+
   // HJ demo embed (crosstalk/contracts/demo-embed.md, Status: LIVE): renders an
   // approved+published HiveJournal studio demo by slug — the MP4 (poster + video)
   // when rendered, else the live caption-player against the public prepared

@@ -24,6 +24,7 @@ import {
   buildDeterministicSeo,
   cap,
   clean,
+  stripPlaceholderLocale,
   type ListingCopyContext,
 } from '@/lib/rebuild/listingSeo';
 
@@ -86,10 +87,13 @@ async function runEnrich(spec: RebuildSpec, ctx: ListingCopyContext): Promise<Re
     'You write clean, human, SEO-minded website copy for a REAL local business. The ' +
     'business name and city are real — use the business name naturally in the headline ' +
     'and SEO fields so it ranks for brand searches, and include the city/cuisine so it ' +
-    'ranks for "<category> in <city>" searches. Never output underscores, snake_case, or ' +
-    'raw category codes; write it the way a human would say it. Return JSON ONLY with keys: ' +
+    'ranks for "<category> in <city>" searches. Only mention a city/state if one is ' +
+    'provided below — NEVER invent, guess, or infer a location; if none is given, omit the ' +
+    'location entirely (do not write "City", "ST", or a placeholder). Never output ' +
+    'underscores, snake_case, or raw category codes; write it the way a human would say it. ' +
+    'Return JSON ONLY with keys: ' +
     'headline (<=8 words), subheadline (<=18 words), about (2-3 warm sentences), ' +
-    'faqs (array of 3 {q,a}), seo_title (<=60 chars, e.g. "Name — Cuisine in City, ST"), ' +
+    'faqs (array of 3 {q,a}), seo_title (<=60 chars, e.g. "Joe\'s Diner — Brunch in Renton, WA"), ' +
     'seo_description (<=155 chars, includes the name + city + what they offer).';
 
   const user = [
@@ -135,13 +139,21 @@ async function runEnrich(spec: RebuildSpec, ctx: ListingCopyContext): Promise<Re
             .slice(0, 3)
         : [];
 
+      // When we have NO real city/state, the model still tends to fill the "<category> in
+      // <city>" shape with a placeholder ("Your City", "City, ST"). Deterministic SEO (which
+      // omits the locale entirely) is authoritative in that case — never ship an invented
+      // location. With a real place, trust the (grounded) LLM SEO.
+      const hasPlace = !!place;
       const value: Partial<RebuildSpec> = {
-        headline: cap(parsed.headline || spec.headline, 80) || spec.headline,
-        subheadline: cap(parsed.subheadline || spec.subheadline, 160) || spec.subheadline,
+        headline: stripPlaceholderLocale(cap(parsed.headline || spec.headline, 80)) || spec.headline,
+        subheadline:
+          stripPlaceholderLocale(cap(parsed.subheadline || spec.subheadline, 160)) || spec.subheadline,
         about: cap(parsed.about || spec.about, 600) || spec.about,
         ...(faqs.length ? { faqs } : {}),
-        seoTitle: cap(parsed.seo_title || spec.seoTitle || '', 70) || spec.seoTitle,
-        seoDescription: cap(parsed.seo_description || spec.seoDescription || '', 160) || spec.seoDescription,
+        seoTitle: hasPlace ? cap(parsed.seo_title || spec.seoTitle || '', 70) || spec.seoTitle : spec.seoTitle,
+        seoDescription: hasPlace
+          ? cap(parsed.seo_description || spec.seoDescription || '', 160) || spec.seoDescription
+          : spec.seoDescription,
       };
       return {
         value,

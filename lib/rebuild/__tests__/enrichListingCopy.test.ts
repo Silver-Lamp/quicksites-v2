@@ -12,7 +12,7 @@
 // We test the PURE module (lib/rebuild/listingSeo) directly, not enrichListingCopy — the
 // latter imports the AI meter → supabase client, which can't load under jest/Node 20.
 
-import { buildDeterministicSeo } from '@/lib/rebuild/listingSeo';
+import { buildDeterministicSeo, stripPlaceholderLocale } from '@/lib/rebuild/listingSeo';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
 import type { RebuildSpec } from '@/lib/rebuild/inferSiteSpec';
 
@@ -62,6 +62,24 @@ describe('buildDeterministicSeo', () => {
       spec({ businessName: 'A'.repeat(120) }),
     );
     expect(seoTitle.length).toBeLessThanOrEqual(70);
+  });
+});
+
+describe('stripPlaceholderLocale', () => {
+  it('removes invented placeholder locations the LLM emits with no real place', () => {
+    expect(stripPlaceholderLocale('Joe’s Diner — Restaurant in Your City')).toBe(
+      'Joe’s Diner — Restaurant',
+    );
+    expect(stripPlaceholderLocale('Fast towing in Your Area')).toBe('Fast towing');
+    expect(stripPlaceholderLocale('Milton Towing — Towing in Milton, ST')).toBe(
+      'Milton Towing — Towing in Milton',
+    );
+  });
+
+  it('leaves real locations untouched', () => {
+    expect(stripPlaceholderLocale('King Buffet — Asian Cuisine in Renton, WA')).toBe(
+      'King Buffet — Asian Cuisine in Renton, WA',
+    );
   });
 });
 

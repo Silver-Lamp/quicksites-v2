@@ -3,7 +3,38 @@
  */
 // lib/seo/__tests__/localPages.test.ts
 
-import { buildCityServicePage, insertPage, slugForCityService, hasPageSlug } from '@/lib/seo/localPages';
+import {
+  buildCityServicePage,
+  buildAreaGuidePage,
+  insertPage,
+  slugForCityService,
+  slugForArea,
+  hasPageSlug,
+} from '@/lib/seo/localPages';
+
+describe('buildAreaGuidePage', () => {
+  const page = buildAreaGuidePage({
+    businessName: 'Jane Realty',
+    area: 'Renton Highlands',
+    region: 'WA',
+    highlights: ['Top-rated schools', 'Quick I-405 commute'],
+  });
+
+  it('targets "Homes for sale in <area>" in slug/title/hero', () => {
+    expect(page.slug).toBe('homes-for-sale-in-renton-highlands');
+    expect(slugForArea('Renton Highlands')).toBe('homes-for-sale-in-renton-highlands');
+    expect(page.title).toBe('Homes for sale in Renton Highlands');
+    expect(page.blocks[0].content.headline).toBe('Homes for sale in Renton Highlands');
+  });
+
+  it('seeds a listings grid and links back to home + contact', () => {
+    expect(page.blocks.some((b: any) => b.type === 'listings_grid')).toBe(true);
+    const body = page.blocks.find((b: any) => b.type === 'text');
+    expect(body.content.value).toContain('href="/"');
+    expect(body.content.value).toContain('href="#contact"');
+    expect(body.content.value).toContain('Top-rated schools');
+  });
+});
 
 describe('slugForCityService', () => {
   it('builds "<service>-in-<city>"', () => {
@@ -13,7 +44,13 @@ describe('slugForCityService', () => {
 });
 
 describe('buildCityServicePage', () => {
-  const page = buildCityServicePage({ businessName: 'Renton Plumbing', serviceLabel: 'Plumbing', city: 'Renton', region: 'WA', services: ['Drain cleaning', 'Water heaters'] });
+  const page = buildCityServicePage({
+    businessName: 'Renton Plumbing',
+    serviceLabel: 'Plumbing',
+    city: 'Renton',
+    region: 'WA',
+    services: ['Drain cleaning', 'Water heaters'],
+  });
 
   it('targets the "<service> in <city>" query in the hero + title + slug', () => {
     expect(page.slug).toBe('plumbing-in-renton');
@@ -43,7 +80,11 @@ describe('buildCityServicePage', () => {
 
 describe('insertPage', () => {
   it('appends the page and is idempotent by slug', () => {
-    const page = buildCityServicePage({ businessName: 'X', serviceLabel: 'Towing', city: 'Grafton' });
+    const page = buildCityServicePage({
+      businessName: 'X',
+      serviceLabel: 'Towing',
+      city: 'Grafton',
+    });
     const data: any = { pages: [{ slug: 'index', blocks: [] }] };
     const first = insertPage(data, page);
     expect(first.changed).toBe(true);
@@ -63,6 +104,8 @@ describe('insertPage', () => {
   });
 
   it('hasPageSlug is case-insensitive', () => {
-    expect(hasPageSlug({ pages: [{ slug: 'Plumbing-In-Renton' }] }, 'plumbing-in-renton')).toBe(true);
+    expect(hasPageSlug({ pages: [{ slug: 'Plumbing-In-Renton' }] }, 'plumbing-in-renton')).toBe(
+      true
+    );
   });
 });

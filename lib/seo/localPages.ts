@@ -73,14 +73,17 @@ export function buildCityServicePage(opts: {
   svc.content = svc.content ?? {};
   if (services.length) {
     if (Array.isArray(svc.content.items)) svc.content.items = services.map((name) => ({ name }));
-    else if (Array.isArray(svc.content.services)) svc.content.services = services.map((name) => ({ name }));
+    else if (Array.isArray(svc.content.services))
+      svc.content.services = services.map((name) => ({ name }));
     else svc.content.items = services.map((name) => ({ name }));
   }
 
   // Body copy with real internal links to the site's own pages (the SEO win).
   const body: any = createDefaultBlock('text');
   body.content = body.content ?? {};
-  const svcList = services.length ? `<ul>${services.map((s) => `<li>${s}</li>`).join('')}</ul>` : '';
+  const svcList = services.length
+    ? `<ul>${services.map((s) => `<li>${s}</li>`).join('')}</ul>`
+    : '';
   body.content.value =
     `<h2>${serviceLabel} in ${city}</h2>` +
     `<p>${businessName} provides trusted ${serviceLabel.toLowerCase()} across ${place} and nearby areas. ` +
@@ -104,12 +107,78 @@ export function buildCityServicePage(opts: {
   };
 }
 
+/** Canonical slug for a real-estate area guide, e.g. "homes-for-sale-in-renton-highlands". */
+export function slugForArea(area: string): string {
+  return `homes-for-sale-in-${slugify(area)}`;
+}
+
+/**
+ * Build a "Homes for sale in <area>" neighborhood/area-guide landing page for a real-estate
+ * agent site — a hyperlocal ranking surface for the exact search buyers/sellers make, with
+ * real internal links back to the agent's home + a home-valuation/contact CTA. Pure. Seeds a
+ * `listings_grid` so the page shows inventory when the site has it. `region` is the state.
+ */
+export function buildAreaGuidePage(opts: {
+  businessName: string;
+  area: string;
+  region?: string | null;
+  /** A few talking points about the area (schools, commute, lifestyle) — optional. */
+  highlights?: string[];
+  homeHref?: string;
+  contactHref?: string;
+}): LocalPage {
+  const { businessName, area } = opts;
+  const region = (opts.region ?? '').trim();
+  const place = region ? `${area}, ${region}` : area;
+  const homeHref = opts.homeHref ?? '/';
+  const contactHref = opts.contactHref ?? '#contact';
+  const highlights = (opts.highlights ?? []).filter(Boolean);
+
+  const hero: any = createDefaultBlock('hero');
+  hero.content = hero.content ?? {};
+  hero.content.headline = `Homes for sale in ${area}`;
+  hero.content.subheadline = `Thinking of buying or selling in ${place}? ${businessName} knows this neighborhood — current listings, real pricing, and local guidance.`;
+  hero.content.cta_text = "What's your home worth?";
+
+  const listings: any = createDefaultBlock('listings_grid');
+
+  const body: any = createDefaultBlock('text');
+  body.content = body.content ?? {};
+  const hiList = highlights.length
+    ? `<ul>${highlights.map((h) => `<li>${h}</li>`).join('')}</ul>`
+    : '';
+  body.content.value =
+    `<h2>Living in ${area}</h2>` +
+    `<p>${businessName} helps buyers and sellers across ${place}. Whether you're searching for your next home ` +
+    `or wondering what yours is worth in today's ${area} market, you'll get local, straight advice.</p>` +
+    hiList +
+    `<p>Browse the latest homes above, see how I work on my <a href="${homeHref}">home page</a>, or ` +
+    `<a href="${contactHref}">get in touch</a> for a personalized look at ${area}.</p>`;
+
+  const cta: any = createDefaultBlock('cta');
+  cta.content = { ...cta.content, label: `Explore ${area} homes`, link: contactHref };
+
+  const blocks = [hero, listings, body, cta];
+  return {
+    id: uuid(),
+    slug: slugForArea(area),
+    title: `Homes for sale in ${area}`,
+    show_header: true,
+    show_footer: true,
+    content_blocks: blocks,
+    blocks,
+  };
+}
+
 export type InsertResult = { data: any; changed: boolean; slug: string };
 
 /** Append a page to a template `data` blob (idempotent by slug). Pure — clones the input. */
 export function insertPage(data: any, page: LocalPage): InsertResult {
   if (hasPageSlug(data, page.slug)) return { data, changed: false, slug: page.slug };
-  const next = typeof structuredClone === 'function' ? structuredClone(data ?? {}) : JSON.parse(JSON.stringify(data ?? {}));
+  const next =
+    typeof structuredClone === 'function'
+      ? structuredClone(data ?? {})
+      : JSON.parse(JSON.stringify(data ?? {}));
   if (!Array.isArray(next.pages)) next.pages = [];
   next.pages.push(page);
   return { data: next, changed: true, slug: page.slug };

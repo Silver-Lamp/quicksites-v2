@@ -6,10 +6,9 @@ import { z } from 'zod';
 const RelativeOrAbsoluteUrl = z
   .string()
   .min(1)
-  .refine(
-    (v) => /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(v),
-    { message: 'Link must start with http(s)://, /, #, mailto:, or tel:' }
-  );
+  .refine((v) => /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(v), {
+    message: 'Link must start with http(s)://, /, #, mailto:, or tel:',
+  });
 
 const urlOptional = z.preprocess(
   (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
@@ -148,71 +147,94 @@ export const ExteriorCleaningContent = z.object({
 });
 
 // richer, editor-friendly schema used by exterior_* blocks
-export const ExteriorAgencyPropsSchema = z.object({
-  brand: z.string().min(1, 'Brand is required'),
-  tagline: z.string().min(1, 'Tagline is required'),
-  subTagline: z.string().optional(),
+export const ExteriorAgencyPropsSchema = z
+  .object({
+    brand: z.string().min(1, 'Brand is required'),
+    tagline: z.string().min(1, 'Tagline is required'),
+    subTagline: z.string().optional(),
 
-  ctaLabel: z.string().default('Get a Free Quote').optional(),
-  phone: z.string().optional(),
-  email: z.string().optional(),
-  address: z.string().optional(),
-  heroImage: z.string().url().optional(),
-  badges: z.array(z.string()).default([]).optional(),
+    ctaLabel: z.string().default('Get a Free Quote').optional(),
+    phone: z.string().optional(),
+    email: z.string().optional(),
+    address: z.string().optional(),
+    heroImage: z.string().url().optional(),
+    badges: z.array(z.string()).default([]).optional(),
 
-  services: z.array(z.object({
-    title: z.string(),
-    blurb: z.string().default(''),
-    bullets: z.array(z.string()).default([]).optional(),
-    icon: z.string().optional(),
-  })).default([]),
+    services: z
+      .array(
+        z.object({
+          title: z.string(),
+          blurb: z.string().default(''),
+          bullets: z.array(z.string()).default([]).optional(),
+          icon: z.string().optional(),
+        })
+      )
+      .default([]),
 
-  packages: z.array(z.object({
-    name: z.string(),
-    price: z.string().optional(),
-    description: z.string().optional(),
-    bullets: z.array(z.string()).default([]).optional(),
-    featured: z.boolean().default(false).optional(),
-  })).default([]),
+    packages: z
+      .array(
+        z.object({
+          name: z.string(),
+          price: z.string().optional(),
+          description: z.string().optional(),
+          bullets: z.array(z.string()).default([]).optional(),
+          featured: z.boolean().default(false).optional(),
+        })
+      )
+      .default([]),
 
-  portfolio: z.array(z.object({
-    title: z.string(),
-    subtitle: z.string().optional(),
-    before: z.string().url(),
-    after: z.string().url(),
-  })).default([]),
+    portfolio: z
+      .array(
+        z.object({
+          title: z.string(),
+          subtitle: z.string().optional(),
+          before: z.string().url(),
+          after: z.string().url(),
+        })
+      )
+      .default([]),
 
-  testimonials: z.array(z.object({
-    quote: z.string(),
-    author: z.string(),
-    role: z.string().optional(),
-  })).default([]),
+    testimonials: z
+      .array(
+        z.object({
+          quote: z.string(),
+          author: z.string(),
+          role: z.string().optional(),
+        })
+      )
+      .default([]),
 
-  serviceAreas: z.array(z.string()).default([]).optional(),
-  footerNote: z.string().optional(),
-}).passthrough();
+    serviceAreas: z.array(z.string()).default([]).optional(),
+    footerNote: z.string().optional(),
+  })
+  .passthrough();
 
 // legacy minimal schema (kept for compatibility; not used by new blocks)
-export const ExteriorCleaningContentSchema = z.object({
-  brand: z.string().min(1, 'Brand is required'),
-  tagline: z.string().min(1, 'Tagline is required'),
-  subTagline: z.string().optional(),
-}).passthrough();
+export const ExteriorCleaningContentSchema = z
+  .object({
+    brand: z.string().min(1, 'Brand is required'),
+    tagline: z.string().min(1, 'Tagline is required'),
+    subTagline: z.string().optional(),
+  })
+  .passthrough();
 
-export const TextBlockContent = z.preprocess((raw) => {
-  const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
-  if (typeof (c as any).value === 'string' && !c.html && !c.json) {
-    (c as any).html = (c as any).value;
-    (c as any).format = (c as any).format ?? 'html';
-  }
-  return c;
-}, z.object({
-  format: z.enum(['tiptap', 'html']).default('tiptap'),
-  json: z.record(z.any()).optional(),
-  html: z.string().optional(),
-  summary: z.string().optional(),
-  word_count: z.number().optional(),
-}));
+export const TextBlockContent = z.preprocess(
+  (raw) => {
+    const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+    if (typeof (c as any).value === 'string' && !c.html && !c.json) {
+      (c as any).html = (c as any).value;
+      (c as any).format = (c as any).format ?? 'html';
+    }
+    return c;
+  },
+  z.object({
+    format: z.enum(['tiptap', 'html']).default('tiptap'),
+    json: z.record(z.any()).optional(),
+    html: z.string().optional(),
+    summary: z.string().optional(),
+    word_count: z.number().optional(),
+  })
+);
 
 export const TextBlockSchema = z.object({
   type: z.literal('text'),
@@ -229,18 +251,21 @@ const emptyToUndef = <T extends z.ZodTypeAny>(schema: T) =>
 
 /* ─────────────────────────── Header / Footer blocks ───────────────────────── */
 
-export const HeaderContent = z.preprocess((raw) => {
-  const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
-  if (Array.isArray(c.navItems) && !Array.isArray(c.nav_items)) c.nav_items = c.navItems;
-  if (Array.isArray(c.links) && !Array.isArray(c.nav_items)) c.nav_items = c.links;
-  if (typeof c.logoUrl === 'string' && !c.logo_url) c.logo_url = c.logoUrl;
-  delete c.navItems;
-  delete c.logoUrl;
-  return c;
-}, z.object({
-  logo_url: z.string().optional(),
-  nav_items: z.array(LinkSchema).default([]),
-}));
+export const HeaderContent = z.preprocess(
+  (raw) => {
+    const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+    if (Array.isArray(c.navItems) && !Array.isArray(c.nav_items)) c.nav_items = c.navItems;
+    if (Array.isArray(c.links) && !Array.isArray(c.nav_items)) c.nav_items = c.links;
+    if (typeof c.logoUrl === 'string' && !c.logo_url) c.logo_url = c.logoUrl;
+    delete c.navItems;
+    delete c.logoUrl;
+    return c;
+  },
+  z.object({
+    logo_url: z.string().optional(),
+    nav_items: z.array(LinkSchema).default([]),
+  })
+);
 
 const toCityString = (item: unknown): string => {
   if (typeof item === 'string') return item;
@@ -254,34 +279,39 @@ const toCityString = (item: unknown): string => {
   return String(item ?? '');
 };
 
-const FooterContent = z.preprocess((raw) => {
-  const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+const FooterContent = z.preprocess(
+  (raw) => {
+    const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
 
-  if (Array.isArray(c.nav_items) && !Array.isArray(c.links)) c.links = c.nav_items;
-  if (Array.isArray(c.navItems) && !Array.isArray(c.links)) c.links = c.navItems;
-  if (typeof c.logoUrl === 'string' && !c.logo_url) c.logo_url = c.logoUrl;
+    if (Array.isArray(c.nav_items) && !Array.isArray(c.links)) c.links = c.nav_items;
+    if (Array.isArray(c.navItems) && !Array.isArray(c.links)) c.links = c.navItems;
+    if (typeof c.logoUrl === 'string' && !c.logo_url) c.logo_url = c.logoUrl;
 
-  if (Array.isArray(c.links)) {
-    c.links = c.links
-      .map((l: any) => {
-        const label = String(l?.label ?? '').trim();
-        const hrefRaw = String(l?.href ?? '').trim();
-        const href = hrefRaw || '/';
-        const appearance = l?.appearance;
-        return { label, href, appearance };
-      })
-      .filter((l: any) => l.label && REL.test(l.href));
-  }
+    if (Array.isArray(c.links)) {
+      c.links = c.links
+        .map((l: any) => {
+          const label = String(l?.label ?? '').trim();
+          const hrefRaw = String(l?.href ?? '').trim();
+          const href = hrefRaw || '/';
+          const appearance = l?.appearance;
+          return { label, href, appearance };
+        })
+        .filter((l: any) => l.label && REL.test(l.href));
+    }
 
-  delete c.nav_items;
-  delete c.navItems;
-  delete c.logoUrl;
+    delete c.nav_items;
+    delete c.navItems;
+    delete c.logoUrl;
 
-  return c;
-}, z.object({
-  logo_url: z.string().optional(),
-  links: z.array(LinkSchema).default([]),
-}).passthrough());
+    return c;
+  },
+  z
+    .object({
+      logo_url: z.string().optional(),
+      links: z.array(LinkSchema).default([]),
+    })
+    .passthrough()
+);
 
 /* ───────────────────────────── Menu (restaurant) ──────────────────────────── */
 // A display menu grouped into sections (Breakfast / Lunch / …). Prices are kept as
@@ -325,27 +355,30 @@ export const MenuSectionSchema = z.object({
   items: z.array(MenuItemSchema).default([]),
 });
 
-export const MenuBlockSchema = z.preprocess((raw) => {
-  const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
-  if (!c.title) c.title = 'Menu';
-  if (!Array.isArray(c.sections)) c.sections = [];
-  // Coerce numeric item prices → display strings so scraped/AI numbers don't drop.
-  c.sections = c.sections.map((s: any) => ({
-    ...s,
-    items: Array.isArray(s?.items)
-      ? s.items.map((it: any) => ({
-          ...it,
-          price: typeof it?.price === 'number' ? `$${it.price}` : it?.price,
-        }))
-      : [],
-  }));
-  return c;
-}, z.object({
-  title: z.string().default('Menu'),
-  note: z.string().optional().default(''),
-  currency: z.string().optional().default('USD'),
-  sections: z.array(MenuSectionSchema).default([]),
-}));
+export const MenuBlockSchema = z.preprocess(
+  (raw) => {
+    const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+    if (!c.title) c.title = 'Menu';
+    if (!Array.isArray(c.sections)) c.sections = [];
+    // Coerce numeric item prices → display strings so scraped/AI numbers don't drop.
+    c.sections = c.sections.map((s: any) => ({
+      ...s,
+      items: Array.isArray(s?.items)
+        ? s.items.map((it: any) => ({
+            ...it,
+            price: typeof it?.price === 'number' ? `$${it.price}` : it?.price,
+          }))
+        : [],
+    }));
+    return c;
+  },
+  z.object({
+    title: z.string().default('Menu'),
+    note: z.string().optional().default(''),
+    currency: z.string().optional().default('USD'),
+    sections: z.array(MenuSectionSchema).default([]),
+  })
+);
 
 /* ───────────────────────────── Location & Map ─────────────────────────────── */
 // A location card: address + tap-to-call phone + "Get Directions" + an optional
@@ -377,9 +410,13 @@ export const OrderBarSchema = z.object({
 
 export const blockContentSchemaMap = {
   // exterior-agency family → richer schema
-  exterior_agency:            { label: 'Exterior Agency',          icon: '🏠', schema: ExteriorAgencyPropsSchema },
-  exterior_cleaning_agency:   { label: 'Exterior Cleaning Agency', icon: '🏠', schema: ExteriorAgencyPropsSchema },
-  pnw_prestige:               { label: 'PNW Prestige',             icon: '🏠', schema: ExteriorAgencyPropsSchema },
+  exterior_agency: { label: 'Exterior Agency', icon: '🏠', schema: ExteriorAgencyPropsSchema },
+  exterior_cleaning_agency: {
+    label: 'Exterior Cleaning Agency',
+    icon: '🏠',
+    schema: ExteriorAgencyPropsSchema,
+  },
+  pnw_prestige: { label: 'PNW Prestige', icon: '🏠', schema: ExteriorAgencyPropsSchema },
 
   text: { label: 'Text Block', icon: '📝', schema: TextBlockContent },
 
@@ -415,7 +452,7 @@ export const blockContentSchemaMap = {
           z.object({
             span: z.number().min(1).max(12).optional(),
             items: z.array(z.lazy(() => BlockSchema as any)).default([]),
-          }),
+          })
         )
         .default([]),
       gap: z.enum(['sm', 'md', 'lg']).default('md'),
@@ -444,105 +481,144 @@ export const blockContentSchemaMap = {
   hero: {
     label: 'Hero',
     icon: '🎯',
-    schema: z.preprocess((raw) => {
-      const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+    schema: z.preprocess(
+      (raw) => {
+        const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
 
-      // Legacy → canonical
-      if (c.heading != null && c.headline == null) c.headline = c.heading;
-      if (c.subheading != null && c.subheadline == null) c.subheadline = c.subheading;
-      if (c.ctaLabel != null && c.cta_text == null) c.cta_text = c.ctaLabel;
-      if (c.ctaHref != null && c.cta_link == null) c.cta_link = c.ctaHref;
-      if (c.imageUrl != null && c.image_url == null) c.image_url = c.imageUrl;
+        // Legacy → canonical
+        if (c.heading != null && c.headline == null) c.headline = c.heading;
+        if (c.subheading != null && c.subheadline == null) c.subheadline = c.subheading;
+        if (c.ctaLabel != null && c.cta_text == null) c.cta_text = c.ctaLabel;
+        if (c.ctaHref != null && c.cta_link == null) c.cta_link = c.ctaHref;
+        if (c.imageUrl != null && c.image_url == null) c.image_url = c.imageUrl;
 
-      // Safe defaults
-      if (c.headline == null || String(c.headline).trim() === '') c.headline = 'Welcome';
-      if (c.subheadline == null) c.subheadline = '';
-      if (c.cta_text == null) c.cta_text = '';
-      if (c.cta_link == null) c.cta_link = '/';
-      if (c.image_url == null) c.image_url = '';
+        // Safe defaults
+        if (c.headline == null || String(c.headline).trim() === '') c.headline = 'Welcome';
+        if (c.subheadline == null) c.subheadline = '';
+        if (c.cta_text == null) c.cta_text = '';
+        if (c.cta_link == null) c.cta_link = '/';
+        if (c.image_url == null) c.image_url = '';
 
-      if (c.layout_mode == null) c.layout_mode = 'inline';
-      if (c.mobile_layout_mode == null) c.mobile_layout_mode = 'inline';
-      if (c.mobile_crop_behavior == null) c.mobile_crop_behavior = 'cover';
-      if (c.image_position == null) c.image_position = 'center';
+        if (c.layout_mode == null) c.layout_mode = 'inline';
+        if (c.mobile_layout_mode == null) c.mobile_layout_mode = 'inline';
+        if (c.mobile_crop_behavior == null) c.mobile_crop_behavior = 'cover';
+        if (c.image_position == null) c.image_position = 'center';
 
-      return c;
-    }, z.object({
-      headline: z.string().min(1).default('Welcome'),
-      subheadline: z.string().optional().default(''),
-      cta_text: z.string().optional().default(''),
-      cta_link: z.string().optional().default('/'),
-      image_url: z.union([z.string().url(), z.literal('')]).optional().default(''),
-      layout_mode: z.enum([
-        'inline','background','full_bleed','natural_height','full_width','full_height','full_width_height','cover'
-      ]).default('inline'),
-      mobile_layout_mode: z.enum([
-        'inline','background','full_bleed','natural_height','full_width','full_height','full_width_height','cover','full_width_height_mobile'
-      ]).optional().default('inline'),
-      mobile_crop_behavior: z.enum(['contain','cover','none']).optional().default('cover'),
-      blur_amount: z.number().min(0).max(100).optional(),
-      parallax_enabled: z.boolean().optional(),
-      image_position: z.enum(['top','center','bottom']).default('center'),
-      image_x: z.number().min(0).max(100).optional(),
-      image_y: z.number().min(0).max(100).optional(),
-      // Hide the overlaid headline/subheadline — e.g. when the background image
-      // already contains that text.
-      hide_headline: z.boolean().optional().default(false),
-      hide_subheadline: z.boolean().optional().default(false),
-      hide_cta: z.boolean().optional().default(false),
-    })),
+        return c;
+      },
+      z.object({
+        headline: z.string().min(1).default('Welcome'),
+        subheadline: z.string().optional().default(''),
+        cta_text: z.string().optional().default(''),
+        cta_link: z.string().optional().default('/'),
+        image_url: z
+          .union([z.string().url(), z.literal('')])
+          .optional()
+          .default(''),
+        layout_mode: z
+          .enum([
+            'inline',
+            'background',
+            'full_bleed',
+            'natural_height',
+            'full_width',
+            'full_height',
+            'full_width_height',
+            'cover',
+          ])
+          .default('inline'),
+        mobile_layout_mode: z
+          .enum([
+            'inline',
+            'background',
+            'full_bleed',
+            'natural_height',
+            'full_width',
+            'full_height',
+            'full_width_height',
+            'cover',
+            'full_width_height_mobile',
+          ])
+          .optional()
+          .default('inline'),
+        mobile_crop_behavior: z.enum(['contain', 'cover', 'none']).optional().default('cover'),
+        blur_amount: z.number().min(0).max(100).optional(),
+        parallax_enabled: z.boolean().optional(),
+        image_position: z.enum(['top', 'center', 'bottom']).default('center'),
+        image_x: z.number().min(0).max(100).optional(),
+        image_y: z.number().min(0).max(100).optional(),
+        // Hide the overlaid headline/subheadline — e.g. when the background image
+        // already contains that text.
+        hide_headline: z.boolean().optional().default(false),
+        hide_subheadline: z.boolean().optional().default(false),
+        hide_cta: z.boolean().optional().default(false),
+      })
+    ),
   },
 
   services: {
     label: 'Services',
     icon: '🧰',
-    schema: z.preprocess((raw) => {
-      const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+    schema: z.preprocess(
+      (raw) => {
+        const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
 
-      if (Array.isArray(c.items)) {
-        c.items = c.items
-          .map((it: any) => {
-            if (typeof it === 'string') {
-              return { name: it, description: '', price: undefined, href: undefined, icon: undefined };
-            }
-            if (it && typeof it === 'object') {
-              const o: any = { ...it };
-              if (o.title && !o.name) o.name = o.title;
-              if (o.link && !o.href) o.href = o.link;
-              return {
-                name: String(o.name ?? '').trim(),
-                description: typeof o.description === 'string' ? o.description : '',
-                price: typeof o.price === 'string' ? o.price : undefined,
-                href: typeof o.href === 'string' ? o.href : undefined,
-                icon: typeof o.icon === 'string' ? o.icon : undefined,
-              };
-            }
-            return null;
-          })
-          .filter(Boolean);
-      }
+        if (Array.isArray(c.items)) {
+          c.items = c.items
+            .map((it: any) => {
+              if (typeof it === 'string') {
+                return {
+                  name: it,
+                  description: '',
+                  price: undefined,
+                  href: undefined,
+                  icon: undefined,
+                };
+              }
+              if (it && typeof it === 'object') {
+                const o: any = { ...it };
+                if (o.title && !o.name) o.name = o.title;
+                if (o.link && !o.href) o.href = o.link;
+                return {
+                  name: String(o.name ?? '').trim(),
+                  description: typeof o.description === 'string' ? o.description : '',
+                  price: typeof o.price === 'string' ? o.price : undefined,
+                  href: typeof o.href === 'string' ? o.href : undefined,
+                  icon: typeof o.icon === 'string' ? o.icon : undefined,
+                };
+              }
+              return null;
+            })
+            .filter(Boolean);
+        }
 
-      if (!Array.isArray(c.items) || c.items.length === 0) {
-        c.items = [{ name: 'Service A', description: '' }];
-      }
+        if (!Array.isArray(c.items) || c.items.length === 0) {
+          c.items = [{ name: 'Service A', description: '' }];
+        }
 
-      if (c.columns == null) c.columns = 3;
-      if (typeof c.title !== 'string') c.title = undefined;
+        if (c.columns == null) c.columns = 3;
+        if (typeof c.title !== 'string') c.title = undefined;
 
-      return c;
-    }, z.object({
-      title: z.string().optional(),
-      columns: z.number().int().min(1).max(6).default(3),
-      // Per-block layout override; falls back to the theme's featureVariant.
-      variant: z.enum(['grid', 'cards', 'rows']).optional(),
-      items: z.array(z.object({
-        name: z.string().min(1),
-        description: z.string().default(''),
-        price: z.string().optional(),
-        href: z.string().optional(),
-        icon: z.string().optional(),
-      })).min(1),
-    })),
+        return c;
+      },
+      z.object({
+        title: z.string().optional(),
+        columns: z.number().int().min(1).max(6).default(3),
+        // Per-block layout override; falls back to the theme's featureVariant.
+        variant: z.enum(['grid', 'cards', 'rows']).optional(),
+        items: z
+          .array(
+            z.object({
+              name: z.string().min(1),
+              description: z.string().default(''),
+              price: z.string().optional(),
+              href: z.string().optional(),
+              icon: z.string().optional(),
+            })
+          )
+          .min(1),
+      })
+    ),
   },
 
   cta: {
@@ -558,40 +634,43 @@ export const blockContentSchemaMap = {
   service_areas: {
     label: 'Service Areas',
     icon: '🌍',
-    schema: z.preprocess((raw) => {
-      const c = (raw && typeof raw === 'object') ? { ...(raw as any) } : {};
+    schema: z.preprocess(
+      (raw) => {
+        const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
 
-      const cities = Array.isArray(c.cities) ? c.cities.map(toCityString).filter(Boolean) : [];
-      const allCities = Array.isArray(c.allCities)
-        ? c.allCities.map(toCityString).filter(Boolean)
-        : [...cities];
+        const cities = Array.isArray(c.cities) ? c.cities.map(toCityString).filter(Boolean) : [];
+        const allCities = Array.isArray(c.allCities)
+          ? c.allCities.map(toCityString).filter(Boolean)
+          : [...cities];
 
-      if (c.source && typeof c.source === 'object') {
-        const s = c.source as any;
-        c.sourceLat ??= s.lat ?? s.latitude ?? s.y;
-        c.sourceLng ??= s.lng ?? s.longitude ?? s.x;
-      }
-      if (c.radius_miles != null && c.radiusMiles == null) c.radiusMiles = c.radius_miles;
+        if (c.source && typeof c.source === 'object') {
+          const s = c.source as any;
+          c.sourceLat ??= s.lat ?? s.latitude ?? s.y;
+          c.sourceLng ??= s.lng ?? s.longitude ?? s.x;
+        }
+        if (c.radius_miles != null && c.radiusMiles == null) c.radiusMiles = c.radius_miles;
 
-      const toNum = (v: any, d = 0) => {
-        const n = Number(v);
-        return Number.isFinite(n) ? n : d;
-      };
+        const toNum = (v: any, d = 0) => {
+          const n = Number(v);
+          return Number.isFinite(n) ? n : d;
+        };
 
-      return {
-        cities,
-        allCities,
-        sourceLat: toNum(c.sourceLat, 0),
-        sourceLng: toNum(c.sourceLng, 0),
-        radiusMiles: toNum(c.radiusMiles, 0),
-      };
-    }, z.object({
-      cities: z.array(z.string()).default([]),
-      allCities: z.array(z.string()).default([]),
-      sourceLat: z.number().default(0),
-      sourceLng: z.number().default(0),
-      radiusMiles: z.number().default(0),
-    })),
+        return {
+          cities,
+          allCities,
+          sourceLat: toNum(c.sourceLat, 0),
+          sourceLng: toNum(c.sourceLng, 0),
+          radiusMiles: toNum(c.radiusMiles, 0),
+        };
+      },
+      z.object({
+        cities: z.array(z.string()).default([]),
+        allCities: z.array(z.string()).default([]),
+        sourceLat: z.number().default(0),
+        sourceLng: z.number().default(0),
+        radiusMiles: z.number().default(0),
+      })
+    ),
   },
 
   audio: {
@@ -607,7 +686,10 @@ export const blockContentSchemaMap = {
   video: {
     label: 'Video',
     icon: '📹',
-    schema: z.object({ url: z.string().url('Video URL must be valid'), caption: z.string().optional() }),
+    schema: z.object({
+      url: z.string().url('Video URL must be valid'),
+      caption: z.string().optional(),
+    }),
   },
 
   footer: { label: 'Footer', icon: '🏠', schema: FooterContent },
@@ -618,10 +700,14 @@ export const blockContentSchemaMap = {
     icon: '❓',
     schema: z.object({
       title: z.string().min(1),
-      items: z.array(z.object({
-        question: z.string().min(1),
-        answer: z.string().min(1),
-      })).min(1),
+      items: z
+        .array(
+          z.object({
+            question: z.string().min(1),
+            answer: z.string().min(1),
+          })
+        )
+        .min(1),
     }),
   },
 
@@ -629,12 +715,16 @@ export const blockContentSchemaMap = {
     label: 'Testimonial',
     icon: '💬',
     schema: z.object({
-      testimonials: z.array(z.object({
-        quote: z.string().min(1),
-        attribution: z.string().optional(),
-        avatar_url: z.union([z.string().url(), z.literal('')]).optional(),
-        rating: z.number().min(1).max(5).optional(),
-      })).min(1),
+      testimonials: z
+        .array(
+          z.object({
+            quote: z.string().min(1),
+            attribution: z.string().optional(),
+            avatar_url: z.union([z.string().url(), z.literal('')]).optional(),
+            rating: z.number().min(1).max(5).optional(),
+          })
+        )
+        .min(1),
       randomized: z.boolean().optional(),
     }),
   },
@@ -656,21 +746,24 @@ export const blockContentSchemaMap = {
     icon: '📖',
     schema: z.object({
       title: z.string().optional(),
-      sections: z.array(z.object({
-        heading: z.string().min(1),
-        body: z.string().default(''),
-        // Root-relative asset paths (/images/…) are valid, not just absolute URLs.
-        image_url: z.union([RelativeOrAbsoluteUrl, z.literal('')]).optional(),
-        cta_text: z.string().optional(),
-        // Empty string → undefined so a section with no CTA validates cleanly.
-        cta_link: z.preprocess(
-          (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-          RelativeOrAbsoluteUrl.optional(),
-        ),
-      })).min(1),
+      sections: z
+        .array(
+          z.object({
+            heading: z.string().min(1),
+            body: z.string().default(''),
+            // Root-relative asset paths (/images/…) are valid, not just absolute URLs.
+            image_url: z.union([RelativeOrAbsoluteUrl, z.literal('')]).optional(),
+            cta_text: z.string().optional(),
+            // Empty string → undefined so a section with no CTA validates cleanly.
+            cta_link: z.preprocess(
+              (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+              RelativeOrAbsoluteUrl.optional()
+            ),
+          })
+        )
+        .min(1),
     }),
   },
-
 
   hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
 
@@ -698,7 +791,7 @@ export const blockContentSchemaMap = {
             url: z.string(),
             hero_url: z.union([z.string(), z.literal('')]).optional(),
             is_winner: z.boolean().optional().default(false),
-          }),
+          })
         )
         .default([]),
     }),
@@ -759,7 +852,10 @@ export const blockContentSchemaMap = {
       /** Overrides the narrated URL (data-url); empty = the page's own address. */
       url: z.string().optional().default(''),
       /** Sizes the player iframe (data-width), e.g. "480" or "100%". */
-      width: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      width: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
     }),
   },
 
@@ -772,7 +868,10 @@ export const blockContentSchemaMap = {
     icon: '🏘️',
     schema: z.object({
       title: z.string().optional().default('Current Listings'),
-      columns: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 3 : v), z.number().min(2).max(3).optional().default(3)),
+      columns: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 3 : v),
+        z.number().min(2).max(3).optional().default(3)
+      ),
       listings: z
         .array(
           z.object({
@@ -780,14 +879,23 @@ export const blockContentSchemaMap = {
             address: z.string().optional().default(''),
             price: z.string().optional().default(''),
             status: z.string().optional().default('For sale'),
-            beds: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
-            baths: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
-            sqft: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+            beds: z.preprocess(
+              (v) => (typeof v === 'number' ? String(v) : v),
+              z.string().optional().default('')
+            ),
+            baths: z.preprocess(
+              (v) => (typeof v === 'number' ? String(v) : v),
+              z.string().optional().default('')
+            ),
+            sqft: z.preprocess(
+              (v) => (typeof v === 'number' ? String(v) : v),
+              z.string().optional().default('')
+            ),
             image_url: z.string().optional().default(''),
             cta_link: z.string().optional().default('#contact'),
             /** Per-home About That audio-tour embed id (agent talks through this home). */
             about_that_embed_id: z.string().optional().default(''),
-          }),
+          })
         )
         .default([]),
     }),
@@ -802,11 +910,17 @@ export const blockContentSchemaMap = {
     icon: '🚗',
     schema: z.object({
       title: z.string().optional().default('Current Inventory'),
-      columns: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 3 : v), z.number().min(2).max(3).optional().default(3)),
+      columns: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 3 : v),
+        z.number().min(2).max(3).optional().default(3)
+      ),
       vehicles: z
         .array(
           z.object({
-            year: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+            year: z.preprocess(
+              (v) => (typeof v === 'number' ? String(v) : v),
+              z.string().optional().default('')
+            ),
             make: z.string().optional().default(''),
             model: z.string().optional().default(''),
             trim: z.string().optional().default(''),
@@ -817,7 +931,7 @@ export const blockContentSchemaMap = {
             cta_link: z.string().optional().default('#contact'),
             /** Per-vehicle About That audio-walkaround embed id. */
             about_that_embed_id: z.string().optional().default(''),
-          }),
+          })
         )
         .default([]),
     }),
@@ -836,16 +950,28 @@ export const blockContentSchemaMap = {
       address: z.string().optional().default(''),
       price: z.string().optional().default(''),
       status: z.string().optional().default('For sale'),
-      beds: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
-      baths: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
-      sqft: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      beds: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
+      baths: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
+      sqft: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
       description: z.string().optional().default(''),
       images: z.array(z.string()).default([]),
       cta_text: z.string().optional().default('Request a showing'),
       cta_link: z.string().optional().default('#contact'),
       /** About That agent-preset slot — the owner-voice pitch player for this listing. */
       about_that_embed_id: z.string().optional().default(''),
-      about_that_width: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      about_that_width: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
     }),
   },
 
@@ -858,7 +984,10 @@ export const blockContentSchemaMap = {
     icon: '🎬',
     schema: z.object({
       slug: z.string().optional().default(''),
-      width: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      width: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
     }),
   },
 
@@ -908,7 +1037,7 @@ export const blockContentSchemaMap = {
             /** Permanent public MP3 from the testimonial endpoint (narrator voice). */
             audio_url: z.string().optional().default(''),
             testimonial_id: z.string().optional().default(''),
-          }),
+          })
         )
         .optional()
         .default([]),
@@ -929,8 +1058,12 @@ export const blockContentSchemaMap = {
       start: z
         .object({
           label: z.string().optional().default('Start'),
-          latitude: z.preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number()).optional(),
-          longitude: z.preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number()).optional(),
+          latitude: z
+            .preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number())
+            .optional(),
+          longitude: z
+            .preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number())
+            .optional(),
         })
         .optional()
         .default({ label: 'Start' }),
@@ -938,9 +1071,13 @@ export const blockContentSchemaMap = {
         .array(
           z.object({
             label: z.string().optional().default(''),
-            latitude: z.preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number()).optional(),
-            longitude: z.preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number()).optional(),
-          }),
+            latitude: z
+              .preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number())
+              .optional(),
+            longitude: z
+              .preprocess((v) => (typeof v === 'string' ? Number(v) : v), z.number())
+              .optional(),
+          })
         )
         .optional()
         .default([]),
@@ -1006,11 +1143,32 @@ export const blockContentSchemaMap = {
     schema: z.object({
       /** Trade this estimator quotes (contract quote-estimate-embed.md). Deck is live;
        *  other trades activate as DeckSketch deploys their models. Absent ⇒ deck. */
-      trade: z.enum(['deck', 'fence', 'concrete_patio', 'turf', 'epoxy_floor', 'paving', 'roofing', 'siding', 'retaining_wall']).optional().default('deck'),
+      trade: z
+        .enum([
+          'deck',
+          'fence',
+          'concrete_patio',
+          'turf',
+          'epoxy_floor',
+          'paving',
+          'roofing',
+          'siding',
+          'retaining_wall',
+        ])
+        .optional()
+        .default('deck'),
       title: z.string().optional().default('Instant deck estimate'),
-      subtitle: z.string().optional().default('Enter a few dimensions for a ballpark price — then we’ll follow up with a real quote.'),
+      subtitle: z
+        .string()
+        .optional()
+        .default(
+          'Enter a few dimensions for a ballpark price — then we’ll follow up with a real quote.'
+        ),
       /** Default material tier the widget opens on. */
-      default_material_tier: z.enum(['pressure_treated', 'cedar', 'composite']).optional().default('pressure_treated'),
+      default_material_tier: z
+        .enum(['pressure_treated', 'cedar', 'composite'])
+        .optional()
+        .default('pressure_treated'),
       /** Show the optional refiners (stairs, railing) that tighten the range. */
       show_refiners: z.boolean().optional().default(true),
       /** Lead CTA copy shown under the estimate. */
@@ -1062,7 +1220,7 @@ export const blockContentSchemaMap = {
             description: z.string().optional().default(''),
             cta_text: z.string().optional().default(''),
             cta_link: z.string().optional().default(''),
-          }),
+          })
         )
         .optional()
         .default([]),
@@ -1077,14 +1235,17 @@ export const blockContentSchemaMap = {
     icon: '🖼️',
     schema: z.object({
       title: z.string().optional().default('Gallery'),
-      columns: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 3 : v), z.number().min(2).max(4).optional().default(3)),
+      columns: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 3 : v),
+        z.number().min(2).max(4).optional().default(3)
+      ),
       images: z
         .array(
           z.object({
             url: z.string().optional().default(''),
             caption: z.string().optional().default(''),
             alt: z.string().optional().default(''),
-          }),
+          })
         )
         .optional()
         .default([]),
@@ -1117,7 +1278,10 @@ export const blockContentSchemaMap = {
       cta_text: z.string().optional().default('Add to cart'),
       /** Fallbacks when the live product fetch hasn't landed (or fails). */
       label: z.string().optional().default(''),
-      price_cents: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 0 : v), z.number().optional().default(0)),
+      price_cents: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 0 : v),
+        z.number().optional().default(0)
+      ),
       show_on_desktop: z.boolean().optional().default(false),
       enabled: z.boolean().optional().default(true),
     }),
@@ -1140,10 +1304,13 @@ export const blockContentSchemaMap = {
         .array(
           z.object({
             author: z.string(),
-            rating: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 5 : v), z.number().min(1).max(5)),
+            rating: z.preprocess(
+              (v) => (typeof v === 'string' ? Number(v) || 5 : v),
+              z.number().min(1).max(5)
+            ),
             text: z.string(),
             date: z.string().optional().default(''),
-          }),
+          })
         )
         .default([]),
     }),
@@ -1154,118 +1321,128 @@ export const blockContentSchemaMap = {
   products_grid: {
     label: 'Products Grid',
     icon: '🛒',
-    schema: z.preprocess((raw) => {
-      const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+    schema: z.preprocess(
+      (raw) => {
+        const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
 
-      // Aliases → canonical
-      if (Array.isArray((c as any).product_ids) && !Array.isArray((c as any).productIds)) {
-        (c as any).productIds = (c as any).product_ids;
-      }
-      if (Array.isArray((c as any).ids) && !Array.isArray((c as any).productIds)) {
-        (c as any).productIds = (c as any).ids;
-      }
-      if (Array.isArray((c as any).items) && !Array.isArray((c as any).productIds)) {
-        (c as any).productIds = (c as any).items.map((x: any) => x?.id).filter(Boolean);
-      }
+        // Aliases → canonical
+        if (Array.isArray((c as any).product_ids) && !Array.isArray((c as any).productIds)) {
+          (c as any).productIds = (c as any).product_ids;
+        }
+        if (Array.isArray((c as any).ids) && !Array.isArray((c as any).productIds)) {
+          (c as any).productIds = (c as any).ids;
+        }
+        if (Array.isArray((c as any).items) && !Array.isArray((c as any).productIds)) {
+          (c as any).productIds = (c as any).items.map((x: any) => x?.id).filter(Boolean);
+        }
 
-      // Normalize columns
-      if (typeof (c as any).columns === 'string') {
-        const n = Number((c as any).columns);
-        (c as any).columns = Number.isFinite(n) ? n : 3;
-      }
+        // Normalize columns
+        if (typeof (c as any).columns === 'string') {
+          const n = Number((c as any).columns);
+          (c as any).columns = Number.isFinite(n) ? n : 3;
+        }
 
-      // Build products from legacy shapes (items/products)
-      const src = Array.isArray((c as any).products)
-        ? (c as any).products
-        : Array.isArray((c as any).items)
-        ? (c as any).items
-        : [];
+        // Build products from legacy shapes (items/products)
+        const src = Array.isArray((c as any).products)
+          ? (c as any).products
+          : Array.isArray((c as any).items)
+            ? (c as any).items
+            : [];
 
-      const products = src
-        .map((p: any, i: number) => {
-          if (!p || typeof p !== 'object') return null;
-          const id = String(p.id ?? p.product_id ?? p.slug ?? p.sku ?? `p${i + 1}`);
-          const title = String(p.title ?? p.name ?? `Item ${i + 1}`);
-          const cents =
-            typeof p.price_cents === 'number' ? p.price_cents : usdToCents(p.price) ?? 0;
-          const image_url = p.image_url ?? p.imageUrl ?? p.image ?? '';
-          return { id, title, price_cents: Math.max(0, Math.round(cents)), image_url };
-        })
-        .filter(Boolean);
+        const products = src
+          .map((p: any, i: number) => {
+            if (!p || typeof p !== 'object') return null;
+            const id = String(p.id ?? p.product_id ?? p.slug ?? p.sku ?? `p${i + 1}`);
+            const title = String(p.title ?? p.name ?? `Item ${i + 1}`);
+            const cents =
+              typeof p.price_cents === 'number' ? p.price_cents : (usdToCents(p.price) ?? 0);
+            const image_url = p.image_url ?? p.imageUrl ?? p.image ?? '';
+            return { id, title, price_cents: Math.max(0, Math.round(cents)), image_url };
+          })
+          .filter(Boolean);
 
-      if (!Array.isArray((c as any).products) && products.length) {
-        (c as any).products = products;
-      }
+        if (!Array.isArray((c as any).products) && products.length) {
+          (c as any).products = products;
+        }
 
-      // Defaults
-      if (!(c as any).title) (c as any).title = 'Featured Products';
-      if ((c as any).columns == null) (c as any).columns = 3;
-      if (!Array.isArray((c as any).productIds)) (c as any).productIds = [];
+        // Defaults
+        if (!(c as any).title) (c as any).title = 'Featured Products';
+        if ((c as any).columns == null) (c as any).columns = 3;
+        if (!Array.isArray((c as any).productIds)) (c as any).productIds = [];
 
-      return c;
-    }, z.object({
-      title: z.string().default('Featured Products'),
-      columns: z.number().int().min(1).max(6).default(3),
-      productIds: z.array(z.string()).default([]),
-      products: z.array(z.object({
-        id: z.string().min(1),
-        title: z.string().min(1),
-        price_cents: z.number().int().min(0).default(0),
-        image_url: z.union([z.string().url(), z.literal('')]).optional(),
-      })).default([]),
-    })),
+        return c;
+      },
+      z.object({
+        title: z.string().default('Featured Products'),
+        columns: z.number().int().min(1).max(6).default(3),
+        productIds: z.array(z.string()).default([]),
+        products: z
+          .array(
+            z.object({
+              id: z.string().min(1),
+              title: z.string().min(1),
+              price_cents: z.number().int().min(0).default(0),
+              image_url: z.union([z.string().url(), z.literal('')]).optional(),
+            })
+          )
+          .default([]),
+      })
+    ),
   },
 
   service_offer: {
     label: 'Service Offer',
     icon: '🛎️',
-    schema: z.preprocess((raw) => {
-      const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+    schema: z.preprocess(
+      (raw) => {
+        const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
 
-      // Aliases → canonical
-      if (c.serviceId && !c.productId) c.productId = c.serviceId;
-      if (c.product_id && !c.productId) c.productId = c.product_id;
+        // Aliases → canonical
+        if (c.serviceId && !c.productId) c.productId = c.serviceId;
+        if (c.product_id && !c.productId) c.productId = c.product_id;
 
-      if (c.cta && !c.cta_text) c.cta_text = c.cta;
-      if (c.href && !c.cta_link) c.cta_link = c.href;
-      if (c.image && !c.image_url) c.image_url = c.image;
+        if (c.cta && !c.cta_text) c.cta_text = c.cta;
+        if (c.href && !c.cta_link) c.cta_link = c.href;
+        if (c.image && !c.image_url) c.image_url = c.image;
 
-      // Plain-text to HTML
-      if (typeof c.description === 'string' && !c.description_html) {
-        c.description_html = c.description;
-      }
+        // Plain-text to HTML
+        if (typeof c.description === 'string' && !c.description_html) {
+          c.description_html = c.description;
+        }
 
-      // Price coercion
-      if (c.price_cents == null && c.price != null) {
-        const cents = usdToCents(c.price);
-        if (cents != null) c.price_cents = cents;
-      }
-      if (c.compare_at_cents == null && c.compareAt != null) {
-        const cents = usdToCents(c.compareAt);
-        if (cents != null) c.compare_at_cents = cents;
-      }
+        // Price coercion
+        if (c.price_cents == null && c.price != null) {
+          const cents = usdToCents(c.price);
+          if (cents != null) c.price_cents = cents;
+        }
+        if (c.compare_at_cents == null && c.compareAt != null) {
+          const cents = usdToCents(c.compareAt);
+          if (cents != null) c.compare_at_cents = cents;
+        }
 
-      // Defaults
-      if (!c.title) c.title = 'Featured Service';
-      if (c.subtitle == null) c.subtitle = '';
-      if (c.description_html == null) c.description_html = '';
-      if (typeof c.showPrice !== 'boolean') c.showPrice = true;
-      if (!('cta_text' in c)) c.cta_text = 'Get Started';
-      if (!('cta_link' in c)) c.cta_link = '/contact';
+        // Defaults
+        if (!c.title) c.title = 'Featured Service';
+        if (c.subtitle == null) c.subtitle = '';
+        if (c.description_html == null) c.description_html = '';
+        if (typeof c.showPrice !== 'boolean') c.showPrice = true;
+        if (!('cta_text' in c)) c.cta_text = 'Get Started';
+        if (!('cta_link' in c)) c.cta_link = '/contact';
 
-      return c;
-    }, z.object({
-      title: z.string().min(1).default('Featured Service'),
-      subtitle: z.string().optional().default(''),
-      description_html: z.string().optional().default(''),
-      price_cents: z.number().int().min(0).optional(),
-      compare_at_cents: z.number().int().min(0).optional(),
-      image_url: z.union([z.string().url(), z.literal('')]).optional(),
-      cta_text: z.string().optional().default('Get Started'),
-      cta_link: RelativeOrAbsoluteUrl.optional().default('/contact'),
-      productId: z.string().min(1).optional(),
-      showPrice: z.boolean().default(true),
-    })),
+        return c;
+      },
+      z.object({
+        title: z.string().min(1).default('Featured Service'),
+        subtitle: z.string().optional().default(''),
+        description_html: z.string().optional().default(''),
+        price_cents: z.number().int().min(0).optional(),
+        compare_at_cents: z.number().int().min(0).optional(),
+        image_url: z.union([z.string().url(), z.literal('')]).optional(),
+        cta_text: z.string().optional().default('Get Started'),
+        cta_link: RelativeOrAbsoluteUrl.optional().default('/contact'),
+        productId: z.string().min(1).optional(),
+        showPrice: z.boolean().default(true),
+      })
+    ),
   },
 
   /* ───────────────────────────── NEW: Scheduler block ─────────────────────── */
@@ -1273,42 +1450,45 @@ export const blockContentSchemaMap = {
   scheduler: {
     label: 'Service Scheduler',
     icon: '📅',
-    schema: z.preprocess((raw) => {
-      const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+    schema: z.preprocess(
+      (raw) => {
+        const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
 
-      // Aliases → canonical (just in case)
-      if (Array.isArray(c.services) && !Array.isArray(c.service_ids)) c.service_ids = c.services;
-      if (typeof c.default_service === 'string' && !c.default_service_id) {
-        c.default_service_id = c.default_service;
-      }
+        // Aliases → canonical (just in case)
+        if (Array.isArray(c.services) && !Array.isArray(c.service_ids)) c.service_ids = c.services;
+        if (typeof c.default_service === 'string' && !c.default_service_id) {
+          c.default_service_id = c.default_service;
+        }
 
-      // Safe defaults
-      if (!Array.isArray(c.service_ids)) c.service_ids = [];
-      if (typeof c.title !== 'string' || !c.title.trim()) c.title = 'Book an appointment';
-      if (typeof c.subtitle !== 'string') c.subtitle = 'Choose a time that works for you';
-      if (typeof c.show_resource_picker !== 'boolean') c.show_resource_picker = false;
-      if (typeof c.timezone !== 'string' || !c.timezone) c.timezone = 'America/Los_Angeles';
-      if (!Number.isFinite(Number(c.slot_granularity_minutes))) c.slot_granularity_minutes = 30;
-      if (!Number.isFinite(Number(c.lead_time_minutes))) c.lead_time_minutes = 120;
-      if (!Number.isFinite(Number(c.window_days))) c.window_days = 14;
-      if (typeof c.confirmation_message !== 'string' || !c.confirmation_message) {
-        c.confirmation_message = 'Thanks! Your appointment is confirmed.';
-      }
+        // Safe defaults
+        if (!Array.isArray(c.service_ids)) c.service_ids = [];
+        if (typeof c.title !== 'string' || !c.title.trim()) c.title = 'Book an appointment';
+        if (typeof c.subtitle !== 'string') c.subtitle = 'Choose a time that works for you';
+        if (typeof c.show_resource_picker !== 'boolean') c.show_resource_picker = false;
+        if (typeof c.timezone !== 'string' || !c.timezone) c.timezone = 'America/Los_Angeles';
+        if (!Number.isFinite(Number(c.slot_granularity_minutes))) c.slot_granularity_minutes = 30;
+        if (!Number.isFinite(Number(c.lead_time_minutes))) c.lead_time_minutes = 120;
+        if (!Number.isFinite(Number(c.window_days))) c.window_days = 14;
+        if (typeof c.confirmation_message !== 'string' || !c.confirmation_message) {
+          c.confirmation_message = 'Thanks! Your appointment is confirmed.';
+        }
 
-      return c;
-    }, z.object({
-      title: z.string().min(1).default('Book an appointment'),
-      subtitle: z.string().optional().default('Choose a time that works for you'),
-      org_id: z.string().uuid().optional(),
-      service_ids: z.array(z.string().uuid()).min(0).default([]),
-      default_service_id: z.string().uuid().optional(),
-      show_resource_picker: z.boolean().default(false),
-      timezone: z.string().default('America/Los_Angeles'),
-      slot_granularity_minutes: z.number().int().min(5).max(120).default(30),
-      lead_time_minutes: z.number().int().min(0).max(1440).default(120),
-      window_days: z.number().int().min(1).max(31).default(14),
-      confirmation_message: z.string().default('Thanks! Your appointment is confirmed.'),
-    })),
+        return c;
+      },
+      z.object({
+        title: z.string().min(1).default('Book an appointment'),
+        subtitle: z.string().optional().default('Choose a time that works for you'),
+        org_id: z.string().uuid().optional(),
+        service_ids: z.array(z.string().uuid()).min(0).default([]),
+        default_service_id: z.string().uuid().optional(),
+        show_resource_picker: z.boolean().default(false),
+        timezone: z.string().default('America/Los_Angeles'),
+        slot_granularity_minutes: z.number().int().min(5).max(120).default(30),
+        lead_time_minutes: z.number().int().min(0).max(1440).default(120),
+        window_days: z.number().int().min(1).max(31).default(14),
+        confirmation_message: z.string().default('Thanks! Your appointment is confirmed.'),
+      })
+    ),
   },
 
   /* ───────────────────── ElectInfo: Candidate blocks ───────────────────── */
@@ -1322,7 +1502,7 @@ export const blockContentSchemaMap = {
       office: z.string().min(1),
       city: z.string().min(1),
       tagline: z.string().optional(),
-      url: z.string().url(),               // canonical long URL
+      url: z.string().url(), // canonical long URL
       shortUrl: z.string().url().optional(), // preferred for QR if present
       ctaDonateHref: z.string().url().optional(),
       ctaVolunteerHref: z.string().url().optional(),
@@ -1334,7 +1514,7 @@ export const blockContentSchemaMap = {
     label: 'About Candidate',
     icon: '👤',
     schema: z.object({
-      markdown: z.string(),                // plain markdown/HTML string
+      markdown: z.string(), // plain markdown/HTML string
     }),
   },
 
@@ -1342,10 +1522,15 @@ export const blockContentSchemaMap = {
     label: 'Key Priorities',
     icon: '✅',
     schema: z.object({
-      items: z.array(z.object({
-        title: z.string(),
-        desc: z.string(),
-      })).min(1).max(12),
+      items: z
+        .array(
+          z.object({
+            title: z.string(),
+            desc: z.string(),
+          })
+        )
+        .min(1)
+        .max(12),
     }),
   },
 
@@ -1353,10 +1538,12 @@ export const blockContentSchemaMap = {
     label: 'Endorsements',
     icon: '🗒️',
     schema: z.object({
-      items: z.array(z.object({
-        org: z.string(),
-        quote: z.string(),
-      })),
+      items: z.array(
+        z.object({
+          org: z.string(),
+          quote: z.string(),
+        })
+      ),
     }),
   },
 
@@ -1364,12 +1551,14 @@ export const blockContentSchemaMap = {
     label: 'Events',
     icon: '📅',
     schema: z.object({
-      items: z.array(z.object({
-        title: z.string(),
-        dateISO: z.string(),               // ISO string; render can format
-        venue: z.string(),
-        blurb: z.string().optional(),
-      })),
+      items: z.array(
+        z.object({
+          title: z.string(),
+          dateISO: z.string(), // ISO string; render can format
+          venue: z.string(),
+          blurb: z.string().optional(),
+        })
+      ),
     }),
   },
 
@@ -1379,7 +1568,7 @@ export const blockContentSchemaMap = {
     schema: z.object({
       headline: z.string().default('Stay Connected'),
       showZip: z.boolean().default(true),
-      candidateSlug: z.string(),           // passed to /api/subscribe
+      candidateSlug: z.string(), // passed to /api/subscribe
     }),
   },
 
@@ -1392,7 +1581,7 @@ export const blockContentSchemaMap = {
       name: z.string().default(''),
       longUrl: z.string().url(),
       shortUrl: z.string().url().optional(),
-      captionMode: z.enum(['none','fromShort','custom']).default('fromShort'),
+      captionMode: z.enum(['none', 'fromShort', 'custom']).default('fromShort'),
       customCaption: z.string().optional(),
       showStickerSheet: z.boolean().default(true),
       defaultPresetId: z.string().default('avery-5160'),
@@ -1425,11 +1614,11 @@ export const blockContentSchemaMap = {
       shortUrl: z.string().url().optional(),
       caption: z.string().optional(),
       size: z.number().min(64).max(512).default(112),
-      align: z.enum(['left','center','right']).default('center'),
+      align: z.enum(['left', 'center', 'right']).default('center'),
       showLinkText: z.boolean().default(true),
     }),
   },
-  
+
   public_qr_sidebar: {
     label: 'QR Sidebar (Public)',
     icon: '🧲',
@@ -1438,15 +1627,27 @@ export const blockContentSchemaMap = {
       shortUrl: z.string().url().optional(),
       caption: z.string().optional(),
       size: z.number().min(80).max(220).default(128),
-      side: z.enum(['left','right']).default('right'),
+      side: z.enum(['left', 'right']).default('right'),
       sticky: z.boolean().default(true),
       topOffsetPx: z.number().min(0).max(200).default(24),
       hideOnMobile: z.boolean().default(true),
-      breakpoint: z.enum(['md','lg','xl']).default('lg'),
+      breakpoint: z.enum(['md', 'lg', 'xl']).default('lg'),
       widthPx: z.number().min(160).max(420).default(260),
     }),
   },
 
+  // Real-estate seller-lead magnet: "What's your home worth?" — address + contact in,
+  // lead to the agent out (no fabricated instant number; a real agent-prepared CMA follows).
+  home_valuation: {
+    label: 'Home Valuation',
+    icon: '🏷️',
+    schema: z.object({
+      title: z.string().optional(),
+      subtitle: z.string().optional(),
+      cta_label: z.string().optional(),
+      disclaimer: z.string().optional(),
+    }),
+  },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
 /* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ───────────── */
@@ -1454,14 +1655,13 @@ export const blockContentSchemaMap = {
 const TYPE_ALIASES: Record<string, string> = {
   'products-grid': 'products_grid',
   'product-grid': 'products_grid',
-  'products': 'products_grid',
+  products: 'products_grid',
   'service-scheduler': 'scheduler',
   // Prestige/exterior aliases → canonical renderer
   'exterior-agency': 'exterior_agency',
   'exterior-cleaning-agency': 'exterior_agency',
-  'exterior_cleaning_agency': 'exterior_agency',
-  'pnw_prestige': 'exterior_agency',
-
+  exterior_cleaning_agency: 'exterior_agency',
+  pnw_prestige: 'exterior_agency',
 
   // ElectInfo aliases
   'candidate-hero': 'candidate_hero',
@@ -1490,7 +1690,7 @@ export function resolveCanonicalType(t: string): string {
 /* ─────────────────────────── Discriminated union ─────────────────────────── */
 
 export function createBlockUnion<
-  T extends Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>
+  T extends Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>,
 >(map: T) {
   const schemas: z.ZodDiscriminatedUnionOption<'type'>[] = [];
   const meta: Record<keyof T, { label: string; icon: string }> = {} as any;
@@ -1512,8 +1712,7 @@ export function createBlockUnion<
   return { schemas, meta };
 }
 
-const { schemas: BasicBlockSchemas, meta: blockMeta } =
-  createBlockUnion(blockContentSchemaMap);
+const { schemas: BasicBlockSchemas, meta: blockMeta } = createBlockUnion(blockContentSchemaMap);
 
 /**
  * Union schema with a preprocessor that:
@@ -1536,7 +1735,8 @@ export const BlockSchema: z.ZodTypeAny = z.lazy(() =>
           const cIn: any = b.content ?? b.props ?? {};
           const c: any = { ...cIn };
 
-          if (Array.isArray(c.product_ids) && !Array.isArray(c.productIds)) c.productIds = c.product_ids;
+          if (Array.isArray(c.product_ids) && !Array.isArray(c.productIds))
+            c.productIds = c.product_ids;
           if (Array.isArray(c.ids) && !Array.isArray(c.productIds)) c.productIds = c.ids;
           if (Array.isArray(c.items) && !Array.isArray(c.productIds)) {
             c.productIds = c.items.map((x: any) => x?.id).filter(Boolean);
@@ -1558,7 +1758,7 @@ export const BlockSchema: z.ZodTypeAny = z.lazy(() =>
       'type',
       BasicBlockSchemas as unknown as [
         z.ZodDiscriminatedUnionOption<'type'>,
-        ...z.ZodDiscriminatedUnionOption<'type'>[]
+        ...z.ZodDiscriminatedUnionOption<'type'>[],
       ]
     )
   )
@@ -1568,7 +1768,7 @@ export const BlocksArraySchema = z.array(BlockSchema);
 export type Block = z.infer<typeof BlockSchema>;
 
 /** Convenience export for scheduler block content type */
-export type SchedulerBlock = z.infer<typeof blockContentSchemaMap['scheduler']['schema']>;
+export type SchedulerBlock = z.infer<(typeof blockContentSchemaMap)['scheduler']['schema']>;
 
 export function isValidBlock(data: unknown): data is Block {
   return BlockSchema.safeParse(data).success;
@@ -1608,12 +1808,15 @@ export function migrateLegacyBlock(block: any): any {
     // NEW: migrate products-grid → products_grid + normalize ID keys
     if (block.type === 'products-grid') {
       const c = block.content ?? {};
-      const ids =
-        Array.isArray(c.product_ids) ? c.product_ids
-        : Array.isArray(c.productIds) ? c.productIds
-        : Array.isArray(c.ids) ? c.ids
-        : Array.isArray(c.items) ? c.items.map((x: any) => x?.id).filter(Boolean)
-        : [];
+      const ids = Array.isArray(c.product_ids)
+        ? c.product_ids
+        : Array.isArray(c.productIds)
+          ? c.productIds
+          : Array.isArray(c.ids)
+            ? c.ids
+            : Array.isArray(c.items)
+              ? c.items.map((x: any) => x?.id).filter(Boolean)
+              : [];
       block.type = 'products_grid';
       block.content = { ...c, productIds: ids, product_ids: ids };
     }
@@ -1638,10 +1841,13 @@ export function migrateLegacyBlock(block: any): any {
 
 export const blockPreviewFallback: Record<Block['type'], string> = Object.entries(
   blockMeta as Record<Block['type'], { label: string; icon: string }>
-).reduce((acc, [key, val]) => {
-  acc[key as Block['type']] = `${val.icon} ${val.label}`;
-  return acc;
-}, {} as Record<Block['type'], string>);
+).reduce(
+  (acc, [key, val]) => {
+    acc[key as Block['type']] = `${val.icon} ${val.label}`;
+    return acc;
+  },
+  {} as Record<Block['type'], string>
+);
 
 export { blockMeta };
 
@@ -1662,52 +1868,58 @@ const HERO_DEFAULT_CONTENT = {
 /* ──────────────────────────── Full-schema helpers ─────────────────────────── */
 
 function makeFullBlockSchema(type: string, content: z.ZodTypeAny) {
-  return z.preprocess((raw) => {
-    const b = raw && typeof raw === 'object' ? { ...(raw as any) } : (raw as any);
+  return z.preprocess(
+    (raw) => {
+      const b = raw && typeof raw === 'object' ? { ...(raw as any) } : (raw as any);
 
-    if (!b || typeof b !== 'object') return raw;
+      if (!b || typeof b !== 'object') return raw;
 
-    // Coerce legacy/seeded shape: props → content (also unwrap props.content if present)
-    if (b.content == null && b.props && typeof b.props === 'object') {
-      const p: any = b.props;
-      b.content = (p && typeof p.content === 'object') ? p.content : p;
-    }
-
-    // Inject safe defaults where it helps pass first-save
-    if (b.content == null) {
-      if (type === 'hero') {
-        b.content = { ...HERO_DEFAULT_CONTENT, ...(b.content ?? {}) };
+      // Coerce legacy/seeded shape: props → content (also unwrap props.content if present)
+      if (b.content == null && b.props && typeof b.props === 'object') {
+        const p: any = b.props;
+        b.content = p && typeof p.content === 'object' ? p.content : p;
       }
-      if (type === 'scheduler') {
-        b.content = {
-          title: 'Book an appointment',
-          subtitle: 'Choose a time that works for you',
-          service_ids: [],
-          show_resource_picker: false,
-          timezone: 'America/Los_Angeles',
-          slot_granularity_minutes: 30,
-          lead_time_minutes: 120,
-          window_days: 14,
-          confirmation_message: 'Thanks! Your appointment is confirmed.',
-          ...(b.content ?? {}),
-        };
-      }
-    }
 
-    return b;
-  }, z.object({
-    type: z.literal(type),
-    content,
-    _id: z.string().optional(),
-    tone: z.string().optional(),
-    industry: z.string().optional(),
-    tags: z.array(z.string()).optional(),
-    meta: z.record(z.any()).optional(),
-  }));
+      // Inject safe defaults where it helps pass first-save
+      if (b.content == null) {
+        if (type === 'hero') {
+          b.content = { ...HERO_DEFAULT_CONTENT, ...(b.content ?? {}) };
+        }
+        if (type === 'scheduler') {
+          b.content = {
+            title: 'Book an appointment',
+            subtitle: 'Choose a time that works for you',
+            service_ids: [],
+            show_resource_picker: false,
+            timezone: 'America/Los_Angeles',
+            slot_granularity_minutes: 30,
+            lead_time_minutes: 120,
+            window_days: 14,
+            confirmation_message: 'Thanks! Your appointment is confirmed.',
+            ...(b.content ?? {}),
+          };
+        }
+      }
+
+      return b;
+    },
+    z.object({
+      type: z.literal(type),
+      content,
+      _id: z.string().optional(),
+      tone: z.string().optional(),
+      industry: z.string().optional(),
+      tags: z.array(z.string()).optional(),
+      meta: z.record(z.any()).optional(),
+    })
+  );
 }
 
 export const blockFullSchemaMap: Record<string, z.ZodTypeAny> = Object.fromEntries(
-  Object.entries(blockContentSchemaMap).map(([type, cfg]) => [type, makeFullBlockSchema(type, cfg.schema)])
+  Object.entries(blockContentSchemaMap).map(([type, cfg]) => [
+    type,
+    makeFullBlockSchema(type, cfg.schema),
+  ])
 );
 
 for (const [type, cfg] of Object.entries(blockContentSchemaMap)) {

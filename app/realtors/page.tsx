@@ -60,12 +60,12 @@ export default function RealtorsPage() {
             >
               See your site — free
             </Link>
-            <a
-              href="#voice"
+            <Link
+              href="/realtors/sample-listing"
               className="rounded-lg border border-emerald-500 px-6 py-3 text-base font-medium text-emerald-300 transition hover:bg-emerald-500/10 hover:text-emerald-200"
             >
-              Hear how it works
-            </a>
+              Hear a live sample →
+            </Link>
           </div>
           <p className="mt-4 text-sm text-zinc-500">Takes about a minute. No credit card. Nothing to install.</p>
         </section>

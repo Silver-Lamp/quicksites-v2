@@ -6,6 +6,7 @@
 // identity to distinguish from restaurants (amber) and partner/compare (sky).
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
+import SiteFooter from '@/components/site/site-footer';
 import { marketingOg } from '@/lib/marketingOg';
 
 export const metadata = marketingOg({
@@ -196,6 +197,7 @@ export default function RealtorsPage() {
           </div>
         </section>
       </div>
+      <SiteFooter />
     </>
   );
 }

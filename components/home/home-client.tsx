@@ -385,6 +385,9 @@ export default function HomeClient({
           <a href="/legal/privacy" className="underline hover:text-zinc-300">Privacy</a>
           <span className="mx-1">•</span>
           <a href="/legal/terms" className="underline hover:text-zinc-300">Terms</a>
+          <span className="mx-1">•</span>
+          made by{' '}
+          <a href="https://www.hivejournal.com/point-seven-studio" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-300">Point Seven Studio</a>
           {showWidget && (
             // Hidden on phones so the floating mascot doesn't cover the hero CTA;
             // shown at sm+ (a display:none ancestor also hides its fixed child).

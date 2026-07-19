@@ -1,9 +1,10 @@
 // app/api/porchhearth/bookings/route.ts
 //
 // QS proxy over PorchHearth's proxy-authed rental booking-create (crosstalk/contracts/
-// neighborhood-stay-embed.md, LIVE). The browser posts an inquiry HERE; we attach the shared
-// X-QS-Proxy-Secret server-side and forward. v1 = a no-charge PENDING inquiry (payment:null) — the
-// neighborhood_stay CTA stays "inquire" until PorchHearth wires the rental PaymentIntent.
+// neighborhood-stay-embed.md, LIVE). The browser posts HERE; we attach the shared X-QS-Proxy-Secret
+// server-side and forward. Creates a PENDING booking + returns a Stripe HOSTED-CHECKOUT URL
+// (payment.checkoutUrl) — the block redirects the guest there to pay. successUrl/cancelUrl (validated
+// same-origin) control where Stripe returns them.
 //
 // Fail-closed: 503 until PORCHHEARTH_PROXY_SECRET is provisioned. Buyer PII + payment live on
 // PorchHearth's side — QS never stores card data or cook/host PII.
@@ -46,6 +47,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'buyer.name and a valid buyer.email are required' }, { status: 400 });
   }
 
+  // Stripe return URLs: only accept same-origin http(s) targets (else omit → PorchHearth defaults to
+  // delivered.menu). This keeps our proxy from being used to emit redirects to arbitrary domains.
+  const origin = s(req.headers.get('origin'));
+  const sameOriginUrl = (v: any): string | undefined => {
+    const raw = s(v);
+    if (!raw || !origin) return undefined;
+    try {
+      const u = new URL(raw);
+      return u.origin === origin ? u.toString() : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const successUrl = sameOriginUrl(body.successUrl);
+  const cancelUrl = sameOriginUrl(body.cancelUrl);
+
   try {
     const result = await createBooking({
       propertyId,
@@ -58,6 +75,8 @@ export async function POST(req: NextRequest) {
       ...((s(req.headers.get('x-qs-site-ref')) || s(body.siteRef))
         ? { siteRef: s(req.headers.get('x-qs-site-ref')) || s(body.siteRef) }
         : {}),
+      ...(successUrl ? { successUrl } : {}),
+      ...(cancelUrl ? { cancelUrl } : {}),
     });
     return NextResponse.json(result);
   } catch (e: any) {

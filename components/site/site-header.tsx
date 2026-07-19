@@ -43,6 +43,7 @@ const DEFAULT_LINKS: LinkItem[] = [
   { label: 'Realtors', href: '/realtors' },
   { label: 'Partners', href: '/partners' },
   { label: 'Pricing', href: '/pricing' },
+  { label: 'Compare', href: '/compare' },
   { label: 'Book', href: '/book' },
   { label: 'Contact', href: '/contact', button: true, variant: 'ghost' },
 ];

@@ -975,6 +975,36 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Neighborhood stay — a short-term-rental listing (PorchHearth mesh seam,
+  // crosstalk/contracts/neighborhood-stay-embed.md). Sibling of listing_card, tuned for
+  // stays: nightly price, guests, amenities, min/max-stay, + the host-voice hook. v1 renders
+  // from inline content (works today); a later PorchHearth deploy wires live availability/booking.
+  neighborhood_stay: {
+    label: 'Rental / Stay',
+    icon: '🏡',
+    schema: z.object({
+      title: z.string().optional().default(''),
+      address: z.string().optional().default(''),
+      price_per_night: z.string().optional().default(''),
+      beds: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      bathrooms: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      max_guests: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      min_stay: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      max_stay: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      amenities: z.array(z.string()).default([]),
+      description: z.string().optional().default(''),
+      images: z.array(z.string()).default([]),
+      cancellation: z.string().optional().default(''),
+      /** Host-voice hook. `host_audio_url` = a direct MP3 (PorchHearth Property.hostAudioUrl / an
+       *  HJ About That render); OR paste an About That embed id to use the QS player. */
+      host_audio_url: z.string().optional().default(''),
+      about_that_embed_id: z.string().optional().default(''),
+      about_that_width: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      cta_text: z.string().optional().default('Check availability'),
+      cta_link: z.string().optional().default('#contact'),
+    }),
+  },
+
   // HJ demo embed (crosstalk/contracts/demo-embed.md, Status: LIVE): renders an
   // approved+published HiveJournal studio demo by slug — the MP4 (poster + video)
   // when rendered, else the live caption-player against the public prepared

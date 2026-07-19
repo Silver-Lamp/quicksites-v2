@@ -468,6 +468,27 @@ export const DEFAULT_BLOCK_CONTENT = {
     about_that_width: '',
   },
 
+  neighborhood_stay: {
+    title: 'Cozy tiny home by the creek',
+    address: 'Cedar Hollow, OR',
+    price_per_night: '$180',
+    beds: '2',
+    bathrooms: '1',
+    max_guests: '4',
+    min_stay: '2',
+    max_stay: '14',
+    amenities: ['Full kitchen', 'Wi-Fi', 'Wood stove', 'Creek-side deck', 'Free parking', 'Pet friendly'],
+    description:
+      'A hand-built tiny home tucked among the cedars, steps from the creek. Wake up to birdsong, cook in a full kitchen, and unwind on the deck under the stars. Minutes to trailheads and downtown.',
+    images: [],
+    cancellation: 'Free cancellation up to 7 days before check-in.',
+    host_audio_url: '',
+    about_that_embed_id: '',
+    about_that_width: '',
+    cta_text: 'Check availability',
+    cta_link: '#contact',
+  },
+
   service_offer: {
     title: 'Book a Service',
     subtitle: '',

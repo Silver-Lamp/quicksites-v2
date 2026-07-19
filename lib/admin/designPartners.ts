@@ -6,6 +6,10 @@
 // while mutable pipeline fields (status / next step / notes / last-nudged) persist in site_settings
 // (service-role only, no migration). The goal is per-partner next-steps + forward-progress nudges.
 //
+// Contact PII (email / phone / referral code) is NEVER hardcoded — it lives only in the editable
+// site_settings overrides, entered in-UI, so no one's contact details sit in the repo (converged
+// with HiveJournal's sibling model 2026-07-18). Identity/context stays code-owned.
+//
 // Sibling: HiveJournal builds the same superadmin page on its side (coordinated via crosstalk); the
 // contacts are shared people, so keep the ids in sync (name slug).
 
@@ -39,13 +43,18 @@ export type DesignPartner = {
   lastNudgedAt?: string; // ISO
 };
 
-/** Fields the operator can edit (everything else is fixed identity/context from code). */
+/** Fields the operator can edit (everything else is fixed identity/context from code). Contact PII
+ *  (email/phone/referralCode) is intentionally editable-only — never seeded in DEFAULT_PARTNERS —
+ *  so it persists to site_settings, not the repo. */
 export const MUTABLE_FIELDS = [
   'status',
   'nextStep',
   'nextStepDue',
   'notes',
   'lastNudgedAt',
+  'email',
+  'phone',
+  'referralCode',
 ] as const;
 type MutablePatch = Partial<Pick<DesignPartner, (typeof MUTABLE_FIELDS)[number]>>;
 
@@ -61,7 +70,6 @@ export const DEFAULT_PARTNERS: DesignPartner[] = [
     company: 'DeckSketch',
     blurb:
       'Owns DeckSketch (deck design + estimating). Co-developing the QS↔DeckSketch estimator seam (9 trades live) and the referral setup. The deepest partnership of the three.',
-    referralCode: 'daniel',
     status: 'engaged',
     nextStep:
       'Get his read on the two open calls: non-deck trades as a real product surface, and installed-vs-materials pricing default.',
@@ -73,7 +81,6 @@ export const DEFAULT_PARTNERS: DesignPartner[] = [
     role: 'Realtor',
     blurb:
       'A working realtor with likely MLS IDX access — the target IDX pilot / design partner (his feed unlocks the shipped IDX Phase-1 scaffold) plus a referral partner.',
-    referralCode: 'ryan',
     status: 'contacted',
     nextStep:
       'Confirm which MLS he’s in + whether he’ll be the IDX pilot; offer to stand up his agent site + a live About That demo.',

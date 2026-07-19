@@ -6,10 +6,10 @@
 // beds / baths / description) — not marketing copy. The embed's data-url defaults to this
 // page's own URL, so the audio is grounded in what's rendered here.
 //
-// Embed: defaults to HJ's SANDBOX embed (allowed on quicksites.ai, house voice) so the
-// wiring is fully live for smoke today. When the owner mints the dedicated prod embed
-// ("QuickSites Realtors Demo", agent preset), set NEXT_PUBLIC_REALTORS_DEMO_EMBED_ID —
-// zero code change. See crosstalk/contracts/about-that-embed.md.
+// Embed: the minted "QuickSites Realtors Demo" prod embed (agent preset, owner's own
+// consented clone → voice:self per the ratified Consent v2). A public embed id is not a
+// secret (it ships in the client <script data-embed=…> anyway); NEXT_PUBLIC_REALTORS_DEMO_EMBED_ID
+// still overrides it if needed. See crosstalk/contracts/about-that-embed.md.
 
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
@@ -27,7 +27,7 @@ export const metadata = {
 // HJ sandbox embed (contracts/about-that-embed.md) — house narrator voice, allowed on
 // quicksites.ai. Swap to the minted prod embed via env, no redeploy of code needed.
 const ABOUT_THAT_EMBED_ID =
-  process.env.NEXT_PUBLIC_REALTORS_DEMO_EMBED_ID || '22e4692a-2538-4d8b-a2df-9fce1a7abdb9';
+  process.env.NEXT_PUBLIC_REALTORS_DEMO_EMBED_ID || '9b0a931f-5277-4de4-bc30-54e0d1e9269f';
 
 // A FICTIONAL, narration-rich listing (HJ content spec 2026-07-18). The town is invented
 // (Cedar Hollow) so it never maps to a real home, and the prose is the "money shot" for the

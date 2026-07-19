@@ -85,6 +85,9 @@ function PartnerCard({ p, onSaved }: { p: Partner; onSaved: () => void }) {
   const [nextStep, setNextStep] = React.useState(p.nextStep ?? '');
   const [due, setDue] = React.useState(p.nextStepDue ?? '');
   const [notes, setNotes] = React.useState(p.notes ?? '');
+  const [email, setEmail] = React.useState(p.email ?? '');
+  const [phone, setPhone] = React.useState(p.phone ?? '');
+  const [referralCode, setReferralCode] = React.useState(p.referralCode ?? '');
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
 
@@ -92,7 +95,10 @@ function PartnerCard({ p, onSaved }: { p: Partner; onSaved: () => void }) {
     status !== p.status ||
     nextStep !== (p.nextStep ?? '') ||
     due !== (p.nextStepDue ?? '') ||
-    notes !== (p.notes ?? '');
+    notes !== (p.notes ?? '') ||
+    email !== (p.email ?? '') ||
+    phone !== (p.phone ?? '') ||
+    referralCode !== (p.referralCode ?? '');
 
   const patch = async (body: any) => {
     setSaving(true);
@@ -111,7 +117,7 @@ function PartnerCard({ p, onSaved }: { p: Partner; onSaved: () => void }) {
       setSaving(false);
     }
   };
-  const save = () => patch({ status, nextStep, nextStepDue: due, notes });
+  const save = () => patch({ status, nextStep, nextStepDue: due, notes, email, phone, referralCode });
   const nudge = () => patch({ action: 'nudge' });
 
   return (
@@ -194,6 +200,37 @@ function PartnerCard({ p, onSaved }: { p: Partner; onSaved: () => void }) {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Context, last conversation…"
+            className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-white"
+          />
+        </label>
+
+        {/* Contact — owner-entered, stored in site_settings (never hardcoded in the repo). */}
+        <label className="text-xs">
+          <span className="text-neutral-500">Email</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@example.com"
+            className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-white"
+          />
+        </label>
+        <label className="text-xs">
+          <span className="text-neutral-500">Phone</span>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="(555) 123-4567"
+            className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-white"
+          />
+        </label>
+        <label className="text-xs">
+          <span className="text-neutral-500">Referral code</span>
+          <input
+            value={referralCode}
+            onChange={(e) => setReferralCode(e.target.value)}
+            placeholder="e.g. daniel"
             className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-white"
           />
         </label>

@@ -39,6 +39,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (typeof body?.nextStep === 'string') patch.nextStep = body.nextStep.slice(0, 500);
   if (typeof body?.nextStepDue === 'string') patch.nextStepDue = body.nextStepDue.slice(0, 40);
   if (typeof body?.notes === 'string') patch.notes = body.notes.slice(0, 2000);
+  // Contact fields — owner-entered, persisted to site_settings (never hardcoded). Empty string clears.
+  if (typeof body?.email === 'string') patch.email = body.email.trim().slice(0, 200);
+  if (typeof body?.phone === 'string') patch.phone = body.phone.trim().slice(0, 40);
+  if (typeof body?.referralCode === 'string') patch.referralCode = body.referralCode.trim().slice(0, 60);
   if (!Object.keys(patch).length)
     return NextResponse.json({ error: 'Nothing to update.' }, { status: 400 });
 

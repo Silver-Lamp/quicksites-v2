@@ -27,6 +27,7 @@ export type IndustryKey =
   | 'siding'
   | 'retaining_walls'
   | 'real_estate'
+  | 'real_estate_agency'
   | 'restaurant'
   | 'salon_spa'
   | 'fitness'
@@ -86,6 +87,7 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'siding',               label: 'Siding' },
   { key: 'retaining_walls',      label: 'Retaining Walls' },
   { key: 'real_estate',          label: 'Real Estate' },
+  { key: 'real_estate_agency',   label: 'Real Estate Agency' },
   { key: 'restaurant',           label: 'Restaurant' },
   { key: 'salon_spa',            label: 'Salon & Spa' },
   { key: 'fitness',              label: 'Fitness' },
@@ -174,6 +176,7 @@ export const INDUSTRY_HINTS: Partial<Record<string, string>> = {
   'Siding': 'Vinyl/wood/fiber-cement siding, stucco, trim, repairs, free instant estimates by the square foot.',
   'Retaining Walls': 'Block/stone/poured walls, hardscaping, drainage, engineered above 4ft, free instant estimates.',
   'Real Estate': 'Neighborhood expertise, staging/photography, negotiation, transparent fees.',
+  'Real Estate Agency': 'A whole brokerage: a roster of agents (each with a headshot, bio, and their own voice), featured listings with audio tours, and seller/buyer lead magnets.',
   'Restaurant': 'Signature dishes, dietary options, delivery/pickup, specials.',
   'Salon & Spa': 'Experience/vibe, memberships, hygiene, before/after gallery.',
   'Fitness': 'Programs, coaching, community, intro specials, class packs.',
@@ -234,6 +237,8 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   if (x.includes('siding')) return 'siding';
   if (x.includes('retaining') || x.includes('hardscap')) return 'retaining_walls';
   if (x.includes('contract')) return 'general_contractor';
+  // Multi-agent firms → the agency scaffold; single agents fall through to real_estate.
+  if (x.includes('brokerage') || x.includes('real estate agency') || x.includes('realty group') || x.includes('realty team') || x.includes('real estate team')) return 'real_estate_agency';
   if (x.includes('real estate') || x.includes('realtor')) return 'real_estate';
   if (x.includes('restaurant')) return 'restaurant';
   if (x.includes('salon') || x.includes('spa')) return 'salon_spa';

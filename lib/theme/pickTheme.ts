@@ -17,7 +17,7 @@ const INDUSTRY_CATEGORY: Partial<Record<IndustryKey, ThemeCategory>> = {
   pressure_washing: 'rugged', landscaping: 'rugged', hvac: 'rugged', plumbing: 'rugged',
   electrical: 'rugged', carpet_cleaning: 'rugged', pest_control: 'rugged', painting: 'rugged',
   // professional
-  real_estate: 'professional', legal: 'professional', medical_dental: 'professional',
+  real_estate: 'professional', real_estate_agency: 'professional', legal: 'professional', medical_dental: 'professional',
   // warm
   restaurant: 'warm', salon_spa: 'warm', farmers_market_vendor: 'warm', gifts_stationery: 'warm',
   handmade: 'warm', crafts: 'warm', artisan_goods: 'warm',

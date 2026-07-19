@@ -465,6 +465,7 @@ export const DEFAULT_BLOCK_CONTENT = {
     cta_text: 'Request a showing',
     cta_link: '#contact',
     about_that_embed_id: '',
+    about_that_url: '',
     about_that_width: '',
   },
 

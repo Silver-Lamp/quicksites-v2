@@ -968,6 +968,10 @@ export const blockContentSchemaMap = {
       cta_link: z.string().optional().default('#contact'),
       /** About That agent-preset slot — the owner-voice pitch player for this listing. */
       about_that_embed_id: z.string().optional().default(''),
+      /** Grounds the narration at THIS listing's URL. Needed when several listing_cards share
+       *  one page (an agency/portfolio page) — else every player narrates the whole page.
+       *  Absolute URL of this listing's own detail page; blank narrates the current page. */
+      about_that_url: z.string().optional().default(''),
       about_that_width: z.preprocess(
         (v) => (typeof v === 'number' ? String(v) : v),
         z.string().optional().default('')

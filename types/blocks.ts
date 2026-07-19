@@ -56,6 +56,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   quote_of_the_day: 'content', // HiveJournal cached daily quote (zero-consent)
   daily_artifact: 'content', // HiveJournal daily comic (consent-gated, opt-in token)
   listing_card: 'content', // real-estate listing w/ built-in About That agent slot
+  neighborhood_stay: 'content', // short-term-rental listing w/ host-voice slot (PorchHearth seam)
   listings_grid: 'content', // agent portfolio: many homes, per-home audio tours
   vehicles_grid: 'content', // auto-dealer inventory: many cars, per-car audio walkarounds
   announcement_bar: 'interactive', // dismissible site-wide promo/notice bar

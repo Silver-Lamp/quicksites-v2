@@ -487,6 +487,8 @@ export const DEFAULT_BLOCK_CONTENT = {
     about_that_width: '',
     cta_text: 'Check availability',
     cta_link: '#contact',
+    porchhearth_property_id: '',
+    site_ref: '',
   },
 
   service_offer: {

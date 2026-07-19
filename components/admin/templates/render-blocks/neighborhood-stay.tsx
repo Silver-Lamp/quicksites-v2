@@ -16,6 +16,7 @@
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
 import { AboutThatEmbed, isValidEmbedId } from './about-that';
+import NeighborhoodStayBooking from '@/components/site/neighborhood-stay-booking';
 
 type Props = {
   block?: Block;
@@ -48,6 +49,14 @@ export default function RenderNeighborhoodStay({ block, content }: Props) {
   const hostAudioUrl = str(c.host_audio_url);
   const embedId = str(c.about_that_embed_id);
   const embedWidth = str(c.about_that_width);
+  // When bound to a live PorchHearth property, render the availability + booking form instead of
+  // the inline inquire CTA (crosstalk/contracts/neighborhood-stay-embed.md).
+  const propertyId = str(c.porchhearth_property_id);
+  const siteRef = str(c.site_ref);
+  const numOr = (v: string): number | undefined => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  };
 
   const [mainIdx, setMainIdx] = React.useState(0);
   const main = images[Math.min(mainIdx, Math.max(0, images.length - 1))];
@@ -157,12 +166,22 @@ export default function RenderNeighborhoodStay({ block, content }: Props) {
           {stayNote && <div className="text-xs text-muted-foreground">{stayNote}</div>}
 
           <div className="mt-auto space-y-2 pt-2">
-            <a
-              href={ctaLink}
-              className="inline-flex rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90"
-            >
-              {ctaText}
-            </a>
+            {propertyId ? (
+              <NeighborhoodStayBooking
+                propertyId={propertyId}
+                siteRef={siteRef || undefined}
+                maxGuests={numOr(maxGuests)}
+                minStay={numOr(minStay)}
+                maxStay={numOr(maxStay)}
+              />
+            ) : (
+              <a
+                href={ctaLink}
+                className="inline-flex rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90"
+              >
+                {ctaText}
+              </a>
+            )}
             {cancellation && <div className="text-xs text-muted-foreground">{cancellation}</div>}
           </div>
         </div>

@@ -29,25 +29,27 @@ export const metadata = {
 const ABOUT_THAT_EMBED_ID =
   process.env.NEXT_PUBLIC_REALTORS_DEMO_EMBED_ID || '22e4692a-2538-4d8b-a2df-9fce1a7abdb9';
 
-// A real, narration-rich listing. The description is deliberately specific — About That
-// reads THIS content, so concrete detail (year, finishes, lot, location) makes better audio.
+// A FICTIONAL, narration-rich listing (HJ content spec 2026-07-18). The town is invented
+// (Cedar Hollow) so it never maps to a real home, and the prose is the "money shot" for the
+// pitch_panel/summary. About That reads THIS content, so concrete detail makes better audio.
 const SAMPLE_LISTING = {
-  headline: 'Sunlit Craftsman on a Cedar Crest Cul-de-Sac',
-  address: '1428 Cedar Crest Dr, Renton, WA 98059',
-  price: '$724,900',
+  headline: 'Easy-Living 4-Bed on a Cedar Hollow Cul-de-Sac',
+  address: '142 Maple Crossing Lane, Cedar Hollow, OR 97402',
+  price: '$475,000',
   status: 'For sale',
   beds: '4',
   baths: '2.5',
   sqft: '2,340',
   description:
-    'Tucked on a quiet cul-de-sac in sought-after Cedar Crest, this light-filled 2016 Craftsman ' +
-    'pairs an open great room with a chef’s kitchen — quartz counters, a gas range, and a walk-in ' +
-    'pantry. Four bedrooms include a convenient main-floor guest suite and a vaulted primary with a ' +
-    'spa bath and heated floors. The fully fenced backyard backs to a protected greenbelt, with a ' +
-    'covered patio pre-wired for a hot tub and raised garden beds ready for spring. Minutes to ' +
-    'top-rated Renton schools, the Cedar River Trail, and I-405.',
+    'Tucked at the end of a quiet cul-de-sac in Cedar Hollow, this 2016-built four-bedroom is the ' +
+    'kind of home that just feels easy to live in. The open kitchen — quartz counters, a big island, ' +
+    'and room for everyone — flows into a bright living space and out to a covered patio and fully ' +
+    'fenced yard. Upstairs, the primary suite has a walk-in closet and dual-vanity bath, with three ' +
+    'more bedrooms and a finished bonus room downstairs for a home office or playroom. A new 2022 ' +
+    'HVAC, hardwood main floor, and attached two-car garage round it out. Minutes to parks and ' +
+    'downtown, in the sought-after Summit school district.',
   cta_text: 'Request a showing',
-  cta_link: 'mailto:realtors@quicksites.ai?subject=Showing%20request%20%E2%80%94%201428%20Cedar%20Crest%20Dr',
+  cta_link: 'mailto:realtors@quicksites.ai?subject=Showing%20request%20%E2%80%94%20142%20Maple%20Crossing%20Lane',
   images: [
     'https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=1200&q=70',
     'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=70',
@@ -55,6 +57,30 @@ const SAMPLE_LISTING = {
   ],
   about_that_embed_id: ABOUT_THAT_EMBED_ID,
 };
+
+// Extra facts rendered as READABLE TEXT (the listing_card block has no fields for these). About
+// That's FAQ answers STRICTLY from page content, so stating HOA / taxes / schools / HVAC / parking
+// here is what lets a visitor ask "what's the HOA?" and get answerable:true (not a decline).
+const PROPERTY_DETAILS: Array<[string, string]> = [
+  ['Property type', 'Single-family'],
+  ['Year built', '2016'],
+  ['Lot size', '0.28 acre'],
+  ['HOA', '$45 / month'],
+  ['Property taxes', '≈ $5,200 / year'],
+  ['Parking', 'Attached 2-car garage'],
+  ['Heating / cooling', 'Forced-air gas + central A/C (new HVAC 2022)'],
+  ['Appliances included', 'Refrigerator, range, dishwasher, washer/dryer'],
+  ['Schools', 'Cedar Hollow Elementary · Riverbend Middle · Summit High'],
+  ['Flooring', 'Hardwood on the main level'],
+];
+
+const KEY_FEATURES = [
+  'Open-concept kitchen with quartz counters + island',
+  'Primary suite with walk-in closet + dual vanity',
+  'Finished bonus room downstairs (office or playroom)',
+  'Fully fenced backyard with a covered patio',
+  'Quiet cul-de-sac lot',
+];
 
 export default function SampleListingPage() {
   return (
@@ -71,7 +97,36 @@ export default function SampleListingPage() {
         {/* The real listing_card block — same one agents publish, wired to About That. */}
         <RenderListingCard content={SAMPLE_LISTING} />
 
-        <div className="mx-auto max-w-5xl px-4 pb-16 text-center">
+        {/* Property details + features as readable text — this is what lets the About That FAQ
+            answer "what's the HOA / taxes / schools / HVAC?" with answerable:true. */}
+        <section className="mx-auto w-full max-w-5xl px-4 py-2">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Property details</h3>
+              <dl className="mt-3 divide-y divide-zinc-800 rounded-xl border border-zinc-800 bg-zinc-900/40">
+                {PROPERTY_DETAILS.map(([label, value]) => (
+                  <div key={label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+                    <dt className="text-sm text-zinc-400">{label}</dt>
+                    <dd className="text-right text-sm font-medium text-zinc-100">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">Key features</h3>
+              <ul className="mt-3 space-y-2">
+                {KEY_FEATURES.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-zinc-200">
+                    <span aria-hidden className="mt-0.5 text-emerald-400">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <div className="mx-auto max-w-5xl px-4 pb-16 pt-6 text-center">
           <p className="text-sm text-zinc-400">Want your listings to talk like this?</p>
           <Link
             href="/realtors"
@@ -79,6 +134,7 @@ export default function SampleListingPage() {
           >
             Get a free agent site with voice listings →
           </Link>
+          <p className="mt-6 text-xs text-zinc-600">Sample listing — not a real property. For demonstration only.</p>
         </div>
       </main>
     </>

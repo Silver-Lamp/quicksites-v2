@@ -278,6 +278,17 @@ export async function middleware(req: NextRequest) {
   if (ORG_DOMAINS[hostLc]) {
     const orgSlug = ORG_DOMAINS[hostLc];
 
+    // Re-point the Point Seven Studio public domain to the studio hub page on HiveJournal
+    // (the canonical, cross-product studio surface that links all mesh products) instead of the
+    // old QuickSites org portfolio. 307 = temporary/reversible; promote to 308 once settled.
+    // The app dashboard lives on app.pointsevenstudio.com (an APP_HOST handled earlier), so an
+    // /admin passthrough is kept here just in case.
+    if (orgSlug === 'pointsevenstudio' && !pathname.startsWith('/admin')) {
+      return withCookies(
+        NextResponse.redirect('https://www.hivejournal.com/point-seven-studio', 307),
+      );
+    }
+
     // Let /admin paths through untouched → app dashboard
     if (pathname.startsWith('/admin')) {
       return withCookies(NextResponse.next());

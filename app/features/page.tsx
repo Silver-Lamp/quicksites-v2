@@ -7,6 +7,7 @@ import FeatureGalleryClient from './client-gallery';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import SiteHeader from '@/components/site/site-header';
+import SiteFooter from '@/components/site/site-footer';
 
 export const revalidate = 60;
 
@@ -87,6 +88,7 @@ export default async function FeaturesPage() {
 
       <FeatureGalleryClient initialRows={(data ?? []) as FeatureRow[]} />
     </div>
+      <SiteFooter />
     </>
   );
 }

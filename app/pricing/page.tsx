@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SiteHeader from '@/components/site/site-header';
+import SiteFooter from '@/components/site/site-footer';
 
 /**
  * QuickSites Pricing — hybrid model (see docs/PRICING_REDESIGN.md)
@@ -549,6 +550,7 @@ export default function PricingPage() {
           </div>
         </section>
       </div>
+      <SiteFooter />
     </>
   );
 }

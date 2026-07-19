@@ -8,6 +8,7 @@
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import SiteHeader from '@/components/site/site-header';
+import SiteFooter from '@/components/site/site-footer';
 import { marketingOg } from '@/lib/marketingOg';
 
 export const dynamic = 'force-dynamic';
@@ -117,6 +118,7 @@ export default async function PersonasShowcasePage() {
           </p>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

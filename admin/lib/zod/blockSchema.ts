@@ -1002,6 +1002,11 @@ export const blockContentSchemaMap = {
       about_that_width: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
       cta_text: z.string().optional().default('Check availability'),
       cta_link: z.string().optional().default('#contact'),
+      /** Bind to a live PorchHearth property (crosstalk/contracts/neighborhood-stay-embed.md): when
+       *  set, the block renders a live availability + booking form (→ our /api/porchhearth/bookings
+       *  proxy) instead of the inline inquire CTA. `site_ref` attributes the booking to this site. */
+      porchhearth_property_id: z.string().optional().default(''),
+      site_ref: z.string().optional().default(''),
     }),
   },
 

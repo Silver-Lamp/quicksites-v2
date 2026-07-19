@@ -27,9 +27,11 @@ export type PhAvailability = { available: boolean; nights?: number; quoteCents?:
 
 export type PhBookingResult = {
   bookingId: string;
-  status: string; // 'PENDING' in v1 (no charge yet)
+  status: string; // 'PENDING' until Stripe captures (webhook)
   amountCents?: number;
-  payment: null | { clientSecret?: string };
+  // Hosted checkout (2026-07-19): `checkoutUrl` is a Stripe-hosted Checkout Session — the block
+  // redirects the guest there to pay. (`clientSecret` kept optional for backwards-safety.)
+  payment: null | { checkoutUrl?: string; clientSecret?: string };
   note?: string;
   siteRef?: string;
 };
@@ -101,12 +103,16 @@ export type CreateBookingInput = {
   buyer: { name: string; email: string; phone?: string };
   guestNotes?: string;
   siteRef?: string;
+  /** Where Stripe returns the guest after the hosted checkout (defaults to delivered.menu if omitted). */
+  successUrl?: string;
+  cancelUrl?: string;
 };
 
 /**
- * Proxy-authed rental booking (v1 = a no-charge PENDING inquiry; the CTA stays "inquire" until
- * PorchHearth wires the rental PaymentIntent). Server-to-server ONLY. Throws PorchHearthError(503)
- * when the shared secret isn't configured (fail-closed).
+ * Proxy-authed rental booking. Creates a PENDING booking and returns a Stripe HOSTED-CHECKOUT URL
+ * (`payment.checkoutUrl`); the block redirects the guest there to pay (PorchHearth owns the pay page —
+ * no Stripe key sharing). Server-to-server ONLY. Throws PorchHearthError(503) when the shared secret
+ * isn't configured (fail-closed).
  */
 export async function createBooking(input: CreateBookingInput): Promise<PhBookingResult> {
   const secret = porchhearthProxySecret();
@@ -125,6 +131,8 @@ export async function createBooking(input: CreateBookingInput): Promise<PhBookin
     },
     ...(input.guestNotes ? { guestNotes: input.guestNotes } : {}),
     ...(input.siteRef ? { siteRef: input.siteRef } : {}),
+    ...(input.successUrl ? { successUrl: input.successUrl } : {}),
+    ...(input.cancelUrl ? { cancelUrl: input.cancelUrl } : {}),
   };
 
   return phFetch(phUrl('bookings'), {

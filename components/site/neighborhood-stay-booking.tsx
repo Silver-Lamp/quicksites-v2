@@ -7,9 +7,10 @@
 // availability (public read proxy, shows a quote) → enter name/email → request booking (POST our
 // /api/porchhearth/bookings proxy, which attaches the shared secret + site_ref server-side).
 //
-// v1 creates a PENDING booking (the API round-trips a Stripe PaymentIntent clientSecret). On-page card
-// payment (Stripe Elements) needs PorchHearth's PUBLISHABLE key — a follow-up; v1 confirms the request
-// and the host/engine follows up to collect payment. Buyer PII + payment never touch QS.
+// Payment = Stripe HOSTED CHECKOUT (2026-07-19): the booking POST returns payment.checkoutUrl and we
+// redirect the guest to Stripe to pay (PorchHearth owns the pay page — no Stripe key on QS). We pass
+// successUrl/cancelUrl = this page + ?booking=success|cancel, so Stripe returns the guest here and we
+// show the outcome. Buyer PII + card data never touch QS.
 
 import * as React from 'react';
 
@@ -47,7 +48,17 @@ export default function NeighborhoodStayBooking({ propertyId, siteRef, maxGuests
   const [checking, setChecking] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [booked, setBooked] = React.useState<{ bookingId: string } | null>(null);
+  // Stripe hosted-checkout outcome, read from the return URL query on mount.
+  const [returned, setReturned] = React.useState<'success' | 'cancel' | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const b = new URLSearchParams(window.location.search).get('booking');
+      if (b === 'success' || b === 'cancel') setReturned(b);
+    } catch {
+      /* no-op */
+    }
+  }, []);
 
   const nights = nightsBetween(checkIn, checkOut);
 
@@ -97,6 +108,16 @@ export default function NeighborhoodStayBooking({ propertyId, siteRef, maxGuests
     }
     setSubmitting(true);
     try {
+      // Return the guest to THIS page after Stripe; the route validates these are same-origin.
+      let successUrl: string | undefined;
+      let cancelUrl: string | undefined;
+      try {
+        const base = window.location.origin + window.location.pathname;
+        successUrl = `${base}?booking=success`;
+        cancelUrl = `${base}?booking=cancel`;
+      } catch {
+        /* SSR-safety: omit → PorchHearth defaults to delivered.menu */
+      }
       const r = await fetch('/api/porchhearth/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(siteRef ? { 'X-QS-Site-Ref': siteRef } : {}) },
@@ -108,6 +129,8 @@ export default function NeighborhoodStayBooking({ propertyId, siteRef, maxGuests
           buyer: { name: name.trim(), email: email.trim(), ...(phone.trim() ? { phone: phone.trim() } : {}) },
           ...(notes.trim() ? { guestNotes: notes.trim() } : {}),
           ...(siteRef ? { siteRef } : {}),
+          ...(successUrl ? { successUrl } : {}),
+          ...(cancelUrl ? { cancelUrl } : {}),
         }),
       });
       const j = await r.json();
@@ -115,7 +138,14 @@ export default function NeighborhoodStayBooking({ propertyId, siteRef, maxGuests
         // 409 = an account already exists for that email (buyer should sign in)
         throw new Error(j?.error || 'Could not complete your booking request.');
       }
-      setBooked({ bookingId: String(j.bookingId || '') });
+      const checkoutUrl: string | undefined = j?.payment?.checkoutUrl;
+      if (checkoutUrl) {
+        // Hand off to Stripe hosted checkout. Guest returns to successUrl/cancelUrl.
+        window.location.href = checkoutUrl;
+        return; // keep the button in its submitting state through the redirect
+      }
+      // No checkout URL (shouldn't happen with hosted checkout) — treat as a received request.
+      setReturned('success');
     } catch (e: any) {
       setError(e?.message || 'Could not complete your booking request.');
     } finally {
@@ -123,13 +153,12 @@ export default function NeighborhoodStayBooking({ propertyId, siteRef, maxGuests
     }
   };
 
-  if (booked) {
+  if (returned === 'success') {
     return (
       <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-        <div className="font-semibold">Booking request received 🎉</div>
+        <div className="font-semibold">You’re booked 🎉</div>
         <p className="mt-1 text-emerald-100/80">
-          You’ll get a confirmation to complete payment and finalize your stay
-          {checkIn && checkOut ? ` (${checkIn} → ${checkOut}, ${guests} guest${guests === 1 ? '' : 's'})` : ''}.
+          Payment received — your stay is confirmed and the host has been notified. Check your email for the details.
         </p>
       </div>
     );
@@ -140,6 +169,11 @@ export default function NeighborhoodStayBooking({ propertyId, siteRef, maxGuests
 
   return (
     <div className="rounded-xl border border-border bg-card/60 p-4">
+      {returned === 'cancel' && (
+        <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          Payment canceled — no charge was made. Your dates are still open; pick them again to try once more.
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <label className="text-xs text-muted-foreground">
           Check in
@@ -194,13 +228,13 @@ export default function NeighborhoodStayBooking({ propertyId, siteRef, maxGuests
             disabled={submitting}
             className="w-full rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow transition hover:opacity-90 disabled:opacity-50"
           >
-            {submitting ? 'Requesting…' : `Request to book${avail.quoteCents != null ? ` · ${money(avail.quoteCents)}` : ''}`}
+            {submitting ? 'Redirecting to checkout…' : `Book & pay${avail.quoteCents != null ? ` · ${money(avail.quoteCents)}` : ''}`}
           </button>
         </div>
       )}
 
       {error && <div className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300">{error}</div>}
-      <p className="mt-2 text-[11px] text-muted-foreground">Powered by delivered.menu · you won’t be charged until you confirm.</p>
+      <p className="mt-2 text-[11px] text-muted-foreground">Powered by delivered.menu · secure checkout via Stripe — you’ll be redirected to pay.</p>
     </div>
   );
 }

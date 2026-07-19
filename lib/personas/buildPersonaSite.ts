@@ -22,8 +22,12 @@ export type PersonaInput = {
   tagline?: string;
   /** The "about" text — the persona's own words. */
   bio: string;
-  /** Life situation (occupation, core tension, kids…) — appended to the about. */
+  /** Life situation (occupation, core tension, kids…) — appended to the about.
+   *  Accepts HJ's `life_situation` alias (their ai_personas field name). */
   situation?: string;
+  life_situation?: string;
+  /** MBTI type (HJ ai_personas field) — surfaced as a small "Type" line when present. */
+  mbti?: string;
   /** Optional flavor woven into the about. */
   leitmotif?: string;
   arc?: string;
@@ -53,9 +57,15 @@ export function personaBannerMessage(name: string): string {
  */
 export function buildPersonaTemplate(p: PersonaInput): RebuildTemplate {
   const name = nonEmpty(p.name) || 'AI Persona';
-  const aboutParts = [nonEmpty(p.bio), nonEmpty(p.situation), nonEmpty(p.arc), nonEmpty(p.leitmotif)].filter(
-    Boolean,
-  ) as string[];
+  const situation = nonEmpty(p.situation) ?? nonEmpty(p.life_situation);
+  const mbti = nonEmpty(p.mbti);
+  const aboutParts = [
+    nonEmpty(p.bio),
+    situation,
+    nonEmpty(p.arc),
+    nonEmpty(p.leitmotif),
+    mbti ? `Type: ${mbti}.` : null,
+  ].filter(Boolean) as string[];
 
   const profile: ProfileSpec = {
     name,

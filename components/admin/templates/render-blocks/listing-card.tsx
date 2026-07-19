@@ -44,6 +44,7 @@ export default function RenderListingCard({ block, content }: Props) {
   const ctaLink = str(c.cta_link) || '#contact';
   const images: string[] = Array.isArray(c.images) ? c.images.filter((u: any) => typeof u === 'string' && u) : [];
   const embedId = str(c.about_that_embed_id);
+  const embedUrl = str(c.about_that_url);
   const embedWidth = str(c.about_that_width);
 
   const [mainIdx, setMainIdx] = React.useState(0);
@@ -134,7 +135,7 @@ export default function RenderListingCard({ block, content }: Props) {
           {isValidEmbedId(embedId) && (
             <div className="mt-1">
               <div className="mb-1 text-xs font-medium text-muted-foreground">🎙️ Hear about this home</div>
-              <AboutThatEmbed embedId={embedId} width={embedWidth} />
+              <AboutThatEmbed embedId={embedId} url={embedUrl} width={embedWidth} />
             </div>
           )}
 

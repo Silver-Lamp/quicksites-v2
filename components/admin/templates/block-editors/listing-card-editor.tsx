@@ -36,6 +36,7 @@ function fromBlock(c: any) {
     cta_text: s(c?.cta_text) || 'Request a showing',
     cta_link: s(c?.cta_link) || '#contact',
     about_that_embed_id: s(c?.about_that_embed_id),
+    about_that_url: s(c?.about_that_url),
     about_that_width: s(c?.about_that_width),
   };
 }
@@ -67,6 +68,7 @@ export default function ListingCardEditor({ block, onSave, onClose }: Props) {
       cta_text: next.cta_text.trim(),
       cta_link: next.cta_link.trim(),
       about_that_embed_id: next.about_that_embed_id.trim(),
+      about_that_url: next.about_that_url.trim(),
       about_that_width: next.about_that_width.trim(),
     };
   }
@@ -165,6 +167,15 @@ export default function ListingCardEditor({ block, onSave, onClose }: Props) {
           placeholder="HiveJournal embed ID (uuid)"
         />
         {!embedOk && <p className="text-xs text-amber-500">That doesn't look like an embed ID (uuid) yet.</p>}
+        <Input
+          value={local.about_that_url}
+          onChange={(e) => apply({ about_that_url: e.target.value })}
+          placeholder="Narrated URL (optional) — this listing's own page"
+        />
+        <p className="text-xs text-muted-foreground">
+          Leave blank on a single-listing page. On a page with several listings, set this to THIS listing's own
+          detail-page URL so the voice describes this home, not the whole page.
+        </p>
         <Input
           value={local.about_that_width}
           onChange={(e) => apply({ about_that_width: e.target.value })}

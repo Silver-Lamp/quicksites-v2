@@ -491,6 +491,42 @@ export function buildIndustryStarter(opts: {
     );
   }
 
+  // Real-estate AGENCY — a whole brokerage, not a single agent. Leads with the agent
+  // roster (each agent voiced via their own About That embed), then a portfolio of
+  // listings, then the seller/buyer lead magnets. Drops the generic services list — an
+  // agency's "services" are its people, which the roster covers. This is the reusable
+  // form of /realtors/sample-agency.
+  if (industryKey === 'real_estate_agency') {
+    // Drop the generic services list — an agency leads with its people, not a service menu.
+    // (The later "About | Why choose us" split section is kept — it's real brand content.)
+    blocks = blocks.filter((b: any) => b?.type !== 'services');
+    setIfPresent(
+      hero.content,
+      'subheadline',
+      'Meet the team, hear every listing in the agent’s own voice, and find your next home.'
+    );
+    setIfPresent(hero.content, 'cta_text', 'Talk to our agents');
+    setIfPresent(hero.content, 'cta_link', '#contact');
+
+    const heroIdx = blocks.findIndex((b: any) => b?.type === 'hero');
+    const rosterAt = heroIdx >= 0 ? heroIdx + 1 : 0;
+    blocks.splice(
+      rosterAt,
+      0,
+      createDefaultBlock('agent_roster') as any,
+      createDefaultBlock('listings_grid') as any
+    );
+
+    const contactIdx = blocks.findIndex((b: any) => b?.type === 'contact_form');
+    const magnetAt = contactIdx >= 0 ? contactIdx : blocks.length;
+    blocks.splice(
+      magnetAt,
+      0,
+      createDefaultBlock('home_valuation') as any,
+      createDefaultBlock('listing_alert') as any
+    );
+  }
+
   // Photographers lead with their work — a photo gallery right after the hero (the
   // portfolio a photographer site is nothing without). The gallery block is addable on
   // any visual site; this just seeds it where it's most load-bearing.

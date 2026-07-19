@@ -186,6 +186,9 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
   listings_grid: wrapDynamic(() => import('./listings-grid-editor')),
   vehicles_grid: wrapDynamic(() => import('./vehicles-grid-editor')),
 
+  // Agent roster ("meet our agents" — headshot + bio + per-agent About That voice)
+  agent_roster: wrapDynamic(() => import('./agent-roster-editor')),
+
   // HJ demo embed (contracts/demo-embed.md)
   demo_embed: wrapDynamic(() => import('./demo-embed-editor')),
 

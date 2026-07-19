@@ -975,6 +975,38 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Agent roster — a "meet our team" grid for an agency site (real-estate first, but
+  // generic: any firm with named people). Each agent carries a headshot + bio + their OWN
+  // About That voice slot (the agent talks in their own voice), keyed per-card by embed_id
+  // exactly like listing_card — many voices on one page is already proven fine. Embed-id
+  // fields stay lenient ('') so fresh blocks validate; the renderer gates on a valid uuid.
+  agent_roster: {
+    label: 'Agent Roster',
+    icon: '🧑‍💼',
+    schema: z.object({
+      title: z.string().optional().default('Meet Our Agents'),
+      subtitle: z.string().optional().default(''),
+      columns: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 3 : v),
+        z.number().min(2).max(4).optional().default(3)
+      ),
+      agents: z
+        .array(
+          z.object({
+            name: z.string().optional().default(''),
+            title: z.string().optional().default(''),
+            photo_url: z.string().optional().default(''),
+            bio: z.string().optional().default(''),
+            phone: z.string().optional().default(''),
+            email: z.string().optional().default(''),
+            /** Per-agent About That voice embed — the agent speaks in their own voice. */
+            about_that_embed_id: z.string().optional().default(''),
+          })
+        )
+        .default([]),
+    }),
+  },
+
   // Neighborhood stay — a short-term-rental listing (PorchHearth mesh seam,
   // crosstalk/contracts/neighborhood-stay-embed.md). Sibling of listing_card, tuned for
   // stays: nightly price, guests, amenities, min/max-stay, + the host-voice hook. v1 renders

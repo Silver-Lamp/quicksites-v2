@@ -468,6 +468,41 @@ export const DEFAULT_BLOCK_CONTENT = {
     about_that_width: '',
   },
 
+  agent_roster: {
+    title: 'Meet Our Agents',
+    subtitle: 'Every one of our agents will walk you through their listings — in their own voice.',
+    columns: 3,
+    agents: [
+      {
+        name: 'Jordan Avery',
+        title: 'Listing Agent',
+        photo_url: '',
+        bio: 'Fifteen years matching families to the right block, not just the right house. Knows every cul-de-sac in the district.',
+        phone: '',
+        email: '',
+        about_that_embed_id: '',
+      },
+      {
+        name: 'Priya Nair',
+        title: 'Buyer’s Agent',
+        photo_url: '',
+        bio: 'First-time buyers are her specialty — patient, straight about the numbers, and relentless on inspection details.',
+        phone: '',
+        email: '',
+        about_that_embed_id: '',
+      },
+      {
+        name: 'Marcus Bellamy',
+        title: 'Broker',
+        photo_url: '',
+        bio: 'Runs the desk and the luxury portfolio. If it has a view and a story, Marcus has the pitch.',
+        phone: '',
+        email: '',
+        about_that_embed_id: '',
+      },
+    ],
+  },
+
   neighborhood_stay: {
     title: 'Cozy tiny home by the creek',
     address: 'Cedar Hollow, OR',

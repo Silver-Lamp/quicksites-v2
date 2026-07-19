@@ -152,6 +152,7 @@ export const DYNAMIC_RENDERERS: Record<
   listing_card: () => import('@/components/admin/templates/render-blocks/listing-card'),
   neighborhood_stay: () => import('@/components/admin/templates/render-blocks/neighborhood-stay'),
   listings_grid: () => import('@/components/admin/templates/render-blocks/listings-grid'),
+  agent_roster: () => import('@/components/admin/templates/render-blocks/agent-roster'),
   vehicles_grid: () => import('@/components/admin/templates/render-blocks/vehicles-grid'),
   announcement_bar: () => import('@/components/admin/templates/render-blocks/announcement-bar'),
   sticky_cart: () => import('@/components/admin/templates/render-blocks/sticky-cart'),

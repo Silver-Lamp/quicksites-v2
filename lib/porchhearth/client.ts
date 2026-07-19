@@ -137,3 +137,58 @@ export async function createBooking(input: CreateBookingInput): Promise<PhBookin
     body: JSON.stringify(body),
   });
 }
+
+export type CreateOrderInput = {
+  listingId: string;
+  portions: number;
+  fulfillment?: 'pickup' | 'delivery';
+  deliveryAddress?: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
+  buyer: { name: string; email: string; phone?: string };
+  siteRef?: string;
+};
+
+export type PhOrderResult = {
+  orderId: string;
+  status: string;
+  amountCents?: number;
+  payment: { clientSecret?: string } | null;
+  siteRef?: string;
+};
+
+/**
+ * Proxy-authed meal order — DOES take payment (returns a Stripe PaymentIntent clientSecret to confirm
+ * client-side). Server-to-server ONLY. Fail-closed 503 without the shared secret. EXACTLY the
+ * whitelisted fields (forbidNonWhitelisted).
+ */
+export async function createOrder(input: CreateOrderInput): Promise<PhOrderResult> {
+  const secret = porchhearthProxySecret();
+  if (!secret) throw new PorchHearthError(503, 'PorchHearth proxy secret not configured');
+
+  const isDelivery = input.fulfillment === 'delivery';
+  const body: Record<string, any> = {
+    listingId: input.listingId,
+    portions: input.portions,
+    ...(input.fulfillment ? { fulfillment: input.fulfillment } : {}),
+    ...(isDelivery && input.deliveryAddress ? { deliveryAddress: input.deliveryAddress } : {}),
+    ...(isDelivery && input.deliveryLatitude != null ? { deliveryLatitude: input.deliveryLatitude } : {}),
+    ...(isDelivery && input.deliveryLongitude != null ? { deliveryLongitude: input.deliveryLongitude } : {}),
+    buyer: {
+      name: input.buyer.name,
+      email: input.buyer.email,
+      ...(input.buyer.phone ? { phone: input.buyer.phone } : {}),
+    },
+    ...(input.siteRef ? { siteRef: input.siteRef } : {}),
+  };
+
+  return phFetch(phUrl('orders'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-QS-Proxy-Secret': secret,
+      ...(input.siteRef ? { 'X-QS-Site-Ref': input.siteRef } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+}

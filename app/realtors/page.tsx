@@ -67,6 +67,12 @@ export default function RealtorsPage() {
             >
               Hear a live sample →
             </Link>
+            <Link
+              href="/realtors/sample-agency"
+              className="rounded-lg border border-zinc-700 px-6 py-3 text-base font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
+            >
+              Tour a sample agency →
+            </Link>
           </div>
           <p className="mt-4 text-sm text-zinc-500">Takes about a minute. No credit card. Nothing to install.</p>
         </section>

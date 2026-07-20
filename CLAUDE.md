@@ -159,29 +159,40 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 - **`public.sites` is a legacy/secondary table** — the live content model is `templates`. Most `sites` rows are orphaned (131 rows, ~105 with no `owner_id`); it gained an `owner_id` column + owner-scoped RLS in 2026-07 (public read, writes scoped to owner/admin). Build new features on `templates`, not `sites`. Its old write routes (`/api/sites/save`, `/api/sites/create`) referenced columns that never existed and were effectively dead until repaired during the RLS work.
 - **`types/supabase.ts` was regenerated** (commit `2c8dd6c`, "align @supabase versions + regenerate full DB types") — the old "88-table, commerce-absent, ~1000-`never`-errors" trap is **resolved**. The `@supabase/*` versions are now aligned (`supabase-js` 2.108, CLI 2.109), so the CLI output no longer resolves to `never`; `tsc --noEmit` is green. The file now types **164 of the 168 live public base tables** (+ views), commerce included. Still missing (added after that regen): `print_orders`, `site_settings`, `stock_reservations`, `schema_migrations`, and the CRM tables `customers` / `crm_campaigns` / `crm_campaign_sends` (+ the new `orders.customer_id` / `customers.notes` columns) — verified against the live DB 2026-07-07. Their absence is low-impact: the routes touching them use the **service-role `createClient(...)` untyped** (no `<Database>` generic), so they don't consume these types anyway. To finish the last few: `supabase gen types typescript --schema public` — needs either Docker (for `--db-url`) or a `SUPABASE_ACCESS_TOKEN` (for `--project-id`); neither is available in a headless session, so it's a "run it locally" chore. When a service-role query's columns matter, verify against the live DB (`psql "$SUPABASE_DB_URL"`), not this file.
 
-## 8b. Crosstalk (HiveJournal ↔ QuickSites session mailbox)
+## 8b. Crosstalk (the mesh session mailbox)
 
 Cross-product coordination with sibling Claude sessions runs through the file
-mailbox at `~/Desktop/_SilverLamp/crosstalk/` (protocol: its `README.md`).
-Participants: **HiveJournal** + **QuickSites** (both 100% the same owner) and, as
-of 2026-07-16, **DeckSketch AI** (`inbox/decksketch/`; repo `../deck-builder`).
-Our inbox: `crosstalk/inbox/quicksites/`. Send with
-`crosstalk/bin/crosstalk send hivejournal "<subject>"`; ack (never delete) after
-acting. When doing cross-product work, arm the persistent inbox Monitor from the
-README loop. **Cross-product API specs live ONLY in `crosstalk/contracts/*.md`**
-(currently: `about-that-embed.md`, `voice-welcome-endpoint.md`) — repo docs link
-there, never fork copies. Hard rule: write only this repo + the crosstalk folder;
-the sibling repo (`hivejournal-2026`) is read-only — a change we want there is a
-message, never an edit. **Standing sanction (owner, 2026-07-16, extended to DeckSketch 2026-07-17): the
-owner runs 100% of the code and calls all product shots across QuickSites,
-HiveJournal, AND DeckSketch — so all three sessions share one standing
-pre-approval.** Scope/sequencing agreed through crosstalk is pre-approved, and the
-sessions may co-develop new ideas incl. brand-new product offerings, without
-pausing for permission. Still surface to the user first (universal carve-outs,
-all three products): spending real money, deleting data, publishing externally —
-these matter doubly on DeckSketch, which has other equity holders even though the
-owner directs the work. (Operational authority, not equity split, is what governs
-what a session may act on.)
+mailbox at `~/Desktop/_SilverLamp/crosstalk/` (protocol: its `README.md`). This is
+**one of four coordinated sessions**: **QuickSites** (this repo) · **HiveJournal**
+(`../hivejournal-2026`) · **DeckSketch AI** (`../deck-builder`) · **PorchHearth**
+(`../deliveredmenu` — the *product* delivered.menu/PorchHearth; note `delivered.menu`
+the *domain* is our own restaurant deliverable, a different thing with a similar name).
+Our inbox: `crosstalk/inbox/quicksites/`.
+
+**Set your identity every session:** `export CROSSTALK_SELF=quicksites` before any
+`bin/crosstalk send` (or pass `--from quicksites`). The helper's legacy sender-guess
+only resolves the original HJ↔QS pair, so without this a 4-way send is **mis-stamped
+as from hivejournal**. Send: `CROSSTALK_SELF=quicksites crosstalk/bin/crosstalk send
+<peer> "<subject>" -f <file>`. **Ack, never delete, AFTER acting** (`bin/crosstalk ack
+<path>`) — the inbox is a live to-do list, not a read log. When doing cross-product
+work, arm the persistent inbox Monitor from the README loop.
+
+- **Cross-product API specs live ONLY in `crosstalk/contracts/*.md`** — the single
+  source of truth; repo docs link there, never fork a copy (that's how drift starts).
+- **Common owner/task deep links** are indexed in `crosstalk/deep-links.md` (a shared
+  per-product registry) — look there before hand-writing a "navigate to X → click Y".
+- **Write only this repo + the crosstalk folder.** Sibling repos are **read-only** —
+  read them freely (answering an API question from their source beats a round-trip),
+  but a change you want on their side is a **message, never an edit.**
+
+**Standing sanction (owner, 2026-07-16; extended to DeckSketch 2026-07-17, PorchHearth
+2026-07):** the owner runs 100% of the code and calls all product shots across the mesh
+— so the sessions share one standing pre-approval. Scope/sequencing agreed through
+crosstalk is pre-approved, and sessions may co-develop new ideas incl. brand-new product
+offerings without pausing for permission. Still surface to the user first (universal
+carve-outs): spending real money, deleting data, publishing externally — these matter
+doubly on DeckSketch, which has other equity holders even though the owner directs the
+work. (Operational authority, not equity split, governs what a session may act on.)
 
 ## 9. For AI agents specifically
 
@@ -190,3 +201,4 @@ what a session may act on.)
 - The authoritative data model is **`supabase/migrations/*` + `types/supabase.ts`**, not any prose doc.
 - When unsure whether code is live, check for the legacy markers in §8 and grep for imports before assuming.
 - Keep `tsc --noEmit` green; run `npm run typecheck` after non-trivial changes.
+- **Keep docs + public surfaces in sync in the same commit** (a mesh-wide rule — HJ + DeckSketch codify it too): when you change a feature, update its doc/this file/the relevant `crosstalk/contracts/*` in the *same* PR. A stale doc is worse than a missing one. When you notice a doc contradicting the code, fix or delete it rather than working around it.

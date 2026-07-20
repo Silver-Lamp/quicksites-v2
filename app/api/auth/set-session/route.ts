@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { captureSignupIfNew } from '@/lib/analytics/funnel';
+import { notifyNewSignup } from '@/lib/notifications/newSignupEmail';
 import { claimPendingGuestDraft } from '@/lib/auth/claimGuestDraft';
 import { claimPendingSiteDraft } from '@/lib/auth/claimPendingSiteDraft';
 import { provisionPendingAuthorSite } from '@/lib/authorSites/provisionPendingAuthorSite';
@@ -40,6 +41,8 @@ export async function POST(req: NextRequest) {
   // Best-effort funnel: fire SIGNUP for a brand-new account (magic-link is the
   // primary signup path). Never blocks the session write.
   try { await captureSignupIfNew(data.user); } catch {}
+  // Best-effort admin notification email on a genuine new signup (skips guests).
+  try { await notifyNewSignup(data.user); } catch {}
 
   // Referral attribution: if they arrived under a referral code (qs_ref cookie, set from
   // ?ref=/join/<code> or the signup field), record the user-level signup (first-touch).

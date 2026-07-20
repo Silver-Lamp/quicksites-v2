@@ -12,8 +12,10 @@
 // still overrides it if needed. See crosstalk/contracts/about-that-embed.md.
 
 import Link from 'next/link';
+import QRCode from 'qrcode';
 import SiteHeader from '@/components/site/site-header';
 import RenderListingCard from '@/components/admin/templates/render-blocks/listing-card';
+import { listenUrlFor } from '@/lib/listings/qrPack';
 
 export const metadata = {
   title: 'Sample listing — hear it in the agent’s voice | QuickSites',
@@ -28,6 +30,10 @@ export const metadata = {
 // quicksites.ai. Swap to the minted prod embed via env, no redeploy of code needed.
 const ABOUT_THAT_EMBED_ID =
   process.env.NEXT_PUBLIC_REALTORS_DEMO_EMBED_ID || '9b0a931f-5277-4de4-bc30-54e0d1e9269f';
+
+// This page's canonical public URL — the QR encodes the hosted listen page grounded here,
+// so scanning opens the audio tour for THIS listing straight on a phone (the real yard-sign flow).
+const PAGE_URL = 'https://www.quicksites.ai/realtors/sample-listing';
 
 // A FICTIONAL, narration-rich listing (HJ content spec 2026-07-18). The town is invented
 // (Cedar Hollow) so it never maps to a real home, and the prose is the "money shot" for the
@@ -82,7 +88,11 @@ const KEY_FEATURES = [
   'Quiet cul-de-sac lot',
 ];
 
-export default function SampleListingPage() {
+export default async function SampleListingPage() {
+  // Generate the yard-sign QR server-side (inline data URL — no external request, CSP-safe).
+  const listenUrl = listenUrlFor(ABOUT_THAT_EMBED_ID, PAGE_URL);
+  const qrDataUrl = await QRCode.toDataURL(listenUrl, { width: 480, margin: 1, errorCorrectionLevel: 'M' });
+
   return (
     <>
       <SiteHeader sticky />
@@ -122,6 +132,63 @@ export default function SampleListingPage() {
                   </li>
                 ))}
               </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Try-it-on-your-phone: a mock yard sign whose QR opens the audio tour for THIS listing */}
+        <section className="mx-auto w-full max-w-5xl px-4 py-12">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 sm:p-10">
+            <div className="grid items-center gap-10 md:grid-cols-2">
+              {/* Copy */}
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                  📱 Try it on your phone
+                </div>
+                <h3 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-100">Scan the yard sign — hear the house</h3>
+                <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+                  This is exactly what goes on the sign in the front yard. Point your phone camera at the QR code and the
+                  audio tour for <span className="text-zinc-200">this listing</span> plays right on your phone — no app, no
+                  typing. It’s the same thing a buyer does standing at the curb.
+                </p>
+                <p className="mt-3 text-xs text-zinc-500">
+                  Every QuickSites listing ships with a printable pack — yard-sign insert, flyer card, and open-house
+                  business cards — each carrying this QR.
+                </p>
+              </div>
+
+              {/* The sign mock */}
+              <div className="flex flex-col items-center">
+                <div className="w-full max-w-[300px] overflow-hidden rounded-lg bg-white text-zinc-900 shadow-2xl ring-1 ring-black/10">
+                  <div className="bg-emerald-700 px-4 py-2 text-center text-[11px] font-bold uppercase tracking-widest text-white">
+                    For Sale · Cedar Hollow Realty
+                  </div>
+                  <div className="px-5 py-5 text-center">
+                    <div className="text-lg font-extrabold leading-tight">🔊 Hear about this home</div>
+                    <div className="mt-3 inline-block rounded-lg bg-white p-2 ring-1 ring-zinc-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={qrDataUrl}
+                        alt="Scan to hear this listing on your phone"
+                        width={188}
+                        height={188}
+                        className="block h-[188px] w-[188px]"
+                      />
+                    </div>
+                    <div className="mt-3 text-base font-bold">{SAMPLE_LISTING.price}</div>
+                    <div className="text-xs text-zinc-500">142 Maple Crossing Lane</div>
+                    <div className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                      📷 Scan with your camera
+                    </div>
+                  </div>
+                </div>
+                {/* H-frame stakes + ground shadow */}
+                <div className="flex w-full max-w-[220px] items-start justify-between">
+                  <div className="h-14 w-2.5 rounded-b bg-zinc-600/80" />
+                  <div className="h-14 w-2.5 rounded-b bg-zinc-600/80" />
+                </div>
+                <div className="-mt-1 h-1.5 w-[280px] max-w-full rounded-full bg-black/40 blur-[2px]" />
+              </div>
             </div>
           </div>
         </section>

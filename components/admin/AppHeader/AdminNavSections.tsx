@@ -165,6 +165,13 @@ const NAV_ADMIN: NavItem[] = [
     icon: <Globe size={18} />,
     adminOnly: true,
   },
+  {
+    type: 'item',
+    label: 'Talking Demo',
+    href: '/admin/talking-demo',
+    icon: <PlayCircle size={18} />,
+    adminOnly: true,
+  },
 
   /* Growth — the lead-gen + outreach engine, unified into one workspace (/admin/growth).
      The old scattered surfaces (Map of Opportunities, Leads, legacy Campaigns) ran on the

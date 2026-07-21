@@ -31,14 +31,13 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 });
   }
-  const templateId = str(body.templateId) || str(body.id);
-  if (!templateId) return NextResponse.json({ error: 'templateId is required' }, { status: 400 });
+  const ref = str(body.templateId) || str(body.id) || str(body.slug);
+  if (!ref) return NextResponse.json({ error: 'templateId or slug is required' }, { status: 400 });
 
-  const { data: tpl, error } = await (supabaseAdmin as any)
-    .from('templates')
-    .select('id, slug, data, business_name, template_name')
-    .eq('id', templateId)
-    .maybeSingle();
+  // Accept a uuid (templateId) or a slug — resolve either.
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref);
+  const sel = (supabaseAdmin as any).from('templates').select('id, slug, data, business_name, template_name');
+  const { data: tpl, error } = await (isUuid ? sel.eq('id', ref) : sel.eq('slug', ref)).maybeSingle();
   if (error || !tpl) return NextResponse.json({ error: 'template not found' }, { status: 404 });
 
   const businessName = str(tpl.business_name) || str(tpl.template_name) || 'this business';
@@ -49,7 +48,7 @@ export async function POST(req: NextRequest) {
   const base = (process.env.NEXT_PUBLIC_APP_BASE_URL || 'https://www.quicksites.ai').replace(/\/+$/, '');
   const pageUrl = str(body.pageUrl) || (str(tpl.slug) ? `${base}/sites/${str(tpl.slug)}` : '');
   const script = buildTalkingDemoScript({
-    instanceRef: templateId,
+    instanceRef: str(tpl.id),
     businessName,
     blocks,
     voice,

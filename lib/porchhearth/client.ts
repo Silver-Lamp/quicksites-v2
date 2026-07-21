@@ -23,7 +23,15 @@ export type PhProperty = {
   hostAudioUrl?: string;
 };
 
-export type PhAvailability = { available: boolean; nights?: number; quoteCents?: number; reason?: string };
+export type PhAvailability = {
+  available: boolean;
+  nights?: number;
+  /** Total price in cents. The contract promises this; the live engine currently emits it inside
+   *  `priceBreakdown.totalCents` instead — propertyAvailability() normalizes so callers can rely on it. */
+  quoteCents?: number;
+  priceBreakdown?: { totalCents?: number } | null;
+  reason?: string;
+};
 
 export type PhBookingResult = {
   bookingId: string;
@@ -92,7 +100,17 @@ export async function propertyAvailability(
 ): Promise<PhAvailability> {
   const q = new URLSearchParams({ from: params.from, to: params.to });
   if (params.guests != null) q.set('guests', String(params.guests));
-  return phFetch(`${phUrl(`properties/${encodeURIComponent(id)}/availability`)}?${q.toString()}`);
+  const raw: any = await phFetch(`${phUrl(`properties/${encodeURIComponent(id)}/availability`)}?${q.toString()}`);
+  // Contract drift shim (crosstalk 2026-07-21): the live engine returns the price inside
+  // `priceBreakdown.totalCents` rather than the contracted `quoteCents`. Normalize so the
+  // booking form's `quoteCents` read works today, and keeps working once the engine conforms.
+  const quoteCents =
+    typeof raw?.quoteCents === 'number'
+      ? raw.quoteCents
+      : typeof raw?.priceBreakdown?.totalCents === 'number'
+        ? raw.priceBreakdown.totalCents
+        : undefined;
+  return { ...raw, ...(quoteCents != null ? { quoteCents } : {}) } as PhAvailability;
 }
 
 export type CreateBookingInput = {

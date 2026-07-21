@@ -8,6 +8,8 @@
 
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
+import TalkingDemoTour from '@/components/site/talking-demo-tour';
+import { EXAMPLE_TOUR } from './example/tour';
 
 export const metadata = {
   title: 'Talking Demo — a website that walks you through itself | QuickSites',
@@ -81,9 +83,21 @@ export default function TalkingDemoPage() {
 
         {/* See it live */}
         <section className="mx-auto max-w-4xl px-6 py-16 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">Hear it in action</h2>
-          <p className="mx-auto mt-2 max-w-xl text-sm text-zinc-400">Every one of these is an auto-built site that describes itself when you press play.</p>
-          <div className="mt-8 flex flex-col items-center gap-3">
+          <h2 className="text-2xl font-semibold tracking-tight">See it in action</h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-zinc-400">
+            A real ~60-second Talking Demo, generated automatically from an auto-built coffee-roaster site —
+            the site narrating and scrolling through itself.
+          </p>
+          <div className="mx-auto mt-6 max-w-2xl text-left">
+            <TalkingDemoTour
+              steps={EXAMPLE_TOUR.steps}
+              mp4Url={EXAMPLE_TOUR.mp4_url}
+              posterUrl={EXAMPLE_TOUR.poster_url}
+              headline="Talking Demo reel"
+            />
+          </div>
+          <p className="mx-auto mt-10 max-w-xl text-sm text-zinc-400">Or open any of these live examples and press play:</p>
+          <div className="mt-6 flex flex-col items-center gap-3">
             <Link href="/talking-demo/example" className="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900/40 px-5 py-4 text-left transition hover:border-emerald-500/40">
               <div className="font-semibold text-emerald-300">☕ A neighborhood coffee roaster →</div>
               <div className="mt-1 text-sm text-zinc-400">A small-business site with a press-play tour.</div>

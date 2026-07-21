@@ -7,6 +7,8 @@
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
 import TalkingDemoBar from '@/components/site/talking-demo-bar';
+import TalkingDemoTour from '@/components/site/talking-demo-tour';
+import { EXAMPLE_TOUR } from './tour';
 
 export const metadata = {
   title: 'Field & Oak Coffee Roasters — a Talking Demo | QuickSites',
@@ -41,6 +43,28 @@ export default function TalkingDemoExamplePage() {
             This site was auto-built as a demo. Tap play above to hear it walk through everything below.
           </p>
         </div>
+
+        {/* The auto-generated Tier-2 reel: real narration + the site scrolling itself. Baked from a
+            one-time HJ render (see ./tour.ts) — permanent URLs, so it's instant with no runtime cost. */}
+        <section className="mx-auto max-w-4xl px-4 pt-10">
+          <div className="rounded-2xl border border-emerald-500/30 bg-zinc-900/40 p-4 sm:p-6">
+            <div className="mb-4 text-center">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                🎬 The auto-generated tour
+              </div>
+              <p className="mx-auto mt-2 max-w-xl text-sm text-zinc-400">
+                This ~60-second reel was generated <span className="text-zinc-200">automatically from this page</span> —
+                the site narrating and scrolling through itself. Nobody wrote the script or edited the video.
+              </p>
+            </div>
+            <TalkingDemoTour
+              steps={EXAMPLE_TOUR.steps}
+              mp4Url={EXAMPLE_TOUR.mp4_url}
+              posterUrl={EXAMPLE_TOUR.poster_url}
+              headline="Talking Demo reel"
+            />
+          </div>
+        </section>
 
         {/* Hero */}
         <header className="mx-auto max-w-4xl px-4 pt-12 text-center">

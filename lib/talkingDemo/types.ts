@@ -11,6 +11,12 @@ export type TourStep = {
   say: string;
   /** Optional silent hold (ms) for steps without much to say. */
   dwell_ms?: number;
+  /**
+   * Phase C: positions the page for this step's screenshot (HJ demo-actions vocabulary).
+   * `scroll:#<block-id>` scrolls that block into view; `highlight:.<selector>` outlines an
+   * element; a bare `#anchor`/`.selector` = scroll-into-view. Absent → HJ scrolls proportionally.
+   */
+  action?: string;
 };
 
 /** The full tour script QS sends to HJ's render endpoint. */
@@ -24,6 +30,11 @@ export type TalkingDemoScript = {
   want_mp4?: boolean;
   /** Title card for the MP4 reel (Phase B), e.g. the business name. */
   title?: string;
+  /**
+   * Phase C: the public URL of the built site. HJ screenshots it (per step `action`) so the reel
+   * shows the real page scrolling. Omit → caption-card frames. Bad/unsafe url falls back to cards.
+   */
+  page_url?: string;
 };
 
 /** A step after HJ has narrated it. */

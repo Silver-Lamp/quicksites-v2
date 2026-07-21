@@ -12,6 +12,7 @@ import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import type { Prospect } from '@/lib/outreach/prospects';
 import { getSenderProfile, type SenderProfile } from '@/lib/outreach/senderProfile';
+import { ensureTalkingDemo, talkingDemoAutogenEnabled } from '@/lib/talkingDemo/ensureTalkingDemo';
 
 export function publicBaseUrl(): string {
   return (
@@ -82,6 +83,9 @@ export type PosterModel = {
   /** Restaurant domain-competition: the domain is a diner-traffic PRIZE won by claiming the
    *  restaurant's own ordering site, not the site itself. Switches the copy to that framing. */
   restaurantComp?: boolean;
+  /** Talking Demo watch page for the pitch site — a "🔊 see it in action" line on the back.
+   *  Populated (flag-gated) by ensureTalkingDemo; null → the line is omitted (default). */
+  watchUrl?: string | null;
 };
 
 /**
@@ -231,6 +235,12 @@ export async function buildPosterModel(
     targetLng: target?.address_lon ?? null,
     radiusMiles: Number(process.env.POSTCARD_LOCAL_RADIUS_MILES) || 300,
   });
+  // Talking Demo (flag-gated, best-effort): ensure the pitch site has a reel + add a "watch it"
+  // line to the back. OFF by default (TALKING_DEMO_AUTOGEN_ENABLED); never blocks the postcard.
+  let watchUrl: string | null = null;
+  if (talkingDemoAutogenEnabled() && !isRestaurantComp && campaign.template_id) {
+    watchUrl = (await ensureTalkingDemo(campaign.template_id))?.watch_url ?? null;
+  }
   return {
     domain: campaign.domain,
     industryLabel: KEY_TO_LABEL[industry] ?? 'Local Services',
@@ -244,6 +254,7 @@ export async function buildPosterModel(
     sender: senderFromProfile(profile, brandName),
     localLine,
     restaurantComp: isRestaurantComp,
+    watchUrl,
   };
 }
 
@@ -429,6 +440,7 @@ export function renderPosterBackHtml(m: PosterModel): string {
   ${benefitsHtml}
   ${deadlineLine}
   <div class="u">${esc(m.claimUrl)}</div>
+  ${m.watchUrl ? `<div class="u">🔊 See it in action: ${esc(m.watchUrl)}</div>` : ''}
   ${signOff}
   <div class="spacer"></div>
 </div></body></html>`;

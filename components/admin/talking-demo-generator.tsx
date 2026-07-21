@@ -32,6 +32,8 @@ export default function TalkingDemoGenerator({ initialRef = '' }: { initialRef?:
   const [error, setError] = React.useState<string | null>(null);
   const [script, setScript] = React.useState<TourStep[] | null>(null);
   const [result, setResult] = React.useState<RenderResult | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [saved, setSaved] = React.useState<{ watch_url: string; qr_data_url: string } | null>(null);
 
   const poll = async (instanceId: string): Promise<RenderResult> => {
     const r = await fetch(`/api/admin/talking-demo/${encodeURIComponent(instanceId)}`, { credentials: 'include' });
@@ -45,6 +47,7 @@ export default function TalkingDemoGenerator({ initialRef = '' }: { initialRef?:
     setError(null);
     setResult(null);
     setScript(null);
+    setSaved(null);
     setStatus('Building the tour script…');
     try {
       const r = await fetch('/api/admin/talking-demo/render', {
@@ -75,6 +78,33 @@ export default function TalkingDemoGenerator({ initialRef = '' }: { initialRef?:
       setStatus('');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const save = async () => {
+    if (!result?.mp4_url) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const r = await fetch('/api/admin/talking-demo/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          templateId: ref.trim(),
+          mp4_url: result.mp4_url,
+          poster_url: result.poster_url,
+          steps: result.steps,
+          instance_id: result.instance_id,
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error || 'save failed');
+      setSaved({ watch_url: j.watch_url, qr_data_url: j.qr_data_url });
+    } catch (e: any) {
+      setError(e?.message || 'save failed');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -143,6 +173,35 @@ export default function TalkingDemoGenerator({ initialRef = '' }: { initialRef?:
               <a href={result.mp4_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-primary hover:underline">
                 Open the MP4 ↗
               </a>
+
+              {/* Outreach packaging: save the reel to the site's watch page + get a scannable QR. */}
+              <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                {!saved ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={save}
+                      disabled={saving}
+                      className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400 disabled:opacity-50"
+                    >
+                      {saving ? 'Saving…' : '💾 Save to watch page + get QR'}
+                    </button>
+                    <span className="text-xs text-muted-foreground">Publishes a phone-friendly “here’s the site we built you” page + a scannable QR for outreach.</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={saved.qr_data_url} alt="Scan to watch" width={128} height={128} className="h-32 w-32 shrink-0 rounded-lg bg-white p-1.5" />
+                    <div className="min-w-0 text-sm">
+                      <div className="font-semibold text-emerald-600 dark:text-emerald-300">✅ Saved — scan to watch</div>
+                      <a href={saved.watch_url} target="_blank" rel="noreferrer" className="mt-1 block break-all text-xs text-primary hover:underline">
+                        {saved.watch_url}
+                      </a>
+                      <p className="mt-1 text-xs text-muted-foreground">Print this QR on a postcard/yard sign — scanning opens the reel + the claimable site.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div>

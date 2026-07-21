@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   const { data: tpl, error } = await (supabaseAdmin as any)
     .from('templates')
-    .select('id, data, business_name, template_name')
+    .select('id, slug, data, business_name, template_name')
     .eq('id', templateId)
     .maybeSingle();
   if (error || !tpl) return NextResponse.json({ error: 'template not found' }, { status: 404 });
@@ -45,6 +45,9 @@ export async function POST(req: NextRequest) {
   const blocks: any[] = tpl?.data?.pages?.[0]?.blocks ?? tpl?.data?.blocks ?? [];
   const voice = body.voice === 'owner_clone' ? 'owner_clone' : 'house';
   const wantMp4 = body.wantMp4 === true; // Phase B: request the shareable MP4 reel (async, poll for it)
+  // Phase C: the built site's public URL, so HJ screenshots the real page per step. Overridable.
+  const base = (process.env.NEXT_PUBLIC_APP_BASE_URL || 'https://www.quicksites.ai').replace(/\/+$/, '');
+  const pageUrl = str(body.pageUrl) || (str(tpl.slug) ? `${base}/sites/${str(tpl.slug)}` : '');
   const script = buildTalkingDemoScript({
     instanceRef: templateId,
     businessName,
@@ -52,6 +55,7 @@ export async function POST(req: NextRequest) {
     voice,
     wantMp4,
     title: str(body.title) || businessName,
+    pageUrl,
   });
 
   // Dry-run, or not configured yet → return the generated script only (no HJ call). Works today.

@@ -114,6 +114,13 @@ const HANDLERS: Record<string, (c: any, ctx: Ctx) => TourStep | null> = {
 function blockType(b: any): string {
   return str(b?.type) || str(b?._type);
 }
+// The public renderer stamps id=<type> on the FIRST block of each type (contact_form → "contact");
+// see components/sites/site-renderer.tsx. Our generator emits one step per type, so this anchor
+// lands the Phase-C screenshot on exactly the block the step narrates.
+function stepAction(type: string): string {
+  const anchor = type === 'contact_form' ? 'contact' : type;
+  return `scroll:#${anchor}`;
+}
 function blockContent(b: any): any {
   return b?.content ?? b?.props ?? b ?? {};
 }
@@ -137,7 +144,12 @@ export function buildTourSteps(businessName: string, blocks: any[]): TourStep[] 
     const step = handler(blockContent(b), ctx);
     if (!step || !step.say.trim()) continue;
     seen.add(type);
-    steps.push({ caption: step.caption, say: clampSay(step.say), ...(step.dwell_ms ? { dwell_ms: step.dwell_ms } : {}) });
+    steps.push({
+      caption: step.caption,
+      say: clampSay(step.say),
+      ...(step.dwell_ms ? { dwell_ms: step.dwell_ms } : {}),
+      action: stepAction(type), // Phase C: scroll the screenshot to this block
+    });
   }
 
   // Guarantee a welcome up front.
@@ -161,13 +173,17 @@ export function buildTalkingDemoScript(input: {
   wantMp4?: boolean;
   /** MP4 title card; defaults to the business name when want_mp4 is set. */
   title?: string;
+  /** Public URL of the built site — enables Phase-C real-screenshot frames (want_mp4 only). */
+  pageUrl?: string;
 }): TalkingDemoScript {
   const businessName = str(input.businessName);
+  const pageUrl = str(input.pageUrl);
   return {
     instance_ref: str(input.instanceRef),
     steps: buildTourSteps(input.businessName, input.blocks),
     ...(input.voice ? { voice: input.voice } : {}),
     ...(input.wantMp4 != null ? { want_mp4: input.wantMp4 } : {}),
     ...(input.wantMp4 ? { title: str(input.title) || businessName || undefined } : {}),
+    ...(input.wantMp4 && pageUrl ? { page_url: pageUrl } : {}),
   };
 }

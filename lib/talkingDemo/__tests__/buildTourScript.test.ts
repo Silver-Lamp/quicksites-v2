@@ -16,6 +16,10 @@ describe('buildTourSteps', () => {
     expect(steps[0].say).toContain('Cedar & Vine Realty');
     expect(steps.map((s) => s.caption)).toEqual(['Welcome', 'Meet the team', 'Current listings', 'Get in touch']);
     expect(steps.find((s) => s.caption === 'Meet the team')!.say).toContain('Jordan Avery');
+    // Phase C: each block step carries a scroll action matching the renderer's first-of-type anchors.
+    expect(steps.find((s) => s.caption === 'Welcome')!.action).toBe('scroll:#hero');
+    expect(steps.find((s) => s.caption === 'Meet the team')!.action).toBe('scroll:#agent_roster');
+    expect(steps.find((s) => s.caption === 'Get in touch')!.action).toBe('scroll:#contact'); // contact_form → #contact
   });
 
   it('tours a restaurant (hero + menu) and adds a closer when there is no contact block', () => {
@@ -60,5 +64,14 @@ describe('buildTourSteps', () => {
     expect(script.voice).toBe('owner_clone');
     expect(script.want_mp4).toBe(false);
     expect(script.steps[0].caption).toBe('Welcome');
+  });
+
+  it('includes title + page_url only when want_mp4 is set (Phase B/C)', () => {
+    const audio = buildTalkingDemoScript({ instanceRef: 'a', businessName: 'Acme', blocks: [], wantMp4: false, pageUrl: 'https://x/sites/acme' });
+    expect(audio.title).toBeUndefined();
+    expect(audio.page_url).toBeUndefined();
+    const reel = buildTalkingDemoScript({ instanceRef: 'a', businessName: 'Acme', blocks: [], wantMp4: true, pageUrl: 'https://x/sites/acme' });
+    expect(reel.title).toBe('Acme'); // defaults to business name
+    expect(reel.page_url).toBe('https://x/sites/acme');
   });
 });

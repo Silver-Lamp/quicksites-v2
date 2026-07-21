@@ -44,7 +44,15 @@ export async function POST(req: NextRequest) {
   const businessName = str(tpl.business_name) || str(tpl.template_name) || 'this business';
   const blocks: any[] = tpl?.data?.pages?.[0]?.blocks ?? tpl?.data?.blocks ?? [];
   const voice = body.voice === 'owner_clone' ? 'owner_clone' : 'house';
-  const script = buildTalkingDemoScript({ instanceRef: templateId, businessName, blocks, voice, wantMp4: false });
+  const wantMp4 = body.wantMp4 === true; // Phase B: request the shareable MP4 reel (async, poll for it)
+  const script = buildTalkingDemoScript({
+    instanceRef: templateId,
+    businessName,
+    blocks,
+    voice,
+    wantMp4,
+    title: str(body.title) || businessName,
+  });
 
   // Dry-run, or not configured yet → return the generated script only (no HJ call). Works today.
   if (body.dryRun === true || !talkingDemoRenderConfigured()) {

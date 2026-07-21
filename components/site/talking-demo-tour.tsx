@@ -16,11 +16,14 @@ import type { RenderedStep } from '@/lib/talkingDemo/types';
 export default function TalkingDemoTour({
   steps,
   mp4Url,
+  posterUrl,
   headline = 'Talking Demo',
   className = '',
 }: {
   steps: RenderedStep[];
   mp4Url?: string | null;
+  /** First caption card / thumbnail for the MP4 reel (Phase B poster_url). */
+  posterUrl?: string | null;
   headline?: string;
   className?: string;
 }) {
@@ -59,7 +62,7 @@ export default function TalkingDemoTour({
     return (
       <div className={`overflow-hidden rounded-2xl border border-emerald-500/30 bg-black ${className}`}>
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-        <video src={mp4Url} controls playsInline className="w-full" />
+        <video src={mp4Url} poster={posterUrl || undefined} controls playsInline className="w-full" />
       </div>
     );
   }

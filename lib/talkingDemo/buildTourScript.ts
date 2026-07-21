@@ -159,11 +159,15 @@ export function buildTalkingDemoScript(input: {
   blocks: any[];
   voice?: 'house' | 'owner_clone';
   wantMp4?: boolean;
+  /** MP4 title card; defaults to the business name when want_mp4 is set. */
+  title?: string;
 }): TalkingDemoScript {
+  const businessName = str(input.businessName);
   return {
     instance_ref: str(input.instanceRef),
     steps: buildTourSteps(input.businessName, input.blocks),
     ...(input.voice ? { voice: input.voice } : {}),
     ...(input.wantMp4 != null ? { want_mp4: input.wantMp4 } : {}),
+    ...(input.wantMp4 ? { title: str(input.title) || businessName || undefined } : {}),
   };
 }

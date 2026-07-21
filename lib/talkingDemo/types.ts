@@ -22,6 +22,8 @@ export type TalkingDemoScript = {
   voice?: 'house' | 'owner_clone';
   /** false = audio-only (the on-page bar); true = also render the shareable MP4. */
   want_mp4?: boolean;
+  /** Title card for the MP4 reel (Phase B), e.g. the business name. */
+  title?: string;
 };
 
 /** A step after HJ has narrated it. */
@@ -31,8 +33,10 @@ export type RenderedStep = { caption: string; say: string; audio_url: string };
 export type TalkingDemoRender = {
   instance_id: string;
   steps: RenderedStep[];
-  mp4_status: 'rendering' | 'ready' | 'skipped';
+  mp4_status: 'rendering' | 'ready' | 'skipped' | 'failed';
   mp4_url: string | null;
+  /** First caption card — the reel/QR thumbnail (Phase B poll response). */
+  poster_url?: string | null;
   voice_basis: 'self' | 'narrator';
   usage?: { owner_id?: string; render_chars: number; billed: boolean };
 };

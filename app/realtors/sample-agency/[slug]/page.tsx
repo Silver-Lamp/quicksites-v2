@@ -64,7 +64,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             images: l.images,
             cta_text: l.cta_text,
             cta_link: 'mailto:hello@example.com?subject=Showing%20request',
-            about_that_embed_id: DEMO_EMBED,
+            about_that_embed_id: l.about_that_embed_id || DEMO_EMBED,
             about_that_url: '',
           }}
         />

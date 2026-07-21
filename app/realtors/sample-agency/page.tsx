@@ -91,7 +91,7 @@ export default function SampleAgencyPage() {
                 images: l.images,
                 cta_text: l.cta_text,
                 cta_link: `/realtors/sample-agency/${l.slug}`,
-                about_that_embed_id: DEMO_EMBED,
+                about_that_embed_id: l.about_that_embed_id || DEMO_EMBED,
                 // Ground the voice at THIS listing's detail page → it narrates this home, not the page.
                 about_that_url: `${SITE_BASE}/realtors/sample-agency/${l.slug}`,
               }}

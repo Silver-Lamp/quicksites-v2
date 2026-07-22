@@ -14,10 +14,12 @@ experience.
 ## Status
 
 - **Phase 1 — built, flag OFF.** Summary-only launcher, mounted once in the root layout,
-  self-gating by flag + configured embed + public pathname.
-- **Phase 2 — pending HJ.** Super-admin `site_settings` config to enable extra registers
-  (`pitch_panel` / `eli10` / `whats_new`) per surface — gated on HJ supporting a
-  per-instance kind allowlist (`data-kinds`).
+  self-gating by flag + configured embed + public pathname. Passes `data-kinds="summary"`
+  to the loader (`AboutThatEmbed` `kinds` prop) so the short version is enforced client-side.
+- **Phase 2 — unblocked (HJ shipped `data-kinds`, #1475).** Add a super-admin `site_settings`
+  config that feeds `resolveKinds(surface)` to widen registers per surface
+  (`pitch_panel` / `eli10` / `whats_new`) + a small `/admin` toggle UI. `data-kinds` only
+  ever narrows the embed's `enabled_kinds` (backend still gates), so it's safe to expose.
 
 ## Files (QuickSites)
 
@@ -35,14 +37,25 @@ experience.
 
 Until both are set, the launcher renders nothing.
 
-## Blocked on HiveJournal (asked via crosstalk 2026-07-22)
+## HiveJournal answers (resolved 2026-07-22)
 
-1. **Per-instance kind restriction** — can the loader render only an allowlist passed per
-   instance (e.g. `data-kinds="summary"`)? Gates the Phase 2 super-admin per-surface toggle.
-2. **Domain-allow at scale** — wildcard for platform subdomains + a per-custom-domain allow
-   (automatable on domain attach) + a platform house-narrator embed.
-3. **Billing/cost at scale** — one TTS render per `(embed,url,kind)` on first listen, then
-   cached; owner-billed per site vs a QS platform embed.
+1. **Per-instance kind restriction** — ✅ **BUILT (HJ #1475).** Loader `data-kinds` comma
+   allowlist off one embed; narrows-never-widens (backend gates by `enabled_kinds`). Wired
+   via `AboutThatEmbed`'s `kinds` prop.
+2. **Domain-allow** — `isDomainAllowed` matches on a dot boundary, so one entry `quicksites.ai`
+   covers apex + every subdomain (and `delivered.menu`). Tenant custom domains = add each apex
+   to the embed's `allowed_domains` (automatable on domain-attach; HJ can expose a
+   `POST /api/about-that/embeds/:id/domains` add-one endpoint).
+3. **Billing / cache** — cache key = `(embed_id, content_hash)` where
+   `content_hash = sha256(kind, voice, tone, preset, lang, page_text)`: free repeats,
+   auto-fresh on content change, shared render across identical-content URLs. QS platform
+   house embed = **QS-billed** (one render per unique content+kind on first listen; a daily
+   per-embed render cap is the spend guard). **Enabling renders = a conscious money step**,
+   surfaced to the owner before flipping on broadly.
+
+**House-narrator embed:** HJ mints on request (`voice_mode:'house'`,
+`allowed_domains:['quicksites.ai','delivered.menu']`, kinds incl. `summary`). Set its uuid as
+`NEXT_PUBLIC_HEAR_THIS_PAGE_EMBED_ID` to arm Phase 1.
 
 ## Mesh adoption
 

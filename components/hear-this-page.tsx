@@ -17,6 +17,7 @@ import {
   HEAR_THIS_PAGE_EMBED_ID,
   HEAR_THIS_PAGE_VOICE_LABEL,
   hearThisPageVisibleFor,
+  resolveKinds,
 } from '@/lib/hearThisPage/config';
 
 export default function HearThisPage() {
@@ -57,7 +58,12 @@ export default function HearThisPage() {
             </button>
           </div>
           {pageUrl ? (
-            <AboutThatEmbed embedId={HEAR_THIS_PAGE_EMBED_ID} url={pageUrl} width="100%" />
+            <AboutThatEmbed
+              embedId={HEAR_THIS_PAGE_EMBED_ID}
+              url={pageUrl}
+              width="100%"
+              kinds={resolveKinds(pathname ?? undefined)}
+            />
           ) : null}
           <p className="mt-2 text-[11px] text-muted-foreground">{HEAR_THIS_PAGE_VOICE_LABEL}</p>
         </div>

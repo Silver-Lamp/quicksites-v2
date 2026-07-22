@@ -198,6 +198,13 @@ export function buildIndustryStarter(opts: {
   // Hero shape follows the theme's layout personality (all paths).
   applyHeroLayout(hero, theme.stamped.layout);
 
+  // "In Your Voice" — the owner-voice narration block (About That). Seeded near the top
+  // of every general/storefront/food starter so it's front-and-center in the editor as a
+  // "let this page talk" setup card. Ships SILENT (no embed_id): renders nothing on the
+  // published site until the owner adds their embed, so it's a prompt, not clutter.
+  // (The personal + faith scaffolds already seed their own voice blocks.)
+  const voice: any = createDefaultBlock('about_that');
+
   let blocks: any[];
   if (FOOD_INDUSTRIES.has(industryKey)) {
     // Restaurant: menu + hours; the hero points at the menu rather than a quote.
@@ -290,7 +297,7 @@ export function buildIndustryStarter(opts: {
       footerBlk.content.links = foodNav.map((l) => ({ ...l }));
     }
 
-    blocks = [hero, menu, location, hours, contact, orderBar];
+    blocks = [hero, voice, menu, location, hours, contact, orderBar];
   } else if (industryKey === 'personal') {
     // "About Me" personal site — audio-forward, no services/FAQ. The differentiator
     // is HiveJournal's owner-voice moat: the page can talk in your own voice via an
@@ -401,7 +408,7 @@ export function buildIndustryStarter(opts: {
 
     blocks = [hero, times, welcome, message, give, contact];
   } else if (STOREFRONT_INDUSTRIES.has(industryKey)) {
-    blocks = [hero, createDefaultBlock('products_grid') as any, services, faq, contact];
+    blocks = [hero, voice, createDefaultBlock('products_grid') as any, services, faq, contact];
   } else {
     // Standard service business: pick a composition archetype so sites don't all
     // read as the same hero→services→faq→contact stack. Woven-in blocks
@@ -464,6 +471,8 @@ export function buildIndustryStarter(opts: {
         blocks = [hero, services, faq, contact];
         break;
     }
+    // Seed "In Your Voice" right after the hero for every standard archetype.
+    blocks.splice(1, 0, voice);
   }
 
   // Real estate: an AGENT site — a portfolio of homes (each with an About That

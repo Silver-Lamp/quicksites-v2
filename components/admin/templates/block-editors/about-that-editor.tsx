@@ -57,6 +57,27 @@ export default function AboutThatEditor({ block, onSave, onClose }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Hype + honest voice framing */}
+      <div className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/5 p-3">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <span aria-hidden>🎙️</span> In Your Voice
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Let visitors <b>hear</b> this page — a warm, human read of your story, pitch, or
+          menu. It starts with a house narrator, then upgrades to <b>your own voice</b> once you
+          set up a consented voice clone. That owner-voice audio is the thing competitors can&apos;t
+          copy.
+        </p>
+        <a
+          href="https://hivejournal.com/dashboard/lovio/voice-setup"
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-block text-xs font-medium text-fuchsia-600 underline underline-offset-2 hover:text-fuchsia-500"
+        >
+          Set up your voice →
+        </a>
+      </div>
+
       <div className="grid gap-2">
         <Label>
           Embed ID <span className="text-red-500">*</span>

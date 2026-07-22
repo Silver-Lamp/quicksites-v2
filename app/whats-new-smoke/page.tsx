@@ -42,18 +42,18 @@ const SMOKE_EMBED_ID =
 const PAGE_URL = 'https://www.quicksites.ai/whats-new-smoke';
 
 // ─── EDIT THIS BLOCK BETWEEN DEPLOYS TO DRIVE THE DIFF ──────────────────────────────
-// v3 = HIKE CONTROL vs v2: the ONLY substantive change is a price INCREASE
-// (Avocado Toast $9.00 → $11.00). Guest-negative → the default skip-negatives toggle
-// should SUPPRESS it: whats_new narrates a bare "the page was updated" with no detail,
-// never "the price went up." Everything else is identical to v2 (the version label bump
-// is cosmetic and should be ignored by the diff).
-const SMOKE_VERSION = 'v3';
+// v4 = HIKE RE-VERIFY vs v3 (under HJ's hardened prompt #1472): the ONLY change is a
+// second lone price INCREASE (Cold Brew $4.00 → $6.00). Guest-negative only → the fixed
+// prompt must collapse it to a bare "this page was just updated" naming no specific,
+// never mentioning the increase. Everything else identical to v3 (version label bump is
+// cosmetic). This busts the cache (new hash) so we get a fresh render under the fix.
+const SMOKE_VERSION = 'v4';
 const SMOKE_ITEMS: { name: string; price: string; note?: string }[] = [
   { name: 'House Drip Coffee', price: '$3.00' },
   { name: 'Oat-Milk Latte', price: '$4.25' },
   { name: 'Morning Bun', price: '$4.50', note: 'baked daily' },
   { name: 'Avocado Toast', price: '$11.00' },
-  { name: 'Cold Brew', price: '$4.00', note: 'new' },
+  { name: 'Cold Brew', price: '$6.00', note: 'new' },
 ];
 const SMOKE_NOTE = 'Open 7am–4pm daily. Patio seating now open.';
 // ────────────────────────────────────────────────────────────────────────────────────

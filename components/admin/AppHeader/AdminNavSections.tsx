@@ -167,7 +167,7 @@ const NAV_ADMIN: NavItem[] = [
   },
   {
     type: 'item',
-    label: 'Talking Demo',
+    label: 'Site Tour',
     href: '/admin/talking-demo',
     icon: <PlayCircle size={18} />,
     adminOnly: true,

@@ -2,7 +2,7 @@
 
 // components/admin/talking-demo-generator.tsx
 //
-// Admin "Generate Talking Demo" panel: given a template (slug or id), auto-build the tour script
+// Admin "Generate Site Tour" panel: given a template (slug or id), auto-build the tour script
 // from its blocks and render it via HJ — the narrated audio tour + the shareable MP4 reel (the site
 // narrating + scrolling through itself). Calls POST /api/admin/talking-demo/render, then polls
 // GET /api/admin/talking-demo/:instance_id until the MP4 is ready.
@@ -135,7 +135,7 @@ export default function TalkingDemoGenerator({ initialRef = '' }: { initialRef?:
           disabled={busy || !ref.trim()}
           className="h-9 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? 'Generating…' : '🎬 Generate Talking Demo'}
+          {busy ? 'Generating…' : '🎬 Generate Site Tour'}
         </button>
       </div>
 
@@ -169,7 +169,7 @@ export default function TalkingDemoGenerator({ initialRef = '' }: { initialRef?:
           {result.mp4_url ? (
             <div>
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">The reel</div>
-              <TalkingDemoTour steps={result.steps} mp4Url={result.mp4_url} posterUrl={result.poster_url} headline="Talking Demo reel" />
+              <TalkingDemoTour steps={result.steps} mp4Url={result.mp4_url} posterUrl={result.poster_url} headline="Site Tour reel" />
               <a href={result.mp4_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-primary hover:underline">
                 Open the MP4 ↗
               </a>
@@ -206,7 +206,7 @@ export default function TalkingDemoGenerator({ initialRef = '' }: { initialRef?:
           ) : (
             <div>
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Audio tour</div>
-              <TalkingDemoTour steps={result.steps} headline="Talking Demo" />
+              <TalkingDemoTour steps={result.steps} headline="Site Tour" />
             </div>
           )}
         </div>

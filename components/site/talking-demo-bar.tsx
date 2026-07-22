@@ -2,11 +2,11 @@
 
 // components/site/talking-demo-bar.tsx
 //
-// "Talking Demo" — the prominent press-play tour bar that turns any QuickSites page into
+// "Site Tour" — the prominent press-play tour bar that turns any QuickSites page into
 // a site that walks you through itself out loud. It's a branded frame around the HiveJournal
 // About That player (page-grounded narration): press ▶ and hear this page describe itself.
 //
-// Tier 1 of the Talking Demo offering (crosstalk 2026-07-21): one quicksites.ai-gated embed
+// Tier 1 of the Site Tour offering (crosstalk 2026-07-21): one quicksites.ai-gated embed
 // narrates whatever page it's on (data-url = the page). Tier 2 (a per-site scripted/MP4 tour
 // from the site's own blocks) is being scoped with HiveJournal.
 
@@ -14,14 +14,14 @@ import * as React from 'react';
 import { AboutThatEmbed, isValidEmbedId } from '@/components/admin/templates/render-blocks/about-that';
 
 // Reuses the warmed, quicksites.ai-gated realtors demo embed as a stand-in until a dedicated
-// "Talking Demo" embed is minted. Override per-deploy without a code change.
+// "Site Tour" embed is minted. Override per-deploy without a code change.
 const DEFAULT_EMBED =
   process.env.NEXT_PUBLIC_TALKING_DEMO_EMBED_ID || '9b0a931f-5277-4de4-bc30-54e0d1e9269f';
 
 export default function TalkingDemoBar({
   embedId = DEFAULT_EMBED,
   url = '',
-  headline = 'Talking Demo',
+  headline = 'Site Tour',
   subline = 'Press ▶ to hear this site walk you through itself — no reading required.',
   className = '',
 }: {

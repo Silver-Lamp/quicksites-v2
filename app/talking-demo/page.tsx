@@ -1,6 +1,6 @@
 // app/talking-demo/page.tsx
 //
-// "Talking Demo" — product landing for the auto-built-site-that-narrates-itself offering
+// "Site Tour" — product landing for the auto-built-site-that-narrates-itself offering
 // (QuickSites site-gen × HiveJournal About That). Tier 1: any auto-built site gets a press-play
 // tour. See crosstalk 2026-07-21 for the Tier 2 (scripted/MP4 tour) scoping with HiveJournal.
 //
@@ -12,7 +12,7 @@ import TalkingDemoTour from '@/components/site/talking-demo-tour';
 import { EXAMPLE_TOUR } from './example/tour';
 
 export const metadata = {
-  title: 'Talking Demo — a website that walks you through itself | QuickSites',
+  title: 'Site Tour — a website that walks you through itself | QuickSites',
   description:
     'Point us at your business and we build the website — then it introduces itself, out loud. An AI-built site with a press-play voice tour.',
   robots: { index: false, follow: true },
@@ -21,7 +21,7 @@ export const metadata = {
 const STEPS: Array<[string, string, string]> = [
   ['1', 'We build the site', 'Give us your business — a URL, a Google or Yelp listing, or just a name and trade. QuickSites auto-builds a real website: your services, hours, photos, and copy, cleaned up and laid out.'],
   ['2', 'It learns to talk', 'About That reads the finished site and turns it into a short spoken tour — grounded in exactly what\'s on the page, in a natural voice (yours, if you have one).'],
-  ['3', 'You get a Talking Demo', 'A shareable link (or a QR code) where anyone can press ▶ and hear the site walk them through itself in about a minute. No app, no reading.'],
+  ['3', 'You get a Site Tour', 'A shareable link (or a QR code) where anyone can press ▶ and hear the site walk them through itself in about a minute. No app, no reading.'],
 ];
 
 export default function TalkingDemoPage() {
@@ -33,7 +33,7 @@ export default function TalkingDemoPage() {
         <header className="border-b border-zinc-800/70">
           <div className="mx-auto max-w-4xl px-6 py-20 text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-300">
-              🔊 Talking Demo
+              🔊 Site Tour
             </div>
             <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-semibold tracking-tight sm:text-6xl">
               A website that walks you through itself.
@@ -85,7 +85,7 @@ export default function TalkingDemoPage() {
         <section className="mx-auto max-w-4xl px-6 py-16 text-center">
           <h2 className="text-2xl font-semibold tracking-tight">See it in action</h2>
           <p className="mx-auto mt-2 max-w-xl text-sm text-zinc-400">
-            A real ~60-second Talking Demo, generated automatically from an auto-built coffee-roaster site —
+            A real ~60-second Site Tour, generated automatically from an auto-built coffee-roaster site —
             the site narrating and scrolling through itself.
           </p>
           <div className="mx-auto mt-6 max-w-2xl text-left">
@@ -93,7 +93,7 @@ export default function TalkingDemoPage() {
               steps={EXAMPLE_TOUR.steps}
               mp4Url={EXAMPLE_TOUR.mp4_url}
               posterUrl={EXAMPLE_TOUR.poster_url}
-              headline="Talking Demo reel"
+              headline="Site Tour reel"
             />
           </div>
           <p className="mx-auto mt-10 max-w-xl text-sm text-zinc-400">Or open any of these live examples and press play:</p>
@@ -113,7 +113,7 @@ export default function TalkingDemoPage() {
           </div>
 
           <div className="mt-14">
-            <p className="text-sm text-zinc-400">Want a Talking Demo of your business?</p>
+            <p className="text-sm text-zinc-400">Want a Site Tour of your business?</p>
             <Link href="/rebuild" className="mt-2 inline-flex rounded-xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400">
               Build mine — free
             </Link>

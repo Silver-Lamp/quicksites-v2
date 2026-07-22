@@ -2,7 +2,7 @@
 
 // components/site/talking-demo-tour.tsx
 //
-// Talking Demo Tier 2 player — the stepped, narrated tour. Given HJ's rendered steps
+// Site Tour Tier 2 player — the stepped, narrated tour. Given HJ's rendered steps
 // ([{caption, say, audio_url}]) it plays each step's narration, shows the caption, and advances on
 // audio end (+ any dwell). This is the audio-tour surface (want_mp4:false); when an mp4_url is
 // available it plays that instead. Consumes lib/talkingDemo/renderClient output.
@@ -17,7 +17,7 @@ export default function TalkingDemoTour({
   steps,
   mp4Url,
   posterUrl,
-  headline = 'Talking Demo',
+  headline = 'Site Tour',
   className = '',
 }: {
   steps: RenderedStep[];

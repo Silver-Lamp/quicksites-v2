@@ -32,10 +32,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// HJ sandbox embed dedicated to this smoke — set once HJ confirms the full uuid +
-// whats_new enabled + quicksites.ai allowed. Env override so no code redeploy is needed
-// to swap it. Until it's a valid uuid, the player renders nothing (content still shows).
-const SMOKE_EMBED_ID = process.env.NEXT_PUBLIC_WHATS_NEW_SMOKE_EMBED_ID || '';
+// HJ sandbox embed dedicated to this smoke (contracts/about-that-embed.md). enabled_kinds
+// includes whats_new (default skip-negatives toggle), and quicksites.ai is domain-allowed.
+// A public embed id is not a secret (it ships in the client <script data-embed=…> anyway),
+// so it's baked in as the default — the page works on deploy with no env config. The env
+// var still overrides it if we ever swap sandboxes, no code redeploy needed.
+const SMOKE_EMBED_ID =
+  process.env.NEXT_PUBLIC_WHATS_NEW_SMOKE_EMBED_ID || '22e4692a-2538-4d8b-a2df-9fce1a7abdb9';
 const PAGE_URL = 'https://www.quicksites.ai/whats-new-smoke';
 
 // ─── EDIT THIS BLOCK BETWEEN DEPLOYS TO DRIVE THE DIFF ──────────────────────────────

@@ -16,10 +16,11 @@ experience.
 - **Phase 1 — built, flag OFF.** Summary-only launcher, mounted once in the root layout,
   self-gating by flag + configured embed + public pathname. Passes `data-kinds="summary"`
   to the loader (`AboutThatEmbed` `kinds` prop) so the short version is enforced client-side.
-- **Phase 2 — unblocked (HJ shipped `data-kinds`, #1475).** Add a super-admin `site_settings`
-  config that feeds `resolveKinds(surface)` to widen registers per surface
-  (`pitch_panel` / `eli10` / `whats_new`) + a small `/admin` toggle UI. `data-kinds` only
-  ever narrows the embed's `enabled_kinds` (backend still gates), so it's safe to expose.
+- **Phase 2 — built.** Super-admin `site_settings` config (`hear_this_page`): per surface
+  (`home` / `sites` / `marketing`) enable + choose registers, `summary` always the baseline.
+  Feeds `resolveKinds(pathname, settings)` → `data-kinds` (narrows only). Admin UI at
+  `/admin/hear-this-page`, API `app/api/admin/hear-this-page`, loader
+  `lib/hearThisPage/settings.ts`. The env flag stays the master switch + billing gate on top.
 
 ## Files (QuickSites)
 

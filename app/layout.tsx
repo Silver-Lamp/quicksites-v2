@@ -20,6 +20,8 @@ import RouteChangeOverlayClient from '@/components/ui/RouteChangeOverlayClient';
 import CartEventsWire from '@/components/cart/cart-events-wire';
 import CartFab from '@/components/cart/cart-fab';
 import HearThisPage from '@/components/hear-this-page';
+import { HEAR_THIS_PAGE_ENABLED } from '@/lib/hearThisPage/config';
+import { getHearThisPageSettings } from '@/lib/hearThisPage/settings';
 import { resolveOrg } from '@/lib/org/resolveOrg';
 
 /* ---------------- Metadata / Viewport ---------------- */
@@ -66,6 +68,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     data: { session },
   } = await supabase.auth.getSession();
 
+  // Hear-this-page super-admin config (Phase 2). Only read from site_settings when the
+  // feature is actually enabled, so it costs nothing on every request while OFF.
+  const hearThisPageSettings = HEAR_THIS_PAGE_ENABLED ? await getHearThisPageSettings() : null;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -85,9 +91,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
           <CartFab />
           {/* Platform-wide "Hear this page" launcher — self-gates by flag + embed +
-              public pathname (lib/hearThisPage/config.ts). OFF until HJ delivers the
-              house-narrator embed + domain-allow model. */}
-          <HearThisPage />
+              public pathname + the super-admin per-surface config (lib/hearThisPage/*).
+              Flag OFF by default; flipping it on = QS-billed renders. */}
+          <HearThisPage settings={hearThisPageSettings} />
         </Providers>
       </body>
     </html>

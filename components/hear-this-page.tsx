@@ -18,9 +18,10 @@ import {
   HEAR_THIS_PAGE_VOICE_LABEL,
   hearThisPageVisibleFor,
   resolveKinds,
+  type HearThisPageSettings,
 } from '@/lib/hearThisPage/config';
 
-export default function HearThisPage() {
+export default function HearThisPage({ settings }: { settings?: HearThisPageSettings | null }) {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
   const [dismissed, setDismissed] = React.useState(false);
@@ -37,7 +38,7 @@ export default function HearThisPage() {
   }, [pathname]);
 
   if (!HEAR_THIS_PAGE_ENABLED || !HEAR_THIS_PAGE_EMBED_ID) return null;
-  if (!hearThisPageVisibleFor(pathname)) return null;
+  if (!hearThisPageVisibleFor(pathname, settings)) return null;
   if (dismissed) return null;
 
   return (
@@ -62,7 +63,7 @@ export default function HearThisPage() {
               embedId={HEAR_THIS_PAGE_EMBED_ID}
               url={pageUrl}
               width="100%"
-              kinds={resolveKinds(pathname ?? undefined)}
+              kinds={resolveKinds(pathname, settings)}
             />
           ) : null}
           <p className="mt-2 text-[11px] text-muted-foreground">{HEAR_THIS_PAGE_VOICE_LABEL}</p>

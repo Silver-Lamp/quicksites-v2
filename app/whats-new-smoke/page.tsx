@@ -42,15 +42,17 @@ const SMOKE_EMBED_ID =
 const PAGE_URL = 'https://www.quicksites.ai/whats-new-smoke';
 
 // ─── EDIT THIS BLOCK BETWEEN DEPLOYS TO DRIVE THE DIFF ──────────────────────────────
-// v2 = FAVORABLE diff vs v1: Oat-Milk Latte price DROP ($5.25 → $4.25), a NEW item
-// (Cold Brew), and LATER closing hours (2pm → 4pm). All guest-positive → whats_new
-// should narrate them (default skip-negatives toggle does not suppress favorable diffs).
-const SMOKE_VERSION = 'v2';
+// v3 = HIKE CONTROL vs v2: the ONLY substantive change is a price INCREASE
+// (Avocado Toast $9.00 → $11.00). Guest-negative → the default skip-negatives toggle
+// should SUPPRESS it: whats_new narrates a bare "the page was updated" with no detail,
+// never "the price went up." Everything else is identical to v2 (the version label bump
+// is cosmetic and should be ignored by the diff).
+const SMOKE_VERSION = 'v3';
 const SMOKE_ITEMS: { name: string; price: string; note?: string }[] = [
   { name: 'House Drip Coffee', price: '$3.00' },
   { name: 'Oat-Milk Latte', price: '$4.25' },
   { name: 'Morning Bun', price: '$4.50', note: 'baked daily' },
-  { name: 'Avocado Toast', price: '$9.00' },
+  { name: 'Avocado Toast', price: '$11.00' },
   { name: 'Cold Brew', price: '$4.00', note: 'new' },
 ];
 const SMOKE_NOTE = 'Open 7am–4pm daily. Patio seating now open.';

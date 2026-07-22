@@ -34,11 +34,16 @@ export function AboutThatEmbed({
   embedId,
   url = '',
   width = '',
+  kinds,
   className,
 }: {
   embedId: string;
   url?: string;
   width?: string;
+  /** Restrict which registers this instance offers (loader `data-kinds`, HJ #1475).
+   *  Presentational allowlist — can only NARROW the embed's enabled_kinds, never widen
+   *  (the backend still gates). Omit = all enabled kinds. e.g. ['summary']. */
+  kinds?: string[];
   className?: string;
 }) {
   const valid = UUID_RX.test((embedId || '').trim());
@@ -51,6 +56,12 @@ export function AboutThatEmbed({
     return /^\d+(\.\d+)?$/.test(w) ? `${w}px` : w;
   }, [width]);
 
+  // Stable string for the effect dep (arrays are identity-unstable).
+  const kindsAttr = React.useMemo(
+    () => (kinds && kinds.length ? kinds.join(',') : ''),
+    [kinds],
+  );
+
   React.useEffect(() => {
     const host = hostRef.current;
     if (!host || !valid) return;
@@ -60,12 +71,13 @@ export function AboutThatEmbed({
     s.setAttribute('data-embed', embedId.trim());
     if (url) s.setAttribute('data-url', url);
     if (normWidth) s.setAttribute('data-width', normWidth);
+    if (kindsAttr) s.setAttribute('data-kinds', kindsAttr);
     host.appendChild(s);
     return () => {
       // Remove the loader AND whatever it injected next to itself.
       host.innerHTML = '';
     };
-  }, [valid, embedId, url, normWidth]);
+  }, [valid, embedId, url, normWidth, kindsAttr]);
 
   if (!valid) return null;
   return <div ref={hostRef} data-about-that-embed={embedId.trim()} className={className} />;

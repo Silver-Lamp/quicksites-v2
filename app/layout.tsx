@@ -19,6 +19,7 @@ import MagicLinkBridge from '@/components/auth/MagicLinkBridge';
 import RouteChangeOverlayClient from '@/components/ui/RouteChangeOverlayClient';
 import CartEventsWire from '@/components/cart/cart-events-wire';
 import CartFab from '@/components/cart/cart-fab';
+import HearThisPage from '@/components/hear-this-page';
 import { resolveOrg } from '@/lib/org/resolveOrg';
 
 /* ---------------- Metadata / Viewport ---------------- */
@@ -83,6 +84,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <CartEventsWire />
           {children}
           <CartFab />
+          {/* Platform-wide "Hear this page" launcher — self-gates by flag + embed +
+              public pathname (lib/hearThisPage/config.ts). OFF until HJ delivers the
+              house-narrator embed + domain-allow model. */}
+          <HearThisPage />
         </Providers>
       </body>
     </html>

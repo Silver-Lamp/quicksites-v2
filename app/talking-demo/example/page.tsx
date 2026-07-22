@@ -1,7 +1,7 @@
 // app/talking-demo/example/page.tsx
 //
-// A live "Talking Demo" example: a representative small-business site (the kind QuickSites
-// auto-builds from a business's listing) with the Talking Demo bar at the top. Press ▶ and the
+// A live "Site Tour" example: a representative small-business site (the kind QuickSites
+// auto-builds from a business's listing) with the Site Tour bar at the top. Press ▶ and the
 // site narrates itself (About That, grounded at this page). Fictional business — noindex.
 
 import Link from 'next/link';
@@ -11,9 +11,9 @@ import TalkingDemoTour from '@/components/site/talking-demo-tour';
 import { EXAMPLE_TOUR } from './tour';
 
 export const metadata = {
-  title: 'Field & Oak Coffee Roasters — a Talking Demo | QuickSites',
+  title: 'Field & Oak Coffee Roasters — a Site Tour | QuickSites',
   description:
-    'A sample auto-built small-business site that narrates itself. Press play to hear the Talking Demo.',
+    'A sample auto-built small-business site that narrates itself. Press play to hear the Site Tour.',
   robots: { index: false, follow: true },
 };
 
@@ -36,7 +36,7 @@ export default function TalkingDemoExamplePage() {
     <>
       <SiteHeader sticky logoText={BIZ.name} logoHref="/talking-demo/example" />
       <main className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-black text-zinc-100">
-        {/* The Talking Demo bar — press play and the site describes itself. */}
+        {/* The Site Tour bar — press play and the site describes itself. */}
         <div className="mx-auto max-w-4xl px-4 pt-8">
           <TalkingDemoBar subline="Press ▶ to hear this whole site in about 60 seconds — the way a customer would." />
           <p className="mt-2 text-center text-xs text-zinc-500">
@@ -61,7 +61,7 @@ export default function TalkingDemoExamplePage() {
               steps={EXAMPLE_TOUR.steps}
               mp4Url={EXAMPLE_TOUR.mp4_url}
               posterUrl={EXAMPLE_TOUR.poster_url}
-              headline="Talking Demo reel"
+              headline="Site Tour reel"
             />
           </div>
         </section>
@@ -136,7 +136,7 @@ export default function TalkingDemoExamplePage() {
             href="/talking-demo"
             className="inline-flex rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-300 transition hover:border-emerald-400 hover:bg-emerald-500/20"
           >
-            ← What is a Talking Demo?
+            ← What is a Site Tour?
           </Link>
           <p className="mt-6 text-xs text-zinc-600">Field &amp; Oak Coffee Roasters is a fictional business. Sample site for demonstration only.</p>
         </div>

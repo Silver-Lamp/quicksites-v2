@@ -29,13 +29,19 @@ experience.
   player grounded at `origin+pathname`, house narrator, dismissible, collapses on nav).
 - `app/layout.tsx` — mounts `<HearThisPage />` once beside `CartFab`.
 
-## Enable in an environment (all required)
+## Enable in an environment
 
-1. `NEXT_PUBLIC_HEAR_THIS_PAGE_ENABLED=1`
-2. `NEXT_PUBLIC_HEAR_THIS_PAGE_EMBED_ID=<platform house-narrator embed>` — **from HJ**,
-   domain-allowed for `*.quicksites.ai`, `*.delivered.menu`, and tenant custom domains.
+The house embed is baked in as the default (`1cda57cc-23f0-4973-b49e-6620b60137ce` —
+"QuickSites — Hear this page (platform house)", house narrator, allowed
+`quicksites.ai`+`delivered.menu`, kinds `summary`+`pitch_panel`+`eli10`), so the **single
+switch** to arm it is:
 
-Until both are set, the launcher renders nothing.
+- `NEXT_PUBLIC_HEAR_THIS_PAGE_ENABLED=1`
+
+**Flipping this flag ON = real QS-billed TTS renders** (one per unique page-content+kind on
+first listen; daily per-embed cap is the spend guard). Held OFF until the owner explicitly
+greenlights the spend + rollout scope. `NEXT_PUBLIC_HEAR_THIS_PAGE_EMBED_ID` still overrides
+the embed if needed.
 
 ## HiveJournal answers (resolved 2026-07-22)
 

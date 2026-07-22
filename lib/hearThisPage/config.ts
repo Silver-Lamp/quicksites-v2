@@ -23,8 +23,14 @@ export const HEAR_THIS_PAGE_ENABLED =
   process.env.NEXT_PUBLIC_HEAR_THIS_PAGE_ENABLED === '1' ||
   process.env.NEXT_PUBLIC_HEAR_THIS_PAGE_ENABLED === 'true';
 
-/** The platform house-narrator embed (from HJ). Empty until minted → nothing renders. */
-export const HEAR_THIS_PAGE_EMBED_ID = process.env.NEXT_PUBLIC_HEAR_THIS_PAGE_EMBED_ID || '';
+/**
+ * The platform house-narrator embed (HJ-minted: "QuickSites — Hear this page (platform
+ * house)", voice_mode narrator, allowed quicksites.ai + delivered.menu, enabled_kinds
+ * summary+pitch_panel+eli10). Baked in as the default (public id) so the single ENABLED
+ * flag is the only switch to arm it. Env-overridable; still inert until the flag is on.
+ */
+export const HEAR_THIS_PAGE_EMBED_ID =
+  process.env.NEXT_PUBLIC_HEAR_THIS_PAGE_EMBED_ID || '1cda57cc-23f0-4973-b49e-6620b60137ce';
 
 /** Universal default: the short version only. Super-admin config can widen this later. */
 export const DEFAULT_KINDS: HearThisPageKind[] = ['summary'];

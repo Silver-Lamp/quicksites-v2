@@ -61,6 +61,21 @@ export default function RenderNeighborhoodStay({ block, content }: Props) {
   const [mainIdx, setMainIdx] = React.useState(0);
   const main = images[Math.min(mainIdx, Math.max(0, images.length - 1))];
 
+  // Host-voice rail: when bound to a PorchHearth property with no inline audio, pull the property's
+  // SERVED hostAudioUrl (crosstalk/contracts/neighborhood-stay-embed.md) so the host voice "rides
+  // along" from PorchHearth to every surface from one field. Best-effort; silent if unavailable.
+  const [servedHostAudio, setServedHostAudio] = React.useState('');
+  React.useEffect(() => {
+    if (!propertyId || hostAudioUrl) return;
+    let alive = true;
+    fetch(`/api/porchhearth/properties/${encodeURIComponent(propertyId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p) => { if (alive && p && typeof p.hostAudioUrl === 'string') setServedHostAudio(p.hostAudioUrl.trim()); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [propertyId, hostAudioUrl]);
+  const effectiveHostAudio = hostAudioUrl || servedHostAudio;
+
   const stats = [
     beds && { icon: '🛏', label: `${beds} bd` },
     bathrooms && { icon: '🛁', label: `${bathrooms} ba` },
@@ -149,12 +164,12 @@ export default function RenderNeighborhoodStay({ block, content }: Props) {
             </div>
           )}
 
-          {/* The hook: hear the host describe the place. Direct audio wins; else the QS About That player. */}
-          {hostAudioUrl ? (
+          {/* The hook: hear the host describe the place. Direct/served audio wins; else the QS About That player. */}
+          {effectiveHostAudio ? (
             <div className="mt-1">
               <div className="mb-1 text-xs font-medium text-muted-foreground">🎙️ Hear the host describe this place</div>
               {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-              <audio controls preload="none" src={hostAudioUrl} className="w-full max-w-md" />
+              <audio controls preload="none" src={effectiveHostAudio} className="w-full max-w-md" />
             </div>
           ) : isValidEmbedId(embedId) ? (
             <div className="mt-1">

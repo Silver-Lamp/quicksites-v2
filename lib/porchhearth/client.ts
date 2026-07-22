@@ -93,6 +93,12 @@ export async function listProperties(params: {
   return phFetch(`${phUrl('properties')}?${q.toString()}`);
 }
 
+/** Public read: a single property by id — incl. `hostAudioUrl` (the host-voice rail). Used by the
+ *  neighborhood_stay block to pull the served host voice for whichever property it's bound to. */
+export async function getProperty(id: string): Promise<PhProperty> {
+  return phFetch(phUrl(`properties/${encodeURIComponent(id)}`));
+}
+
 /** Public read: availability + a quote for a date range. */
 export async function propertyAvailability(
   id: string,

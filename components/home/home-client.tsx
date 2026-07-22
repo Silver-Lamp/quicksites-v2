@@ -18,6 +18,7 @@ import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import GuestStart from '@/components/home/guest-start';
 import HomeColorLab from '@/components/home/home-color-lab';
 import SectionBackdrop from '@/components/home/section-backdrop';
+import InYourVoice from '@/components/home/in-your-voice';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -229,6 +230,9 @@ export default function HomeClient({
             </div>
           </div>
         </section>
+
+        {/* ───────── In Your Voice (owner-voice narration moat) — default brand only ───────── */}
+        {showCharacter && <InYourVoice />}
 
         {/* ───────── Showcase (real published sites) — SSR'd via server page ───────── */}
         {showcase}

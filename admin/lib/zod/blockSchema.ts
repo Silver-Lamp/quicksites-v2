@@ -845,7 +845,7 @@ export const blockContentSchemaMap = {
   // HiveJournal embed uuid for a working player, but the DATA layer accepts '' so a
   // freshly-inserted block validates — the renderer shows a setup hint until set.
   about_that: {
-    label: 'About That (narration)',
+    label: 'In Your Voice',
     icon: '🎙️',
     schema: z.object({
       embed_id: z.string().optional().default(''),

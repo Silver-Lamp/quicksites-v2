@@ -92,7 +92,8 @@ export default function RenderAboutThat({ block, content, previewOnly }: Props) 
     return (
       <section className="mx-auto w-full max-w-3xl px-4 py-4">
         <div className="rounded-xl border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-          🎙️ <b>About That</b> — paste your HiveJournal embed ID to add narrated audio for this page.
+          🎙️ <b>In Your Voice</b> — let visitors <i>hear</i> this page. Paste your embed ID to add
+          narrated audio; start with a house narrator and upgrade to your own consented voice.
         </div>
       </section>
     );

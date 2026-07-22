@@ -21,6 +21,8 @@ export type PhProperty = {
   maximumStayNights?: number;
   cancellationPolicy?: string;
   hostAudioUrl?: string;
+  /** false = a listing that isn't currently rentable → the block degrades to an "inquire" CTA. */
+  bookable?: boolean;
 };
 
 export type PhAvailability = {
@@ -94,9 +96,12 @@ export async function listProperties(params: {
 }
 
 /** Public read: a single property by id — incl. `hostAudioUrl` (the host-voice rail). Used by the
- *  neighborhood_stay block to pull the served host voice for whichever property it's bound to. */
+ *  neighborhood_stay block to pull the served host voice for whichever property it's bound to.
+ *  The engine wraps it as `{ property }` (matching `{ properties }` on the list) — unwrap it here
+ *  (defensive: accepts a bare property too). */
 export async function getProperty(id: string): Promise<PhProperty> {
-  return phFetch(phUrl(`properties/${encodeURIComponent(id)}`));
+  const raw: any = await phFetch(phUrl(`properties/${encodeURIComponent(id)}`));
+  return (raw && typeof raw === 'object' && raw.property) ? raw.property : raw;
 }
 
 /** Public read: availability + a quote for a date range. */

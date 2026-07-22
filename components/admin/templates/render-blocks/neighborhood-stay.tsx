@@ -65,16 +65,24 @@ export default function RenderNeighborhoodStay({ block, content }: Props) {
   // SERVED hostAudioUrl (crosstalk/contracts/neighborhood-stay-embed.md) so the host voice "rides
   // along" from PorchHearth to every surface from one field. Best-effort; silent if unavailable.
   const [servedHostAudio, setServedHostAudio] = React.useState('');
+  // undefined = unknown (default to bookable); false = a listing that isn't rentable → inquire CTA.
+  const [bookable, setBookable] = React.useState<boolean | undefined>(undefined);
   React.useEffect(() => {
-    if (!propertyId || hostAudioUrl) return;
+    if (!propertyId) return;
     let alive = true;
     fetch(`/api/porchhearth/properties/${encodeURIComponent(propertyId)}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((p) => { if (alive && p && typeof p.hostAudioUrl === 'string') setServedHostAudio(p.hostAudioUrl.trim()); })
+      .then((p) => {
+        if (!alive || !p) return;
+        if (!hostAudioUrl && typeof p.hostAudioUrl === 'string') setServedHostAudio(p.hostAudioUrl.trim());
+        if (typeof p.bookable === 'boolean') setBookable(p.bookable);
+      })
       .catch(() => {});
     return () => { alive = false; };
   }, [propertyId, hostAudioUrl]);
   const effectiveHostAudio = hostAudioUrl || servedHostAudio;
+  // Show the booking form only for a bookable property (default when the flag is absent).
+  const showBooking = !!propertyId && bookable !== false;
 
   const stats = [
     beds && { icon: '🛏', label: `${beds} bd` },
@@ -181,7 +189,7 @@ export default function RenderNeighborhoodStay({ block, content }: Props) {
           {stayNote && <div className="text-xs text-muted-foreground">{stayNote}</div>}
 
           <div className="mt-auto space-y-2 pt-2">
-            {propertyId ? (
+            {showBooking ? (
               <NeighborhoodStayBooking
                 propertyId={propertyId}
                 siteRef={siteRef || undefined}

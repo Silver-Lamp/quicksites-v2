@@ -11,9 +11,11 @@
 // The copy is explicit that a site starts with a house narrator and upgrades to the
 // owner's own voice once they set up a consented clone.
 //
-// Embed is env-driven (NEXT_PUBLIC_IN_YOUR_VOICE_EMBED_ID) so we can swap to a
-// dedicated "QuickSites homepage" embed with no code redeploy; the default is our
-// existing quicksites.ai-allowed consented-clone embed. A public embed id is not a
+// Default embed is the dedicated "QuickSites — In Your Voice (homepage)" embed HJ
+// minted for this (own_clone / Sandon's consented clone, warm+founder tone, kinds
+// summary+pitch_panel, quicksites.ai + www allowed) — so the realtors demo stays
+// single-purpose and homepage analytics/domain scope stays clean. Env-overridable
+// (NEXT_PUBLIC_IN_YOUR_VOICE_EMBED_ID) with no redeploy. A public embed id is not a
 // secret (it ships in the client <script data-embed=…> anyway).
 
 import Link from 'next/link';
@@ -21,7 +23,7 @@ import SectionBackdrop from '@/components/home/section-backdrop';
 import { AboutThatEmbed } from '@/components/admin/templates/render-blocks/about-that';
 
 const EMBED_ID =
-  process.env.NEXT_PUBLIC_IN_YOUR_VOICE_EMBED_ID || '9b0a931f-5277-4de4-bc30-54e0d1e9269f';
+  process.env.NEXT_PUBLIC_IN_YOUR_VOICE_EMBED_ID || '4f90e68e-5057-4eab-8355-628ddbdb5af2';
 const HOMEPAGE_URL = 'https://www.quicksites.ai/';
 
 export default function InYourVoice() {

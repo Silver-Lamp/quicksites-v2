@@ -9,7 +9,9 @@
 Distinct from the opt-in **In Your Voice** block (owner voice on a specific page,
 `about_that` block). Hear-this-page is a site-wide **house-narrator** baseline; where an
 owner has added their own In Your Voice block, that owner-voice player is the richer
-experience.
+experience — so the launcher **auto-suppresses** when it detects a non-house About That
+embed (`[data-about-that-embed]`) already on the page, avoiding double audio + a redundant
+house render.
 
 ## Status
 

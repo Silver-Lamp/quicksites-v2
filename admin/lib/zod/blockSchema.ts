@@ -797,6 +797,31 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Auto-shop apex portals (<city>-auto-repair.com): the driver-facing directory of a
+  // domain-competition cohort — "trusted shops that show you the work" (SecondSet wedge).
+  // Same shape as restaurants_directory: `campaign_id` drives a live fetch, `entries` is
+  // the commit-time snapshot fallback. Winner featured first, no "competition" framing.
+  auto_shops_directory: {
+    label: 'Auto Shops Directory',
+    icon: '🔧',
+    schema: z.object({
+      title: z.string().optional().default(''),
+      campaign_id: z.string().optional().default(''),
+      entries: z
+        .array(
+          z.object({
+            template_id: z.string(),
+            slug: z.string(),
+            business_name: z.string(),
+            url: z.string(),
+            hero_url: z.union([z.string(), z.literal('')]).optional(),
+            is_winner: z.boolean().optional().default(false),
+          })
+        )
+        .default([]),
+    }),
+  },
+
   // Daily Artifact (crosstalk/contracts/daily-artifact-embed.md → LIVE): a person's
   // OWN HiveJournal daily artifact on their about-me site. v1 kind = comic of the day
   // (Daily Buzz — stars "Buzz", never real names). CONSENT-GATED entirely on HJ's side:

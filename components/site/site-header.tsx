@@ -41,6 +41,7 @@ const DEFAULT_LINKS: LinkItem[] = [
   { label: 'Features', href: '/features' },
   { label: 'Restaurants', href: '/restaurants' },
   { label: 'Realtors', href: '/realtors' },
+  { label: 'Auto Shops', href: '/secondset' },
   { label: 'Partners', href: '/partners' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Compare', href: '/compare' },

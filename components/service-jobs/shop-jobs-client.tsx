@@ -19,7 +19,9 @@ export default function ShopJobsClient() {
   const [sel, setSel] = React.useState<ServiceJobDetail | null>(null);
   const [form, setForm] = React.useState({ title: '', customer_email: '', customer_name: '', vehicle_ref: '' });
   const [draft, setDraft] = React.useState<DraftItem[]>([]);
-  const [tokenInfo, setTokenInfo] = React.useState<{ capture_token: string; expires_at: string } | null>(null);
+  const [tokenInfo, setTokenInfo] = React.useState<{ capture_token: string; expires_at: string; qr_data_url?: string | null } | null>(null);
+  const [voiceText, setVoiceText] = React.useState('');
+  const [voiceMsg, setVoiceMsg] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
   const [hasGrant, setHasGrant] = React.useState(false);
@@ -105,8 +107,19 @@ export default function ShopJobsClient() {
       const res = await fetch(`/api/service-jobs/${sel.id}/capture-token`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Mint failed');
-      setTokenInfo({ capture_token: data.capture_token, expires_at: data.expires_at });
+      setTokenInfo({ capture_token: data.capture_token, expires_at: data.expires_at, qr_data_url: data.qr_data_url });
     } catch (e: any) { setMsg(e?.message || 'Mint failed'); } finally { setBusy(false); }
+  }
+
+  async function sendVoice() {
+    if (!sel || !voiceText.trim()) return;
+    setBusy(true); setVoiceMsg('');
+    try {
+      const res = await fetch(`/api/service-jobs/${sel.id}/voice-note`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: voiceText.trim() }) });
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.result?.skipped ? `Not sent (${d.result.skipped})` : d.result?.error || 'Send failed');
+      setVoiceText(''); setVoiceMsg('Sent — plays in the tech’s ear.');
+    } catch (e: any) { setVoiceMsg(e?.message || 'Send failed'); } finally { setBusy(false); }
   }
 
   if (auth === 'loading') return <p className="mt-6 text-sm text-muted-foreground">Loading…</p>;
@@ -181,10 +194,26 @@ export default function ShopJobsClient() {
                 <button type="button" disabled={busy} onClick={mintToken} className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted disabled:opacity-50">Mint</button>
               </div>
               {tokenInfo ? (
-                <div className="mt-2 break-all rounded-md bg-muted/40 p-2 font-mono text-xs">{tokenInfo.capture_token}
-                  <div className="mt-1 font-sans text-[11px] text-muted-foreground">Expires {new Date(tokenInfo.expires_at).toLocaleString()}. The tech binds their glasses session to this to attach captures.</div>
+                <div className="mt-2 flex gap-3">
+                  {tokenInfo.qr_data_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={tokenInfo.qr_data_url} alt="Scan to bind the glasses to this job" className="h-28 w-28 shrink-0 rounded-md border border-border bg-white" />
+                  ) : null}
+                  <div className="min-w-0 break-all rounded-md bg-muted/40 p-2 font-mono text-xs">{tokenInfo.capture_token}
+                    <div className="mt-1 font-sans text-[11px] text-muted-foreground">Expires {new Date(tokenInfo.expires_at).toLocaleString()}. The tech scans the QR (or picks the job in the companion) to bind the glasses.</div>
+                  </div>
                 </div>
-              ) : <p className="mt-1 text-xs text-muted-foreground">Mint a scoped token for the tech to attach photos + notes from the glasses.</p>}
+              ) : <p className="mt-1 text-xs text-muted-foreground">Mint a scoped token + QR for the tech to bind the glasses and attach photos + notes.</p>}
+            </div>
+
+            {/* Owner → tech voice note (plays in-ear; only reaches a tech bound to this job) */}
+            <div className="rounded-xl border border-border p-3">
+              <div className="text-sm font-semibold">Say something to the tech</div>
+              <div className="mt-2 flex gap-2">
+                <input className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-sm" placeholder="e.g. check the rear rotor too" value={voiceText} onChange={(e) => setVoiceText(e.target.value)} />
+                <button type="button" disabled={busy || !voiceText.trim()} onClick={sendVoice} className="rounded-md bg-primary px-3 py-1 text-sm font-medium text-primary-foreground disabled:opacity-50">Send</button>
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">{voiceMsg || 'Plays in the tech’s ear — only if they’re currently bound to this job.'}</p>
             </div>
 
             {/* Line items editor */}

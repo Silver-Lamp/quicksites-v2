@@ -41,6 +41,7 @@ import {
   Search,
   Filter,
   Gauge,
+  Volume2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useBrand } from '@/app/providers';
@@ -170,6 +171,13 @@ const NAV_ADMIN: NavItem[] = [
     label: 'Site Tour',
     href: '/admin/talking-demo',
     icon: <PlayCircle size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Hear this page',
+    href: '/admin/hear-this-page',
+    icon: <Volume2 size={18} />,
     adminOnly: true,
   },
 

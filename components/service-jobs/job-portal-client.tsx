@@ -9,8 +9,15 @@
 
 import * as React from 'react';
 import type { ServiceJobDetail } from '@/lib/serviceJobs/types';
+import { AboutThatEmbed } from '@/components/admin/templates/render-blocks/about-that';
+import { HEAR_THIS_PAGE_EMBED_ID } from '@/lib/hearThisPage/config';
 
 const dollars = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+// About That embed used to narrate the report (house narrator, short version). Reuses the
+// platform house embed by default; override with a dedicated/per-shop SecondSet embed.
+const NARRATION_EMBED_ID =
+  process.env.NEXT_PUBLIC_SECONDSET_NARRATION_EMBED_ID || HEAR_THIS_PAGE_EMBED_ID;
 
 export default function JobPortalClient({
   token,
@@ -24,6 +31,10 @@ export default function JobPortalClient({
   const [consent, setConsent] = React.useState<boolean>(!!initialJob.consent_captured_at);
   const [saving, setSaving] = React.useState(false);
   const [msg, setMsg] = React.useState('');
+  const [pageUrl, setPageUrl] = React.useState('');
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') setPageUrl(window.location.origin + window.location.pathname);
+  }, []);
 
   const photos = job.captures.filter((c) => c.kind === 'photo' && c.photo_url);
   const notes = job.captures.filter((c) => c.kind === 'note' && (c.transcript || c.audio_url || c.narration_url));
@@ -55,8 +66,22 @@ export default function JobPortalClient({
     }
   }
 
+  const hasContent = photos.length > 0 || notes.length > 0 || job.line_items.length > 0;
+
   return (
     <div className="mt-6 space-y-8">
+      {/* Hear the whole report narrated (About That, short version) */}
+      {hasContent && pageUrl && NARRATION_EMBED_ID ? (
+        <section className="rounded-2xl border border-border bg-muted/20 p-4">
+          <div className="mb-2 text-sm font-semibold">🔊 Hear this report</div>
+          <AboutThatEmbed embedId={NARRATION_EMBED_ID} url={pageUrl} width="100%" kinds={['summary']} />
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Narrated summary of what the tech found and what&apos;s proposed. (Narrator voice — the raw clips
+            below are the tech&apos;s own.)
+          </p>
+        </section>
+      ) : null}
+
       {/* Proof captured on the glasses */}
       <section>
         <h2 className="text-sm font-semibold text-muted-foreground">What the tech saw</h2>

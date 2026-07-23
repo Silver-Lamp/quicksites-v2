@@ -22,6 +22,9 @@ export default function ShopJobsClient() {
   const [tokenInfo, setTokenInfo] = React.useState<{ capture_token: string; expires_at: string } | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
+  const [hasGrant, setHasGrant] = React.useState(false);
+  const [grantInput, setGrantInput] = React.useState('');
+  const [syncMsg, setSyncMsg] = React.useState('');
 
   const loadJobs = React.useCallback(async () => {
     const res = await fetch('/api/service-jobs');
@@ -33,6 +36,28 @@ export default function ShopJobsClient() {
   }, []);
 
   React.useEffect(() => { loadJobs().catch(() => setAuth('unauth')); }, [loadJobs]);
+  React.useEffect(() => { fetch('/api/service-jobs/grant').then((r) => r.ok ? r.json() : null).then((d) => d && setHasGrant(!!d.hasGrant)).catch(() => {}); }, []);
+
+  async function saveGrant() {
+    if (!grantInput.trim()) return;
+    setBusy(true); setSyncMsg('');
+    try {
+      const res = await fetch('/api/service-jobs/grant', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ grantToken: grantInput.trim() }) });
+      if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+      setHasGrant(true); setGrantInput(''); setSyncMsg('Grant saved.');
+    } catch (e: any) { setSyncMsg(e?.message || 'Save failed'); } finally { setBusy(false); }
+  }
+
+  async function syncCaptures() {
+    setBusy(true); setSyncMsg('Syncing…');
+    try {
+      const res = await fetch('/api/service-jobs/sync', { method: 'POST' });
+      const d = await res.json();
+      const r = d.result || {};
+      setSyncMsg(r.skipped ? `Nothing synced (${r.skipped}).` : `Synced: ${r.stored} new, ${r.acked} acked.`);
+      if (sel) await selectJob(sel.id);
+    } catch (e: any) { setSyncMsg(e?.message || 'Sync failed'); } finally { setBusy(false); }
+  }
 
   async function selectJob(id: string) {
     setTokenInfo(null); setMsg('');
@@ -91,7 +116,27 @@ export default function ShopJobsClient() {
   const portalUrl = sel ? `${typeof window !== 'undefined' ? window.location.origin : ''}/jobs/${sel.public_token}` : '';
 
   return (
-    <div className="mt-6 grid gap-6 md:grid-cols-[1fr_1.4fr]">
+    <div className="space-y-6">
+    {/* Glasses capture grant + sync */}
+    <div className="rounded-xl border border-border p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-semibold">Glasses captures</span>
+        {hasGrant ? (
+          <>
+            <span className="text-xs text-emerald-600">connected</span>
+            <button type="button" disabled={busy} onClick={syncCaptures} className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50">Sync now</button>
+          </>
+        ) : (
+          <>
+            <input className="min-w-[220px] flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs" placeholder="Paste the HJ capture grant token" value={grantInput} onChange={(e) => setGrantInput(e.target.value)} />
+            <button type="button" disabled={busy || !grantInput.trim()} onClick={saveGrant} className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50">Connect</button>
+          </>
+        )}
+      </div>
+      {syncMsg ? <p className="mt-1 text-xs text-muted-foreground">{syncMsg}</p> : <p className="mt-1 text-xs text-muted-foreground">Pull the tech&apos;s photos + notes from the glasses into each job.</p>}
+    </div>
+
+    <div className="grid gap-6 md:grid-cols-[1fr_1.4fr]">
       {/* Left: create + list */}
       <div className="space-y-4">
         <div className="rounded-xl border border-border p-4">
@@ -178,6 +223,7 @@ export default function ShopJobsClient() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

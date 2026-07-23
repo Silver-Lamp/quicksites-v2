@@ -134,8 +134,13 @@ export default function JobPortalClient({
         ) : (
           <div className="mt-3 space-y-4">
             {photos.map((c) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={c.id} src={c.photo_url as string} alt="Captured by the technician" className="w-full rounded-xl border border-border" />
+              <div key={c.id} className="overflow-hidden rounded-xl border border-border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={c.photo_url as string} alt="Captured by the technician" className="w-full" />
+                {c.transcript ? (
+                  <p className="bg-muted/30 p-3 text-sm"><span className="text-xs font-medium text-muted-foreground">🎙️ </span>{c.transcript}</p>
+                ) : null}
+              </div>
             ))}
             {notes.map((c) => (
               <div key={c.id} className="rounded-xl border border-border bg-muted/30 p-3">

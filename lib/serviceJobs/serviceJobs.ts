@@ -110,6 +110,8 @@ export async function addCapture(
     audioUrl?: string | null;
     narrationUrl?: string | null;
     capturedBy?: string | null;
+    /** The HJ rail's capture id — de-dupes re-pulls (unique). */
+    railCaptureId?: string | null;
   },
 ): Promise<ServiceJobCapture | null> {
   const { data, error } = await db()
@@ -123,11 +125,19 @@ export async function addCapture(
       audio_url: cap.audioUrl ?? null,
       narration_url: cap.narrationUrl ?? null,
       captured_by: cap.capturedBy ?? null,
+      rail_capture_id: cap.railCaptureId ?? null,
     })
     .select('*')
     .single();
   if (error) throw new Error(error.message);
   return (data as ServiceJobCapture) ?? null;
+}
+
+/** Which of these rail capture ids are already stored (so a re-pull doesn't duplicate). */
+export async function existingRailCaptureIds(ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const { data } = await db().from('service_job_captures').select('rail_capture_id').in('rail_capture_id', ids);
+  return new Set((data ?? []).map((r: any) => r.rail_capture_id).filter(Boolean));
 }
 
 /** Replace a job's proposed line items and move it to awaiting_approval. */

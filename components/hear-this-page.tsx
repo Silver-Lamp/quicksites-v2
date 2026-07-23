@@ -11,6 +11,7 @@
 
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
+import event from '@vercel/analytics';
 import { AboutThatEmbed } from '@/components/admin/templates/render-blocks/about-that';
 import {
   HEAR_THIS_PAGE_ENABLED,
@@ -26,19 +27,33 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
   const [open, setOpen] = React.useState(false);
   const [dismissed, setDismissed] = React.useState(false);
   const [pageUrl, setPageUrl] = React.useState('');
+  // Defer to an owner's own voice: if the page already renders an In Your Voice /
+  // About That player (a different embed than the house one), suppress this launcher —
+  // that owner-voice player is the richer experience, and it avoids a redundant
+  // house-narrator render (and its spend).
+  const [ownerVoiceOnPage, setOwnerVoiceOnPage] = React.useState(false);
 
   // Collapse + un-dismiss on navigation; recompute the grounded URL (origin+pathname,
-  // no query string) so each page narrates itself.
+  // no query string) so each page narrates itself. Then detect an owner embed once the
+  // page's client components have had a beat to mount.
   React.useEffect(() => {
     setOpen(false);
     setDismissed(false);
-    if (typeof window !== 'undefined') {
-      setPageUrl(window.location.origin + window.location.pathname);
-    }
+    setOwnerVoiceOnPage(false);
+    if (typeof window === 'undefined') return;
+    setPageUrl(window.location.origin + window.location.pathname);
+    const detect = () => {
+      const hosts = Array.from(document.querySelectorAll('[data-about-that-embed]'));
+      const hasOwner = hosts.some((el) => el.getAttribute('data-about-that-embed') !== HEAR_THIS_PAGE_EMBED_ID);
+      if (hasOwner) setOwnerVoiceOnPage(true);
+    };
+    const t = window.setTimeout(detect, 1500);
+    return () => window.clearTimeout(t);
   }, [pathname]);
 
   if (!HEAR_THIS_PAGE_ENABLED || !HEAR_THIS_PAGE_EMBED_ID) return null;
   if (!hearThisPageVisibleFor(pathname, settings)) return null;
+  if (ownerVoiceOnPage) return null;
   if (dismissed) return null;
 
   return (
@@ -72,7 +87,12 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              // Measure engagement (opening the launcher = intent to listen). The actual
+              // play happens inside HJ's iframe; this tracks the funnel step we can see.
+              try { event.track('hear_this_page_opened', { path: pathname || '' }); } catch {}
+              setOpen(true);
+            }}
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/90 px-3 py-2 text-sm font-medium shadow-lg backdrop-blur transition hover:bg-muted"
           >
             <span aria-hidden>🔊</span> Hear this page

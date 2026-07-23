@@ -28,8 +28,8 @@ export default function JobPortalClient({
 }) {
   const [job, setJob] = React.useState<ServiceJobDetail>(initialJob);
   const [decisions, setDecisions] = React.useState<Record<string, boolean>>({});
-  const [consent, setConsent] = React.useState<boolean>(!!initialJob.consent_captured_at);
   const [saving, setSaving] = React.useState(false);
+  const [consentSaving, setConsentSaving] = React.useState(false);
   const [msg, setMsg] = React.useState('');
   const [pageUrl, setPageUrl] = React.useState('');
   React.useEffect(() => {
@@ -39,13 +39,35 @@ export default function JobPortalClient({
   const photos = job.captures.filter((c) => c.kind === 'photo' && c.photo_url);
   const notes = job.captures.filter((c) => c.kind === 'note' && (c.transcript || c.audio_url || c.narration_url));
   const decided = job.status === 'approved' || job.status === 'declined';
+  const consented = !!job.consent_captured_at;
+
+  // Pre-capture consent — recorded BEFORE the tech documents the work. HJ's capture rail
+  // rejects a customer-subject capture until this is on file (glasses-capture.md), so this
+  // is the load-bearing gate that lets any photos/notes flow at all.
+  async function giveConsent() {
+    setConsentSaving(true);
+    setMsg('');
+    try {
+      const res = await fetch(`/api/service-jobs/portal/${token}/decision`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ consent: true, decisions: [] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Something went wrong');
+      if (data.job) setJob(data.job);
+    } catch (e: any) {
+      setMsg(e?.message || 'Could not record consent.');
+    } finally {
+      setConsentSaving(false);
+    }
+  }
 
   async function submit() {
     setSaving(true);
     setMsg('');
     try {
       const payload = {
-        consent,
         decisions: job.line_items
           .filter((li) => li.id in decisions)
           .map((li) => ({ lineItemId: li.id, approved: decisions[li.id] })),
@@ -70,6 +92,28 @@ export default function JobPortalClient({
 
   return (
     <div className="mt-6 space-y-8">
+      {/* Pre-capture consent — the gate that lets the tech document the work at all */}
+      {!consented ? (
+        <section className="rounded-2xl border border-emerald-400 bg-emerald-50/50 p-4">
+          <div className="text-sm font-semibold">Before we start</div>
+          <p className="mt-1 text-sm text-zinc-700">
+            This shop documents your service with SecondSet — the tech takes a photo of any problem
+            and a short spoken note, so you can see and approve the work before it happens. Do you
+            consent to on-site photos and notes of your vehicle for this job? They&apos;re kept with
+            your service record.
+          </p>
+          <button
+            type="button"
+            onClick={giveConsent}
+            disabled={consentSaving}
+            className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {consentSaving ? 'Saving…' : 'I consent — document my service'}
+          </button>
+          {msg ? <p className="mt-2 text-sm text-red-500">{msg}</p> : null}
+        </section>
+      ) : null}
+
       {/* Hear the whole report narrated (About That, short version) */}
       {hasContent && pageUrl && NARRATION_EMBED_ID ? (
         <section className="rounded-2xl border border-border bg-muted/20 p-4">
@@ -153,16 +197,10 @@ export default function JobPortalClient({
 
       {!decided && job.line_items.length > 0 ? (
         <section className="space-y-3">
-          {!initialJob.consent_captured_at ? (
-            <label className="flex items-start gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
-              <span>I consent to the shop capturing photos and audio notes of my vehicle for this job, kept with my service record.</span>
-            </label>
-          ) : null}
           <button
             type="button"
             onClick={submit}
-            disabled={saving || Object.keys(decisions).length === 0 || (!initialJob.consent_captured_at && !consent)}
+            disabled={saving || Object.keys(decisions).length === 0}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
             {saving ? 'Sending…' : 'Send my decision'}

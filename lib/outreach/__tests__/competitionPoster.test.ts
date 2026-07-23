@@ -141,8 +141,12 @@ describe('postcardBenefits', () => {
   it('falls back to a service pitch for trades', () => {
     expect(postcardBenefits('towing').join(' ')).toMatch(/find you first|one tap/i);
   });
+  it('leads with the SecondSet transparency wedge for auto service', () => {
+    expect(postcardBenefits('auto_repair').join(' ')).toMatch(/photo|actual problem|approve the work/i);
+    expect(postcardBenefits('windshield_repair')).toHaveLength(3);
+  });
   it('always returns exactly three bullets', () => {
-    for (const k of ['restaurant', 'author', 'towing', 'other'] as const) {
+    for (const k of ['restaurant', 'author', 'towing', 'auto_repair', 'other'] as const) {
       expect(postcardBenefits(k)).toHaveLength(3);
     }
   });

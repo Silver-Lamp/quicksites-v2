@@ -21,13 +21,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!job || job.owner_id !== gate.user.id) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
   let text = '';
+  let targetTechRef = '';
   try {
-    text = String((await req.json())?.text ?? '').trim();
+    const body = await req.json();
+    text = String(body?.text ?? '').trim();
+    targetTechRef = String(body?.target_tech_ref ?? '').trim();
   } catch {
     return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
   }
   if (!text) return NextResponse.json({ error: 'missing_text' }, { status: 400 });
 
-  const result = await sendVoiceNote(gate.user.id, id, text);
+  const result = await sendVoiceNote(gate.user.id, id, text, targetTechRef || null);
   return NextResponse.json({ ok: result.ok, result });
 }

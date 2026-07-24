@@ -22,6 +22,7 @@ export default function ShopJobsClient() {
   const [tokenInfo, setTokenInfo] = React.useState<{ capture_token: string; expires_at: string; qr_data_url?: string | null } | null>(null);
   const [voiceText, setVoiceText] = React.useState('');
   const [voiceMsg, setVoiceMsg] = React.useState('');
+  const [voiceTarget, setVoiceTarget] = React.useState(''); // '' = whoever's bound to the job; else a tech_ref
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState('');
   const [hasGrant, setHasGrant] = React.useState(false);
@@ -144,9 +145,17 @@ export default function ShopJobsClient() {
     if (!sel || !voiceText.trim()) return;
     setBusy(true); setVoiceMsg('');
     try {
-      const res = await fetch(`/api/service-jobs/${sel.id}/voice-note`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: voiceText.trim() }) });
+      const res = await fetch(`/api/service-jobs/${sel.id}/voice-note`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: voiceText.trim(), target_tech_ref: voiceTarget || undefined }),
+      });
       const d = await res.json();
-      if (!d.ok) throw new Error(d.result?.skipped ? `Not sent (${d.result.skipped})` : d.result?.error || 'Send failed');
+      if (!d.ok) {
+        const err = d.result?.error;
+        if (err === 'tech_not_bound') throw new Error('That tech isn’t wearing glasses on a job right now — the note wasn’t delivered.');
+        throw new Error(d.result?.skipped ? `Not sent (${d.result.skipped})` : err || 'Send failed');
+      }
       setVoiceText(''); setVoiceMsg('Sent — plays in the tech’s ear.');
     } catch (e: any) { setVoiceMsg(e?.message || 'Send failed'); } finally { setBusy(false); }
   }
@@ -273,14 +282,27 @@ export default function ShopJobsClient() {
               ) : <p className="mt-1 text-xs text-muted-foreground">Mint a scoped token + QR for the tech to bind the glasses and attach photos + notes.</p>}
             </div>
 
-            {/* Owner → tech voice note (plays in-ear; only reaches a tech bound to this job) */}
+            {/* Owner → tech voice note (plays in-ear; only reaches a tech with an active binding) */}
             <div className="rounded-xl border border-border p-3">
               <div className="text-sm font-semibold">Say something to the tech</div>
-              <div className="mt-2 flex gap-2">
-                <input className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-sm" placeholder="e.g. check the rear rotor too" value={voiceText} onChange={(e) => setVoiceText(e.target.value)} />
+              <div className="mt-2 flex flex-wrap gap-2">
+                {techs.length > 0 && (
+                  <select
+                    className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+                    value={voiceTarget}
+                    onChange={(e) => setVoiceTarget(e.target.value)}
+                    aria-label="Which tech"
+                  >
+                    <option value="">Whoever’s on this job</option>
+                    {techs.map((t) => (
+                      <option key={t.tech_ref} value={t.tech_ref}>{t.label || `${t.tech_ref.slice(0, 8)}…`}</option>
+                    ))}
+                  </select>
+                )}
+                <input className="min-w-[180px] flex-1 rounded-md border border-border bg-background px-2 py-1 text-sm" placeholder="e.g. check the rear rotor too" value={voiceText} onChange={(e) => setVoiceText(e.target.value)} />
                 <button type="button" disabled={busy || !voiceText.trim()} onClick={sendVoice} className="rounded-md bg-primary px-3 py-1 text-sm font-medium text-primary-foreground disabled:opacity-50">Send</button>
               </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">{voiceMsg || 'Plays in the tech’s ear — only if they’re currently bound to this job.'}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{voiceMsg || 'Plays in the tech’s ear — only delivered if that tech is currently bound to a job.'}</p>
             </div>
 
             {/* Line items editor */}

@@ -15,7 +15,18 @@ const RAIL_BASE = (process.env.HJ_BACKEND_URL || 'https://hivejournalbackend-pro
 
 export type VoiceNoteResult = { ok: boolean; skipped?: string; error?: string };
 
-export async function sendVoiceNote(ownerId: string, jobId: string, text: string): Promise<VoiceNoteResult> {
+/**
+ * Send a note to the tech on a job. Addressed by `job_id` (HJ resolves the currently-bound
+ * tech) OR, when `targetUserId` (== a roster tech_ref) is given, directed at that specific
+ * tech. HJ consent-gates both: it only enqueues if the target has an ACTIVE binding under
+ * our partner, so a directed note to an off-shift tech returns 403 (mapped to `tech_not_bound`).
+ */
+export async function sendVoiceNote(
+  ownerId: string,
+  jobId: string,
+  text: string,
+  targetUserId?: string | null,
+): Promise<VoiceNoteResult> {
   if (!SECONDSET_ENABLED) return { ok: false, skipped: 'not_enabled' };
   const clean = (text || '').trim();
   if (!clean) return { ok: false, error: 'empty' };
@@ -24,6 +35,10 @@ export async function sendVoiceNote(ownerId: string, jobId: string, text: string
   if (!key) return { ok: false, skipped: 'no_partner_key' };
   const grant = await getCaptureGrant(ownerId);
   if (!grant) return { ok: false, skipped: 'no_grant' };
+
+  const body: Record<string, string> = { job_id: jobId, text: clean };
+  const target = (targetUserId || '').trim();
+  if (target) body.target_user_id = target; // direct to a specific tech (alongside job_id)
 
   try {
     const res = await fetch(`${RAIL_BASE}/api/glasses/voice-notes`, {
@@ -34,9 +49,10 @@ export async function sendVoiceNote(ownerId: string, jobId: string, text: string
         'X-Partner-Grant': grant,
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ job_id: jobId, text: clean }),
+      body: JSON.stringify(body),
       cache: 'no-store',
     });
+    if (res.status === 403) return { ok: false, error: 'tech_not_bound' }; // consent gate: no active binding
     if (!res.ok) return { ok: false, error: `rail_${res.status}` };
     return { ok: true };
   } catch {

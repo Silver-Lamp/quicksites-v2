@@ -145,6 +145,8 @@ export const DYNAMIC_RENDERERS: Record<
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
   restaurants_directory: () =>
     import('@/components/admin/templates/render-blocks/restaurants-directory'),
+  auto_shops_directory: () =>
+    import('@/components/admin/templates/render-blocks/auto-shops-directory'),
   about_that: () => import('@/components/admin/templates/render-blocks/about-that'),
   audio_faq: () => import('@/components/admin/templates/render-blocks/audio-faq'),
   quote_of_the_day: () => import('@/components/admin/templates/render-blocks/quote-of-the-day'),

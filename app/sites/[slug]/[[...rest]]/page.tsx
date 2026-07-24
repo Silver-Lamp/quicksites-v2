@@ -27,6 +27,8 @@ import { getDemandCount } from '@/lib/menu/demand';
 import { resolveListingPhone } from '@/lib/claim/resolveListingPhone';
 import { loadCompetitionDirectoryBySlug } from '@/lib/outreach/restaurantCompetitionDirectory';
 import RestaurantCompetitionDirectory from '@/components/sites/restaurant-competition-directory';
+import { loadAutoShopDirectoryBySlug } from '@/lib/outreach/autoShopCompetitionDirectory';
+import AutoShopCompetitionDirectory from '@/components/sites/auto-shop-competition-directory';
 import { isRestaurantApexData } from '@/lib/outreach/restaurantApexSite';
 
 /* -------------------- Types -------------------- */
@@ -316,6 +318,16 @@ export async function generateMetadata({
         ...(dir.entries.length >= 2 ? {} : { robots: { index: false, follow: false } }),
       };
     }
+    // Or an auto-shop domain-competition apex (<city>-auto-repair.com).
+    const autoDir = await loadAutoShopDirectoryBySlug(slug);
+    if (autoDir) {
+      const place = [autoDir.city, autoDir.region].filter(Boolean).join(', ');
+      return {
+        title: place ? `Trusted auto shops in ${place}` : 'Trusted local auto shops',
+        description: `Find an auto repair shop that shows you the work${place ? ` in ${place}` : ''} — see the problem and approve before the repair.`,
+        ...(autoDir.entries.length >= 2 ? {} : { robots: { index: false, follow: false } }),
+      };
+    }
     return {};
   }
 
@@ -381,10 +393,12 @@ export default async function SitePreviewPage({
 
   const siteRow = await loadSiteRowBySlugOrTemplate(slug);
   if (!siteRow) {
-    // No site at this slug — render the restaurant domain-competition directory if this
-    // apex fronts one (<city>-restaurant.com); otherwise 404.
+    // No site at this slug — render a domain-competition directory if this apex fronts one
+    // (<city>-restaurant.com or <city>-auto-repair.com); otherwise 404.
     const dir = await loadCompetitionDirectoryBySlug(slug);
     if (dir) return <RestaurantCompetitionDirectory dir={dir} />;
+    const autoDir = await loadAutoShopDirectoryBySlug(slug);
+    if (autoDir) return <AutoShopCompetitionDirectory dir={autoDir} />;
     return notFound();
   }
 

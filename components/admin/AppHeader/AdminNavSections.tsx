@@ -236,6 +236,13 @@ const NAV_ADMIN: NavItem[] = [
   },
   {
     type: 'item',
+    label: 'Auto-shop Domains',
+    href: '/admin/auto-shop-domains',
+    icon: <Wrench size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
     label: 'Demand Funnel',
     href: '/admin/demand-funnel',
     icon: <Filter size={18} />,

@@ -15,8 +15,9 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { provisionGeoDomain, linkProspectsToCampaign } from '@/lib/outreach/geoCampaigns';
 import { geoDomainFor } from '@/lib/outreach/geoDomain';
 import { getProspect } from '@/lib/outreach/prospects';
+import { RESTAURANT_COMPETITION_KIND, COMPETITION_KINDS } from '@/lib/outreach/competitionKinds';
 
-export const RESTAURANT_COMPETITION_KIND = 'restaurant_competition';
+export { RESTAURANT_COMPETITION_KIND };
 
 export type RestaurantCompetition = {
   id: string;
@@ -137,8 +138,10 @@ export async function awardCompetitionOnClaim(templateId: string): Promise<Award
       .maybeSingle();
     if (!prospect?.geo_campaign_id) return null;
 
-    // Atomic compare-and-set: claim the apex only if this is a restaurant competition that
-    // still has no winner. The kind filter guarantees we never touch a services campaign.
+    // Atomic compare-and-set: claim the apex only if this is a *competition* campaign
+    // (restaurant OR auto-shop) that still has no winner. The kind filter guarantees we
+    // never touch a services (rent-model) campaign. Kind-agnostic so every vertical's
+    // first-to-claim awards through this one hook.
     const { data: won } = await supabaseAdmin
       .from('geo_industry_campaigns')
       .update({
@@ -147,7 +150,7 @@ export async function awardCompetitionOnClaim(templateId: string): Promise<Award
         updated_at: new Date().toISOString(),
       })
       .eq('id', prospect.geo_campaign_id)
-      .eq('kind', RESTAURANT_COMPETITION_KIND)
+      .in('kind', COMPETITION_KINDS as unknown as string[])
       .is('claimed_by_prospect_id', null)
       .select('id')
       .maybeSingle();

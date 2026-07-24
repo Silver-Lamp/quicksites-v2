@@ -182,6 +182,61 @@ export default function SecondSetPage() {
           </div>
         </section>
 
+        {/* Sibling product — Point Seven Studio. SecondSet + AisleAsk are the studio's two
+            capture-rail commerce copilots; this reciprocates HJ's Point Seven Studio page which
+            features both. AisleAsk is a sibling product (HiveJournal-owned), not a QuickSites
+            feature — labeled + linked out as such. Honest: target framing only, no partnership
+            with any delivery platform, no borrowed logos, no invented metrics. */}
+        <section className="border-t border-zinc-800/70">
+          <div className="mx-auto max-w-4xl px-6 py-14">
+            <p className="text-center text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              From Point Seven Studio
+            </p>
+            <h2 className="mt-2 text-center text-2xl font-bold">Meet its sibling: AisleAsk</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-zinc-400">
+              SecondSet and AisleAsk are Point Seven Studio’s two capture-rail copilots — the same idea
+              in a different aisle.
+            </p>
+            <div className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 text-left">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-lg font-semibold text-white">🛒 AisleAsk</div>
+                  <div className="mt-0.5 text-xs text-zinc-500">A HiveJournal product · Point Seven Studio</div>
+                </div>
+                <a
+                  href="https://www.hivejournal.com/aisleask"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-zinc-500"
+                >
+                  See AisleAsk →
+                </a>
+              </div>
+              <p className="mt-4 text-sm text-zinc-400">
+                A hands-free grocery store-walk copilot: the fastest route through the store, where every
+                item sits, scan-to-confirm, and batched multi-customer picking. Live for shoppers; measured
+                pilots for grocery delivery at fleet scale.
+              </p>
+              <p className="mt-3 text-sm text-zinc-400">
+                Built for DoorDash, Instacart, and grocery chains.{' '}
+                <span className="text-zinc-500">No partnership with any delivery platform.</span>
+              </p>
+            </div>
+            <p className="mt-6 text-center text-xs text-zinc-600">
+              Both are{' '}
+              <a
+                href="https://www.hivejournal.com/point-seven-studio"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-zinc-400"
+              >
+                Point Seven Studio
+              </a>{' '}
+              products.
+            </p>
+          </div>
+        </section>
+
         <footer className="border-t border-zinc-800/70 py-6 text-center text-xs text-zinc-600">
           &copy; {new Date().getFullYear()} QuickSites.ai —{' '}
           <Link href="/" className="underline hover:text-zinc-300">Home</Link>

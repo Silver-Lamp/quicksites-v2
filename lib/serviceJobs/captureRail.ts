@@ -10,6 +10,7 @@ import 'server-only';
 import { SECONDSET_ENABLED } from '@/lib/flags/secondset';
 import { getCaptureGrant } from '@/lib/serviceJobs/captureGrants';
 import { addCapture, existingRailCaptureIds, getJobDetail } from '@/lib/serviceJobs/serviceJobs';
+import { resolveTechRef } from '@/lib/serviceJobs/techRoster';
 
 const RAIL_BASE = (process.env.HJ_BACKEND_URL || 'https://hivejournalbackend-production.up.railway.app').replace(/\/+$/, '');
 
@@ -27,11 +28,11 @@ type RailCapture = {
   status?: string;
 };
 
-export type SyncResult = { skipped?: string; pulled: number; stored: number; acked: number };
+export type SyncResult = { skipped?: string; pulled: number; stored: number; acked: number; techs: number };
 
 /** Pull + store + ack a shop owner's secondset_field captures. Idempotent. */
 export async function syncOwnerCaptures(ownerId: string): Promise<SyncResult> {
-  const zero = { pulled: 0, stored: 0, acked: 0 };
+  const zero = { pulled: 0, stored: 0, acked: 0, techs: 0 };
   if (!SECONDSET_ENABLED) return { skipped: 'not_enabled', ...zero };
 
   const grant = await getCaptureGrant(ownerId);
@@ -53,10 +54,12 @@ export async function syncOwnerCaptures(ownerId: string): Promise<SyncResult> {
   const existing = await existingRailCaptureIds(captures.map((c) => c.id).filter(Boolean));
   let stored = 0;
   let acked = 0;
+  const jobIdsSeen = new Set<string>(); // for passive tech-roster discovery after the loop
 
   for (const c of captures) {
     const jobId = c.context?.job_id;
     if (!c.id || !jobId) continue;
+    jobIdsSeen.add(jobId);
 
     if (!existing.has(c.id)) {
       // Verify the job belongs to this owner (grant scopes the owner, but double-check).
@@ -84,5 +87,13 @@ export async function syncOwnerCaptures(ownerId: string): Promise<SyncResult> {
       /* leave it pending; a later sync retries */
     }
   }
-  return { pulled: captures.length, stored, acked };
+  // Passive tech-roster discovery: ask HJ who was wearing the glasses on each job we saw a
+  // capture for, once per job. Best-effort — never blocks or fails the sync (each call is
+  // itself fail-closed to null). resolveTechRef upserts the tech on a hit.
+  let techs = 0;
+  for (const jobId of jobIdsSeen) {
+    if (await resolveTechRef(ownerId, jobId)) techs++;
+  }
+
+  return { pulled: captures.length, stored, acked, techs };
 }

@@ -21,18 +21,35 @@ export type Gig = {
   source: string;
   notes: string | null;
   created_at: string;
+  visibility: 'public' | 'private';
+  assigned_to: string | null;
 };
 
-const COLS = 'id, store_name, address, latitude, longitude, location_label, status, claimed_by, claimed_at, completed_at, source, notes, created_at';
+const COLS = 'id, store_name, address, latitude, longitude, location_label, status, claimed_by, claimed_at, completed_at, source, notes, created_at, visibility, assigned_to';
 
-/** Open (unclaimed) gigs — the pool a tasker picks from. */
+/** Open (unclaimed) gigs in the PUBLIC pool a tasker picks from. Private gigs (self-dogfood /
+ *  non-consenting stores) are excluded — they never recruit strangers. */
 export async function listOpenGigs(limit = 100): Promise<Gig[]> {
   const { data } = await supabaseAdmin
     .from('catalog_gigs')
     .select(COLS)
     .eq('status', 'open')
+    .eq('visibility', 'public')
     .order('created_at', { ascending: false })
     .limit(Math.min(200, Math.max(1, limit)));
+  return (data as Gig[]) ?? [];
+}
+
+/** A tasker's PRIVATE queue — open gigs assigned specifically to them (out of the public pool). */
+export async function listAssignedGigs(userId: string): Promise<Gig[]> {
+  const { data } = await supabaseAdmin
+    .from('catalog_gigs')
+    .select(COLS)
+    .eq('status', 'open')
+    .eq('visibility', 'private')
+    .eq('assigned_to', userId)
+    .order('created_at', { ascending: false })
+    .limit(100);
   return (data as Gig[]) ?? [];
 }
 
@@ -48,13 +65,16 @@ export async function listMyGigs(userId: string): Promise<Gig[]> {
   return (data as Gig[]) ?? [];
 }
 
-/** Claim an OPEN gig — conditional on status='open' so two taskers can't both win. */
+/** Claim an OPEN gig — conditional on status='open' so two taskers can't both win. A gig
+ *  assigned to a specific tasker (private queue) can only be claimed by that tasker; an
+ *  unassigned gig is claimable by any authed tasker who reaches it. */
 export async function claimGig(id: string, userId: string): Promise<Gig | null> {
   const { data } = await supabaseAdmin
     .from('catalog_gigs')
     .update({ status: 'claimed', claimed_by: userId, claimed_at: new Date().toISOString() })
     .eq('id', id)
     .eq('status', 'open')
+    .or(`assigned_to.is.null,assigned_to.eq.${userId}`)
     .select(COLS)
     .maybeSingle();
   return (data as Gig) ?? null;
@@ -95,9 +115,14 @@ export type NewGig = {
   source?: string;
   external_ref?: string;
   notes?: string;
+  visibility?: 'public' | 'private';
+  assigned_to?: string;
 };
 
-/** Normalize a NewGig into an insertable row (shared by createGig + createGigs). */
+/** Normalize a NewGig into an insertable row (shared by createGig + createGigs).
+ *  HONESTY DEFAULT: an AisleAsk-sourced gig with no explicit visibility is PRIVATE — a
+ *  non-consenting store can never leak into the public pool by omission. A consenting store
+ *  is posted with visibility:'public' explicitly. */
 function toRow(input: NewGig): Record<string, unknown> {
   const row: Record<string, unknown> = { store_name: input.store_name.trim().slice(0, 200) };
   if (input.address) row.address = input.address.trim().slice(0, 300);
@@ -107,12 +132,38 @@ function toRow(input: NewGig): Record<string, unknown> {
   if (input.source) row.source = input.source.slice(0, 40);
   if (input.external_ref) row.external_ref = input.external_ref.slice(0, 200);
   if (input.notes) row.notes = input.notes.trim().slice(0, 1000);
+  const explicitVis = input.visibility === 'public' || input.visibility === 'private' ? input.visibility : undefined;
+  row.visibility = explicitVis ?? (input.source === 'aisleask' ? 'private' : 'public');
+  if (input.assigned_to) row.assigned_to = input.assigned_to;
   return row;
 }
 
-/** Create a gig (operator/admin seeds these — from the AisleAsk store list or by hand). */
+/** Create a gig (operator/admin or a partner push — from the AisleAsk store list or by hand).
+ *  De-dupes on `external_ref`: re-posting the same store UPDATES the existing gig in place
+ *  rather than creating a duplicate. */
 export async function createGig(input: NewGig): Promise<Gig | null> {
-  const { data } = await supabaseAdmin.from('catalog_gigs').insert(toRow(input)).select(COLS).maybeSingle();
+  const row = toRow(input);
+  if (input.external_ref) {
+    const { data: existing } = await supabaseAdmin
+      .from('catalog_gigs')
+      .select('id')
+      .eq('external_ref', input.external_ref.slice(0, 200))
+      .maybeSingle();
+    if (existing?.id) {
+      const { data } = await supabaseAdmin
+        .from('catalog_gigs')
+        .update(row)
+        .eq('id', existing.id)
+        .select(COLS)
+        .maybeSingle();
+      return (data as Gig) ?? null;
+    }
+  }
+  const { data } = await supabaseAdmin
+    .from('catalog_gigs')
+    .insert({ ...row, external_ref: input.external_ref ? input.external_ref.slice(0, 200) : null })
+    .select(COLS)
+    .maybeSingle();
   return (data as Gig) ?? null;
 }
 

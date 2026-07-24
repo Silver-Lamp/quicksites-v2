@@ -9,7 +9,7 @@ type Gig = {
   id: string; store_name: string; address: string | null; latitude: number | null;
   longitude: number | null; location_label: string | null; status: 'open' | 'claimed' | 'completed';
 };
-type Board = { open: Gig[]; mine: Gig[]; plan_url: string };
+type Board = { open: Gig[]; mine: Gig[]; assigned: Gig[]; plan_url: string };
 
 const whereOf = (g: Gig) =>
   Number.isFinite(g.latitude) && Number.isFinite(g.longitude) ? '📍 exact location' : (g.address || g.location_label || 'location TBD');
@@ -96,6 +96,26 @@ export default function WalkerBoard() {
           </ul>
         )}
       </section>
+
+      {/* Assigned to you — private gigs (out of the public pool) scoped to this tasker. */}
+      {(board?.assigned?.length ?? 0) > 0 && (
+        <section className="mt-10">
+          <h2 className="text-lg font-bold">Assigned to you ({board!.assigned.length})</h2>
+          <p className="mt-1 text-xs text-zinc-500">Private gigs sent straight to you — not shown in the open pool.</p>
+          <ul className="mt-3 space-y-2">
+            {board!.assigned.map((g) => (
+              <li key={g.id} className="flex items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3">
+                <div className="min-w-0">
+                  <div className="truncate font-semibold">{g.store_name}</div>
+                  <div className="truncate text-xs text-zinc-500">{whereOf(g)}</div>
+                </div>
+                <button type="button" disabled={busy === g.id + 'claim'} onClick={() => act(g.id, 'claim')}
+                  className="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50">Claim</button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Open pool */}
       <section className="mt-10">

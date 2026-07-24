@@ -27,6 +27,19 @@ export default function ShopJobsClient() {
   const [hasGrant, setHasGrant] = React.useState(false);
   const [grantInput, setGrantInput] = React.useState('');
   const [syncMsg, setSyncMsg] = React.useState('');
+  const [techs, setTechs] = React.useState<{ tech_ref: string; label: string | null; last_seen_at: string }[]>([]);
+  const [labelEdits, setLabelEdits] = React.useState<Record<string, string>>({});
+
+  const loadTechs = React.useCallback(async () => {
+    try {
+      const res = await fetch('/api/service-jobs/techs');
+      if (!res.ok) return;
+      const d = await res.json();
+      setTechs(Array.isArray(d.techs) ? d.techs : []);
+    } catch {
+      /* roster is best-effort */
+    }
+  }, []);
 
   const loadJobs = React.useCallback(async () => {
     const res = await fetch('/api/service-jobs');
@@ -39,6 +52,7 @@ export default function ShopJobsClient() {
 
   React.useEffect(() => { loadJobs().catch(() => setAuth('unauth')); }, [loadJobs]);
   React.useEffect(() => { fetch('/api/service-jobs/grant').then((r) => r.ok ? r.json() : null).then((d) => d && setHasGrant(!!d.hasGrant)).catch(() => {}); }, []);
+  React.useEffect(() => { loadTechs(); }, [loadTechs]);
 
   async function saveGrant() {
     if (!grantInput.trim()) return;
@@ -56,9 +70,24 @@ export default function ShopJobsClient() {
       const res = await fetch('/api/service-jobs/sync', { method: 'POST' });
       const d = await res.json();
       const r = d.result || {};
-      setSyncMsg(r.skipped ? `Nothing synced (${r.skipped}).` : `Synced: ${r.stored} new, ${r.acked} acked.`);
+      const techNote = r.techs ? ` · ${r.techs} tech${r.techs === 1 ? '' : 's'} seen` : '';
+      setSyncMsg(r.skipped ? `Nothing synced (${r.skipped}).` : `Synced: ${r.stored} new, ${r.acked} acked${techNote}.`);
       if (sel) await selectJob(sel.id);
+      await loadTechs();
     } catch (e: any) { setSyncMsg(e?.message || 'Sync failed'); } finally { setBusy(false); }
+  }
+
+  async function saveLabel(techRef: string) {
+    const label = (labelEdits[techRef] ?? '').trim();
+    try {
+      const res = await fetch('/api/service-jobs/techs', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tech_ref: techRef, label }) });
+      if (!res.ok) return;
+      const d = await res.json();
+      setTechs(Array.isArray(d.techs) ? d.techs : techs);
+      setLabelEdits((m) => { const n = { ...m }; delete n[techRef]; return n; });
+    } catch {
+      /* best-effort */
+    }
   }
 
   async function selectJob(id: string) {
@@ -148,6 +177,44 @@ export default function ShopJobsClient() {
       </div>
       {syncMsg ? <p className="mt-1 text-xs text-muted-foreground">{syncMsg}</p> : <p className="mt-1 text-xs text-muted-foreground">Pull the tech&apos;s photos + notes from the glasses into each job.</p>}
     </div>
+
+    {/* Tech roster — discovered from glasses bindings as captures sync. */}
+    {techs.length > 0 && (
+      <div className="rounded-xl border border-border p-3 text-sm">
+        <div className="font-semibold">Your techs <span className="font-normal text-muted-foreground">({techs.length})</span></div>
+        <p className="mt-1 text-[11px] text-muted-foreground">Discovered automatically when a tech&apos;s glasses attach photos to a job. Give each a name so you know who&apos;s who.</p>
+        <div className="mt-2 space-y-2">
+          {techs.map((t) => {
+            const editing = Object.prototype.hasOwnProperty.call(labelEdits, t.tech_ref);
+            const shown = t.label || `${t.tech_ref.slice(0, 8)}…`;
+            return (
+              <div key={t.tech_ref} className="flex items-center gap-2">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[11px]">🕶️</span>
+                {editing ? (
+                  <>
+                    <input
+                      autoFocus
+                      className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-sm"
+                      placeholder="Tech name"
+                      value={labelEdits[t.tech_ref]}
+                      onChange={(e) => setLabelEdits((m) => ({ ...m, [t.tech_ref]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveLabel(t.tech_ref); }}
+                    />
+                    <button type="button" onClick={() => saveLabel(t.tech_ref)} className="rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground">Save</button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 truncate">{shown}</span>
+                    <span className="text-[11px] text-muted-foreground">seen {new Date(t.last_seen_at).toLocaleDateString()}</span>
+                    <button type="button" onClick={() => setLabelEdits((m) => ({ ...m, [t.tech_ref]: t.label || '' }))} className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted">Rename</button>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    )}
 
     <div className="grid gap-6 md:grid-cols-[1fr_1.4fr]">
       {/* Left: create + list */}

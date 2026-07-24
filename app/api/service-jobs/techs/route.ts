@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { SECONDSET_ENABLED } from '@/lib/flags/secondset';
 import { requireUser } from '@/lib/auth/requireUser';
-import { listShopTechs } from '@/lib/serviceJobs/techRoster';
+import { listShopTechs, setTechLabel } from '@/lib/serviceJobs/techRoster';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,4 +18,24 @@ export async function GET() {
 
   const techs = await listShopTechs(gate.user.id);
   return NextResponse.json({ techs });
+}
+
+// PATCH -> { tech_ref, label } -> rename a discovered tech. Owner-scoped.
+export async function PATCH(req: Request) {
+  if (!SECONDSET_ENABLED) return NextResponse.json({ error: 'not_enabled' }, { status: 404 });
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
+  }
+  const techRef = String(body?.tech_ref ?? '').trim();
+  if (!techRef) return NextResponse.json({ error: 'missing_tech_ref' }, { status: 400 });
+
+  await setTechLabel(gate.user.id, techRef, String(body?.label ?? ''));
+  const techs = await listShopTechs(gate.user.id);
+  return NextResponse.json({ ok: true, techs });
 }

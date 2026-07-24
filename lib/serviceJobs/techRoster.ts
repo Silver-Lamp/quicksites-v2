@@ -68,6 +68,17 @@ export async function resolveTechRef(ownerId: string, jobId: string): Promise<st
   }
 }
 
+/** Assign a friendly display name to a discovered tech (owner-scoped; no-op if unknown). */
+export async function setTechLabel(ownerId: string, techRef: string, label: string): Promise<void> {
+  if (!ownerId || !techRef) return;
+  const clean = (label || '').trim().slice(0, 80);
+  await db()
+    .from('service_shop_techs')
+    .update({ label: clean || null })
+    .eq('owner_id', ownerId)
+    .eq('tech_ref', techRef);
+}
+
 /** The techs known for a shop (most-recently-seen first) — for the voice-note picker. */
 export async function listShopTechs(ownerId: string): Promise<ShopTech[]> {
   if (!ownerId) return [];

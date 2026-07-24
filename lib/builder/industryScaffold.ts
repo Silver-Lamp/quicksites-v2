@@ -536,6 +536,17 @@ export function buildIndustryStarter(opts: {
     );
   }
 
+  // Auto trades: seed the SecondSet "service transparency" trust block (see it / hear it /
+  // approve it) just before contact — the differentiator for a shop's own site. Pure
+  // marketing copy; it never exposes captures (those live in the per-job customer portal).
+  // The SecondSet pilot itself stays flag-gated; this block is safe to ship regardless.
+  const AUTO_TRADES = new Set<IndustryKey>(['auto_repair', 'windshield_repair']);
+  if (AUTO_TRADES.has(industryKey)) {
+    const contactIdx = blocks.findIndex((b: any) => b?.type === 'contact_form');
+    const at = contactIdx >= 0 ? contactIdx : blocks.length;
+    blocks.splice(at, 0, createDefaultBlock('service_transparency') as any);
+  }
+
   // Photographers lead with their work — a photo gallery right after the hero (the
   // portfolio a photographer site is nothing without). The gallery block is addable on
   // any visual site; this just seeds it where it's most load-bearing.

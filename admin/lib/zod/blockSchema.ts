@@ -822,6 +822,19 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Service Transparency (SecondSet) — a shop's "we show you the work" trust block on its
+  // own site. Pure marketing copy; never exposes captures (those stay in the per-job portal).
+  service_transparency: {
+    label: 'Service Transparency (SecondSet)',
+    icon: '🔧',
+    schema: z.object({
+      headline: z.string().optional().default('See the work before you pay for it'),
+      blurb: z.string().optional().default(''),
+      cta_label: z.string().optional().default(''),
+      cta_link: z.string().optional().default(''),
+    }),
+  },
+
   // Daily Artifact (crosstalk/contracts/daily-artifact-embed.md → LIVE): a person's
   // OWN HiveJournal daily artifact on their about-me site. v1 kind = comic of the day
   // (Daily Buzz — stars "Buzz", never real names). CONSENT-GATED entirely on HJ's side:

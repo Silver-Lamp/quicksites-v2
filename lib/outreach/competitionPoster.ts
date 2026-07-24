@@ -127,6 +127,17 @@ export function postcardBenefits(industry: IndustryKey): string[] {
       'Found on Google when locals search for you nearby',
     ];
   }
+  // Auto-service verticals — the SecondSet transparency wedge: the tech captures the
+  // actual problem, the customer approves from their phone, and "am I being ripped off?"
+  // stops being a reason to walk. The differentiator competitors can't copy.
+  const AUTO_SERVICE = new Set<IndustryKey>(['auto_repair', 'windshield_repair']);
+  if (AUTO_SERVICE.has(industry)) {
+    return [
+      'Show customers the actual problem — a photo and the tech’s note, on their phone',
+      'They approve the work before you turn a wrench — fewer disputes, more trust',
+      'Found on Google when drivers search for a shop they can trust',
+    ];
+  }
   return [
     'Customers find you first when they search Google',
     'Request a quote or call you in one tap',

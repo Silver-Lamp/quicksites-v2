@@ -103,6 +103,8 @@ const EXCLUDED_PREFIXES = [
   '/claim-success',
   '/preview',
   '/actions',
+  '/jobs', // SecondSet service-job portal has its own "Hear this report" player
+  '/service-jobs',
 ];
 
 /** Which configurable surface a pathname belongs to. */

@@ -55,9 +55,13 @@ export async function resolveTechRef(ownerId: string, jobId: string): Promise<st
     });
     if (!res.ok) return null; // 404/403 → not bound / not ours; fail-closed
     const data = await res.json().catch(() => null);
-    const techRef = data?.tech_ref;
+    // HJ prod wraps it: { binding: { tech_ref, job_id, bound_at } | null } (verified 2026-07-24;
+    // a 200 with binding:null means "no active binding for that job"). Fall back to a top-level
+    // shape defensively in case the wrapper ever changes.
+    const b = data?.binding ?? data;
+    const techRef = b?.tech_ref;
     if (typeof techRef !== 'string' || !techRef) return null;
-    await upsertTech(ownerId, techRef, typeof data?.bound_at === 'string' ? data.bound_at : null);
+    await upsertTech(ownerId, techRef, typeof b?.bound_at === 'string' ? b.bound_at : null);
     return techRef;
   } catch {
     return null; // rail unreachable

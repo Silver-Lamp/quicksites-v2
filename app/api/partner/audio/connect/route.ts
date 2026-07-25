@@ -5,6 +5,9 @@
 // dashboard and hands it to us here; we store it encrypted, keyed to their QS user (and
 // optionally a specific site). GET lists their active connections; DELETE revokes one.
 //
+// When a site is named, POST also attaches the player to it (see attachEmbedToSite) so
+// connecting is the ONLY manual step — pass `attachToSite:false` to opt out.
+//
 // Owner-gated (real users only — no anon). Flag-gated: 503 until provisioning is enabled.
 
 import { NextResponse } from 'next/server';
@@ -12,6 +15,7 @@ import { requireUser } from '@/lib/auth/requireUser';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 import { partnerAudioEnabled } from '@/lib/partners/audioProvisioning/config';
 import { storeGrant, listGrantsForUser, revokeGrant } from '@/lib/partners/audioProvisioning/grants';
+import { attachEmbedToSite } from '@/lib/partners/audioProvisioning/attachEmbedToSite';
 import type { BillingMode } from '@/lib/partners/audioProvisioning/types';
 
 export const runtime = 'nodejs';
@@ -26,7 +30,14 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: 'audio provisioning not enabled', code: 'disabled' }, { status: 503 });
   }
 
-  let body: { hjEmbedId?: string; token?: string; templateId?: string | null; billingMode?: string };
+  let body: {
+    hjEmbedId?: string;
+    token?: string;
+    templateId?: string | null;
+    billingMode?: string;
+    /** Also point the named site's `about_that` player at this embed (default true). */
+    attachToSite?: boolean;
+  };
   try {
     body = await req.json();
   } catch {
@@ -49,8 +60,19 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const grant = await storeGrant({ userId: gate.user.id, hjEmbedId, token, templateId, billingMode });
+
+    // Last mile: when the owner named a site, put the player on it in the same step — the
+    // whole point of the contract is that nobody hand-copies an embed id. Best-effort: the
+    // connection itself succeeded, so a failed template commit must not fail the request.
+    let attached: string | null = null;
+    if (templateId && body.attachToSite !== false) {
+      const res = await attachEmbedToSite({ templateId, hjEmbedId, actorId: gate.user.id, insertIfMissing: true });
+      attached = res.ok ? (res.action ?? null) : null;
+    }
+
     return NextResponse.json({
       ok: true,
+      attached,
       grant: { id: grant.id, hjEmbedId: grant.hjEmbedId, templateId: grant.templateId, billingMode: grant.billingMode },
     });
   } catch (e) {

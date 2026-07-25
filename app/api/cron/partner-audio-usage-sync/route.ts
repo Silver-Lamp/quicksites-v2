@@ -3,7 +3,7 @@
 // Nightly pull of HiveJournal's partner audio usage feed into the partner_audio_usage
 // ledger (per-agent attribution + tier-billing reconciliation). Cron-authorized. No-ops
 // unless PARTNER_AUDIO_PROVISIONING_ENABLED is on and the endpoint is live.
-// See crosstalk/contracts/partner-provisioning.md §2 (billing rollup — PROPOSED).
+// See crosstalk/contracts/partner-provisioning.md §B2 (billing rollup — ratified).
 
 import { NextResponse } from 'next/server';
 import { runCron } from '@/lib/cron/record';

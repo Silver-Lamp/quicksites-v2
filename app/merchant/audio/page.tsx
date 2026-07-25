@@ -7,14 +7,28 @@
 // HJ dashboard ("Connect QuickSites" on an embed), pastes it here, and can then generate
 // owner-voice audio (welcome / testimonial) for their site without leaving QuickSites.
 //
-// Backs onto: GET/POST/DELETE /api/partner/audio/connect + POST /api/partner/audio/generate.
+// Backs onto: GET/POST/DELETE /api/partner/audio/connect + POST /api/partner/audio/generate
+// + POST /api/partner/audio/attach (puts the player on the site — no uuid copying).
 // Degrades gracefully when provisioning isn't enabled yet (the POST routes 503) — the
 // page still explains the flow so it's ready the moment the flag flips.
+//
+// Voice honesty (consent v2, contract §"Consent v2 — voice bases"): we label a clip with the
+// basis HJ reports, never with what we'd like it to be. A narrated review is rendered in the
+// NARRATOR voice by contract — a customer's words are never spoken in a cloned voice through
+// these rails — so the UI must not blanket-promise "in your voice".
 
 import * as React from 'react';
 
 type Grant = { id: string; hjEmbedId: string; templateId: string | null; billingMode: 'owner' | 'partner' };
-type GenResult = { kind: string; audio_url: string; cached: boolean } | null;
+type VoiceBasis = 'self' | 'narrator';
+type GenResult = { kind: string; audio_url: string; cached: boolean; voiceBasis: VoiceBasis | null } | null;
+
+/** How a rendered clip may be described, given the basis HJ actually used. */
+function voiceLabel(basis: VoiceBasis | null): string {
+  if (basis === 'self') return 'in your voice';
+  if (basis === 'narrator') return 'narrator voice';
+  return 'voice not reported';
+}
 
 const UUID_RX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -90,7 +104,11 @@ export default function MerchantAudioPage() {
       setEmbedId('');
       setToken('');
       setTemplateId('');
-      setNotice('Connected. You can generate audio for this embed below.');
+      setNotice(
+        json?.attached === 'inserted' || json?.attached === 'updated'
+          ? 'Connected, and the player is on your site — publish to push it live.'
+          : 'Connected. You can generate audio for this embed below.',
+      );
       await refresh();
     } catch {
       setConnectErr('Network error — please try again.');
@@ -144,6 +162,7 @@ export default function MerchantAudioPage() {
           <div className="grid gap-1">
             <label className="text-xs text-zinc-400">Site ID (optional)</label>
             <input className={input} value={templateId} onChange={(e) => setTemplateId(e.target.value)} placeholder="Tie to a specific site" />
+            <span className="text-[11px] text-zinc-500">Name a site and we&rsquo;ll add the player to it for you.</span>
           </div>
           <div className="grid gap-1">
             <label className="text-xs text-zinc-400">Billing</label>
@@ -185,6 +204,43 @@ function GrantRow({ grant, onRevoke }: { grant: Grant; onRevoke: () => void }) {
   const [err, setErr] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<GenResult>(null);
 
+  // "Put the player on a site" — pre-filled with the site this connection is tied to.
+  const [siteId, setSiteId] = React.useState(grant.templateId ?? '');
+  const [attaching, setAttaching] = React.useState(false);
+  const [attachMsg, setAttachMsg] = React.useState<string | null>(null);
+
+  async function attach() {
+    setAttachMsg(null);
+    if (!siteId.trim()) {
+      setAttachMsg('Enter the site ID to add the player to.');
+      return;
+    }
+    setAttaching(true);
+    try {
+      const res = await fetch('/api/partner/audio/attach', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ hjEmbedId: grant.hjEmbedId, templateId: siteId.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setAttachMsg(json?.error || 'Could not add the player.');
+        return;
+      }
+      setAttachMsg(
+        json.action === 'inserted'
+          ? 'Added the player to that site — publish to push it live.'
+          : json.action === 'updated'
+            ? 'Pointed that site’s player at this voice — publish to push it live.'
+            : 'That site already plays this voice.',
+      );
+    } catch {
+      setAttachMsg('Network error — please try again.');
+    } finally {
+      setAttaching(false);
+    }
+  }
+
   async function generate() {
     setErr(null);
     setResult(null);
@@ -210,11 +266,18 @@ function GrantRow({ grant, onRevoke }: { grant: Grant; onRevoke: () => void }) {
             ? "Audio generation isn't switched on yet."
             : json?.code === 'quota_exceeded'
               ? 'This embed has reached its audio limit.'
-              : json?.error || 'Could not generate audio.',
+              : json?.code === 'voice_third_party'
+                ? "That would need someone else's voice, which this connection can't authorize."
+                : json?.error || 'Could not generate audio.',
         );
         return;
       }
-      setResult({ kind, audio_url: json.audio_url, cached: Boolean(json.cached) });
+      setResult({
+        kind,
+        audio_url: json.audio_url,
+        cached: Boolean(json.cached),
+        voiceBasis: json.voiceBasis === 'self' || json.voiceBasis === 'narrator' ? json.voiceBasis : null,
+      });
     } catch {
       setErr('Network error — please try again.');
     } finally {
@@ -237,6 +300,25 @@ function GrantRow({ grant, onRevoke }: { grant: Grant; onRevoke: () => void }) {
         </button>
       </div>
 
+      {/* Last mile: no copying the embed ID into the editor by hand. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-3">
+        <span className="text-xs text-zinc-400">Play it on</span>
+        <input
+          className="w-56 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-white placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none"
+          value={siteId}
+          onChange={(e) => setSiteId(e.target.value)}
+          placeholder="Site ID"
+        />
+        <button
+          onClick={attach}
+          disabled={attaching}
+          className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-500 disabled:opacity-50"
+        >
+          {attaching ? 'Adding…' : 'Add player to site'}
+        </button>
+        {attachMsg && <span className="text-xs text-zinc-400">{attachMsg}</span>}
+      </div>
+
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <select
           className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs text-white"
@@ -246,7 +328,10 @@ function GrantRow({ grant, onRevoke }: { grant: Grant; onRevoke: () => void }) {
           <option value="welcome">Spoken welcome</option>
           <option value="testimonial">Narrated review</option>
         </select>
-        <span className="text-xs text-zinc-500">in your voice</span>
+        {/* Per-kind, not a blanket claim: a review is read by the narrator, never cloned. */}
+        <span className="text-xs text-zinc-500">
+          {kind === 'welcome' ? 'in your voice, if your voice is set up' : 'read by the narrator, not a cloned voice'}
+        </span>
       </div>
       <textarea
         className={`mt-2 ${input}`}
@@ -261,7 +346,9 @@ function GrantRow({ grant, onRevoke }: { grant: Grant; onRevoke: () => void }) {
           {busy ? 'Generating…' : 'Generate audio'}
         </button>
         {result?.audio_url && (
-          <span className="text-xs text-zinc-500">{result.cached ? 'Reused a cached clip' : 'Fresh render'}</span>
+          <span className="text-xs text-zinc-500">
+            {result.cached ? 'Reused a cached clip' : 'Fresh render'} · {voiceLabel(result.voiceBasis)}
+          </span>
         )}
       </div>
       {result?.audio_url && (

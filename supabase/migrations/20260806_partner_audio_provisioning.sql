@@ -13,13 +13,13 @@
 --     per-agent attribution + tier billing reconciliation.
 --
 -- Deny-default RLS on BOTH — service-role (server) only. Grant tokens must never be
--- reachable by anon/authenticated clients. The feed shape is PROPOSED (pending HJ
--- ratification of the billing-rollup half — see the contract §"billing rollup"); the
--- columns here mirror the proposal and are cheap to alter before this migration is applied.
+-- reachable by anon/authenticated clients. The usage columns mirror the billing-rollup
+-- half of the contract (§B1/B2/B3), which HJ ratified as-proposed on 2026-07-19.
 --
 -- STATUS: pending — run `npm run db:migrate:up`. Inert until then AND until the flag
 -- PARTNER_AUDIO_PROVISIONING_ENABLED + PARTNER_QUICKSITES_SECRET + PARTNER_GRANT_ENC_KEY
--- are set and HJ's provisioning endpoint (#1332) is live.
+-- are set. HJ's side is already live + deployed (HJ #1450, its migration 549), so the
+-- shared secret being set on both sides is the last coordination step.
 
 create table if not exists public.partner_audio_grants (
   id              uuid primary key default gen_random_uuid(),
@@ -29,7 +29,7 @@ create table if not exists public.partner_audio_grants (
   hj_owner_id     text,                                                       -- learned from the usage feed / provision responses
   grant_token_enc text not null,                                             -- AES-256-GCM: iv:tag:ciphertext (base64)
   scope           text not null default 'about_that:provision',
-  billing_mode    text not null default 'owner',                             -- 'owner' | 'partner' (PROPOSED — pending HJ)
+  billing_mode    text not null default 'owner',                             -- 'owner' | 'partner' (§B3; 'partner' accrual deferred by HJ)
   status          text not null default 'active',                            -- 'active' | 'revoked'
   created_at      timestamptz not null default now(),
   last_used_at    timestamptz,

@@ -3,10 +3,11 @@
 // Pulls HiveJournal's partner usage feed and upserts it into partner_audio_usage — the
 // rollup ledger QS uses for per-agent attribution + tier-billing reconciliation.
 //
-// PROPOSED (contract §2, billing-rollup half — pending HJ ratification). The endpoint
-// shape below matches what QS proposed; if HJ ratifies a different shape, only the parse
-// + the GET path change. Everything is flag-gated + fail-soft, so this is inert and
-// harmless until the feed is live.
+// The shape below is the ratified contract §B2 (HJ ratified the billing-rollup half
+// as-proposed on 2026-07-19) and the endpoint is deployed. Everything stays flag-gated +
+// fail-soft: a missing/garbled feed logs nothing and writes nothing rather than failing a
+// cron. `est_cost_usd` arrives already computed at HJ's $0.30/1k wholesale rate — we store
+// it as the reconciliation basis rather than recomputing a rate of our own.
 
 import { createClient } from '@supabase/supabase-js';
 import { hjBackendUrl, partnerSecret, partnerAudioEnabled, PARTNER_ID } from './config';

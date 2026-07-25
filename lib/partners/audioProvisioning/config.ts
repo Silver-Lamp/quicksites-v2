@@ -7,7 +7,8 @@
 //   PARTNER_AUDIO_PROVISIONING_ENABLED = 1
 //   PARTNER_QUICKSITES_SECRET          = <shared secret, also set on HJ's side>
 //   PARTNER_GRANT_ENC_KEY              = <32-byte key, hex(64) or base64 — encrypts grants at rest>
-// and HJ's provisioning endpoint (#1332) + migration 509 must be live.
+// HJ's side is already live + deployed (HJ #1450, its migration 549), so the shared secret
+// is the last coordination step: the same value must be set on both sides.
 //
 // Host convention (contract): API calls go to the BACKEND host, not www.
 

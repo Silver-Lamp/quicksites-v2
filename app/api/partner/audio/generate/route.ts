@@ -5,8 +5,12 @@
 // the embed — we authorize against the stored grant's user_id, not the client's claim.
 // The actual HJ call fails closed if the flag/secret/grant are missing.
 //
-// Owner-gated. Returns the audio_url (+ whether it was a cache hit / billed) or a typed
-// error mapped from HJ's error contract.
+// Owner-gated. Returns the audio_url (+ whether it was a cache hit / billed / which voice
+// basis spoke) or a typed error mapped from HJ's error contract.
+//
+// `voiceBasis` is echoed straight from HJ's B1 envelope (consent v2) so the UI can label
+// honestly — 'self' = the owner's own cloned voice, 'narrator' = the standard voice,
+// undefined = unknown, which must read as neither. We never infer it.
 
 import { NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth/requireUser';
@@ -29,6 +33,7 @@ const STATUS_FOR: Record<ProvisionErrorCode, number> = {
   invalid_or_revoked_grant: 409,
   grant_scope: 403,
   grant_embed_mismatch: 403,
+  voice_third_party: 403,
   quota_exceeded: 429,
   partner_quota_exceeded: 402,
   audio_not_configured: 503,
@@ -73,7 +78,13 @@ export async function POST(req: Request): Promise<Response> {
     if (!script) return NextResponse.json({ error: 'script required' }, { status: 400 });
     const r = await generateWelcome(hjEmbedId, script);
     if (!r.ok) return errorResponse(r);
-    return NextResponse.json({ ok: true, welcome_id: r.welcome_id, audio_url: r.audio_url, cached: r.cached });
+    return NextResponse.json({
+      ok: true,
+      welcome_id: r.welcome_id,
+      audio_url: r.audio_url,
+      cached: r.cached,
+      voiceBasis: r.usage?.voice_basis ?? null,
+    });
   }
 
   if (kind === 'testimonial') {
@@ -81,7 +92,13 @@ export async function POST(req: Request): Promise<Response> {
     if (!quote) return NextResponse.json({ error: 'quote required' }, { status: 400 });
     const r = await generateTestimonial(hjEmbedId, quote);
     if (!r.ok) return errorResponse(r);
-    return NextResponse.json({ ok: true, testimonial_id: r.testimonial_id, audio_url: r.audio_url, cached: r.cached });
+    return NextResponse.json({
+      ok: true,
+      testimonial_id: r.testimonial_id,
+      audio_url: r.audio_url,
+      cached: r.cached,
+      voiceBasis: r.usage?.voice_basis ?? null,
+    });
   }
 
   return NextResponse.json({ error: "kind must be 'welcome' or 'testimonial'" }, { status: 400 });

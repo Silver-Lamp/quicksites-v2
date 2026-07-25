@@ -2,6 +2,13 @@
 
 // Store-walk gig board UI. Two lists: open gigs (claim) + "my walk today" (claimed gigs
 // with one-tap route planning + mark-done). Powered by /api/walker/gigs.
+//
+// Theme: colors come from the semantic tokens (`foreground`/`muted-foreground`/`card`/
+// `border`) rather than hard-coded zinc/white. The app wraps every page in a dark
+// ThemeScope, so literal light colors rendered dark-on-dark text and white cards on a
+// near-black page. Tokens flip with the surrounding scope at SSR (they key off the
+// `[data-theme]` wrapper, unlike `dark:` utilities which need the post-hydration
+// `.dark` class). Accents use alpha tints so they read on either theme.
 
 import * as React from 'react';
 
@@ -50,9 +57,9 @@ export default function WalkerBoard() {
 
   if (needAuth) {
     return (
-      <div className="mx-auto min-h-screen max-w-xl px-4 py-16 text-center text-zinc-700">
+      <div className="mx-auto min-h-screen max-w-xl px-4 py-16 text-center text-foreground">
         <h1 className="text-2xl font-bold">🧺 Store-walk gigs</h1>
-        <p className="mt-3 text-sm text-zinc-500">Sign in to see open cataloging gigs and plan your route.</p>
+        <p className="mt-3 text-sm text-muted-foreground">Sign in to see open cataloging gigs and plan your route.</p>
         <a href="/login?next=/walker" className="mt-6 inline-block rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">Sign in</a>
       </div>
     );
@@ -62,10 +69,10 @@ export default function WalkerBoard() {
   const mineDone = (board?.mine ?? []).filter((g) => g.status === 'completed');
 
   return (
-    <div className="mx-auto min-h-screen max-w-xl px-4 py-10 text-zinc-900">
+    <div className="mx-auto min-h-screen max-w-xl px-4 py-10 text-foreground">
       <h1 className="text-2xl font-bold tracking-tight">🧺 Store-walk gigs</h1>
-      <p className="mt-1 text-sm text-zinc-500">Claim the stores you’ll catalog today, then plan one efficient route across them.</p>
-      {error && <div className="mt-4 text-sm text-red-600">{error}</div>}
+      <p className="mt-1 text-sm text-muted-foreground">Claim the stores you’ll catalog today, then plan one efficient route across them.</p>
+      {error && <div className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</div>}
 
       {/* My walk */}
       <section className="mt-8">
@@ -76,20 +83,20 @@ export default function WalkerBoard() {
           )}
         </div>
         {mineActive.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No stores claimed yet — grab some from the open gigs below.</p>
+          <p className="mt-2 text-sm text-muted-foreground">No stores claimed yet — grab some from the open gigs below.</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {mineActive.map((g) => (
-              <li key={g.id} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white p-3">
+              <li key={g.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 text-card-foreground">
                 <div className="min-w-0">
                   <div className="truncate font-semibold">{g.store_name}</div>
-                  <div className="truncate text-xs text-zinc-500">{whereOf(g)}</div>
+                  <div className="truncate text-xs text-muted-foreground">{whereOf(g)}</div>
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <button type="button" disabled={busy === g.id + 'complete'} onClick={() => act(g.id, 'complete')}
-                    className="rounded-lg border border-emerald-500/50 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">Done</button>
+                    className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/20 disabled:opacity-50 dark:text-emerald-300">Done</button>
                   <button type="button" disabled={busy === g.id + 'release'} onClick={() => act(g.id, 'release')}
-                    className="rounded-lg border border-zinc-300 px-2.5 py-1 text-xs text-zinc-500 hover:bg-zinc-50">Release</button>
+                    className="rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50">Release</button>
                 </div>
               </li>
             ))}
@@ -101,13 +108,13 @@ export default function WalkerBoard() {
       {(board?.assigned?.length ?? 0) > 0 && (
         <section className="mt-10">
           <h2 className="text-lg font-bold">Assigned to you ({board!.assigned.length})</h2>
-          <p className="mt-1 text-xs text-zinc-500">Private gigs sent straight to you — not shown in the open pool.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Private gigs sent straight to you — not shown in the open pool.</p>
           <ul className="mt-3 space-y-2">
             {board!.assigned.map((g) => (
-              <li key={g.id} className="flex items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3">
+              <li key={g.id} className="flex items-center justify-between gap-3 rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-3">
                 <div className="min-w-0">
                   <div className="truncate font-semibold">{g.store_name}</div>
-                  <div className="truncate text-xs text-zinc-500">{whereOf(g)}</div>
+                  <div className="truncate text-xs text-muted-foreground">{whereOf(g)}</div>
                 </div>
                 <button type="button" disabled={busy === g.id + 'claim'} onClick={() => act(g.id, 'claim')}
                   className="shrink-0 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50">Claim</button>
@@ -121,14 +128,14 @@ export default function WalkerBoard() {
       <section className="mt-10">
         <h2 className="text-lg font-bold">Open gigs {board?.open.length ? `(${board.open.length})` : ''}</h2>
         {(board?.open.length ?? 0) === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500">No open gigs right now. Check back soon.</p>
+          <p className="mt-2 text-sm text-muted-foreground">No open gigs right now. Check back soon.</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {board!.open.map((g) => (
-              <li key={g.id} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white p-3">
+              <li key={g.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 text-card-foreground">
                 <div className="min-w-0">
                   <div className="truncate font-semibold">{g.store_name}</div>
-                  <div className="truncate text-xs text-zinc-500">{whereOf(g)}</div>
+                  <div className="truncate text-xs text-muted-foreground">{whereOf(g)}</div>
                 </div>
                 <button type="button" disabled={busy === g.id + 'claim'} onClick={() => act(g.id, 'claim')}
                   className="shrink-0 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50">Claim</button>
@@ -139,7 +146,7 @@ export default function WalkerBoard() {
       </section>
 
       {mineDone.length > 0 && (
-        <p className="mt-8 text-xs text-zinc-400">✓ {mineDone.length} completed today.</p>
+        <p className="mt-8 text-xs text-muted-foreground">✓ {mineDone.length} completed today.</p>
       )}
     </div>
   );

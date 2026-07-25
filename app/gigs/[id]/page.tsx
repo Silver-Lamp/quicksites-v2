@@ -5,6 +5,9 @@
 // land on the tasker board. Net-new: gigs previously lived only in the authed /walker board.
 // Open + claimable gigs render; a completed/closed gig shows a gentle "no longer available".
 // See docs/AISLEASK_OPS_PLAN.md Feature B #1.
+//
+// Colors use the semantic theme tokens (not literal zinc/white) — the app wraps pages in a
+// dark ThemeScope, so hard-coded light values rendered dark-on-dark. Same fix as /walker.
 
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -42,28 +45,28 @@ export default async function GigPage({ params }: { params: Promise<{ id: string
   const available = gig.status === 'open';
 
   return (
-    <div className="mx-auto min-h-screen max-w-xl px-4 py-12 text-zinc-900">
-      <div className="mb-6 text-sm font-medium text-sky-600">🧺 Store-walk gig</div>
+    <div className="mx-auto min-h-screen max-w-xl px-4 py-12 text-foreground">
+      <div className="mb-6 text-sm font-medium text-sky-600 dark:text-sky-400">🧺 Store-walk gig</div>
       <h1 className="text-3xl font-bold tracking-tight">Catalog a store&rsquo;s aisles</h1>
-      <p className="mt-1 text-zinc-500">{gigLocality(gig)}</p>
+      <p className="mt-1 text-muted-foreground">{gigLocality(gig)}</p>
 
-      <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="mt-8 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
         <dl className="space-y-3 text-sm">
           <div>
-            <dt className="text-zinc-400">The store</dt>
-            <dd className="font-semibold text-zinc-900">{gig.store_name}</dd>
+            <dt className="text-muted-foreground">The store</dt>
+            <dd className="font-semibold text-card-foreground">{gig.store_name}</dd>
           </div>
           <div>
-            <dt className="text-zinc-400">Where</dt>
-            <dd className="text-zinc-700">{where}</dd>
+            <dt className="text-muted-foreground">Where</dt>
+            <dd>{where}</dd>
           </div>
           <div>
-            <dt className="text-zinc-400">Time</dt>
-            <dd className="text-zinc-700">About 15&ndash;30 minutes, on your own schedule.</dd>
+            <dt className="text-muted-foreground">Time</dt>
+            <dd>About 15&ndash;30 minutes, on your own schedule.</dd>
           </div>
           <div>
-            <dt className="text-zinc-400">What you do</dt>
-            <dd className="text-zinc-700">
+            <dt className="text-muted-foreground">What you do</dt>
+            <dd>
               Walk the aisles in order and record what&rsquo;s in each section. We make it easy
               &mdash; no special skills needed.
             </dd>
@@ -79,15 +82,15 @@ export default async function GigPage({ params }: { params: Promise<{ id: string
           >
             Claim this gig &rarr;
           </Link>
-          <p className="mt-3 text-xs text-zinc-400">
+          <p className="mt-3 text-xs text-muted-foreground">
             You&rsquo;ll sign in, then it&rsquo;s added to your walk &mdash; tap &ldquo;Plan my
             route&rdquo; to catalog several stores in one efficient loop.
           </p>
         </div>
       ) : (
-        <div className="mt-8 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500">
+        <div className="mt-8 rounded-xl border border-border bg-muted p-4 text-sm text-muted-foreground">
           This gig is {gig.status === 'claimed' ? 'already claimed' : 'no longer available'}.{' '}
-          <Link href="/gigs" className="font-medium text-sky-600 hover:underline">
+          <Link href="/gigs" className="font-medium text-sky-600 hover:underline dark:text-sky-400">
             See other open gigs &rarr;
           </Link>
         </div>

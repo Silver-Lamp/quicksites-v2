@@ -17,3 +17,21 @@ if (!globalThis.TextDecoder) globalThis.TextDecoder = TextDecoder as any;
 process.env.NEXT_PUBLIC_SUPABASE_URL ||= 'https://placeholder.supabase.co';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||= 'placeholder-anon-key';
 process.env.SUPABASE_SERVICE_ROLE_KEY ||= 'placeholder-service-role-key';
+
+// ...and the other half of the same problem. Constructing a Supabase client also builds a
+// RealtimeClient, which resolves a WebSocket constructor at construction time and throws
+// when it can't find one. Neither Node 20 nor jsdom provides a global `WebSocket`, so every
+// suite whose import chain reaches lib/supabase/admin.ts (a module-load client) died with
+// "Test suite failed to run" — ~10 suites, including all of admin/__tests__. That is a
+// whole-suite failure, so it fails CI even when every test in the repo passes.
+//
+// `ws` is already a dependency. Nothing here makes a real connection: tests mock Supabase
+// access, and this only satisfies the constructor lookup.
+if (typeof (globalThis as any).WebSocket === 'undefined') {
+  try {
+    (globalThis as any).WebSocket = require('ws');
+  } catch {
+    // If `ws` ever goes away, leave it unset — the suites that need it fail loudly with
+    // the original error rather than silently behaving differently.
+  }
+}

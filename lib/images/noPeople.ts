@@ -18,9 +18,11 @@
 export const NO_PEOPLE_INSTRUCTION =
   'No people, faces, or figures of any kind; focus on the space, the work, the results, and the equipment.';
 
-/** Negative-form list, baked into the prompt (the OpenAI images API has no negative param). */
+/** Negative-form list, baked into the prompt (the OpenAI images API has no negative param).
+ *  Keep "no text, no watermarks, no logos" plural + last — it preserves the wording the
+ *  hero prompts carried before this constant existed, which generateHero.test.ts pins. */
 export const NO_PEOPLE_NEGATIVES =
-  'no people, no faces, no portraits, no hands, no silhouettes, no crowds, no text, no watermark, no logo';
+  'no people, no faces, no portraits, no hands, no silhouettes, no crowds, no text, no watermarks, no logos';
 
 /** Both, joined — for prompts that take one flat constraint string. */
 export const NO_PEOPLE_CLAUSE = `${NO_PEOPLE_INSTRUCTION} Strictly: ${NO_PEOPLE_NEGATIVES}.`;

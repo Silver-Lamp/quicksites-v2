@@ -36,9 +36,13 @@ describe('buildBuyList — scoring', () => {
     expect(c.industryKey).toBe('towing');
   });
 
-  it('uses the nicer industry domain word (roof_cleaning → roofing)', () => {
+  // roof_cleaning and roofing are DELIBERATELY separate verticals: 'roofing' is reserved
+  // for install/replace, so cleaning takes 'roof-cleaning' (see INDUSTRY_DOMAIN_WORD in
+  // lib/outreach/geoDomain.ts). This test predates that split and asserted the old
+  // collapsed mapping — the code is right, the expectation was stale.
+  it('uses the industry domain word, keeping roof_cleaning distinct from roofing', () => {
     const [c] = buildBuyList(noSite('Quincy', 'roof_cleaning', 2));
-    expect(c.domain).toBe('quincy-roofing.com');
+    expect(c.domain).toBe('quincy-roof-cleaning.com');
   });
 
   it('prices from the industry tier (premium full/locked rent)', () => {

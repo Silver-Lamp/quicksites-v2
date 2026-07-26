@@ -33,10 +33,13 @@ export type BackdropStyle =
   | 'grid'      // blueprint line grid — trades, construction, technical
   | 'dots'      // dot matrix — clean/product
   | 'paper'     // warm tonal paper — editorial, personal, author, portfolio
+  | 'topo'      // contour lines — tech/SaaS/product, feature pages
+  | 'circuit'   // traces + nodes — engineering, electrical, IT, security
+  | 'ledger'    // fine ruled columns — finance, legal, consulting, B2B
   | 'painterly'; // generated image (costs money; see paintBackdrop.ts)
 
 export const BACKDROP_STYLES: BackdropStyle[] = [
-  'none', 'wash', 'mesh', 'aurora', 'grid', 'dots', 'paper', 'painterly',
+  'none', 'wash', 'mesh', 'aurora', 'grid', 'dots', 'paper', 'topo', 'circuit', 'ledger', 'painterly',
 ];
 
 /** Persisted shape at `template.data.meta.backdrop`. All fields optional but `style`. */
@@ -61,6 +64,9 @@ export const BACKDROP_LABELS: Record<BackdropStyle, string> = {
   grid: 'Blueprint grid',
   dots: 'Dot matrix',
   paper: 'Paper',
+  topo: 'Contour',
+  circuit: 'Circuit',
+  ledger: 'Ledger',
   painterly: 'Painterly (AI image)',
 };
 
@@ -72,6 +78,9 @@ export const BACKDROP_HINTS: Record<BackdropStyle, string> = {
   grid: 'A faint technical grid. Suits trades, construction and engineering.',
   dots: 'An even dot field. Clean and product-like.',
   paper: 'Warm tonal paper. Suits writing, portfolios and personal sites.',
+  topo: 'Soft contour lines. Modern and technical — good behind feature and product pages.',
+  circuit: 'Fine traces and nodes. Suits engineering, electrical, IT and security.',
+  ledger: 'Quiet ruled columns. Understated and corporate — finance, legal, consulting.',
   painterly: 'A generated painting behind the page. Costs money to create, one per site.',
 };
 
@@ -88,7 +97,6 @@ const INDUSTRY_DEFAULTS: Record<string, BackdropStyle> = {
   contractor: 'grid',
   roofing: 'grid',
   plumbing: 'grid',
-  electrical: 'grid',
   hvac: 'grid',
   towing: 'grid',
   auto_repair: 'grid',
@@ -100,9 +108,25 @@ const INDUSTRY_DEFAULTS: Record<string, BackdropStyle> = {
   spa: 'aurora',
   // Considered professions — restraint.
   real_estate: 'mesh',
-  legal: 'wash',
   medical: 'wash',
-  finance: 'wash',
+  // Corporate/B2B — ruled columns read as considered rather than decorative.
+  legal: 'ledger',
+  finance: 'ledger',
+  accounting: 'ledger',
+  insurance: 'ledger',
+  consulting: 'ledger',
+  // Tech + product — contour reads modern behind feature/product copy, which is
+  // exactly where a warm painterly image would feel wrong.
+  software: 'topo',
+  saas: 'topo',
+  technology: 'topo',
+  it_services: 'circuit',
+  web_design: 'topo',
+  marketing: 'topo',
+  // Engineering-adjacent — traces over a plain grid.
+  electrical: 'circuit',
+  security: 'circuit',
+  solar: 'circuit',
 };
 
 /** The style a NEW site of this industry starts with. Never `none` — that's the point. */
@@ -192,6 +216,45 @@ export function backdropLayerStyle(b: SiteBackdrop | null): CSSProperties | null
         ].join(', '),
         backgroundSize: '22px 22px, 100% 100%',
       };
+
+    case 'topo': {
+      // Concentric contour rings, offset so they read as terrain rather than a target.
+      const line = `hsl(${P} / ${a(0.16)})`;
+      return {
+        backgroundImage: [
+          `repeating-radial-gradient(circle at 18% 22%, transparent 0 26px, ${line} 26px 27px)`,
+          `repeating-radial-gradient(circle at 82% 78%, transparent 0 34px, hsl(var(--foreground) / ${a(0.05)}) 34px 35px)`,
+          `radial-gradient(ellipse 80% 55% at 50% 0%, hsl(${P} / ${a(0.14)}) 0%, transparent 72%)`,
+        ].join(', '),
+      };
+    }
+
+    case 'circuit': {
+      // Orthogonal traces at two scales + nodes where they meet.
+      const trace = `hsl(${P} / ${a(0.13)})`;
+      const node = `hsl(${P} / ${a(0.30)})`;
+      return {
+        backgroundImage: [
+          `radial-gradient(${node} 1.5px, transparent 1.6px)`,
+          `linear-gradient(${trace} 1px, transparent 1px)`,
+          `linear-gradient(90deg, ${trace} 1px, transparent 1px)`,
+          `radial-gradient(ellipse 70% 50% at 50% 0%, hsl(${P} / ${a(0.12)}) 0%, transparent 70%)`,
+        ].join(', '),
+        backgroundSize: '64px 64px, 64px 64px, 64px 64px, 100% 100%',
+      };
+    }
+
+    case 'ledger': {
+      // Vertical rules with a heavier one every fourth column — quiet and corporate.
+      const rule = `hsl(var(--foreground) / ${a(0.055)})`;
+      return {
+        backgroundImage: [
+          `repeating-linear-gradient(90deg, ${rule} 0 1px, transparent 1px 72px)`,
+          `repeating-linear-gradient(90deg, hsl(var(--foreground) / ${a(0.03)}) 0 1px, transparent 1px 18px)`,
+          `linear-gradient(180deg, hsl(${P} / ${a(0.10)}) 0%, transparent 42%)`,
+        ].join(', '),
+      };
+    }
 
     case 'paper':
       return {

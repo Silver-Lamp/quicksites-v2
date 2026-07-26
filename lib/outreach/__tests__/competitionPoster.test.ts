@@ -11,6 +11,7 @@ import {
   postcardBenefits,
   resolveLocalityLine,
   senderFromProfile,
+  posterBackdropCss,
   type PosterModel,
 } from '@/lib/outreach/competitionPoster';
 import type { SenderProfile } from '@/lib/outreach/senderProfile';
@@ -207,5 +208,55 @@ describe('resolveLocalityLine', () => {
     expect(
       resolveLocalityLine({ senderCity: null, senderState: null, senderLat: null, senderLng: null, targetState: 'WA', targetLat: null, targetLng: null }),
     ).toBeNull();
+  });
+});
+
+// The postcard front's backdrop now comes from the shared recipes (lib/theme/backdrops.ts)
+// rather than a hand-rolled gradient. Two properties matter and neither is visible in a
+// browser screenshot: it must stay ADDITIVE over the existing brand gradient (a card that
+// already prints well must not get worse), and it must emit no CSS vars — Lob rasterises
+// this HTML standalone, with no cascade to resolve them against.
+describe('posterBackdropCss', () => {
+  const KEYS = ['towing', 'plumbing', 'restaurant', 'legal', 'personal', 'software', 'electrical'] as const;
+
+  it.each([...KEYS, null])('%s keeps the brand gradient as the base layer', (key) => {
+    expect(posterBackdropCss(key as any).backgroundImage).toContain('#16233f');
+  });
+
+  it.each([...KEYS, null])('%s emits no CSS variables (print has no cascade)', (key) => {
+    expect(posterBackdropCss(key as any).backgroundImage).not.toContain('var(');
+  });
+
+  // Count top-level commas by paren depth. A regex can't do this: `linear-gradient(90deg,
+  // ...)` has an inner comma at depth 1 that naive splitting reads as a layer boundary.
+  const topLevelCount = (css: string) => {
+    let depth = 0;
+    let n = 1;
+    for (const ch of css) {
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+      else if (ch === ',' && depth === 0) n++;
+    }
+    return n;
+  };
+
+  it.each([...KEYS, null])('%s declares a background-size per layer', (key) => {
+    const css = posterBackdropCss(key as any);
+    const layers = topLevelCount(css.backgroundImage);
+    const sizes = topLevelCount(css.backgroundSize);
+    // CSS cycles background-size values across layers, so a single value legitimately
+    // applies to all of them. What must never happen is a count that is neither 1 nor
+    // per-layer — that silently misaligns which size lands on which gradient.
+    expect(sizes === 1 || sizes === layers).toBe(true);
+  });
+
+  // `software` maps to `topo`, whose repeating-radial rings are the recipe most likely to
+  // rasterise differently in a PDF engine than in Chrome — so it must fall back, not ship.
+  it('falls back to a print-safe recipe for styles that are not print-safe', () => {
+    expect(posterBackdropCss('software' as any).backgroundImage).not.toContain('repeating-radial-gradient');
+  });
+
+  it('gives a trades campaign the blueprint grid', () => {
+    expect(posterBackdropCss('towing' as any).backgroundImage).toContain('linear-gradient');
   });
 });

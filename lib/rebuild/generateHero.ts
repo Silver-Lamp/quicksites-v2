@@ -12,6 +12,7 @@
 import { getOpenAI } from '@/lib/ai/openaiClient';
 import { createClient } from '@supabase/supabase-js';
 import { meterLLMCall } from '@/lib/ai/meter';
+import { NO_PEOPLE_CLAUSE } from '@/lib/images/noPeople';
 import type { RebuildSpec } from '@/lib/rebuild/inferSiteSpec';
 
 const ROUTE = '/api/rebuild';
@@ -39,11 +40,17 @@ function slugify(s: string): string {
   return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60) || 'rebuild';
 }
 
-/** Prompt for the hero image (exported for testing / prompt tuning). */
+/** Prompt for the hero image (exported for testing / prompt tuning).
+ *
+ *  The no-people clause is NOT optional here. This path auto-builds sites for real,
+ *  named businesses from their public listing, so a generated photo of staff or diners
+ *  would assert people who don't exist on a page that presents as that business's own.
+ *  See lib/images/noPeople.ts for why, and the mesh standard it implements. */
 export function heroPrompt(spec: RebuildSpec): string {
   return (
     `Professional website hero photo for a ${spec.industryLabel} business named "${spec.businessName}". ` +
-    `Real-world, high quality, on-brand, bright and inviting, no text, no logos, no watermarks.`
+    `Real-world, high quality, on-brand, bright and inviting. ` +
+    NO_PEOPLE_CLAUSE
   );
 }
 

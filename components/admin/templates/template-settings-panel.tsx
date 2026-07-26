@@ -10,6 +10,7 @@ import ServicesPanel from './panels/services-panel';
 import DomainPanel from './panels/domain-panel';
 import SeoPanel from './panels/seo-panel';
 import ThemePanel from './panels/theme-panel';
+import BackdropPanel from './panels/backdrop-panel';
 import ScreensaverPanel from './panels/screensaver-panel';
 import MascotPanel from './panels/mascot-panel';
 import PaymentSettingsPanel from '../payments/payment-settings-panel';
@@ -69,6 +70,12 @@ export default function TemplateSettingsPanel({ template, onChange }: Props) {
   return (
     <div className="space-y-4 px-4 pt-2 w-1/4 min-w-[280px] max-w-[320px] flex-shrink-0" id="sidebar-settings">
       <ThemePanel
+        template={template}
+        onChange={(patch: any) => applyPatch(patch)}
+      />
+
+      {/* Sits directly under Theme — it's a visual choice and it reads the same accent. */}
+      <BackdropPanel
         template={template}
         onChange={(patch: any) => applyPatch(patch)}
       />

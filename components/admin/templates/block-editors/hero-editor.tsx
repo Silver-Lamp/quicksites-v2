@@ -23,6 +23,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import toast from 'react-hot-toast';
 import { getIndustryOptions, resolveIndustryKey, toIndustryLabel } from '@/lib/industries';
+import { NO_PEOPLE_NEGATIVES } from '@/lib/images/noPeople';
 import { uploadToStorage } from '@/lib/uploadToStorage';
 import MediaPicker from '@/components/admin/media/media-picker';
 
@@ -470,7 +471,6 @@ export default function HeroEditor({
   const [aiError, setAiError] = useState<string | null>(null);
   const [imgLoading, setImgLoading] = useState(false);
   const [imgError, setImgError] = useState<string | null>(null);
-  const [imgIncludePeople, setImgIncludePeople] = useState(false);
   const [imgSubjectTouched, setImgSubjectTouched] = useState(false);
   const [imgSubject, setImgSubject] = useState(
     local?.image_subject || `${promptIndustryLabel} website hero banner`,
@@ -800,9 +800,9 @@ export default function HeroEditor({
       const base =
         `website hero (header/banner) image for a ${effectiveIndustryLabel || 'local small business'} small business. ` +
         `${imgSubject}. wide 16:9 composition with clear copy space for headline, clean modern background, high detail, no text, no watermarks, no logos.`;
-      const negatives = imgIncludePeople
-        ? 'no text, no watermark, no logo'
-        : 'no people, no faces, no portraits, no hands, no superheroes, no text, no watermark, no logo';
+      // No-people is network policy, not a preference — see lib/images/noPeople.ts.
+      // The server enforces it regardless; this keeps the client prompt honest too.
+      const negatives = `${NO_PEOPLE_NEGATIVES}, no superheroes`;
 
       const res = await fetch('/api/hero/generate-image', {
         method: 'POST',
@@ -821,11 +821,9 @@ export default function HeroEditor({
           aspect: 'wide',
           prompt: base,
           negative: negatives,
-          include_people: imgIncludePeople,
           prompt_context: {
             purpose: 'website hero header',
             layout: 'wide 16:9 with copy space',
-            include_people: imgIncludePeople,
           },
         }),
       });
@@ -1467,11 +1465,9 @@ export default function HeroEditor({
                       <option value="3d">3D Render</option>
                       <option value="minimal">Minimal</option>
                     </select>
-                    <Switch
-                      checked={imgIncludePeople}
-                      onCheckedChange={(v) => setImgIncludePeople(!!v)}
-                    />
-                    <label className="text-xs text-neutral-300 pl-2">Include people in image</label>
+                    <span className="text-xs text-neutral-400 pl-2">
+                      Generated images never include people.
+                    </span>
                   </div>
                 </div>
               )}

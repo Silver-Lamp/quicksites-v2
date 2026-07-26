@@ -6,6 +6,7 @@ import { checkRateLimit, clientIp } from '@/lib/rateLimit';
 import { inferIndustry } from '@/lib/builder/inferIndustry';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import { autogenerateForTemplate } from '@/lib/builder/autogenerateForTemplate';
+import { pickPoolBackdrop } from '@/lib/theme/backdropPool';
 import type { IndustryKey } from '@/lib/industries';
 
 export const runtime = 'nodejs';
@@ -113,6 +114,25 @@ export async function POST(req: Request) {
       colorMode = rebuilt.color_mode || colorMode;
       industryCol = String(inferred.key);
     }
+  }
+
+  // Upgrade the scaffold's CSS backdrop to a pooled painterly one when that industry's
+  // pool already has images (lib/theme/backdropPool.ts). This is a READ ONLY — it never
+  // generates, so creation stays instant; an empty pool just leaves the CSS backdrop in
+  // place. Filling happens out of band in /api/cron/backdrop-pool-fill.
+  try {
+    const industryForPool = industryCol || String(obj(data).meta?.industry || '') || null;
+    const pooled = await pickPoolBackdrop(industryForPool);
+    if (pooled) {
+      const d = obj(data);
+      d.meta = {
+        ...(d.meta || {}),
+        backdrop: { style: 'painterly', url: pooled, intensity: 50, auto: true },
+      };
+      data = d;
+    }
+  } catch {
+    /* best-effort decoration — never fail site creation over a backdrop */
   }
 
   // Build minimal, canonical payload

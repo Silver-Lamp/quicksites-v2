@@ -2,6 +2,7 @@ import { getOpenAI } from '@/lib/ai/openaiClient';
 import { lazyClient } from '@/lib/lazyClient';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
+import { NO_PEOPLE_INSTRUCTION, NO_PEOPLE_NEGATIVES } from '@/lib/images/noPeople';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
@@ -79,9 +80,12 @@ export async function POST(req: Request) {
       // NEW optional fields from the editor:
       prompt: extraPrompt,   // richer guidance
       negative,              // “no faces, no text...” etc.
-      include_people = false,
       prompt_context,        // arbitrary context if you want to log/extend
     } = body || {};
+    // NOTE: `include_people` used to be an opt-in here. It was removed 2026-07-26 —
+    // the mesh painterly-backdrop standard (crosstalk/contracts/painterly-backdrop.md,
+    // rule 9) bans generated people network-wide. A body still sending the flag is
+    // silently ignored rather than rejected, so old clients don't break.
 
     // Prefer DB context if template_id present
     let db: any = {};
@@ -116,14 +120,12 @@ export async function POST(req: Request) {
 
     // Build a *banner-specific* prompt. Treat "hero" as website header, not a person.
     const subjectOrPreset = (subject && String(subject).trim()) || presetSubjectFor(finalIndustry, finalServices);
-    const peopleInstruction = include_people
-      ? 'People may be present but not as close-up portraits; faces small and non-dominant.'
-      : 'No people or faces; focus on service results/equipment.';
+    const peopleInstruction = NO_PEOPLE_INSTRUCTION;
 
     // Fold in optional negatives (OpenAI images API has no separate negative param,
     // so bake them into the instruction text).
     const negatives = [
-      include_people ? 'no text, no watermark, no logo' : 'no people, no faces, no portraits, no hands, no text, no watermark, no logo',
+      NO_PEOPLE_NEGATIVES,
       negative ? String(negative) : '',
     ].filter(Boolean).join('; ');
 

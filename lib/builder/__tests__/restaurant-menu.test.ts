@@ -53,7 +53,10 @@ describe('buildIndustryStarter — food vs non-food', () => {
     const tpl = buildIndustryStarter({ businessName: "Jay's Cafe", industryKey: 'restaurant' });
     const types = blockTypes(tpl);
     // FAQ dropped 2026-07: diners want menu/hours/order — generic Q&A is filler.
-    expect(types).toEqual(['hero', 'menu', 'location', 'hours', 'contact_form', 'order_bar']);
+    // `about_that` sits after the hero on every scaffold (the "In Your Voice" seed, PR
+    // #595) and renders nothing until an embed is set — silent on the page, but present
+    // in the block list.
+    expect(types).toEqual(['hero', 'about_that', 'menu', 'location', 'hours', 'contact_form', 'order_bar']);
     const menu = tpl.data.pages[0].blocks.find((b: any) => b.type === 'menu');
     expect(menu.content.sections.length).toBeGreaterThan(0);
     const loc = tpl.data.pages[0].blocks.find((b: any) => b.type === 'location');

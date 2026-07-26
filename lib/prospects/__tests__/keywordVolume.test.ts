@@ -14,7 +14,8 @@ describe('keywordForCandidate', () => {
   it('builds a local keyword from city + industry service word', () => {
     expect(keywordForCandidate('Gallatin', 'towing')).toBe('gallatin towing');
     expect(keywordForCandidate('Renton', 'windshield_repair')).toBe('renton auto glass');
-    expect(keywordForCandidate('Kent', 'roof_cleaning')).toBe('kent roofing');
+    // roof_cleaning is its own vertical — 'roofing' is reserved for install/replace.
+    expect(keywordForCandidate('Kent', 'roof_cleaning')).toBe('kent roof cleaning');
   });
 });
 

@@ -5,6 +5,7 @@ import type { Block } from '@/types/blocks';
 import PageHeader from '../admin/templates/render-blocks/header';
 import PageFooter from '../admin/templates/render-blocks/footer';
 import { resolveSiteTheme } from '@/lib/theme/resolveSiteTheme';
+import { readBackdrop, backdropLayerStyle, backdropScrimStyle } from '@/lib/theme/backdrops';
 
 type Props = {
   template: Template;
@@ -49,8 +50,41 @@ export function TemplateThemeWrapper({
   const colorMode: 'light' | 'dark' =
     (template?.color_mode ?? (template as any)?.data?.color_mode) === 'dark' ? 'dark' : 'light';
 
+  // Site backdrop (lib/theme/backdrops.ts). CSS styles derive from the theme vars scoped
+  // on THIS element, so the layers must sit inside it. Both resolve to null when there's
+  // nothing to paint — then no layer renders and the site looks exactly as it did before
+  // (painterly-backdrop standard rule 7: a missing backdrop is a plain page, never a
+  // broken one). Layers are aria-hidden decoration and sit behind content, so they can
+  // never carry information or be announced (rule 8).
+  const backdrop = React.useMemo(() => readBackdrop(template), [template]);
+  const backdropStyle = React.useMemo(() => backdropLayerStyle(backdrop), [backdrop]);
+  const scrimStyle = React.useMemo(() => backdropScrimStyle(backdrop), [backdrop]);
+
   return (
-    <div style={wrapperStyle} data-theme={colorMode} data-qs-themed={resolved ? '1' : undefined}>
+    <div
+      style={{ ...(wrapperStyle ?? {}), ...(backdropStyle ? { position: 'relative' } : null) }}
+      data-theme={colorMode}
+      data-qs-themed={resolved ? '1' : undefined}
+      data-qs-backdrop={backdropStyle ? backdrop?.style : undefined}
+    >
+      {backdropStyle ? (
+        <>
+          <div
+            aria-hidden
+            style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', ...backdropStyle }}
+          />
+          {scrimStyle ? (
+            <div
+              aria-hidden
+              style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', ...scrimStyle }}
+            />
+          ) : null}
+        </>
+      ) : null}
+
+      {/* Content sits above the backdrop layers. Only needed when one is painted, so a
+          site with no backdrop keeps its original stacking context untouched. */}
+      <div style={backdropStyle ? { position: 'relative', zIndex: 1 } : undefined}>
       {/* Load the curated font pairing (Google Fonts). Next hoists & dedupes the
           stylesheet link; display=swap avoids blocking on the webfont. Headings
           pick up var(--font-heading) via the [data-qs-themed] rule in globals.css. */}
@@ -83,6 +117,7 @@ export function TemplateThemeWrapper({
           />
         </div>
       ) : null}
+      </div>
     </div>
   );
 

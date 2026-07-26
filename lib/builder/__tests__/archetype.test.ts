@@ -7,6 +7,10 @@ import { buildIndustryStarter, pickArchetype } from '@/lib/builder/industryScaff
 const KNOWN = new Set([
   'hero', 'services', 'faq', 'contact_form', 'story', 'testimonial', 'cta',
   'menu', 'location', 'hours', 'order_bar', 'products_grid', 'section', 'text',
+  // Seeded into every scaffold after the hero by the "In Your Voice" work (PR #595).
+  // It renders nothing until an embed is set, so it's silent on the page — but it IS
+  // in the block list, and omitting it here is what made this suite fail on main.
+  'about_that',
 ]);
 
 const types = (tpl: any): string[] => tpl.data.pages[0].blocks.map((b: any) => b.type);

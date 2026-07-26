@@ -58,4 +58,16 @@ describe('heroPrompt', () => {
     expect(p).toMatch(/no text/i);
     expect(p).toMatch(/no logos/i);
   });
+
+  // Rule 9 of the mesh painterly-backdrop standard, pinned on the path where it matters
+  // most: this prompt runs in the listing-import pipeline, which auto-builds sites for
+  // REAL, NAMED businesses. Before 2026-07-26 it constrained text/logos but said nothing
+  // about people, so it happily returned staff and diners — fabricated employees on a page
+  // presenting as that business's own. If someone rewrites this prompt, this test is what
+  // stops that regression shipping silently.
+  it('forbids people — the prompt runs against real, named businesses', () => {
+    const p = heroPrompt(spec);
+    expect(p).toMatch(/no people/i);
+    expect(p).toMatch(/no faces/i);
+  });
 });

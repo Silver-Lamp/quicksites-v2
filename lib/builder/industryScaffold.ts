@@ -10,6 +10,7 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { generateServices } from '@/lib/generateServices';
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
+import { defaultBackdropFor } from '@/lib/theme/backdrops';
 import {
   getCuratedTheme,
   toStampedTheme,
@@ -708,6 +709,10 @@ export function buildIndustryStarter(opts: {
         services: serviceNames,
         // Persist the curated theme so the renderer/editor theme layer can read it.
         theme: theme.stamped,
+        // Every new site starts with a backdrop rather than one flat color. CSS-derived
+        // by default, so this costs nothing and works for guest builds too — see
+        // lib/theme/backdrops.ts for why the default is never image generation.
+        backdrop: defaultBackdropFor(industryKey),
       },
     },
   };

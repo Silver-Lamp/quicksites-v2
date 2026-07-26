@@ -1,5 +1,6 @@
 import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
+import { NO_PEOPLE_NEGATIVES } from '@/lib/images/noPeople';
 import { normalizeTemplate as normalizeTemplateServer } from '@/admin/utils/normalizeTemplate';
 import { generateDataUrlPNG } from './openaiIdeation';
 import { uploadDataUrlPNG } from './storage';
@@ -98,13 +99,12 @@ async function aiSuggestHeroCopy(args: {
 
 /** AI hero image, uploads to Storage, returns public URL (or null). */
 async function aiGenerateHeroImage(templateId: string, subject: string, opts?: {
-  includePeople?: boolean; style?: 'photo'|'illustration'|'3d'|'minimal';
+  style?: 'photo'|'illustration'|'3d'|'minimal';
 }) {
   try {
     const style = opts?.style || 'photo';
-    const neg = opts?.includePeople
-      ? 'no text, no watermark, no logo'
-      : 'no people, no faces, no portraits, no text, no watermark, no logo';
+    // No-people is network policy, never a caller's choice — see lib/images/noPeople.ts.
+    const neg = NO_PEOPLE_NEGATIVES;
     const prompt =
       `website hero banner: ${subject}. ` +
       `wide 16:9 composition with ample copy space, modern, clean. ${style}.`;
@@ -177,7 +177,7 @@ export async function hydrateHeroBlocks(args: {
           const subject =
             c.image_subject ||
             `${args.industry || 'business'} website hero banner`;
-          const url = await aiGenerateHeroImage(args.templateId, subject, { includePeople: false, style: 'photo' });
+          const url = await aiGenerateHeroImage(args.templateId, subject, { style: 'photo' });
           if (url) c.image_url = url;
         }
       }

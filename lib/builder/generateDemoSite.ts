@@ -10,6 +10,7 @@
 import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { createClient } from '@supabase/supabase-js';
 import { meterLLMCall } from '@/lib/ai/meter';
+import { NO_PEOPLE_CLAUSE } from '@/lib/images/noPeople';
 import { randomDemoSpec, type DemoSpec } from '@/lib/builder/randomDemoSpec';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import { LABEL_TO_KEY, KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
@@ -190,9 +191,11 @@ export async function ideateCopy(spec: DemoSpec, userId: string | null): Promise
 }
 
 export async function generateHero(spec: DemoSpec, userId: string | null): Promise<string | null> {
+  // No-people is mandatory network-wide — see lib/images/noPeople.ts.
   const prompt =
     `Professional hero photo for a ${spec.industryLabel} business named "${spec.businessName}" in ${spec.city}, ${spec.state}. ` +
-    `Real-world, high quality, on-brand, no text, no logos.`;
+    `Real-world, high quality, on-brand. ` +
+    NO_PEOPLE_CLAUSE;
 
   const dataUrl = await meterLLMCall<string | null>(
     { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: userId, route: ROUTE },

@@ -54,6 +54,7 @@ type FeatureRow = {
   category: string;
   video_url?: string | null;
   doc_href?: string | null;
+  demo_href?: string | null;
   badge?: string | null;
   featured?: boolean | null;
   created_at?: string | null;
@@ -102,10 +103,20 @@ function FeatureCard({ f }: { f: FeatureRow }) {
 
       <CardFooter className="mt-auto items-center justify-between pt-2">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">{f.category}</span>
+        {/* "Read docs" is a promise of documentation; "See it live" is a promise of a
+            working demo. They're different claims, so they're different fields — two
+            features once shipped with doc_href="/" and sent readers to the homepage. */}
         {f.doc_href ? (
           <Link href={f.doc_href} className="inline-flex">
             <Button variant="ghost" size="sm">
               Read docs
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        ) : f.demo_href ? (
+          <Link href={f.demo_href} className="inline-flex">
+            <Button variant="ghost" size="sm">
+              See it live
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>

@@ -43,6 +43,7 @@ type FeatureRow = {
   category: string;
   video_url?: string | null;
   doc_href?: string | null;
+  demo_href?: string | null;
   badge?: string | null;
   featured?: boolean | null;
   feature_order?: number | null;
@@ -353,6 +354,23 @@ function FeatureForm({
           <div>
             <Label htmlFor="doc">Docs link (optional)</Label>
             <Input id="doc" value={draft.doc_href ?? ''} onChange={(e) => setDraft((d) => ({ ...d, doc_href: e.target.value }))} placeholder="https://docs…" />
+            {draft.doc_href && !normalizeDocHref(draft.doc_href) ? (
+              <p className="mt-1 text-xs text-amber-500">
+                Not a usable docs destination — this will be saved as empty and no “Read docs” button will show.
+              </p>
+            ) : null}
+          </div>
+          <div>
+            <Label htmlFor="demo">Live demo link (optional)</Label>
+            <Input id="demo" value={draft.demo_href ?? ''} onChange={(e) => setDraft((d) => ({ ...d, demo_href: e.target.value }))} placeholder="/ or https://…" />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Shows a “See it live” button when there are no docs. Use this for a working demo — a docs link it isn’t.
+            </p>
+            {draft.demo_href && !normalizeDocHref(draft.demo_href) ? (
+              <p className="mt-1 text-xs text-amber-500">
+                Not a usable destination — this will be saved as empty.
+              </p>
+            ) : null}
           </div>
           {portfolioMode && (
             <div>
@@ -659,6 +677,25 @@ function FeatureForm({
 /* Page                                                                       */
 /* ========================================================================== */
 
+/**
+ * A "Read docs" button is a promise. `"/"`, `"#"` and `"TBD"` all pass a truthy check and
+ * render a button that lands the reader on the homepage or nowhere — worse than no button,
+ * because it advertises documentation that doesn't exist. Two live features shipped with
+ * `doc_href: "/"` before this guard existed.
+ *
+ * Returns the cleaned value, or null when it isn't a usable destination.
+ */
+export function normalizeDocHref(raw: string | null | undefined): string | null {
+  const v = (raw ?? '').trim();
+  if (!v) return null;
+  if (v === '/' || v === '#' || v === '.') return null;
+  // A path must actually go somewhere below the root.
+  if (v.startsWith('/')) return v.length > 1 ? v : null;
+  if (/^https?:\/\//i.test(v)) return v;
+  // Anything else (a bare "TBD", a naked domain) is not a link we should render.
+  return null;
+}
+
 export default function ManageFeaturesPage() {
   const supabase = React.useMemo(
     () =>
@@ -777,6 +814,7 @@ export default function ManageFeaturesPage() {
       category: portfolioMode ? 'Web' : 'Editor',
       badge: '',
       doc_href: '',
+      demo_href: '',
       video_url: '',
       image_url: '',
       thumb_url: '',
@@ -799,6 +837,7 @@ export default function ManageFeaturesPage() {
       category: r.category,
       badge: r.badge ?? '',
       doc_href: r.doc_href ?? '',
+      demo_href: r.demo_href ?? '',
       video_url: r.video_url ?? '',
       image_url: r.image_url ?? '',
       thumb_url: r.thumb_url ?? '',
@@ -868,7 +907,8 @@ export default function ManageFeaturesPage() {
           blurb: draft.blurb?.trim() ?? '',
           category: (draft.category as string) ?? 'Editor',
           badge: (draft.badge ?? '').trim() || null,
-          doc_href: (draft.doc_href ?? '').trim() || null,
+          doc_href: normalizeDocHref(draft.doc_href),
+          demo_href: normalizeDocHref(draft.demo_href),
           video_url: (draft.video_url ?? '').trim() || null,
           featured: !!draft.featured,
           feature_order: draft.feature_order ?? null,
@@ -945,6 +985,7 @@ export default function ManageFeaturesPage() {
       category: src.category,
       badge: src.badge,
       doc_href: src.doc_href,
+      demo_href: src.demo_href,
       video_url: src.video_url,
       featured: src.featured ?? false,
       feature_order: (src.feature_order ?? 0) + 1,

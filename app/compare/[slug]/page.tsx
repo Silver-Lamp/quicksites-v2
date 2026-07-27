@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
+import SiteFooter from '@/components/site/site-footer';
 import { CompareTable } from '@/components/compare/compare-table';
 import { marketingOg } from '@/lib/marketingOg';
 import {
@@ -175,6 +176,7 @@ export default async function CompareCompetitorPage({
           </p>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

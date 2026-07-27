@@ -12,6 +12,7 @@ import SiteHeader from '@/components/site/site-header';
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE } from '@/lib/commerce/partner-terms';
 import { marketingOg } from '@/lib/marketingOg';
 import { COMPETITORS, PRICES_VERIFIED } from '@/lib/compare/competitors';
+import SiteFooter from '@/components/site/site-footer';
 
 const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
 const keepPct = Math.round(PARTNER_FEE_SHARE * 100);
@@ -101,6 +102,7 @@ export default function CompareHubPage() {
           </p>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

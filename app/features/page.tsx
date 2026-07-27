@@ -18,6 +18,7 @@ type FeatureRow = {
   category: string;
   video_url?: string | null;
   doc_href?: string | null;
+  demo_href?: string | null;
   badge?: string | null;
   featured?: boolean | null;
   feature_order?: number | null;

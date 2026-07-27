@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSupabase } from "@/lib/supabase/server";
+import { rateLimitOr429 } from "@/lib/api/rateLimitGuard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +37,19 @@ async function verifyRecaptcha(token?: string) {
 
 export async function POST(req: Request) {
   try {
+    // Per-IP throttle. This is a PUBLIC, unauthenticated endpoint that upserts into
+    // `supporters`, and its captcha does not currently stop anything: no caller sends a
+    // token, so verifyRecaptcha short-circuits to true on `!token`. Until that behaviour
+    // question is settled, the rate limit is the protection.
+    //
+    // 5/hour matches `contact` (lib/api/rateLimitGuard.ts users), the closest analogue —
+    // a public form that writes a contact record. Generous for a human (you subscribe
+    // once) and fatal to a bot, which needs thousands. Counted per IP, so a shared office
+    // or carrier-NAT address shares the budget; that is the accepted trade every other
+    // public form here already makes.
+    const limited = await rateLimitOr429(req, "subscribe", 5, 3600);
+    if (limited) return limited;
+
     const json = await req.json();
     const parsed = Body.safeParse(json);
     if (!parsed.success) {

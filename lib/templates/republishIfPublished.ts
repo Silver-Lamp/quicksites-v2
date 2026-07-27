@@ -18,6 +18,49 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
+/**
+ * Did this template have edits that were never published, BEFORE we touched it?
+ *
+ * This has to be asked *before* the commit, because the commit itself moves `updated_at`
+ * past the last publish and would make every site look dirty.
+ *
+ * Why it matters: `publish_template_demo` snapshots the CURRENT draft. Republishing a site
+ * whose owner has unpublished work in progress would shove that work live as a side effect
+ * of a cosmetic backdrop change — the fleet-upgrade version of that is 80 owners' drafts
+ * published at once. When in doubt we skip the republish: the backdrop still lands on the
+ * draft and appears the next time they publish deliberately.
+ *
+ * Returns `true` (i.e. assume dirty, skip republish) on any error — the safe direction.
+ */
+export async function hasUnpublishedDraftChanges(
+  templateId: string,
+  updatedAt: string | null | undefined,
+): Promise<boolean> {
+  if (!updatedAt) return true;
+  try {
+    const vers = await supabaseAdmin
+      .from('template_versions')
+      .select('id')
+      .eq('template_id', templateId);
+    const ids = (vers.data ?? []).map((v: any) => v.id);
+    if (!ids.length) return true; // never snapshotted → nothing safely republishable
+
+    const pub = await supabaseAdmin
+      .from('published_sites')
+      .select('published_at')
+      .in('snapshot_id', ids)
+      .order('published_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const publishedAt = (pub.data as any)?.published_at;
+    if (!publishedAt) return true;
+    return new Date(updatedAt).getTime() > new Date(publishedAt).getTime();
+  } catch {
+    return true;
+  }
+}
+
 export type RepublishResult = {
   /** True only when a republish actually ran AND succeeded. */
   republished: boolean;

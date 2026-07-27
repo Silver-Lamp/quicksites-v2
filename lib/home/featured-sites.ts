@@ -12,5 +12,7 @@ export const FEATURED_SITE_SLUGS: string[] = [
   'graftontowing',
   'southhilltowing',
   'florencetow',
-  'deliveredmenu',
+  // 'deliveredmenu' removed 2026-07-27: it was `published=true` with NO published snapshot,
+  // so its showcase card linked to a page that rendered the marketing homepage instead of a
+  // site. Unpublished at the same time. Re-add only if it is genuinely published.
 ];

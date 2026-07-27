@@ -75,6 +75,15 @@ export async function getShowcaseData(): Promise<ShowcaseData> {
         .eq('is_site', true)
         .eq('published', true)
         .eq('archived', false)
+        // ⚠️ LATENT TRAP, left in place deliberately (2026-07-27). `is_version` does NOT
+        // reliably mean "version snapshot" — a fresh create gets is_version=true, and 50 of
+        // 66 published sites currently carry it. So this filter silently drops most of the
+        // fleet. It is harmless TODAY only because every curated slug in featured-sites.ts
+        // happens to be is_version=false; curate one that isn't and it vanishes with no
+        // error. Not changed here because the homepage is high-stakes and nothing is
+        // currently broken — but app/delivered/page.tsx had the identical filter and it
+        // reduced the public restaurant directory to a single placeholder. Fix both
+        // together when someone has a reason to touch this query.
         .eq('is_version', false);
       data = res.data;
       error = res.error;

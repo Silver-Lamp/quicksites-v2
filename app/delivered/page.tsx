@@ -85,7 +85,17 @@ export default async function DeliveredDirectoryPage() {
     .eq('is_site', true)
     .eq('published', true)
     .eq('archived', false)
-    .eq('is_version', false)
+    // NO is_version filter — deliberately. `is_version` does NOT reliably mean "this row is
+    // a version snapshot": a fresh create gets is_version=true (the admin templates page
+    // carries the same note and works around it with a fallback query). Measured on the
+    // live fleet: 50 of 66 published sites have is_version=true, so filtering on false
+    // excluded 76% of real sites — including every genuine restaurant. The public directory
+    // ended up advertising exactly one listing, a placeholder demo, because it was the only
+    // row that happened to pass.
+    //
+    // Safe to drop: verified zero duplicate slugs across published+non-archived sites, so
+    // this cannot surface the same restaurant twice. `is_site && published && !archived` is
+    // what actually identifies a live site.
     .order('updated_at', { ascending: false })
     .limit(120);
 

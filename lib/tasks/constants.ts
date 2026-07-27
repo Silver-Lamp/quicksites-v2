@@ -1,6 +1,10 @@
 // lib/tasks/constants.ts — shared vocabulary for the admin task tracker.
 
-export const TASK_STATUSES = ['open', 'in_progress', 'blocked', 'done', 'cancelled'] as const;
+// 'triage' = a machine-reported CLAIM awaiting human confirmation (an AI-persona finding —
+// crosstalk/contracts/persona-testing.md). Deliberately distinct from 'open', which reads as
+// confirmed work: one bad browse session filing 20 unverified items into the real queue is
+// how the queue stops being trusted. Backed by the DB CHECK (migration 20260808).
+export const TASK_STATUSES = ['triage', 'open', 'in_progress', 'blocked', 'done', 'cancelled'] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 export const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
@@ -21,6 +25,7 @@ export type AdminTask = {
 };
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
+  triage: 'Triage (unconfirmed)',
   open: 'Open',
   in_progress: 'In progress',
   blocked: 'Blocked',
@@ -40,8 +45,11 @@ export const STATUS_ORDER: Record<TaskStatus, number> = {
   in_progress: 0,
   blocked: 1,
   open: 2,
-  done: 3,
-  cancelled: 4,
+  // Below confirmed work on purpose: triage items are unverified claims, so they must not
+  // push real work down the board. Visible, but never competing for attention with it.
+  triage: 3,
+  done: 4,
+  cancelled: 5,
 };
 
 export const PRIORITY_ORDER: Record<TaskPriority, number> = {

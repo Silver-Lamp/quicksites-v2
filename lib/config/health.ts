@@ -163,6 +163,20 @@ export const CONFIG_GATES: ConfigGate[] = [
       'delivered.menu traffic is ignored — <slug>.delivered.menu and delivered.menu/<slug> stop resolving to restaurant sites. NOTE: this is a NEXT_PUBLIC_ var, so changing it requires a REBUILD, not just a redeploy of the same build.',
   },
   {
+    key: 'persona_findings',
+    label: 'Persona-testing receiver (HiveJournal)',
+    // Keyed on the secret's PRESENCE, requiring nothing else — so it reports `off` when the
+    // secret hasn't been issued yet and `ready` once it has, but can never report
+    // `incomplete`. Gating it the other way (requires: [SECRET]) would cry wolf on every
+    // deploy until the secret exists, which is the hear_this_page mistake repeated.
+    enabledBy: 'PERSONA_FINDINGS_SECRET',
+    enabledWhen: (raw) => !!(raw && raw.trim()),
+    requires: [],
+    degradeOnly: true,
+    breaks:
+      'POST /api/persona-findings returns 503, so HiveJournal cannot file persona test findings. HJ degrades gracefully (logs the report), so nothing breaks on either side — the findings are simply not recorded.',
+  },
+  {
     key: 'hear_this_page',
     label: 'Hear this page (billed TTS)',
     enabledBy: 'NEXT_PUBLIC_HEAR_THIS_PAGE_ENABLED',

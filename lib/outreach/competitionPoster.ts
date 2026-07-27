@@ -9,6 +9,12 @@
 import QRCode from 'qrcode';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
+import {
+  backdropLayerStyle,
+  defaultBackdropFor,
+  PRINT_COLORS,
+  type BackdropStyle,
+} from '@/lib/theme/backdrops';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import type { Prospect } from '@/lib/outreach/prospects';
 import { getSenderProfile, type SenderProfile } from '@/lib/outreach/senderProfile';
@@ -62,6 +68,9 @@ export type PostcardSender = {
 export type PosterModel = {
   domain: string;
   industryLabel: string;
+  /** Canonical key (not just the label) so the front can pick an industry-appropriate
+   *  backdrop — see posterBackdropCss below. */
+  industryKey?: IndustryKey | null;
   city: string;
   region: string | null;
   businesses: string[];
@@ -255,6 +264,7 @@ export async function buildPosterModel(
   return {
     domain: campaign.domain,
     industryLabel: KEY_TO_LABEL[industry] ?? 'Local Services',
+    industryKey: industry,
     city: campaign.city,
     region: campaign.region,
     businesses: prospects.map((p) => p.business_name),
@@ -298,6 +308,52 @@ function esc(s: string): string {
  * Inline styles only (no external assets) so it renders identically in the admin print
  * view AND when handed to Lob as postcard front HTML.
  */
+/**
+ * Backdrop CSS for the postcard front.
+ *
+ * The front already carried a hand-rolled `radial-gradient` — this replaces that one-off
+ * with the shared backdrop recipes (lib/theme/backdrops.ts), so an outreach piece gets the
+ * same industry-appropriate texture as the site it's pitching: a blueprint grid behind a
+ * trades card, ruled columns behind a professional one.
+ *
+ * Two deliberate constraints:
+ *  - **Additive, never a replacement.** The pattern layers OVER the existing brand
+ *    gradient, which stays as the base. A postcard that already looks right must not get
+ *    worse because a recipe changed.
+ *  - **Print-safe subset.** Lob rasterises this HTML, and the more exotic recipes
+ *    (`topo`'s repeating-radial rings, `circuit`'s multi-scale traces) are the ones most
+ *    likely to render differently in a PDF engine than in Chrome. Anything not on the
+ *    list falls back to `wash`, which is one radial gradient and cannot surprise us.
+ *    Widen this only after seeing a real printed proof, not a browser screenshot.
+ *
+ * Costs nothing: pure CSS, no image, no generation. (Painterly on a postcard is a separate
+ * question — full-bleed 6x9 needs a portrait source; the landscape pool images crop to
+ * ~114dpi, which is visibly soft on paper.)
+ */
+const PRINT_SAFE: ReadonlySet<BackdropStyle> = new Set<BackdropStyle>([
+  'wash', 'mesh', 'aurora', 'grid', 'dots', 'paper', 'ledger',
+]);
+
+/** The existing brand gradient — the base layer the pattern sits on. */
+const POSTER_BASE_GRADIENT = 'radial-gradient(120% 80% at 50% 0%, #16233f 0%, #0b1020 60%)';
+
+export function posterBackdropCss(industryKey?: IndustryKey | null): {
+  backgroundImage: string;
+  backgroundSize: string;
+} {
+  const picked = defaultBackdropFor(industryKey ?? null);
+  const style: BackdropStyle = PRINT_SAFE.has(picked.style) ? picked.style : 'wash';
+  // Softer than on screen: ink on paper reads heavier than pixels on a dark display, and
+  // this sits under headline text that has to stay crisp at arm's length.
+  const layer = backdropLayerStyle({ style, intensity: 34 }, PRINT_COLORS);
+  const img = layer?.backgroundImage ? String(layer.backgroundImage) : '';
+  return {
+    backgroundImage: img ? `${img}, ${POSTER_BASE_GRADIENT}` : POSTER_BASE_GRADIENT,
+    // Sizes line up 1:1 with the layers above; the base gradient always covers.
+    backgroundSize: layer?.backgroundSize ? `${String(layer.backgroundSize)}, 100% 100%` : '100% 100%',
+  };
+}
+
 export function renderPosterHtml(m: PosterModel): string {
   const place = m.region ? `${m.city}, ${m.region}` : m.city;
   const norm = (s: string) => s.trim().toLowerCase();
@@ -325,6 +381,7 @@ export function renderPosterHtml(m: PosterModel): string {
   const scanLabel = m.restaurantComp
     ? 'Scan to preview &amp; claim your free ordering site'
     : 'Scan to preview &amp; claim your free site';
+  const bd = posterBackdropCss(m.industryKey);
 
   return `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -333,7 +390,9 @@ export function renderPosterHtml(m: PosterModel): string {
   html,body { background:#0b1020; }
   .poster {
     width: 6in; height: 9in; margin: 0 auto; padding: 0.5in 0.55in;
-    background: radial-gradient(120% 80% at 50% 0%, #16233f 0%, #0b1020 60%);
+    background-color: #0b1020;
+    background-image: ${bd.backgroundImage};
+    background-size: ${bd.backgroundSize};
     color: #f8fafc; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
     display: flex; flex-direction: column; text-align: center;
   }

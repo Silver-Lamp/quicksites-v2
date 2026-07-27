@@ -16,6 +16,7 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
 import { defaultBackdropFor, readBackdrop, type SiteBackdrop } from '@/lib/theme/backdrops';
+import { hasUnpublishedDraftChanges, republishIfPublished } from '@/lib/templates/republishIfPublished';
 
 /** Bump to re-offer the upgrade on sites already carrying an `auto` backdrop. */
 export const BACKDROP_STANDARDS_VERSION = 1;
@@ -24,6 +25,9 @@ export type BackdropUpgradeResult = {
   changed: boolean;
   reason?: string;
   style?: string;
+  /** True when the live (published) site was refreshed too — see republishIfPublished. */
+  republished?: boolean;
+  warning?: string;
 };
 
 /**
@@ -40,7 +44,7 @@ export async function applyBackdropUpgrade(
 ): Promise<BackdropUpgradeResult> {
   const { data: tpl, error } = await supabaseAdmin
     .from('templates')
-    .select('id, rev, industry, data')
+    .select('id, rev, industry, published, updated_at, data')
     .eq('id', templateId)
     .maybeSingle();
 
@@ -78,8 +82,18 @@ export async function applyBackdropUpgrade(
     },
   };
 
+  // Ask BEFORE committing — the commit moves updated_at and would make every site look
+  // dirty. A site with unpublished work in progress keeps the backdrop on its draft only;
+  // we will not push someone's half-finished edits live for a cosmetic change.
+  const dirty = await hasUnpublishedDraftChanges(templateId, (tpl as any).updated_at);
+
   const err = await commitTemplatePatch(templateId, (tpl as any).rev ?? 0, patch, actorId);
   if (err) return { changed: false, reason: 'commit_failed', style: next.style };
 
-  return { changed: true, style: next.style };
+  // Published sites render a snapshot, so a commit alone leaves the live page unchanged.
+  const pub = dirty
+    ? { republished: false, warning: 'Applied to the draft only — this site has unpublished changes, so it was not republished.' }
+    : await republishIfPublished(templateId, (tpl as any).published);
+
+  return { changed: true, style: next.style, ...pub };
 }

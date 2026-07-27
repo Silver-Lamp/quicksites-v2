@@ -16,6 +16,9 @@ const NAV: Array<{ label: string; href: string }> = [
   { label: 'Partners', href: '/partners' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Compare', href: '/compare' },
+  // The roundup targets the shopping query ("best website builder 2026") that /compare
+  // doesn't rank for; a footer link on every marketing page is how it gets crawled.
+  { label: 'Best builders 2026', href: '/best-website-builders-2026' },
   { label: 'Contact', href: '/contact' },
 ];
 

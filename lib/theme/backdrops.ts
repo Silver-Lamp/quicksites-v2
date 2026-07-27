@@ -154,6 +154,24 @@ function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
 }
 
+/** Colour tokens a recipe is bound to. Each is an HSL triple ("H S% L%") — a CSS custom
+ *  property that holds one on screen, or a literal for contexts with no cascade (print). */
+export type BackdropColors = { accent: string; ink: string };
+
+/** On a site the theme wrapper has already scoped these, so a backdrop tracks the accent
+ *  and light/dark without knowing either. */
+export const SCREEN_COLORS: BackdropColors = {
+  accent: 'var(--primary)',
+  ink: 'var(--foreground)',
+};
+
+/** Print/standalone HTML (outreach postcards): no cascade and no CSS vars, so the brand
+ *  palette is bound literally. emerald-400 #34d399 / slate-50 #f8fafc. */
+export const PRINT_COLORS: BackdropColors = {
+  accent: '160 84% 52%',
+  ink: '210 40% 98%',
+};
+
 /**
  * CSS for the backdrop layer. Returns null when there is nothing to paint — the caller
  * then renders no layer at all and the site looks exactly as it does today (rule 7).
@@ -162,12 +180,18 @@ function clamp(n: number, lo: number, hi: number) {
  * has already scoped, so a backdrop tracks the site's accent and its light/dark mode
  * without knowing either. `a` scales every alpha from the 0–100 intensity.
  */
-export function backdropLayerStyle(b: SiteBackdrop | null): CSSProperties | null {
+export function backdropLayerStyle(
+  b: SiteBackdrop | null,
+  colors: BackdropColors = SCREEN_COLORS,
+): CSSProperties | null {
   if (!b || b.style === 'none') return null;
   const t = clamp(b.intensity ?? 50, 0, 100) / 100;
   if (t <= 0) return null;
   const a = (base: number) => +(base * t).toFixed(3);
-  const P = 'var(--primary)';
+  const P = colors.accent;
+  // Every recipe below writes `hsl(<token> / <alpha>)`, so a token is an HSL triple —
+  // either a CSS var that holds one (screen) or a literal "H S% L%" (print).
+  const FG = colors.ink;
 
   switch (b.style) {
     case 'wash':
@@ -201,8 +225,8 @@ export function backdropLayerStyle(b: SiteBackdrop | null): CSSProperties | null
       // Lines in the foreground token so the grid reads on light AND dark without a swap.
       return {
         backgroundImage: [
-          `linear-gradient(hsl(var(--foreground) / ${a(0.07)}) 1px, transparent 1px)`,
-          `linear-gradient(90deg, hsl(var(--foreground) / ${a(0.07)}) 1px, transparent 1px)`,
+          `linear-gradient(hsl(${FG} / ${a(0.07)}) 1px, transparent 1px)`,
+          `linear-gradient(90deg, hsl(${FG} / ${a(0.07)}) 1px, transparent 1px)`,
           `radial-gradient(ellipse 70% 50% at 50% 0%, hsl(${P} / ${a(0.16)}) 0%, transparent 70%)`,
         ].join(', '),
         backgroundSize: '48px 48px, 48px 48px, 100% 100%',
@@ -211,7 +235,7 @@ export function backdropLayerStyle(b: SiteBackdrop | null): CSSProperties | null
     case 'dots':
       return {
         backgroundImage: [
-          `radial-gradient(hsl(var(--foreground) / ${a(0.10)}) 1px, transparent 1px)`,
+          `radial-gradient(hsl(${FG} / ${a(0.10)}) 1px, transparent 1px)`,
           `radial-gradient(ellipse 70% 50% at 50% 0%, hsl(${P} / ${a(0.14)}) 0%, transparent 70%)`,
         ].join(', '),
         backgroundSize: '22px 22px, 100% 100%',
@@ -223,7 +247,7 @@ export function backdropLayerStyle(b: SiteBackdrop | null): CSSProperties | null
       return {
         backgroundImage: [
           `repeating-radial-gradient(circle at 18% 22%, transparent 0 26px, ${line} 26px 27px)`,
-          `repeating-radial-gradient(circle at 82% 78%, transparent 0 34px, hsl(var(--foreground) / ${a(0.05)}) 34px 35px)`,
+          `repeating-radial-gradient(circle at 82% 78%, transparent 0 34px, hsl(${FG} / ${a(0.05)}) 34px 35px)`,
           `radial-gradient(ellipse 80% 55% at 50% 0%, hsl(${P} / ${a(0.14)}) 0%, transparent 72%)`,
         ].join(', '),
       };
@@ -246,11 +270,11 @@ export function backdropLayerStyle(b: SiteBackdrop | null): CSSProperties | null
 
     case 'ledger': {
       // Vertical rules with a heavier one every fourth column — quiet and corporate.
-      const rule = `hsl(var(--foreground) / ${a(0.055)})`;
+      const rule = `hsl(${FG} / ${a(0.055)})`;
       return {
         backgroundImage: [
           `repeating-linear-gradient(90deg, ${rule} 0 1px, transparent 1px 72px)`,
-          `repeating-linear-gradient(90deg, hsl(var(--foreground) / ${a(0.03)}) 0 1px, transparent 1px 18px)`,
+          `repeating-linear-gradient(90deg, hsl(${FG} / ${a(0.03)}) 0 1px, transparent 1px 18px)`,
           `linear-gradient(180deg, hsl(${P} / ${a(0.10)}) 0%, transparent 42%)`,
         ].join(', '),
       };
@@ -259,9 +283,9 @@ export function backdropLayerStyle(b: SiteBackdrop | null): CSSProperties | null
     case 'paper':
       return {
         backgroundImage: [
-          `radial-gradient(ellipse 100% 60% at 50% 0%, hsl(var(--foreground) / ${a(0.05)}) 0%, transparent 70%)`,
+          `radial-gradient(ellipse 100% 60% at 50% 0%, hsl(${FG} / ${a(0.05)}) 0%, transparent 70%)`,
           `linear-gradient(180deg, hsl(${P} / ${a(0.08)}) 0%, transparent 38%)`,
-          `repeating-linear-gradient(90deg, hsl(var(--foreground) / ${a(0.022)}) 0px, hsl(var(--foreground) / ${a(0.022)}) 1px, transparent 1px, transparent 3px)`,
+          `repeating-linear-gradient(90deg, hsl(${FG} / ${a(0.022)}) 0px, hsl(${FG} / ${a(0.022)}) 1px, transparent 1px, transparent 3px)`,
         ].join(', '),
       };
 

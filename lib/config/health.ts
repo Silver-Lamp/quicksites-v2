@@ -36,7 +36,18 @@ export type ConfigGate = {
   enabledBy?: string;
   /** Values of `enabledBy` that count as ON. Default: '1' | 'true' (case-insensitive). */
   enabledWhen?: (raw: string | undefined) => boolean;
-  /** Keys that MUST be set for the feature to actually work. */
+  /**
+   * Keys that MUST be set for the feature to actually work.
+   *
+   * ⚠️ NEVER list a key that has a code default (`process.env.X || 'fallback'`). The feature
+   * works without it, so the gate would report `incomplete` on a correctly-configured
+   * deploy — a false CRITICAL. A check that cries wolf trains people to ignore it, which is
+   * worse than no check at all. This exact mistake shipped here on the first production run
+   * (NEXT_PUBLIC_HEAR_THIS_PAGE_EMBED_ID, which falls back to the house embed), and it's the
+   * same failure PorchHearth hit with a STRIPE_WEBHOOK_SECRET declared for a service that
+   * never read it. Rule 7a's inverse check cannot catch this one — the key IS read, just
+   * with a fallback — so it needs a human eye at declaration time.
+   */
   requires: string[];
   /** Any-of groups: at least one key in each group must be set (aliases, fallbacks). */
   requiresAnyOf?: string[][];
@@ -155,7 +166,12 @@ export const CONFIG_GATES: ConfigGate[] = [
     key: 'hear_this_page',
     label: 'Hear this page (billed TTS)',
     enabledBy: 'NEXT_PUBLIC_HEAR_THIS_PAGE_ENABLED',
-    requires: ['NEXT_PUBLIC_HEAR_THIS_PAGE_EMBED_ID'],
+    // NOT requiring NEXT_PUBLIC_HEAR_THIS_PAGE_EMBED_ID: lib/hearThisPage/config.ts falls
+    // back to the baked-in house embed, so the var is genuinely optional. Requiring it made
+    // this gate report `incomplete` on a correctly-configured production deploy — a FALSE
+    // CRITICAL on the check's very first live run. See the rule in the ConfigGate docblock:
+    // never require a key that has a code default.
+    requires: [],
     degradeOnly: true,
     breaks: 'The listen launcher does not render on public pages. No TTS is billed.',
   },

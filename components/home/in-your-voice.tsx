@@ -28,7 +28,8 @@ const HOMEPAGE_URL = 'https://www.quicksites.ai/';
 
 export default function InYourVoice() {
   return (
-    <section className="relative z-10 w-full overflow-hidden border-t border-zinc-800/70 bg-gradient-to-b from-fuchsia-950/25 to-transparent">
+    // id is a deep-link target: the /features card links here with "See it live".
+    <section id="in-your-voice" className="relative z-10 w-full overflow-hidden border-t border-zinc-800/70 bg-gradient-to-b from-fuchsia-950/25 to-transparent">
       <SectionBackdrop image="bokeh" />
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-16 md:grid-cols-2">
         {/* Copy */}

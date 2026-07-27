@@ -21,6 +21,7 @@ import MenuClaimBar from '@/components/sites/menu-claim-bar';
 import DemandCapture from '@/components/sites/demand-capture';
 import CompetitionBanner from '@/components/sites/competition-banner';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
+import AdminEditPill from '@/components/sites/admin-edit-pill';
 import { getSiteCompetition } from '@/lib/outreach/competitionForSite';
 import { MENU_DEMAND_CAPTURE_ENABLED, MENU_DRAFT_INDEXABLE } from '@/lib/flags/menuDemand';
 import { getDemandCount } from '@/lib/menu/demand';
@@ -374,11 +375,14 @@ export async function generateMetadata({
 /* ---------------------- Page ---------------------- */
 export default async function SitePreviewPage({
   params,
+  searchParams,
 }: {
   // ✅ Next 15: params is async for dynamic routes
   params: Promise<{ slug: string; rest?: string[] }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug, rest } = await params;
+  const sp = (await searchParams) ?? {};
 
   // Special routes served directly
   if (Array.isArray(rest)) {
@@ -516,6 +520,14 @@ export default async function SitePreviewPage({
           demandCount={demandCount}
         />
       )}
+      {/* Operator jump-to-editor. `admin` only ever fires on the canonical host (auth
+          cookies are host-only), so ?edit=1 is the universal trigger everywhere else. */}
+      <AdminEditPill
+        slug={slug}
+        host={siteRow.domain ?? null}
+        admin={admin}
+        editParam={sp.edit === '1' || sp.edit === 'true'}
+      />
     </TemplateEditorProvider>
   );
 }

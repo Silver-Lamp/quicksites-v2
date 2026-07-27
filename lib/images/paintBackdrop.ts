@@ -24,6 +24,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
 import { NO_PEOPLE_CLAUSE } from '@/lib/images/noPeople';
 import { readBackdrop, type SiteBackdrop } from '@/lib/theme/backdrops';
+import { republishIfPublished } from '@/lib/templates/republishIfPublished';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
 const ROUTE = 'lib/images/paintBackdrop';
@@ -90,6 +91,9 @@ export type PaintBackdropResult = {
   reason?: string;
   url?: string;
   style?: string;
+  /** True when the live (published) site was refreshed too — see republishIfPublished. */
+  republished?: boolean;
+  warning?: string;
 };
 
 /**
@@ -104,7 +108,7 @@ export async function paintSiteBackdrop(
 ): Promise<PaintBackdropResult> {
   const { data: tpl, error } = await supabaseAdmin
     .from('templates')
-    .select('id, rev, industry, data')
+    .select('id, rev, industry, published, data')
     .eq('id', templateId)
     .maybeSingle();
 
@@ -175,5 +179,9 @@ export async function paintSiteBackdrop(
   );
   if (commitErr) return { changed: false, reason: 'commit_failed' };
 
-  return { changed: true, url, style: 'painterly' };
+  // A published site serves a SNAPSHOT, not templates.data — without this the paint is
+  // invisible on the live page. Guarded: never takes an unpublished draft live.
+  const republish = await republishIfPublished(templateId, (tpl as any).published);
+
+  return { changed: true, url, style: 'painterly', ...republish };
 }

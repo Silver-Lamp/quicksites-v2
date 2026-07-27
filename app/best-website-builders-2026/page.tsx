@@ -17,6 +17,7 @@
 
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
+import PageBackdrop from '@/components/site/page-backdrop';
 import SiteFooter from '@/components/site/site-footer';
 import { marketingOg } from '@/lib/marketingOg';
 import { COMPETITORS, PRICES_VERIFIED, competitorBySlug } from '@/lib/compare/competitors';
@@ -126,7 +127,8 @@ export default function BestWebsiteBuilders2026Page() {
   return (
     <>
       <SiteHeader sticky />
-      <main className="min-h-screen bg-zinc-950 text-white">
+      <main className="relative min-h-screen bg-zinc-950 text-white">
+      <PageBackdrop style="paper" />
         {/* Hero */}
         <section className="mx-auto max-w-4xl px-5 pt-16 pb-10 sm:px-8 sm:pt-24">
           <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.3em] text-emerald-400/70">

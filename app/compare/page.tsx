@@ -9,6 +9,7 @@
 // page states what they do better, which is what keeps the wedge credible.
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
+import PageBackdrop from '@/components/site/page-backdrop';
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE } from '@/lib/commerce/partner-terms';
 import { marketingOg } from '@/lib/marketingOg';
 import { COMPETITORS, PRICES_VERIFIED } from '@/lib/compare/competitors';
@@ -37,7 +38,8 @@ export default function CompareHubPage() {
   return (
     <>
       <SiteHeader sticky />
-      <main className="min-h-screen bg-zinc-950 text-white">
+      <main className="relative min-h-screen bg-zinc-950 text-white">
+      <PageBackdrop style="topo" />
         {/* Hero */}
         <section className="mx-auto max-w-4xl px-6 pt-14 pb-8 text-center">
           <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">

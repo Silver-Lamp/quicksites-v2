@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SiteHeader from '@/components/site/site-header';
+import PageBackdrop from '@/components/site/page-backdrop';
 import SiteFooter from '@/components/site/site-footer';
 
 /**
@@ -399,6 +400,7 @@ export default function PricingPage() {
     <>
       <SiteHeader sticky />
       <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
+      <PageBackdrop style="mesh" />
         {/* hero */}
         <section className="relative overflow-hidden">
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">

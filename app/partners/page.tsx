@@ -3,6 +3,7 @@
 // no invented pricing — partner terms are a "talk to us" conversation.
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
+import PageBackdrop from '@/components/site/page-backdrop';
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE, QS_FEE_SHARE, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
 import { marketingOg } from '@/lib/marketingOg';
 
@@ -44,6 +45,7 @@ export default function PartnersPage() {
     <>
       <SiteHeader sticky />
       <div className="relative min-h-screen bg-zinc-950 text-white">
+      <PageBackdrop style="mesh" />
         {/* Hero */}
         <section className="relative mx-auto max-w-5xl px-6 pt-16 pb-12 text-center">
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">

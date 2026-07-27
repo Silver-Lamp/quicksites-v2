@@ -27,4 +27,22 @@ export async function register() {
   if (!ok) {
     console.warn('[env] server environment incomplete:\n' + problems.map((p) => '  - ' + p).join('\n'));
   }
+
+  // Rule 7 of the adopted config standard (crosstalk/contracts/config-registry.md): report
+  // any feature that is ENABLED but incompletely configured. validateServerEnv above only
+  // covers the three boot-critical Supabase vars — it cannot catch a flag flipped on with a
+  // required key missing, which is the failure that actually keeps happening here (partner
+  // audio inert five days on 1 of 3 vars; a captcha silently off on a name mismatch).
+  //
+  // Non-throwing on purpose: a boot loop is a worse outage than the thing being reported.
+  try {
+    const { configHealth, bootReportLines } = await import('@/lib/config/health');
+    const health = configHealth();
+    const lines = bootReportLines(health).join('\n');
+    if (health.ok) console.log(lines);
+    else console.warn(lines);
+  } catch (e: any) {
+    // The check failing must never be worse than not having it.
+    console.warn('[config] health check could not run:', e?.message ?? e);
+  }
 }

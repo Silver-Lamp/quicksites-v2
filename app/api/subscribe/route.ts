@@ -14,9 +14,15 @@ const Body = z.object({
 });
 
 async function verifyRecaptcha(token?: string) {
-  if (!token || !process.env.RECAPTCHA_SECRET) return true;
+  // The env var is RECAPTCHA_SECRET_KEY — this read said RECAPTCHA_SECRET, so it was always
+  // undefined and the guard below always returned true. Captcha has been silently off here.
+  // Renaming changes no behaviour today (no caller sends a token, so `!token` short-circuits
+  // anyway); it means verification actually runs if one ever does. Whether this should fail
+  // CLOSED when the secret is configured is a separate behaviour decision — failing closed
+  // now would reject both existing callers. Rate-limiting this route is the unambiguous fix.
+  if (!token || !process.env.RECAPTCHA_SECRET_KEY) return true;
   const params = new URLSearchParams({
-    secret: process.env.RECAPTCHA_SECRET,
+    secret: process.env.RECAPTCHA_SECRET_KEY,
     response: token,
   });
   const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {

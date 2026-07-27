@@ -14,6 +14,9 @@ import {
 } from '@/lib/tasks/constants';
 
 const STATUS_STYLE: Record<TaskStatus, string> = {
+  // Visually distinct from every real-work status: an unconfirmed machine claim should not
+  // look like something a human has already agreed is worth doing.
+  triage: 'text-fuchsia-300 bg-fuchsia-500/10 border-fuchsia-500/30',
   open: 'text-amber-300 bg-amber-500/10 border-amber-500/30',
   in_progress: 'text-sky-300 bg-sky-500/10 border-sky-500/30',
   blocked: 'text-red-300 bg-red-500/10 border-red-500/30',

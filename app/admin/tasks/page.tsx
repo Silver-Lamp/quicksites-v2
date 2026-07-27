@@ -25,7 +25,7 @@ export default async function AdminTasksPage() {
 
   const counts = tasks.reduce<Record<TaskStatus, number>>(
     (acc, t) => ((acc[t.status] = (acc[t.status] ?? 0) + 1), acc),
-    { open: 0, in_progress: 0, blocked: 0, done: 0, cancelled: 0 },
+    { triage: 0, open: 0, in_progress: 0, blocked: 0, done: 0, cancelled: 0 },
   );
 
   return (
@@ -41,6 +41,11 @@ export default async function AdminTasksPage() {
         {counts.in_progress ? <span className="text-sky-300">{counts.in_progress} in progress</span> : null}
         {counts.blocked ? <span className="text-red-300">{counts.blocked} blocked</span> : null}
         {counts.open ? <span className="text-amber-300">{counts.open} open</span> : null}
+        {counts.triage ? (
+          <span className="text-fuchsia-300" title="Machine-reported claims awaiting human confirmation — not confirmed work">
+            {counts.triage} in triage
+          </span>
+        ) : null}
         {counts.done ? <span className="text-emerald-300">{counts.done} done</span> : null}
         {counts.cancelled ? <span className="text-neutral-500">{counts.cancelled} cancelled</span> : null}
       </div>

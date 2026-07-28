@@ -8,6 +8,7 @@ import TemplatesListClient from '@/components/admin/templates/TemplatesListClien
 import RefreshTemplatesButton from '@/components/admin/templates/RefreshTemplatesButton';
 import GenerateDemosButton from '@/components/admin/templates/generate-demos-button';
 import SeedStartersButton from '@/components/admin/templates/seed-starters-button';
+import PersonaTestingPromo from '@/components/promo/persona-testing-promo';
 
 type SearchParams = { date?: string; versions?: string };
 
@@ -58,6 +59,15 @@ export default async function TemplatesIndexPage({ searchParams }: { searchParam
       <GenerateDemosButton />
       <SeedStartersButton />
       </div>
+
+      {/* Persistent cross-promo. Lives here rather than on /admin/dashboard because that
+          route is the legacy domains table — this list is where site owners actually
+          manage their sites, so it reaches owners whose sites are already published (the
+          publish-success panel only catches new publishes). */}
+      <div className="mb-6 max-w-md">
+        <PersonaTestingPromo variant="card" />
+      </div>
+
       <TemplatesListClient
         initialRows={initialRows}
         initialOffset={initialOffset}

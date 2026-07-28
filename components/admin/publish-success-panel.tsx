@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui';
 import QRCode from 'react-qr-code';
 import QRCodeLib from 'qrcode';
+import PersonaTestingPromo from '@/components/promo/persona-testing-promo';
 
 export function PublishSuccessPanel({ slug, url }: { slug: string; url: string }) {
   return (
@@ -29,6 +30,12 @@ export function PublishSuccessPanel({ slug, url }: { slug: string; url: string }
         >
           Download QR Code
         </Button>
+      </div>
+
+      {/* The highest-intent moment we have: they just shipped a site and don't yet know
+          whether a stranger can use it. Copy + link live in the component, never here. */}
+      <div className="pt-4">
+        <PersonaTestingPromo variant="panel" />
       </div>
     </div>
   );

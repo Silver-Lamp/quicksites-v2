@@ -14,6 +14,7 @@ import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE } from '@/lib/commerce/part
 import { marketingOg } from '@/lib/marketingOg';
 import { COMPETITORS, PRICES_VERIFIED } from '@/lib/compare/competitors';
 import SiteFooter from '@/components/site/site-footer';
+import PersonaTestingPromo from '@/components/promo/persona-testing-promo';
 
 const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
 const keepPct = Math.round(PARTNER_FEE_SHARE * 100);
@@ -99,6 +100,16 @@ export default function CompareHubPage() {
               Build my site — free
             </Link>
           </div>
+          {/* Related — a sibling product, not a QuickSites feature. Sits on /compare
+              because someone weighing builders is also weighing whether their current
+              site actually works. */}
+          <div className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Related</p>
+            <div className="mt-2">
+              <PersonaTestingPromo variant="inline" />
+            </div>
+          </div>
+
           <p className="mt-6 text-center text-xs text-zinc-600">
             Competitor pricing is public pricing as of {PRICES_VERIFIED} and changes over time — each comparison links its sources.
           </p>

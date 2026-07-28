@@ -46,7 +46,14 @@ export default function PersonaTestingPromo({ variant = 'card' }: { variant?: Va
   if (variant === 'inline') {
     return (
       <div className="text-sm">
-        <p className="text-zinc-400">
+        {/* The eyebrow renders on EVERY variant. It was originally omitted here for
+            visual quietness, which left the marketing surface naming HiveJournal only
+            in the link text — weaker attribution than the in-product surfaces, on the
+            one surface a stranger sees first. Partner attribution is not chrome. */}
+        <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+          {c.eyebrow}
+        </p>
+        <p className="mt-1 text-zinc-400">
           <span className="font-medium text-zinc-200">{c.headline}.</span> {c.body}{' '}
           <span className="text-zinc-500">
             {c.disclosure} {c.price}

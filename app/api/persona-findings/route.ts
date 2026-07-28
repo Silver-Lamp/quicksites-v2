@@ -45,7 +45,17 @@ type Issue = {
   detail?: string;
   url?: string;
   severity?: 'low' | 'med' | 'high';
+  // How the persona came by this issue (HJ #1660). `encountered` = friction it hit directly;
+  // `searched_not_found` = an ABSENCE it looked for and didn't find. The second is weaker
+  // evidence — "I couldn't find X" is indistinguishable from "I didn't look" — so we label it
+  // in the record rather than letting both read identically to whoever triages it.
+  evidence?: 'encountered' | 'searched_not_found';
 };
+
+/** Render the evidence class, but only when it's the weak one — noise otherwise. */
+function evidenceTag(e: Issue['evidence']): string {
+  return e === 'searched_not_found' ? ' _(searched for, not found)_' : '';
+}
 
 /** Constant-time compare so the secret can't be recovered by timing the response. */
 function secretOk(provided: string | null): boolean {
@@ -127,7 +137,7 @@ export async function POST(req: Request) {
           `**Issues reported (${issues.length})**`,
           ...issues.map(
             (i) =>
-              `- [${i.severity ?? 'low'}] ${i.kind ?? 'other'} — ${i.detail ?? '(no detail)'}` +
+              `- [${i.severity ?? 'low'}] ${i.kind ?? 'other'}${evidenceTag(i.evidence)} — ${i.detail ?? '(no detail)'}` +
               (i.url && i.url !== url ? ` (${i.url})` : ''),
           ),
         ]

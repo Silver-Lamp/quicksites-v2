@@ -19,8 +19,27 @@ import GuestStart from '@/components/home/guest-start';
 import HomeColorLab from '@/components/home/home-color-lab';
 import SectionBackdrop from '@/components/home/section-backdrop';
 import InYourVoice from '@/components/home/in-your-voice';
+import { INDUSTRIES } from '@/lib/industries';
 
 const isProd = process.env.NODE_ENV === 'production';
+
+// A sample of the industry starters, shown as pills. The COUNT is derived from
+// INDUSTRIES (never hard-coded) so adding an industry can't leave the homepage
+// claiming a stale number — the copy stays true by construction.
+const INDUSTRY_PILLS = [
+  'Restaurant',
+  'Plumbing',
+  'Real Estate',
+  'HVAC',
+  'Salon & Spa',
+  'Deck Builder',
+  'Roofing',
+  'Photography',
+  'Author',
+  'Auto Repair',
+  'Fitness',
+  'Landscaping',
+] as const;
 
 // White-label-overridable brand shape (orgs can theme the homepage).
 type Branding = {
@@ -165,6 +184,59 @@ export default function HomeClient({
             </>
           )}
         </main>
+
+        {/* ───────── Industries ─────────
+            Added 2026-07-28 from persona finding c130316f: a first-time visitor
+            trying to answer "is this for me?" got an all-commerce/reseller pitch,
+            and the only industry surface on the page was an optional dropdown in
+            the start form. The breadth below was already built — it just wasn't
+            stated anywhere a visitor would look. */}
+        <section className="relative z-10 w-full border-t border-zinc-800/70">
+          <div className="mx-auto max-w-6xl px-6 py-14">
+            <h2 className="text-2xl md:text-3xl font-semibold">Starts as your industry, not a blank page</h2>
+            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+              Pick your trade and the first draft already has the right pages, services, and
+              look — {INDUSTRIES.length} of them, from towing to bookshops. Change anything.
+            </p>
+
+            <ul className="mt-6 flex flex-wrap gap-2">
+              {INDUSTRY_PILLS.map((label) => (
+                <li
+                  key={label}
+                  className="rounded-full border border-zinc-700 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300"
+                >
+                  {label}
+                </li>
+              ))}
+              <li className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs text-sky-300">
+                +{INDUSTRIES.length - INDUSTRY_PILLS.length} more
+              </li>
+            </ul>
+
+            <p className="mt-8 max-w-2xl text-sm text-zinc-400">
+              Some go further than a starter — a few trades get tools built for how they
+              actually sell:
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+              <Card title="Restaurants">
+                A menu-forward ordering site, not a brochure. Diners order from the menu and you
+                take payment — no delivery app in the middle.
+              </Card>
+              <Card title="Real estate">
+                Listings with a mortgage calculator, home valuation, affordability tools, and
+                area guides that bring searchers in.
+              </Card>
+              <Card title="Trades with quotes">
+                Fencing, concrete, roofing, paving and more get an instant estimator, so a
+                visitor gets a number instead of a callback.
+              </Card>
+              <Card title="Authors & makers">
+                Sell books, posters and apparel that are printed and shipped when ordered — no
+                inventory, no boxes in your garage.
+              </Card>
+            </div>
+          </div>
+        </section>
 
         {/* ───────── Build ───────── */}
         <section className="relative z-10 w-full border-t border-zinc-800/70 bg-zinc-950/60">

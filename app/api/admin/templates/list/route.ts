@@ -43,23 +43,58 @@ const stripToken = (s?: string | null) =>
 function deriveBaseKey(row: any): string {
   const canonicalId = (row?.canonical_id || '').toString().trim();
   if (canonicalId) return canonicalId;
+  // Same base_slug collapse as deriveRootKey — see the note there. Without the qualifier,
+  // every geo site in a city shares one base key too, not just one root.
   const baseSlug = (row?.base_slug || '').toString().trim();
-  if (baseSlug) return baseSlug;
+  if (baseSlug) return baseSlug + industryQualifier(row);
   const src = (row?.slug || row?.template_name || '').toString();
   if (!src) return row?.id || '';
   const stripped = stripToken(src);
   return stripped || src;
 }
 
+/**
+ * Industry qualifier for a root key.
+ *
+ * ⚠️ WHY THIS IS NEEDED. `templates.base_slug` is a GENERATED column:
+ *
+ *     regexp_replace(coalesce(slug, template_name, ''), '(-[A-Za-z0-9]{2,12})+$', '')
+ *
+ * It strips trailing `-token` suffixes so a site groups with its random-suffixed variants
+ * (graftontowing-08zi → graftontowing). But it cannot tell a random suffix from a real word,
+ * so it also strips the INDUSTRY off every geo site:
+ *
+ *     renton-plumbing   → renton
+ *     renton-restaurant → renton
+ *     boston-roofing    → boston
+ *
+ * Every `<city>-<industry>` site in a city therefore shares one root, and aggressive grouping
+ * collapses them into a single family — renton-restaurant showed up as a "+1 variant" of
+ * Renton Plumbing, and opening it gave an editor titled with the wrong business. Measured
+ * across the fleet: Renton 6 industries under one root, Milton 5, Braintree 5, Framingham 5,
+ * Arlington 5, Boston 4, Lynn 4, Chelsea 4, Brookline 4.
+ *
+ * Two sites in different industries are never variants of each other, so qualifying the root
+ * key by industry separates them while leaving genuine variant families (same industry, random
+ * suffix) grouped exactly as before.
+ *
+ * This is a display fix. The generated column is the actual root cause and changing it is a
+ * schema migration that recomputes every row — deliberately not attempted here.
+ */
+function industryQualifier(row: any): string {
+  const ind = (row?.industry || row?.data?.meta?.industry || '').toString().trim().toLowerCase();
+  return ind ? `::${ind}` : '';
+}
+
 function deriveRootKey(row: any): string {
   // Prefer canonical/base slugs; otherwise use slug/name
   const cslug = (row?.canonical_slug || '').toString().trim();
-  if (cslug) return stripToken(cslug);
+  if (cslug) return stripToken(cslug) + industryQualifier(row);
   const bslug = (row?.base_slug || '').toString().trim();
-  if (bslug) return stripToken(bslug);
+  if (bslug) return stripToken(bslug) + industryQualifier(row);
   const src = (row?.slug || row?.template_name || '').toString();
   if (!src) return row?.id || '';
-  return stripToken(src);
+  return stripToken(src) + industryQualifier(row);
 }
 
 export async function GET(req: Request) {

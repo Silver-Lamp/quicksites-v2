@@ -37,7 +37,7 @@ describe('buildDeterministicSeo', () => {
     expect(seoTitle).toBe('The Local 907 — Bar in Anchorage, AK');
     expect(seoDescription).toContain('The Local 907');
     expect(seoDescription).toContain('Anchorage, AK');
-    expect(seoDescription).toContain('Order online'); // restaurant tail
+    expect(seoDescription).toContain('call ahead'); // restaurant tail — never promises online ordering
   });
 
   it('never leaks snake_case from raw category slugs', () => {

@@ -49,7 +49,7 @@ export function stripPlaceholderLocale(s: string): string {
  * Deterministic name + locale SEO title/description from what we already know — no LLM.
  * Applied unconditionally so the auto-built page title always leads with the business name.
  *   title  → "Rogue Ales — Brewpub in Portland, OR"
- *   desc   → "Rogue Ales — brewpub in Portland, OR. Order online for pickup, or stop by."
+ *   desc   → "Rogue Ales — brewpub in Portland, OR. See hours and call ahead, or stop by."
  */
 export function buildDeterministicSeo(
   spec: RebuildSpec,
@@ -67,8 +67,11 @@ export function buildDeterministicSeo(
 
   const isRestaurant = spec.industryKey === 'restaurant';
   const descLead = category ? `${name} — ${category.toLowerCase()}${inPlace}.` : `${name}${inPlace}.`;
+  // ⚠️ Not "Order online for pickup" — see the note in lib/rebuild/importListing.ts. This
+  // description is the search snippet for an unclaimed draft that cannot take an order, so
+  // promising one here is worse than on-page: it's the promise that wins the click.
   const descTail = isRestaurant
-    ? ' Order online for pickup, or stop by.'
+    ? ' See hours and call ahead, or stop by.'
     : ' Get in touch to learn more.';
   const seoDescription = cap(descLead + descTail, 160);
 

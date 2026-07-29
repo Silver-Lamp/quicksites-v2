@@ -129,14 +129,22 @@ export function buildSpecFromListing(
     if (parsed.postal) contact.postal = parsed.postal;
   }
 
+  // ⚠️ NEVER PROMISE ONLINE ORDERING HERE. This copy is generated for a listing-import
+  // draft — a site we auto-built for a real business that has not claimed it, has no
+  // merchant account, no Stripe and (often) no menu we could honestly publish. "Order
+  // online or stop by" was shipping on every restaurant draft and was false on all of
+  // them: there is no order button, and nothing behind it if there were.
+  //
+  // Promise the phone and the door, which are real on day one. Ordering becomes true only
+  // after an owner claims the site and connects payments — and the copy can say so then.
   const catLead = displayCats.length ? displayCats.slice(0, 2).join(' · ') : industryLabel;
   const subheadline = isRestaurant
     ? displayCats.length
-      ? `${displayCats.slice(0, 2).join(' · ')} — order online or stop by.`
-      : 'Fresh food, made daily — order online or stop by.'
+      ? `${displayCats.slice(0, 2).join(' · ')} — call ahead or stop by.`
+      : 'Fresh food, made daily — call ahead or stop by.'
     : `${catLead} — call or stop by today.`;
   const about = isRestaurant
-    ? `${name}${displayCats.length ? ` — ${displayCats[0].toLowerCase()}` : ''}. Order online for pickup, or come visit us.`
+    ? `${name}${displayCats.length ? ` — ${displayCats[0].toLowerCase()}` : ''}. Give us a call, or come visit us.`
     : `${name}${displayCats.length ? ` — ${displayCats[0].toLowerCase()}` : ` — ${industryLabel.toLowerCase()}`}. Get in touch to learn more.`;
 
   return {

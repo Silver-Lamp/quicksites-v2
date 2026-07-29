@@ -45,8 +45,16 @@ jobs:
       # rebrand nine months earlier, leaving eight dead references behind. Nothing noticed,
       # because nothing was watching. Graceful degradation and silent failure are the same
       # mechanism seen from two sides.
-      # The check fails if it matches ZERO references, so it cannot rot into a no-op that
-      # reports success; `--selftest` proves it still goes red.
+      # It also catches the mirror failure — an asset that is PRESENT and absurd (a 1175 KB
+      # logo rendered at 48px was introduced while fixing the six above).
+      #
+      # `verify:assets` runs --selftest FIRST, then the check. The selftest spawns the script
+      # against fixture directories and asserts its EXIT CODE, so a guard that is defined but
+      # never wired into the exit path fails the build here rather than being blessed by the
+      # very check it was meant to strengthen. Not hypothetical: the weight guard shipped dead
+      # exactly that way and printed a green checkmark, and the first selftest missed it by
+      # calling the guard functions directly instead of running the script.
+      # Enforce, don't hope — including on the enforcement.
       - name: Verify image assets resolve
         run: npm run verify:assets
 

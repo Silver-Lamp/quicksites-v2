@@ -10,6 +10,7 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import type { RebuildSpec } from '@/lib/rebuild/inferSiteSpec';
 import { formatContactAddress } from '@/lib/rebuild/parseAddress';
 import type { ProductSpec } from '@/lib/rebuild/importShopify';
+import { stripPlacesKeysDeep } from '@/lib/places/photoProxy';
 
 export type RebuildTemplate = {
   template_name: string;
@@ -245,13 +246,23 @@ export function buildRebuildTemplate(opts: {
     }
   }
 
+  // ⚠️ THE STORAGE BOUNDARY. Google Places photo URLs arrive here still carrying
+  // GOOGLE_PLACES_API_KEY — deliberately, because the menu-OCR path needs a URL OpenAI can
+  // fetch (see the note in lib/rebuild/importListing.ts). Everything below this line gets
+  // persisted into `templates.data` and rendered into public HTML, so the key is stripped
+  // here, once, over the whole blob rather than at each assignment that might carry one.
+  //
+  // This is the leak that put the key in public HTML on every listing-import site and three
+  // times in one unauthenticated /api/public/restaurant-directory response.
+  const safeData = stripPlacesKeysDeep(tpl.data);
+
   return {
     template_name: spec.businessName,
     slug: `${slugify(spec.businessName)}-${rand()}`,
     color_mode: (tpl.color_mode ?? 'light') as 'light' | 'dark',
-    data: tpl.data,
-    header_block: tpl.data?.headerBlock ?? null,
-    footer_block: tpl.data?.footerBlock ?? null,
+    data: safeData,
+    header_block: safeData?.headerBlock ?? null,
+    footer_block: safeData?.footerBlock ?? null,
     industry: spec.industryKey,
     business_name: spec.businessName,
   };

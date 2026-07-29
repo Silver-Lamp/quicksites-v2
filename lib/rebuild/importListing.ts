@@ -212,6 +212,17 @@ export async function fetchGooglePlace(
     );
   }
   const r = json.result;
+  // ⚠️ These stay KEYED on purpose, and must never be persisted.
+  //
+  // They are consumed in-process by the menu OCR path (`pickMenuPhotos` → OpenAI vision),
+  // which hands the URL to OpenAI to fetch from THEIR servers. A relative or proxied URL is
+  // unfetchable there, so keyless-at-source would silently kill menu extraction while every
+  // import still "succeeded".
+  //
+  // The key leaked because these strings reached `templates.data`. The fix is therefore at
+  // the STORAGE boundary, not here: `sanitizePersistedPhotoUrl` in lib/places/photoProxy.ts
+  // rewrites them to the keyless proxy form on the way into a draft. Anything writing one of
+  // these into a template must go through it.
   const photos = (Array.isArray(r.photos) ? r.photos : [])
     .slice(0, 10) // more candidates so the menu-photo classifier has options
     .map(

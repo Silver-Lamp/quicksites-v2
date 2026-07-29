@@ -97,7 +97,7 @@ type NavItem =
 /* ---------------- Loading Overlay ---------------- */
 function LoadingOverlay({ show }: { show: boolean }) {
   const { name, logoUrl } = useBrand();
-  const brandLogo = logoUrl || '/logo_v1.png';
+  const brandLogo = logoUrl || '/brand/qs-mark.png';
   if (!show) return null;
   return (
     <div
@@ -545,7 +545,7 @@ function BrandSwitcher({
   isPlatformAdmin: boolean; // ← NEW
 }) {
   const { name, logoUrl, slug } = useBrand();
-  const brandLogo = logoUrl || '/logo_v1.png';
+  const brandLogo = logoUrl || '/brand/qs-mark.png';
   const [open, setOpen] = useState(false);
   const [orgs, setOrgs] = useState<OrgLite[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -710,7 +710,7 @@ function BrandSwitcher({
                     )}
                   >
                     <img
-                      src={o.logo_url || '/logo_v1.png'}
+                      src={o.logo_url || '/brand/qs-mark.png'}
                       alt=""
                       className="h-5 w-5 rounded-sm object-contain"
                     />
@@ -934,7 +934,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const [selectedIdx, setSelectedIdx] = useState<number>(0); // NEW
 
   const { name: brandName, logoUrl } = useBrand();
-  const brandLogo = logoUrl || '/logo_v1.png';
+  const brandLogo = logoUrl || '/brand/qs-mark.png';
 
   // Core nav (without brand; brand handled by BrandSwitcher). Flat rows under the
   // "Sites" header — consistent with every other section (Commerce/Customers/…),

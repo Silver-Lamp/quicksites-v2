@@ -72,7 +72,8 @@
     "openapi:validate": "openapi lint openapi.json",
     "openapi:build": "npm run openapi:gen && npm run openapi:validate",
     "prepare": "husky install",
-    "screenshot:run": "tsx scripts/screenshot-worker.ts"
+    "screenshot:run": "tsx scripts/screenshot-worker.ts",
+    "verify:assets": "node scripts/verify-image-assets.mjs --selftest && node scripts/verify-image-assets.mjs"
   },
   "scripts-meta": {
     "dev": "Start the development server",

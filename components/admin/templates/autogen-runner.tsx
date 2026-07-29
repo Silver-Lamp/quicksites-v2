@@ -6,10 +6,17 @@
 // autogenerate (AI copy + hero image), then refreshes the editor to show the
 // result — so the visitor gets a populated site without opening the hero editor.
 import { useEffect, useRef, useState } from 'react';
+import { useDocumentBusy } from '@/lib/ui/documentBusy';
 
 export default function AutogenRunner({ templateId }: { templateId: string }) {
   const ran = useRef(false);
   const [status, setStatus] = useState<'idle' | 'running' | 'error'>('idle');
+
+  // ~20s of copy + hero-image generation, during which the editor is actively being rewritten
+  // and the on-screen caption never changes. A text-extracting reader that settles on
+  // "the text stopped changing" would read this loading state as the finished page — a stable
+  // string is not a settled one. Say so at the document level. See lib/ui/documentBusy.ts.
+  useDocumentBusy(status === 'running');
 
   useEffect(() => {
     if (ran.current) return;

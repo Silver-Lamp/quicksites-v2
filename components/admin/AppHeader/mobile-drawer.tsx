@@ -48,7 +48,7 @@ export function MobileDrawer({
             <h2 className="text-lg font-bold mb-4">Menu</h2>
             <nav className="space-y-4 text-sm">
               <div className="text-blue-400 hover:underline mb-4 flex justify-center items-center">
-                <img src="/logo_v1.png" alt="QuickSites" className="" style={{ height: '50px', width: '50px' }} />
+                <img src="/brand/qs-mark.png" alt="QuickSites" className="" style={{ height: '50px', width: '50px' }} />
                 <span className="text-blue-400 hover:underline">QuickSites</span>
               </div>
               <details open>

@@ -14,7 +14,7 @@ export default function SiteHeader() {
       <div className="flex justify-between items-center max-w-screen-xl mx-auto relative">
         <div className="flex items-center gap-4 overflow-x-auto whitespace-nowrap max-w-full flex-1">
           <SafeLink href="/" className="text-blue-400 hover:underline">
-            <img src="/logo_v1.png" alt="QuickSites" className="h-12 w-auto" />
+            <img src="/brand/qs-mark.png" alt="QuickSites" className="h-12 w-auto" />
           </SafeLink>
 
           <div className="text-xs text-cyan-300 max-w-xs">

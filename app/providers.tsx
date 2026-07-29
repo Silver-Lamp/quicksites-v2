@@ -36,8 +36,8 @@ const DEFAULT_ORG: Org = {
   id: '00000000-0000-0000-0000-000000000000',
   slug: 'quicksites',
   name: 'QuickSites',
-  logo_url: '/logo_v1.png', // ← make sure this exists
-  dark_logo_url: '/logo_v1.png',
+  logo_url: '/logo-v0.png',
+  dark_logo_url: '/logo-v0.png',
   favicon_url: null,
   theme_json: {},
   support_email: 'support@quicksites.ai',
@@ -58,8 +58,8 @@ export function useBrand() {
   return {
     name: org.name,
     slug: org.slug,
-    logoUrl: org.logo_url ?? '/brand/default-logo.svg',
-    darkLogoUrl: org.dark_logo_url ?? org.logo_url ?? '/brand/default-logo-dark.svg',
+    logoUrl: org.logo_url ?? '/logo-v0.png',
+    darkLogoUrl: org.dark_logo_url ?? org.logo_url ?? '/logo-v0.png',
     faviconUrl: org.favicon_url ?? '/favicon.ico',
     theme: org.theme_json ?? {},
     supportEmail: org.support_email ?? 'support@example.com',

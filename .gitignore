@@ -69,3 +69,6 @@ supabase/.temp/
 leads*.json
 *-results.json
 *-qr/
+
+# Working copy of the OG painting — kept so recomposites are free, not a build input.
+public/assets/.og-source.png

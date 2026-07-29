@@ -37,6 +37,19 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # BLOCKING, and cheap (a filesystem scan, no install beyond what's here).
+      # A missing image never throws — Next renders alt text or nothing at all, which is
+      # correct degradation and a perfect hiding place. When this was first written it found
+      # SIX assets 404ing in production, including the DEFAULT OG image (so every link
+      # preview using the fallback was broken) and a logo whose file had been renamed in a
+      # rebrand nine months earlier, leaving eight dead references behind. Nothing noticed,
+      # because nothing was watching. Graceful degradation and silent failure are the same
+      # mechanism seen from two sides.
+      # The check fails if it matches ZERO references, so it cannot rot into a no-op that
+      # reports success; `--selftest` proves it still goes red.
+      - name: Verify image assets resolve
+        run: npm run verify:assets
+
       # BLOCKING. The SDK clients that used to throw at MODULE load with no env
       # (Stripe/OpenAI/Resend constructors) are now lazy (lib/lazyClient.ts), so
       # importing route modules during page-data collection no longer fails. The

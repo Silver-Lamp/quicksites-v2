@@ -24,6 +24,7 @@
 //
 // Requires the campaign to exist with kind='restaurant_competition' and its cohort attached.
 import { createClient } from '@supabase/supabase-js';
+import { isBuffetLike } from '../lib/prospects/orderingFit';
 
 const APPLY = process.argv.includes('--apply');
 const SLUG = process.argv.find((a) => !a.startsWith('--') && !a.endsWith('.ts') && !a.includes('/'))
@@ -106,6 +107,18 @@ async function main() {
       };
     })
     .filter(Boolean)
+    // Buffets are excluded from an ORDERING directory: dine-in by construction, so nobody
+    // phones one for takeaway and the per-order funnel has nothing to bite on. Mirrors the
+    // live feed's filter so the snapshot and the API can never disagree.
+    .filter((e: any) => {
+      const t: any = byId.get(e.template_id) ?? {};
+      const drop = isBuffetLike({
+        name: e.business_name,
+        categories: t?.data?.meta?.services ?? t?.data?.services ?? [],
+      });
+      if (drop) console.log(`  excluded: ${e.business_name} — buffet / dine-in, not an ordering fit`);
+      return !drop;
+    })
     .sort((a: any, b: any) => a.business_name.localeCompare(b.business_name));
 
   const cityLabel = campaign.region ? `${campaign.city}, ${campaign.region}` : campaign.city;
@@ -214,6 +227,37 @@ async function main() {
   console.log(`  cohort:  ${entries.map((e: any) => e.business_name).join(', ')}`);
   console.log(`  published: ${tpl.published}`);
 
+  // ── Painterly backdrop, from the shared pool ─────────────────────────────────────────────
+  // Every <city>-restaurant.com portal gets one. It's the front door of a city funnel and a
+  // flat page undersells it — but painterly is the ONE backdrop style that costs money, so
+  // this READS the pool and never generates. An empty pool leaves whatever backdrop is
+  // already there (the CSS default), exactly like site creation does.
+  //
+  // `auto: true` marks it fleet-managed. A PAID painterly is written with auto:false by
+  // paintSiteBackdrop specifically so a sweep can't overwrite something someone bought —
+  // so that case is skipped here rather than clobbered.
+  let backdrop = data?.meta?.backdrop ?? null;
+  const paidPainterly = backdrop?.style === 'painterly' && backdrop?.auto === false;
+  if (!paidPainterly) {
+    const prefix = 'backdrops/pool/restaurant';
+    const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
+    const { data: files } = await db.storage.from(bucket).list(prefix, { limit: 100 });
+    const pngs = (files ?? []).filter((f: any) => f.name.endsWith('.png'));
+    if (pngs.length) {
+      const publicUrl = db.storage
+        .from(bucket)
+        .getPublicUrl(`${prefix}/${pngs[0].name}`).data?.publicUrl;
+      if (publicUrl) {
+        backdrop = { style: 'painterly', url: publicUrl, intensity: 50, auto: true };
+        console.log(`  backdrop: painterly from pool (${pngs[0].name}, free)`);
+      }
+    } else {
+      console.log('  backdrop: pool empty for "restaurant" — leaving the CSS backdrop as-is');
+    }
+  } else {
+    console.log('  backdrop: paid painterly already set — left untouched');
+  }
+
   if (!APPLY) {
     console.log('\nDry run. Re-run with --apply to write.');
     return;
@@ -225,7 +269,7 @@ async function main() {
   // the sentence "direct online ordering — no middleman markup" sitting in the page source of
   // a site where nobody can order online. Invisible to a reader, still a false claim in the
   // document, and one render-path change away from being visible again. Write both.
-  const nextData = { ...data };
+  const nextData = { ...data, meta: { ...(data.meta ?? {}), ...(backdrop ? { backdrop } : {}) } };
   if (nextData?.pages?.[0]) {
     const page0: any = { ...nextData.pages[0], content_blocks: next };
     if (Array.isArray(nextData.pages[0].blocks)) page0.blocks = next;

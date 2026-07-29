@@ -5,7 +5,14 @@
 // mp4) with a poster frame for instant paint. Used for multi-second waits — site
 // generation, publish, save — via AsyncGifOverlay and the guest builder.
 
+import { useDocumentBusy } from '@/lib/ui/documentBusy';
+
 export default function BrandLoader({ open, message }: { open: boolean; message?: string }) {
+  // Flag <body aria-busy> for the whole wait. This is a full-screen blocking overlay, so the
+  // document genuinely IS busy — and a reader that extracts text mid-wait would otherwise get
+  // a stable loading caption and mistake it for the finished page. See lib/ui/documentBusy.ts.
+  // Must run before the early return: hooks can't sit below a conditional bail-out.
+  useDocumentBusy(open);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">

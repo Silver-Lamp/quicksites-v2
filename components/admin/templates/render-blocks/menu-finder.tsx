@@ -13,6 +13,7 @@
 // and defaulting the filter on would silently hide kitchens that are actually serving.
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
+import { filterItems, nearestAvailableFrom } from '@/lib/menu/cityMenuIndex';
 
 type Item = {
   id: string;
@@ -73,19 +74,14 @@ export default function MenuFinderBlock({
     };
   }, [campaignId, previewOnly]);
 
-  // Mirrors lib/menu/cityMenuIndex.ts#narrow. Kept client-side so every keystroke is instant;
-  // the index is small (one city) and a round-trip per character would feel worse than useless.
-  const results = React.useMemo(() => {
-    const items = feed?.items ?? [];
-    const sel = picked.map(norm);
-    const query = q.trim().toLowerCase();
-    return items.filter((i) => {
-      if (openOnly && i.openNow !== true) return false;
-      if (sel.length && !sel.every((t) => i.tags.includes(t))) return false;
-      if (query && !`${i.name} ${i.description ?? ''} ${i.restaurantName}`.toLowerCase().includes(query)) return false;
-      return true;
-    });
-  }, [feed, picked, q, openOnly]);
+  // Runs client-side so every keystroke is instant — the index is small (one city) and a
+  // round-trip per character would feel worse than useless. It calls the SHARED filter rather
+  // than a local copy: this block used to hand-roll its own "mirrors cityMenuIndex#narrow"
+  // version, and two copies of one truth is the bug this repo keeps re-committing.
+  const results = React.useMemo(
+    () => filterItems(feed?.items ?? [], { tags: picked, query: q, openOnly }),
+    [feed, picked, q, openOnly],
+  );
 
   const offered = React.useMemo(() => {
     const sel = new Set(picked.map(norm));
@@ -151,6 +147,16 @@ export default function MenuFinderBlock({
       }
     } catch { /* the acknowledgement still shows; a lost log must never look like a failure */ }
   }, [previewOnly, campaignId, q, picked, openOnly]);
+
+  // What we can still offer when the search matched nothing — computed once, used to decide
+  // whether cooking is even mentioned. See nearestAvailable() for why the order matters.
+  const near = React.useMemo(
+    () =>
+      feed && results.length === 0
+        ? nearestAvailableFrom(feed.items, { query: q.trim(), tags: picked, openOnly })
+        : { kind: 'none' as const, items: [] as Item[] },
+    [feed, results.length, q, picked, openOnly],
+  );
 
   const byRestaurant = React.useMemo(() => {
     const m = new Map<string, { url: string; openNow: boolean | null; items: Item[] }>();
@@ -255,7 +261,37 @@ export default function MenuFinderBlock({
               menus stripped off real restaurants this month. A door that says "would you" and
               then admits it isn't built measures the identical signal and lies to nobody.
             */}
-            {!previewOnly && campaignId && (q.trim() || picked.length > 0) && (
+            {/*
+              GRADUATED, NOT COOK-FIRST. Lead with the strongest real answer we have. If the
+              dish exists nearby and the kitchen is merely shut, "here it is, come back later"
+              is both the honest answer and the useful one — and "nobody is OPEN" is simply not
+              the same fact as "nobody SERVES it". Only the second is unmet demand.
+            */}
+            {near.kind === 'closed_now' && (
+              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+                {near.items.length === 1 ? 'One place near you serves that' : `${near.items.length} dishes near you match`}
+                {' '}— just not open right now.{' '}
+                <button onClick={() => setOpenOnly(false)} className="font-medium underline">
+                  Show them anyway
+                </button>
+              </p>
+            )}
+            {near.kind === 'relaxed_tags' && (
+              <p className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3 text-sm text-zinc-300">
+                No exact match, but {near.items.length} close{near.items.length === 1 ? ' one' : ' ones'} if you drop the filters.{' '}
+                <button onClick={() => setPicked([])} className="font-medium underline">
+                  Show those
+                </button>
+              </p>
+            )}
+
+            {/*
+              Cook-it is the CONSOLATION, not the pitch — offered only once we genuinely have
+              nothing. Beyond tone, this is what keeps the measurement honest: offering it to
+              everyone who fails would count the prompt's prominence rather than real appetite,
+              and would fold "the kitchen shut at 9" into "nobody makes this."
+            */}
+            {near.kind === 'none' && !previewOnly && campaignId && (q.trim() || picked.length > 0) && (
               cookIntent ? (
                 <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
                   Noted — thank you. We haven&rsquo;t built this yet; we&rsquo;re finding out

@@ -52,6 +52,11 @@ export async function POST(req: Request) {
     .maybeSingle();
   if (!campaign) return NextResponse.json({ ok: false }, { status: 404 });
 
+  // 'cook_intent' = the visitor hit a zero-result and said they'd cook it themselves. Same
+  // shape, same no-PII rule; only the kind differs. Allowlisted rather than passed through —
+  // the column has a CHECK constraint, and a rejected insert here would be silent.
+  const kind = body?.kind === 'cook_intent' ? 'cook_intent' : 'search';
+
   const query = String(body?.query ?? '').trim().toLowerCase().slice(0, MAX_QUERY);
   const tags = Array.isArray(body?.tags)
     ? body.tags.map((t: any) => String(t).trim().toLowerCase()).filter(Boolean).slice(0, MAX_TAGS)

@@ -127,6 +127,31 @@ export default function MenuFinderBlock({
     return () => clearTimeout(t);
   }, [q, picked, openOnly, results.length, campaignId, feed, previewOnly]);
 
+  // Remedy probe: reset whenever the search changes, so the question is asked per zero-result
+  // search rather than answered once and hidden for the session — otherwise the denominator
+  // (zero-result searches) keeps growing while the numerator can't.
+  const [cookIntent, setCookIntent] = React.useState(false);
+  React.useEffect(() => { setCookIntent(false); }, [q, picked, openOnly]);
+
+  const logCookIntent = React.useCallback(() => {
+    if (previewOnly || !campaignId) return;
+    const payload = JSON.stringify({
+      campaignId,
+      kind: 'cook_intent',
+      query: q.trim(),
+      tags: picked,
+      resultCount: 0, // by construction — this only renders on a zero-result
+      openOnly,
+    });
+    try {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/public/menu-search-log', new Blob([payload], { type: 'application/json' }));
+      } else {
+        void fetch('/api/public/menu-search-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true });
+      }
+    } catch { /* the acknowledgement still shows; a lost log must never look like a failure */ }
+  }, [previewOnly, campaignId, q, picked, openOnly]);
+
   const byRestaurant = React.useMemo(() => {
     const m = new Map<string, { url: string; openNow: boolean | null; items: Item[] }>();
     for (const i of results) {
@@ -209,13 +234,51 @@ export default function MenuFinderBlock({
 
       <div className="mt-7 space-y-6">
         {byRestaurant.length === 0 ? (
-          <p className="text-sm text-zinc-400">
-            Nothing matches that yet.{' '}
-            <button onClick={() => { setPicked([]); setQ(''); setOpenOnly(false); }} className="underline">
-              Start over
-            </button>
-            .
-          </p>
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-400">
+              Nothing matches that yet.{' '}
+              <button onClick={() => { setPicked([]); setQ(''); setOpenOnly(false); }} className="underline">
+                Start over
+              </button>
+              .
+            </p>
+
+            {/*
+              REMEDY PROBE — measures whether a fix is wanted, before the fix is built.
+              The search log proves the LEAK (a search matched nothing). It cannot prove that a
+              recipe PLUGS it, and that is the question four sessions reasoned past: gated to
+              zero-result, the audience is people who wanted a dish, while hungry, and didn't
+              get it — the worst possible mood for a 40-minute project. So ask them.
+
+              ⚠️ IT ASKS A QUESTION; IT DOES NOT PROMISE A FEATURE. "Want the recipe?" implies
+              a recipe exists and dead-ends when tapped — the same dishonesty as the invented
+              menus stripped off real restaurants this month. A door that says "would you" and
+              then admits it isn't built measures the identical signal and lies to nobody.
+            */}
+            {!previewOnly && campaignId && (q.trim() || picked.length > 0) && (
+              cookIntent ? (
+                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                  Noted — thank you. We haven&rsquo;t built this yet; we&rsquo;re finding out
+                  whether people want it first. All we recorded is that someone tapped, and what
+                  they searched for.
+                </p>
+              ) : (
+                <div className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3">
+                  <p className="text-sm text-zinc-300">
+                    Nobody near you is serving that right now — would you cook it yourself if we
+                    showed you how?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setCookIntent(true); logCookIntent(); }}
+                    className="mt-2.5 rounded-md border border-sky-500/40 px-3 py-1.5 text-sm font-medium text-sky-200 transition hover:bg-sky-500/10"
+                  >
+                    Yes, I&rsquo;d cook it
+                  </button>
+                </div>
+              )
+            )}
+          </div>
         ) : (
           byRestaurant.map(([name, r]) => (
             <div key={name}>

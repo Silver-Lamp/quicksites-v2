@@ -11,6 +11,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { menuSiteUrl } from '@/lib/menu/deliveredMenu';
 import { RESTAURANT_COMPETITION_KIND } from '@/lib/outreach/restaurantCompetition';
 import { isBuffetLike } from '@/lib/prospects/orderingFit';
+import { getHiddenTemplateIds, getExtraTemplateIds } from '@/lib/outreach/directoryCuration';
 
 export type CompetitionDirectoryEntry = {
   templateId: string;
@@ -98,7 +99,23 @@ async function assembleDirectory(campaign: {
     .select('id, template_id, business_name')
     .eq('geo_campaign_id', campaign.id)
     .not('template_id', 'is', null);
-  const cohort = prospects ?? [];
+
+  // Operator curation (lib/outreach/directoryCuration.ts). `extra` are restaurants pulled in
+  // that aren't cohort members — they appear on the list without being enrolled in the
+  // competition, because a storefront and a contest are different things.
+  const [hidden, extra] = await Promise.all([
+    getHiddenTemplateIds(campaign.id),
+    getExtraTemplateIds(campaign.id),
+  ]);
+  const hiddenSet = new Set(hidden);
+
+  const cohortIds = new Set((prospects ?? []).map((p: any) => p.template_id));
+  const cohort = [
+    ...(prospects ?? []),
+    // Synthesised rows so extras flow through the same mapping as cohort members. No
+    // prospect id, so they can never be mistaken for the competition winner.
+    ...extra.filter((id) => !cohortIds.has(id)).map((id) => ({ id: null, template_id: id, business_name: null })),
+  ];
   if (!cohort.length) return { ...base, entries: [] };
 
   const { data: templates } = await supabaseAdmin
@@ -123,11 +140,16 @@ async function assembleDirectory(campaign: {
       };
     })
     .filter((e) => e.slug)
+    // MANUAL curation wins over the automatic rule, in both directions: an operator hide
+    // removes anything, and an operator "add" (extra) keeps a restaurant the buffet rule
+    // would otherwise drop. A rule that can't be overridden is a rule you fight.
+    .filter((e) => !hiddenSet.has(e.templateId))
     // A buffet is a dine-in model — nobody phones one for takeaway — so it is the wrong fit
     // for an ORDERING directory, and the take-rate funnel behind it has no orders to bite on.
     // Filtered here as well as in the commit-time snapshot so the live feed and the snapshot
     // can never disagree about who is on the list. See lib/prospects/orderingFit.ts.
     .filter((e) => {
+      if (extra.includes(e.templateId)) return true; // deliberate operator override
       const t: any = tplById.get(e.templateId) ?? {};
       return !isBuffetLike({
         name: e.businessName,

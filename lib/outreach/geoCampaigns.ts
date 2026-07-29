@@ -124,8 +124,26 @@ export async function getGeoCampaignByTemplateId(templateId: string): Promise<Ge
     .select(GEO_SUMMARY_COLS)
     .eq('template_id', templateId)
     .maybeSingle();
-  if (error) return null;
-  return (data as GeoCampaignSummary) ?? null;
+  if (!error && data) return data as GeoCampaignSummary;
+
+  // Fall back to matching on slug. `template_id` is nullable and a campaign can exist without
+  // ever having been linked — renton-restaurant was in exactly that state, which silently hid
+  // the readiness coach in its editor with no error anywhere to explain why. A missing link
+  // should degrade to "found it the other way", not to "this isn't a campaign site".
+  const { data: tpl } = await supabaseAdmin
+    .from('templates')
+    .select('slug')
+    .eq('id', templateId)
+    .maybeSingle();
+  const slug = String((tpl as any)?.slug ?? '').trim();
+  if (!slug) return null;
+
+  const { data: bySlug } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select(GEO_SUMMARY_COLS)
+    .eq('slug', slug)
+    .maybeSingle();
+  return (bySlug as GeoCampaignSummary) ?? null;
 }
 
 /** Look up a campaign by its (unique) domain — used for bulk-buy idempotency. */

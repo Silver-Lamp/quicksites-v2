@@ -57,7 +57,12 @@ export default function MenuClaimBar({
                 <span className="text-neutral-300">
                   Claim this free site to turn on online orders and start collecting —
                 </span>{' '}
-                <span className="text-neutral-400">takes about 2 minutes.</span>
+                <span className="text-neutral-400">
+                  takes about 2 minutes.{' '}
+                  <a href="/pricing" className="underline underline-offset-2 hover:text-neutral-200">
+                    Free to keep; we earn only on orders.
+                  </a>
+                </span>
               </>
             ) : (
               <>
@@ -65,9 +70,25 @@ export default function MenuClaimBar({
                   {name ? `Is this ${name}?` : 'Is this your restaurant?'}
                 </span>{' '}
                 <span className="text-neutral-300">
-                  We built this site free. Claim it to edit, take online orders, and go live —
+                  We built it from your public listing so customers could find you. Claim it to
+                  edit, take online orders, and go live —
                 </span>{' '}
-                <span className="text-neutral-400">takes about 2 minutes.</span>
+                {/* ⚠️ ANSWERS "AND THEN WHAT DOES IT COST?", which is the first thing an owner
+                    asks and the page did not address. A persona given the goal "work out what
+                    this page is, whether it's legitimate, and what it would cost to make it
+                    yours" gave up here, reporting it could not determine how to proceed or
+                    what ownership costs (finding 2026-07-29, high). Verified against the live
+                    page: "free" appeared, but nothing about ONGOING cost — no pricing, no
+                    per-month, no mention of the take-rate — so "free" read as a hook with an
+                    unstated catch.
+                    Also says WHO built it and WHY in the same breath: a stranger's site
+                    appearing under your business's name needs a reason, not just a name. */}
+                <span className="text-neutral-400">
+                  takes about 2 minutes.{' '}
+                  <a href="/pricing" className="underline underline-offset-2 hover:text-neutral-200">
+                    Free to keep; we earn only on orders.
+                  </a>
+                </span>
               </>
             )}
           </p>

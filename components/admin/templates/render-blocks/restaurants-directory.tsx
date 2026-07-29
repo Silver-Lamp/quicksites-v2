@@ -8,6 +8,7 @@
 // unreachable). Same renderer in the editor and on the public site.
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
+import DirectoryCurator from '@/components/sites/directory-curator';
 
 type Entry = {
   template_id: string;
@@ -130,6 +131,10 @@ export default function RestaurantsDirectoryBlock({
       <div className="mt-10 border-t border-zinc-800/60 pt-4 text-center text-xs text-zinc-500">
         Order online, direct from the kitchen · powered by {brand}
       </div>
+      {/* Operator curation. Renders NOTHING for anyone whose session isn't an admin — it
+          probes an admin-gated endpoint and unmounts on 403, so no candidate names or
+          campaign state reach a public visitor. The gate is the server's, not this flag. */}
+      {campaignId ? <DirectoryCurator campaignId={campaignId} /> : null}
     </section>
   );
 }

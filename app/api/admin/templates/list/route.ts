@@ -87,11 +87,15 @@ function industryQualifier(row: any): string {
 }
 
 function deriveRootKey(row: any): string {
-  // Prefer canonical/base slugs; otherwise use slug/name
+  // ⚠️ Do NOT re-strip base_slug. It is maintained by the database (public.base_slug_of +
+  // trg_templates_set_base_slug) and is already the correct family root; running stripToken
+  // over it re-applies the greedy pattern the 20260809 migration removed, collapsing
+  // `renton-plumbing` back to `renton`. stripToken survives only for rows that never
+  // persisted a base_slug, where a guess beats nothing.
   const cslug = (row?.canonical_slug || '').toString().trim();
-  if (cslug) return stripToken(cslug) + industryQualifier(row);
+  if (cslug) return cslug + industryQualifier(row);
   const bslug = (row?.base_slug || '').toString().trim();
-  if (bslug) return stripToken(bslug) + industryQualifier(row);
+  if (bslug) return bslug + industryQualifier(row);
   const src = (row?.slug || row?.template_name || '').toString();
   if (!src) return row?.id || '';
   return stripToken(src) + industryQualifier(row);

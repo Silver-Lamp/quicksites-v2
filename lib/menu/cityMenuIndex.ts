@@ -10,6 +10,7 @@
 //
 // Pure and dependency-free so the narrowing can be unit-tested without a database or a DOM.
 import { readMenuSections, type MenuItem, type MenuSection } from '@/lib/menu/menuBlocks';
+import { assessFreshness, priceOrConfirm } from '@/lib/menu/menuFreshness';
 
 export type IndexedItem = {
   id: string;
@@ -23,6 +24,8 @@ export type IndexedItem = {
   section?: string;
   /** null when the restaurant publishes no hours — "unknown", never guessed as open. */
   openNow: boolean | null;
+  /** True when the price shown is "call to confirm" rather than a number we stand behind. */
+  priceUnconfirmed: boolean;
 };
 
 export type CityMenuIndex = {
@@ -93,6 +96,17 @@ export function isOpenAt(hoursContent: any, now: Date): boolean | null {
   return false;
 }
 
+/** The menu block's own content, for its verified date. */
+function menuContentOf(data: any): any | null {
+  const page = data?.pages?.[0] ?? {};
+  for (const b of [...(page.content_blocks ?? []), ...(page.blocks ?? [])]) {
+    if (b?.type !== 'menu') continue;
+    const c = b.content ?? b.props ?? {};
+    if (Array.isArray(c?.sections) && c.sections.length) return c;
+  }
+  return null;
+}
+
 function hoursOf(data: any): any | null {
   const page = data?.pages?.[0] ?? {};
   for (const b of [...(page.content_blocks ?? []), ...(page.blocks ?? [])]) {
@@ -116,6 +130,10 @@ export function buildCityMenuIndex(
 
   for (const r of restaurants) {
     const openNow = isOpenAt(hoursOf(r.data), now);
+    // A price we cannot date is a price we cannot stand behind — see menuFreshness.ts. The
+    // substitution happens HERE so every consumer of the index inherits it; a caller that
+    // reached past this to the raw price would be re-introducing the exact risk.
+    const freshness = assessFreshness(menuContentOf(r.data), now);
     const sections: MenuSection[] = readMenuSections(r.data);
     let count = 0;
 
@@ -129,7 +147,8 @@ export function buildCityMenuIndex(
           id: `${r.slug}:${name}`,
           name,
           description: it.description ? String(it.description) : undefined,
-          price: it.price ? String(it.price) : undefined,
+          price: it.price ? priceOrConfirm(String(it.price), freshness) : undefined,
+          priceUnconfirmed: !!it.price && freshness.pricesStale,
           tags: Array.isArray(it.tags) ? it.tags.map(normTag).filter(Boolean) : [],
           restaurantSlug: r.slug,
           restaurantName: r.name,

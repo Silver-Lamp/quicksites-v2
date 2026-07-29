@@ -253,6 +253,7 @@ export const DEFAULT_BLOCK_CONTENT = {
 
   // Apex portal directory — campaign_id drives the live fetch; entries is the snapshot fallback.
   restaurants_directory: { title: 'Order from local restaurants', campaign_id: '', entries: [] },
+  menu_finder: { title: 'What are you hungry for?', campaign_id: '' },
   auto_shops_directory: { title: 'Trusted auto shops near you', campaign_id: '', entries: [] },
   service_transparency: {
     headline: 'See the work before you pay for it',

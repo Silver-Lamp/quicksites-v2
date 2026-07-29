@@ -145,6 +145,8 @@ export const DYNAMIC_RENDERERS: Record<
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
   restaurants_directory: () =>
     import('@/components/admin/templates/render-blocks/restaurants-directory'),
+  menu_finder: () =>
+    import('@/components/admin/templates/render-blocks/menu-finder'),
   auto_shops_directory: () =>
     import('@/components/admin/templates/render-blocks/auto-shops-directory'),
   service_transparency: () =>

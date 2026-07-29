@@ -41,6 +41,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   location: 'meta',
   order_bar: 'interactive',
   restaurants_directory: 'content', // apex portal: live competition-cohort directory
+  menu_finder: 'content', // apex portal: narrowing tag search across the cohort's menus
   auto_shops_directory: 'content', // apex portal: driver-facing auto-shop cohort directory (SecondSet)
   service_transparency: 'content', // SecondSet "we show you the work" block for a shop's own site
   scheduler: 'interactive',

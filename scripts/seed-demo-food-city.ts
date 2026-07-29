@@ -39,12 +39,35 @@ const REGION = 'WA';
 
 type Item = { name: string; description?: string; price: string; tags: string[] };
 type Section = { name: string; items: Item[] };
-type Demo = { name: string; slug: string; cuisines: string[]; phone: string; sections: Section[] };
+type Hours = { tz: string; days: Array<{ key: string; label: string; closed?: boolean; periods?: Array<{ open: string; close: string }> }> };
+type Demo = { name: string; slug: string; cuisines: string[]; phone: string; sections: Section[]; hours?: Hours };
+
+const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * Schedules are deliberately VARIED so the "open now" filter has all three states to render at
+ * any hour: a late-night bar (crosses midnight), a bakery that shuts mid-afternoon, and one
+ * place closed on Mondays. A cohort where everything is open 9-5 would let a broken open-now
+ * check pass unnoticed.
+ */
+function hours(open: string, close: string, closedDay?: number): Hours {
+  return {
+    tz: 'America/Los_Angeles',
+    days: DAYS.map((key, i) => ({
+      key,
+      label: LABELS[i],
+      closed: closedDay === i,
+      periods: closedDay === i ? [] : [{ open, close }],
+    })),
+  };
+}
 
 const DEMOS: Demo[] = [
   {
     name: 'Copper Kettle Noodle House',
     slug: 'demo-copper-kettle-noodle-house',
+    hours: hours('11:00', '22:00'),
     cuisines: ['Chinese restaurant', 'Noodle shop'],
     phone: '(555) 0100',
     sections: [
@@ -70,6 +93,7 @@ const DEMOS: Demo[] = [
   {
     name: 'Alder & Ash',
     slug: 'demo-alder-and-ash',
+    hours: hours('16:00', '01:00'),
     cuisines: ['American restaurant', 'Wood-fired'],
     phone: '(555) 0101',
     sections: [
@@ -93,6 +117,7 @@ const DEMOS: Demo[] = [
   {
     name: 'Salt Line Taqueria',
     slug: 'demo-salt-line-taqueria',
+    hours: hours('10:00', '23:00'),
     cuisines: ['Mexican restaurant', 'Taqueria'],
     phone: '(555) 0102',
     sections: [
@@ -117,6 +142,7 @@ const DEMOS: Demo[] = [
   {
     name: 'Fennel Street Bakery',
     slug: 'demo-fennel-street-bakery',
+    hours: hours('07:00', '15:00'),
     cuisines: ['Bakery', 'Cafe'],
     phone: '(555) 0103',
     sections: [
@@ -140,6 +166,7 @@ const DEMOS: Demo[] = [
   {
     name: 'The Quiet Pearl',
     slug: 'demo-the-quiet-pearl',
+    hours: hours('16:00', '23:00', 1),
     cuisines: ['Seafood restaurant', 'Oyster bar'],
     phone: '(555) 0104',
     sections: [
@@ -163,6 +190,7 @@ const DEMOS: Demo[] = [
   {
     name: 'Mira Vegan Kitchen',
     slug: 'demo-mira-vegan-kitchen',
+    hours: hours('11:00', '21:00'),
     cuisines: ['Vegan restaurant', 'Health food'],
     phone: '(555) 0105',
     sections: [
@@ -212,6 +240,7 @@ function buildTemplateData(d: Demo) {
         show_map: false,
       },
     },
+    ...(d.hours ? [{ _id: `${d.slug}-hours`, type: 'hours', content: { title: 'Hours', ...d.hours } }] : []),
     { _id: `${d.slug}-order`, type: 'order_bar', content: { phone: d.phone, enabled: true, cta_href: '#menu', cta_label: 'View Menu', call_label: 'Call' } },
   ];
 
@@ -257,7 +286,19 @@ async function main() {
   for (const d of DEMOS) {
     const { data: existing } = await db.from('templates').select('id').eq('slug', d.slug).maybeSingle();
     if (existing) {
-      console.log(`  = ${d.slug} already exists`);
+      // Re-runs backfill anything the first pass lacked (hours were added after the initial
+      // seed) rather than skipping outright — otherwise the fix never reaches seeded rows.
+      // Direct UPDATEs to templates are blocked by app.guard_templates_update — go through
+      // the sanctioned commit path, same as every other server-side template write.
+      const { commitTemplatePatch } = await import('../lib/templates/commitTemplatePatch');
+      const { data: cur } = await db.from('templates').select('rev').eq('id', (existing as any).id).maybeSingle();
+      const upErr = await commitTemplatePatch(
+        (existing as any).id,
+        (cur as any)?.rev ?? 0,
+        { data: buildTemplateData(d) },
+        null,
+      );
+      console.log(`  ${upErr ? '✗' : '↻'} ${d.slug}${upErr ? ' ' + upErr : ' refreshed'}`);
       templateIds.push((existing as any).id);
       continue;
     }

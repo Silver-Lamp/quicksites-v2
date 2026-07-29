@@ -797,6 +797,18 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Narrowing tag search over a city cohort's menus ("what are you hungry for?"). Reads the
+  // same campaign as restaurants_directory, so it can never surface a restaurant the
+  // directory hides — buffet exclusion and operator curation are applied once, upstream.
+  menu_finder: {
+    label: 'Menu Finder',
+    icon: '🍜',
+    schema: z.object({
+      title: z.string().optional().default('What are you hungry for?'),
+      campaign_id: z.string().optional().default(''),
+    }),
+  },
+
   // Auto-shop apex portals (<city>-auto-repair.com): the driver-facing directory of a
   // domain-competition cohort — "trusted shops that show you the work" (SecondSet wedge).
   // Same shape as restaurants_directory: `campaign_id` drives a live fetch, `entries` is

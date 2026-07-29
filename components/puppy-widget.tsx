@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useMediaQuery from '@/hooks/useMediaQuery';
-import event from '@vercel/analytics';
+import { track as trackEvent } from '@/lib/analytics/syntheticTraffic';
 
 const features = [
   '🚀 AI-generated websites in seconds',
@@ -35,7 +35,7 @@ export default function PuppyWidget({ showOnMobile = true }: { showOnMobile?: bo
         const autoHide = setTimeout(() => {
           setTooltipVisible(false);
           setTooltipDismissed(true);
-          event.track('tooltip_auto_hidden', { isMobile: true });
+          trackEvent('tooltip_auto_hidden', { isMobile: true });
         }, 7000);
         return () => clearTimeout(autoHide);
       }
@@ -45,7 +45,7 @@ export default function PuppyWidget({ showOnMobile = true }: { showOnMobile?: bo
   }, [isMobile]);
 
   const handleClick = () => {
-    event.track('puppy_clicked', { isMobile });
+    trackEvent('puppy_clicked', { isMobile });
     setIsExpanded((prev) => !prev);
     setTooltipVisible(false);
     setTooltipDismissed(false);
@@ -117,7 +117,7 @@ export default function PuppyWidget({ showOnMobile = true }: { showOnMobile?: bo
             onClick={() => {
               setTooltipVisible(true);
               setTooltipDismissed(false);
-              event.track('tooltip_manually_restored', { isMobile });
+              trackEvent('tooltip_manually_restored', { isMobile });
             }}
             className="absolute bottom-0 right-0 translate-y-full mt-2 text-xs text-zinc-400 hover:text-white underline"
           >

@@ -11,7 +11,7 @@
 
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
-import event from '@vercel/analytics';
+import { track as trackEvent } from '@/lib/analytics/syntheticTraffic';
 import { AboutThatEmbed } from '@/components/admin/templates/render-blocks/about-that';
 import {
   HEAR_THIS_PAGE_ENABLED,
@@ -90,7 +90,7 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
             onClick={() => {
               // Measure engagement (opening the launcher = intent to listen). The actual
               // play happens inside HJ's iframe; this tracks the funnel step we can see.
-              try { event.track('hear_this_page_opened', { path: pathname || '' }); } catch {}
+              try { trackEvent('hear_this_page_opened', { path: pathname || '' }); } catch {}
               setOpen(true);
             }}
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/90 px-3 py-2 text-sm font-medium shadow-lg backdrop-blur transition hover:bg-muted"

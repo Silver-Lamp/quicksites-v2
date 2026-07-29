@@ -44,7 +44,7 @@ const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 // dropping and re-adding it is what makes this script idempotent. Without that, a second run
 // appends a second directory (observed: 4 blocks → 5), and a portal quietly ends up listing
 // its cohort twice.
-const DROP = new Set(['menu', 'location', 'hours', 'order_bar', 'restaurants_directory']);
+const DROP = new Set(['menu', 'location', 'hours', 'order_bar', 'restaurants_directory', 'menu_finder']);
 
 async function main() {
   const { data: tpl } = await db
@@ -89,7 +89,7 @@ async function main() {
   const ids = (prospects ?? []).map((p: any) => p.template_id);
   const { data: memberTpls } = await db
     .from('templates')
-    .select('id, slug, business_name, custom_domain, published')
+    .select('id, slug, business_name, custom_domain, published, data')
     .in('id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
   const byId = new Map((memberTpls ?? []).map((t: any) => [t.id, t]));
 
@@ -120,6 +120,17 @@ async function main() {
       return !drop;
     })
     .sort((a: any, b: any) => a.business_name.localeCompare(b.business_name));
+
+  // Does the cohort have any dishes to search? Reads across BOTH block shapes.
+  const hasMenuItems = (memberTpls ?? []).some((t: any) => {
+    const page = t?.data?.pages?.[0] ?? {};
+    for (const b of [...(page.content_blocks ?? []), ...(page.blocks ?? [])]) {
+      if (b?.type !== 'menu') continue;
+      const sections = (b.content ?? b.props ?? {})?.sections;
+      if (Array.isArray(sections) && sections.some((sec: any) => (sec?.items ?? []).length)) return true;
+    }
+    return false;
+  });
 
   const cityLabel = campaign.region ? `${campaign.city}, ${campaign.region}` : campaign.city;
   const n = entries.length;
@@ -156,6 +167,16 @@ async function main() {
           hide_cta: false,
         },
       });
+      // Menu finder sits between the hero and the directory: a visitor who knows what they
+      // fancy shouldn't have to scroll a list of restaurants to find it. Only rendered when
+      // the cohort actually has dishes — an empty search box is worse than no search box.
+      if (hasMenuItems) {
+        next.push({
+          _id: `menu-finder-${campaign.id.slice(0, 8)}`,
+          type: 'menu_finder',
+          content: { title: 'What are you hungry for?', campaign_id: campaign.id },
+        });
+      }
       // The directory goes immediately after the hero: the hero says "below", so "below" had
       // better be the restaurants.
       next.push({

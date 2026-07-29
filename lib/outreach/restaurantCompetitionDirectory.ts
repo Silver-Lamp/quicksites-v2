@@ -10,6 +10,7 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { menuSiteUrl } from '@/lib/menu/deliveredMenu';
 import { RESTAURANT_COMPETITION_KIND } from '@/lib/outreach/restaurantCompetition';
+import { isBuffetLike } from '@/lib/prospects/orderingFit';
 
 export type CompetitionDirectoryEntry = {
   templateId: string;
@@ -121,7 +122,18 @@ async function assembleDirectory(campaign: {
         published: !!t.published,
       };
     })
-    .filter((e) => e.slug);
+    .filter((e) => e.slug)
+    // A buffet is a dine-in model — nobody phones one for takeaway — so it is the wrong fit
+    // for an ORDERING directory, and the take-rate funnel behind it has no orders to bite on.
+    // Filtered here as well as in the commit-time snapshot so the live feed and the snapshot
+    // can never disagree about who is on the list. See lib/prospects/orderingFit.ts.
+    .filter((e) => {
+      const t: any = tplById.get(e.templateId) ?? {};
+      return !isBuffetLike({
+        name: e.businessName,
+        categories: t?.data?.meta?.services ?? t?.data?.services ?? [],
+      });
+    });
 
   // Winner first, then published, then alphabetical.
   entries.sort(

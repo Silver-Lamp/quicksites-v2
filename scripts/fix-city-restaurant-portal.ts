@@ -24,6 +24,7 @@
 //
 // Requires the campaign to exist with kind='restaurant_competition' and its cohort attached.
 import { createClient } from '@supabase/supabase-js';
+import { isBuffetLike } from '../lib/prospects/orderingFit';
 
 const APPLY = process.argv.includes('--apply');
 const SLUG = process.argv.find((a) => !a.startsWith('--') && !a.endsWith('.ts') && !a.includes('/'))
@@ -106,6 +107,18 @@ async function main() {
       };
     })
     .filter(Boolean)
+    // Buffets are excluded from an ORDERING directory: dine-in by construction, so nobody
+    // phones one for takeaway and the per-order funnel has nothing to bite on. Mirrors the
+    // live feed's filter so the snapshot and the API can never disagree.
+    .filter((e: any) => {
+      const t: any = byId.get(e.template_id) ?? {};
+      const drop = isBuffetLike({
+        name: e.business_name,
+        categories: t?.data?.meta?.services ?? t?.data?.services ?? [],
+      });
+      if (drop) console.log(`  excluded: ${e.business_name} — buffet / dine-in, not an ordering fit`);
+      return !drop;
+    })
     .sort((a: any, b: any) => a.business_name.localeCompare(b.business_name));
 
   const cityLabel = campaign.region ? `${campaign.city}, ${campaign.region}` : campaign.city;

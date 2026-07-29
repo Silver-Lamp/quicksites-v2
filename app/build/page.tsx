@@ -21,9 +21,18 @@ export default function BuildPage() {
         <h1 className="max-w-2xl text-3xl md:text-5xl font-extrabold tracking-tight">
           Build your site — free
         </h1>
+        {/*
+          "Your work saves as you go" is stated OUT LOUD on purpose. A guest draft is a real
+          Supabase anonymous session that survives closing the tab and upgrades IN PLACE on
+          signup (same uid → the draft is already theirs). Nothing here is disposable — but a
+          visitor who isn't told that assumes the opposite, treats the builder as a toy, and
+          leaves rather than risk losing the work. The true sentence is also the persuasive
+          one, so there's no reason to make them guess. The editor says the same thing in
+          GuestPublishBanner; this is the same promise at the door.
+        */}
         <p className="mt-4 max-w-xl text-zinc-400">
-          Describe your business and watch a real site appear. Edit it live —
-          sign up only when you’re ready to publish. No credit card.
+          Describe your business and watch a real site appear. Edit it live — your work
+          saves as you go, and the site stays yours when you sign up to publish. No credit card.
         </p>
         <GuestStart />
       </main>

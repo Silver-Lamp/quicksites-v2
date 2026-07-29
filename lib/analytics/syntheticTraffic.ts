@@ -35,8 +35,15 @@ const AUTOMATION_UA = [
   'bot',
   'crawler',
   'spider',
-  // Asked of HiveJournal so their traffic is identifiable even from a headful browser.
-  'quicksites-persona-tester',
+  // HiveJournal's persona testers (HJ #1680). Their real UA is a genuine Chrome string with
+  // `HiveJournalPersonaTesting/1.0 (+https://www.hivejournal.com/persona-testing)` appended —
+  // the Chrome base is deliberate, since pages must render as they would for a real visit.
+  //
+  // ⚠️ The token is theirs, not ours. I originally guessed `quicksites-persona-tester`, which
+  // never would have matched: the same UA serves their self-tests, our cross-mesh runs and
+  // their paying customers, so a QS-specific token would be wrong on a stranger's site. Match
+  // the string they actually send, and don't "correct" it to something QS-shaped.
+  'hivejournalpersonatesting',
 ];
 
 /**

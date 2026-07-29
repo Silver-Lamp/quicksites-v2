@@ -119,6 +119,43 @@ The strongest claim pitch isn't "we built you a site" — it's "**people already
 
 **Pricing for this funnel** (`lib/commerce/pricingPolicy.ts`): a claimed menu-ordering site launches on **8% + 60¢/order, no monthly** — a single-digit take that beats DoorDash, with a per-order floor so a small ticket still clears Stripe's fixed $0.30. Chosen by vertical, not funnel: `resolveMerchantFeeDefault(merchantId)` seeds the fee at Connect onboarding (`/api/connect/onboard`) — a site with a `menu` block (`hasMenuBlock`) gets restaurant terms, everything else keeps the general **5% / no-floor** default, so no other vertical is touched. The concrete rate is stated on the claim page ("you keep 92%, no monthly" — `components/sites/claim-site-hero.tsx`, menu sites only). All numbers env-overridable + clamped to the partner cap. **Deferred:** a subscription *buy-down* (a monthly that lowers the %) once real order volume shows where merchants land — the Shopify model; `lib/billing/*` already has the tier machinery.
 
+## 7d. City menu search, and measuring it honestly (2026-07-29)
+
+The `menu_finder` block is a narrowing dish search across a whole city cohort (`lib/menu/cityMenuIndex.ts` → `app/api/public/city-menu-search`, rendered by `components/admin/templates/render-blocks/menu-finder.tsx`). A chip that would empty the page is never offered (`nextTags`), because a search that can dead-end feels broken in a way no styling fixes.
+
+**Prices we can't date are not quoted as fact.** `lib/menu/menuFreshness.ts` — prices older than `PRICE_TRUST_DAYS` (90) render as "call to confirm", menus over `ITEM_TRUST_DAYS` (365) carry a warning, and **an undated menu counts as stale** (Eyman's 32 items were OCR'd from a photograph of unknown age). ⚠️ **Drop the price, never the dish**: a menu with "call to confirm" still does the directory's job — the diner learns this kitchen serves what they want — whereas a wrong price is a claim about a business that never asked us to make it. The substitution happens inside `buildCityMenuIndex`, so every consumer inherits it; reaching past it to a raw price re-introduces the risk.
+
+### The search log, and the four facts it used to average together
+
+Zero-result searches are the asset: *"47 people wanted vegan pad thai here and found nobody"* is revenue that doesn't exist yet, and no incumbent sells dish-level unmet demand to operators. The filtering is client-side, so without logging it every no-result search evaporated when the visitor gave up. `menu_search_events` (`20260811`) + `POST /api/public/menu-search-log`, **deny-default RLS**.
+
+⚠️ **No PII by construction** — no user id, no session, no IP. The unit is a **search**, not a searcher: the product is an aggregate, so per-person data adds nothing a count doesn't while adding every obligation of holding it. Don't add an identifier to make a later funnel analysis easier; that's a different product with a different consent story.
+
+A bare zero-result turned out to be **four different facts wearing one number**. `nearestAvailable()` splits them, and the rung is persisted as `zero_reason` (`20260813`) because each diagnoses a *different system*:
+
+| `zero_reason` | what's actually broken | remedy |
+|---|---|---|
+| `closed_now` | hours. The dish **is** served nearby | latent **after-hours** demand — who should extend hours |
+| `relaxed_tags` | **our own filter chips** | a UI signal. ⚠️ Never count it near the demand number, or we'd report our own interface design as market evidence |
+| `naming` | **our own index** — `pad thai` vs "Phad Thai" (`lib/menu/looseMatch.ts`) | a synonym layer, **not** a recipe |
+| `none` | nobody nearby serves it | **the only real unmet demand** |
+
+Two of those were inflating the map badly. `closed_now` is probably the *most common* cause, because people search when they're hungry and that is exactly when kitchens close. `naming` is normal for menu text OCR'd off photographs and half transliterated.
+
+⚠️ **Logged at search time, never derived later.** The query text is stored, so batch reclassification looks tempting — but the index *changes* as menus are added, so re-running an old query against today's cohort answers a different question than the visitor asked. `NULL` means "not recorded", never "none".
+
+`looseMatch`'s rule is about the **kind** of difference, not length: one inserted/deleted letter or one adjacent swap is what transliteration and typing do (`pad`/`phad`, `banh`/`bahn`) and is safe at any length; a *substitution* under four characters is usually a different word (`pho`/`phu`). Erring toward "genuinely unserved" is the conservative direction — a false "it's only a spelling problem" hides the signal being measured. Loosening the spelling is not licence to loosen the logic; AND across query tokens is unchanged.
+
+### The remedy probe (`kind='cook_intent'`)
+
+The log proves the **leak**; it cannot prove any fix **plugs** it. A four-way mesh review of a "cook it yourself" surface produced a clean architecture that nobody had demand-tested — so the empty state asks, rather than assuming: *"Nobody near you is serving that right now — would you cook it yourself if we showed you how?"*
+
+⚠️ **It asks a question; it does not promise a feature.** "Want the recipe?" would imply one exists and dead-end on tap — the same dishonesty as the invented menus stripped off real restaurants (§4b), and self-defeating besides: **a door that lies measures how many people believe the door.** The acknowledgement states plainly that it isn't built and exactly what was recorded.
+
+It is offered **only on `zero_reason='none'`** — the consolation, never the pitch. Beyond tone (the audience is hungry and has just failed), offering it to everyone who fails would count the prompt's prominence rather than appetite, and fold "the kitchen shut at 9" into "nobody makes this". Appetite = `count(kind='cook_intent') / count(kind='search' AND zero_reason='none')`.
+
+**Nothing further is built, deliberately.** The instruments are deployed and fill for free; the decision waits on real n.
+
 ## 8. Env flags
 
 - `NEXT_PUBLIC_MENU_BASE_DOMAIN` — the restaurant "menu" base domain (e.g. `delivered.menu`); blank keeps the surface + links dormant. See §7b.

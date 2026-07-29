@@ -20,6 +20,9 @@ const NAV: Array<{ label: string; href: string }> = [
   // doesn't rank for; a footer link on every marketing page is how it gets crawled.
   { label: 'Best builders 2026', href: '/best-website-builders-2026' },
   { label: 'Contact', href: '/contact' },
+  // Discoverability for the human sitemap. Also the reason the 404's map is reachable
+  // BEFORE someone gets lost, not only after (mesh advisory, crosstalk 20260727-015522).
+  { label: 'Sitemap', href: '/sitemap' },
 ];
 
 const LEGAL: Array<{ label: string; href: string }> = [

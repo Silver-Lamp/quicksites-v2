@@ -88,9 +88,9 @@ export default function DirectoryCurator({ campaignId }: { campaignId: string })
           ✏️ Curate list <span className="text-amber-400/70">({on.length})</span>
         </button>
       ) : (
-        <div className="max-h-[70vh] overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-900/97 p-4 text-white shadow-2xl backdrop-blur">
+        <div className="max-h-[70vh] overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-900 p-4 text-zinc-100 shadow-2xl">
           <div className="mb-1 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Curate this directory</h3>
+            <h3 className="text-sm font-semibold text-zinc-100">Curate this directory</h3>
             <button onClick={() => setOpen(false)} className="text-zinc-400 hover:text-white" aria-label="Close">
               ✕
             </button>
@@ -108,7 +108,7 @@ export default function DirectoryCurator({ campaignId }: { campaignId: string })
             {on.map((c) => (
               <li key={c.templateId} className="flex items-center gap-2 rounded-lg bg-zinc-800/60 px-2.5 py-2">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm">{c.businessName}</span>
+                  <span className="block truncate text-sm text-zinc-100">{c.businessName}</span>
                   {c.extra && <span className="text-[10px] text-sky-300">added manually</span>}
                 </span>
                 <button

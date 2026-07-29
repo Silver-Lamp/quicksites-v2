@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 import BackgroundGlow from '@/components/background-glow';
 import QuickSitesWidget, { HomepageWidgetVariant } from '@/components/quick-sites-widget';
-import event from '@vercel/analytics';
+import { track as trackEvent } from '@/lib/analytics/syntheticTraffic';
 import { useSafeAuth } from '@/hooks/useSafeAuth';
 import { SiteFlags } from '@/lib/site-config';
 import useMediaQuery from '@/hooks/useMediaQuery';
@@ -92,7 +92,7 @@ export default function HomeClient({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    event.track('landing_page_viewed', {
+    trackEvent('landing_page_viewed', {
       user: user?.id || user?.email || 'guest',
       role,
       isLoggedIn,

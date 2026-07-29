@@ -58,6 +58,48 @@ export default async function GigsIndexPage() {
         </ul>
       )}
 
+      {/* ── How it works ──────────────────────────────────────────────────────────────
+          Added after FIVE independent persona testers reported the same gap: the page said
+          "Claim one to get started" and never explained what the task is, how to apply, or
+          how payment works. One finding is a hypothesis; five converging is a pattern, and
+          this one checked out — there was no explanation anywhere on the page. */}
+      <section className="mt-14 border-t border-border pt-8">
+        <h2 className="text-lg font-semibold">How it works</h2>
+        <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
+          <li>
+            <span className="font-medium text-foreground">1. Claim a gig above.</span> You&rsquo;ll
+            sign in, and it&rsquo;s added to your walk board.
+          </li>
+          <li>
+            <span className="font-medium text-foreground">2. Walk the store.</span> Go up and down
+            the aisles and note what&rsquo;s on the shelves &mdash; roughly 20 minutes for a typical
+            store. Nothing to install and nobody to check in with; you don&rsquo;t need to speak to
+            staff.
+          </li>
+          <li>
+            <span className="font-medium text-foreground">3. Submit and you&rsquo;re done.</span> Your
+            walk board keeps the list, so you can stop and pick it up later.
+          </li>
+        </ol>
+
+        {/* ⚠️ HONESTY: lib/walker/gigs.ts is explicit that v0 has NO payments, and catalog_gigs
+            has no pay column. "Flexible local gigs" reads as paid work to anyone who hasn't
+            read the source, so the page has to say plainly that it isn't — before someone
+            spends twenty minutes in a supermarket expecting to be paid. The compensation model
+            is an open decision; until it's made, this states what is actually true today. */}
+        <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+          <div className="text-sm font-medium text-foreground">
+            About pay &mdash; please read before you claim
+          </div>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            These gigs are <span className="font-medium text-foreground">not paid yet</span>. This is
+            an early pilot and we&rsquo;d rather say so than let &ldquo;gig&rdquo; imply a paycheck.
+            Claim one if you&rsquo;re curious about the project or happy to help it get off the
+            ground &mdash; not because you&rsquo;re expecting to earn from it today.
+          </p>
+        </div>
+      </section>
+
       <p className="mt-10 text-xs text-muted-foreground">
         Already signed in? Go to your{' '}
         <Link href="/walker" className="text-sky-600 hover:underline dark:text-sky-400">

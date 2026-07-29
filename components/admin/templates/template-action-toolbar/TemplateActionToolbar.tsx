@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
 import {
@@ -619,10 +620,24 @@ useEffect(() => {
               variant="ghost"
               title="Open Site Settings (S)"
               aria-label="Open Site Settings (S)"
+              // LiveEditorPreviewFrame's openSettingsShell() falls back to clicking
+              // [data-action="open-site-settings"] after its event dispatches. That selector
+              // matched nothing, so its last resort was also a no-op. Costs one attribute.
+              data-action="open-site-settings"
               onClick={() => {
-                // Toggle the same drawer the "s" key controls
-                window.dispatchEvent(new CustomEvent('qs:settings:toggle'));
-                // (optional) keep the old localStorage line if you rely on it elsewhere
+                // ⚠️ postMessage, NOT dispatchEvent. The sidebar's open state lives in
+                // template-editor-content, which listens for `qs:settings:toggle` on the
+                // MESSAGE bus (window.addEventListener('message', …), switching on d.type) —
+                // there is no addEventListener('qs:settings:toggle') there. A CustomEvent by
+                // that name therefore reached only floating-settings-rail and left the actual
+                // sidebar untouched, so this button silently did nothing.
+                //
+                // This is the third time this exact channel mismatch has bitten (see the note
+                // at the top of lib/editor/openSettingsPanel.ts, written after the last two).
+                // Route through the shared helper rather than re-deriving the call: it also
+                // closes any overlay stacked above the sidebar, so the panel can't open behind
+                // a modal and look like nothing happened.
+                openSettingsSidebarPanel('identity');
                 try { window.localStorage.setItem('qs:settingsOpen', '1'); } catch {}
               }}
             >

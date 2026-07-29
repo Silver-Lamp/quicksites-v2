@@ -144,12 +144,32 @@ function baseKey(t: any): string {
   return stripped || src;
 }
 
-/** Aggressive grouping key: prefer canonical_slug/base_slug, then strip */
+/**
+ * Aggressive grouping key.
+ *
+ * ⚠️ PREFER THE SERVER'S `root_key`, and do NOT re-strip `base_slug`.
+ *
+ * `templates.base_slug` is maintained by the database (public.base_slug_of + the
+ * trg_templates_set_base_slug trigger) and is already the correct family root. Applying
+ * `stripToken` to it a second time re-runs the greedy `(-[a-z0-9]{2,12})+$` pattern that the
+ * 20260809 migration existed to get rid of — turning a correct `renton-plumbing` back into
+ * `renton`, so every industry in a city collapsed into one family again.
+ *
+ * That is exactly what happened: the migration fixed the data and the server route, and this
+ * function quietly undid both, because it re-derived instead of using what it was given. Two
+ * implementations of one rule will always drift; there is now one, in the database.
+ *
+ * `stripToken` is kept ONLY for rows with no base_slug at all (never persisted), where a
+ * guess is better than nothing.
+ */
 function rootKey(t: any): string {
+  const apiKey = (t?.root_key || '').toString().trim();
+  if (apiKey) return apiKey;
+
   const cslug = (t?.canonical_slug || '').toString().trim();
-  if (cslug) return stripToken(cslug);
+  if (cslug) return cslug;
   const bslug = (t?.base_slug || '').toString().trim();
-  if (bslug) return stripToken(bslug);
+  if (bslug) return bslug;
   const s = (t?.slug || t?.template_name || '').toString();
   if (!s) return t?.id || '';
   return stripToken(s);

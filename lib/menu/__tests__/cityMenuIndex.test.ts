@@ -151,3 +151,21 @@ describe('nearestAvailable', () => {
     expect(nearestAvailable(idx, { query: 'pad thai' }).kind).toBe('none');
   });
 });
+
+// PorchHearth's fourth conflation: a matching failure counted as unmet demand is evidence for
+// the wrong remedy entirely — the dish is on a menu we already hold.
+describe('nearestAvailable — naming rung', () => {
+  const idx = buildCityMenuIndex([
+    site('a', 'Bangkok Kitchen', [{ name: 'Phad Thai', price: '$13', tags: ['noodles'] }]),
+  ] as any);
+
+  it('separates "served under another spelling" from genuine unmet demand', () => {
+    const near = nearestAvailable(idx, { query: 'pad thai' });
+    expect(near.kind).toBe('naming');
+    expect(near.items.map((i) => i.name)).toContain('Phad Thai');
+  });
+
+  it('still reports none when the dish genuinely is not served', () => {
+    expect(nearestAvailable(idx, { query: 'biryani' }).kind).toBe('none');
+  });
+});

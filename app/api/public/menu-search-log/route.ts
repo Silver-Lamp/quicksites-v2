@@ -57,6 +57,13 @@ export async function POST(req: Request) {
   // the column has a CHECK constraint, and a rejected insert here would be silent.
   const kind = body?.kind === 'cook_intent' ? 'cook_intent' : 'search';
 
+  // Why a zero-result found nothing. Only 'none' is real unmet demand — see the migration.
+  // Allowlisted, not passed through: the column has a CHECK and a rejected insert is silent
+  // behind sendBeacon.
+  const ZERO_REASONS = ['closed_now', 'relaxed_tags', 'naming', 'none'];
+  const zeroReason =
+    resultCount === 0 && ZERO_REASONS.includes(String(body?.zeroReason)) ? String(body?.zeroReason) : null;
+
   const query = String(body?.query ?? '').trim().toLowerCase().slice(0, MAX_QUERY);
   const tags = Array.isArray(body?.tags)
     ? body.tags.map((t: any) => String(t).trim().toLowerCase()).filter(Boolean).slice(0, MAX_TAGS)
@@ -72,6 +79,7 @@ export async function POST(req: Request) {
     tags,
     result_count: Math.min(resultCount, 100000),
     open_only: !!body?.openOnly,
+    zero_reason: zeroReason,
   });
 
   return NextResponse.json({ ok: true });

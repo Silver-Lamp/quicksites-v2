@@ -83,6 +83,16 @@ export default function MenuFinderBlock({
     [feed, picked, q, openOnly],
   );
 
+  // What we can still offer when the search matched nothing — computed once, used to decide
+  // whether cooking is even mentioned. See nearestAvailable() for why the order matters.
+  const near = React.useMemo(
+    () =>
+      feed && results.length === 0
+        ? nearestAvailableFrom(feed.items, { query: q.trim(), tags: picked, openOnly })
+        : { kind: 'none' as const, items: [] as Item[] },
+    [feed, results.length, q, picked, openOnly],
+  );
+
   const offered = React.useMemo(() => {
     const sel = new Set(picked.map(norm));
     const counts = new Map<string, number>();
@@ -111,6 +121,8 @@ export default function MenuFinderBlock({
         tags: picked,
         resultCount: results.length,
         openOnly,
+        // Only 'none' is real unmet demand; the other rungs are our own hours/UI/index.
+        zeroReason: results.length === 0 ? near.kind : undefined,
       });
       try {
         if (navigator.sendBeacon) {
@@ -121,7 +133,7 @@ export default function MenuFinderBlock({
       } catch { /* never surface a logging failure to a hungry visitor */ }
     }, 900);
     return () => clearTimeout(t);
-  }, [q, picked, openOnly, results.length, campaignId, feed, previewOnly]);
+  }, [q, picked, openOnly, results.length, campaignId, feed, previewOnly, near.kind]);
 
   // Remedy probe: reset whenever the search changes, so the question is asked per zero-result
   // search rather than answered once and hidden for the session — otherwise the denominator
@@ -147,16 +159,6 @@ export default function MenuFinderBlock({
       }
     } catch { /* the acknowledgement still shows; a lost log must never look like a failure */ }
   }, [previewOnly, campaignId, q, picked, openOnly]);
-
-  // What we can still offer when the search matched nothing — computed once, used to decide
-  // whether cooking is even mentioned. See nearestAvailable() for why the order matters.
-  const near = React.useMemo(
-    () =>
-      feed && results.length === 0
-        ? nearestAvailableFrom(feed.items, { query: q.trim(), tags: picked, openOnly })
-        : { kind: 'none' as const, items: [] as Item[] },
-    [feed, results.length, q, picked, openOnly],
-  );
 
   const byRestaurant = React.useMemo(() => {
     const m = new Map<string, { url: string; openNow: boolean | null; items: Item[] }>();
@@ -273,6 +275,18 @@ export default function MenuFinderBlock({
                 {' '}— just not open right now.{' '}
                 <button onClick={() => setOpenOnly(false)} className="font-medium underline">
                   Show them anyway
+                </button>
+              </p>
+            )}
+            {near.kind === 'naming' && (
+              <p className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3 text-sm text-zinc-300">
+                Served nearby, spelled differently —{' '}
+                <span className="font-medium text-zinc-100">
+                  {near.items.slice(0, 3).map((i) => i.name).join(', ')}
+                </span>
+                {near.items.length > 3 ? ` and ${near.items.length - 3} more` : ''}.{' '}
+                <button onClick={() => setQ(near.items[0].name)} className="font-medium underline">
+                  Search that instead
                 </button>
               </p>
             )}

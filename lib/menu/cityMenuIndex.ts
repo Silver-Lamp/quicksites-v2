@@ -11,6 +11,7 @@
 // Pure and dependency-free so the narrowing can be unit-tested without a database or a DOM.
 import { readMenuSections, type MenuItem, type MenuSection } from '@/lib/menu/menuBlocks';
 import { assessFreshness, priceOrConfirm } from '@/lib/menu/menuFreshness';
+import { looseMatch } from '@/lib/menu/looseMatch';
 
 export type IndexedItem = {
   id: string;
@@ -227,6 +228,8 @@ export type NearestAvailable =
   | { kind: 'closed_now'; items: IndexedItem[] }
   /** No exact match, but relaxing the tag filters finds near misses. */
   | { kind: 'relaxed_tags'; items: IndexedItem[] }
+  /** Served nearby under a DIFFERENT SPELLING. Our index failed, not the market. */
+  | { kind: 'naming'; items: IndexedItem[] }
   /** Genuinely nobody nearby serves this. */
   | { kind: 'none'; items: [] };
 
@@ -269,6 +272,18 @@ export function nearestAvailableFrom<T extends MatchableItem>(
   if ((opts.tags ?? []).length) {
     const looser = filterItems(items, { ...opts, tags: [], openOnly: false });
     if (looser.length) return { kind: 'relaxed_tags', items: looser };
+  }
+
+  // Last: is it served under a different SPELLING? `pad thai` vs "Phad Thai". This is our
+  // index failing to join two strings, not the market failing to serve a dish — and it must
+  // be split out, because a matching bug counted as unmet demand is evidence for the wrong
+  // remedy entirely (a synonym layer, not a recipe surface).
+  const q = String(opts.query ?? '').trim();
+  if (q) {
+    const spelled = items.filter((i) =>
+      looseMatch(q, `${i.name} ${i.description ?? ''} ${i.restaurantName}`),
+    );
+    if (spelled.length) return { kind: 'naming', items: spelled };
   }
 
   return { kind: 'none', items: [] };

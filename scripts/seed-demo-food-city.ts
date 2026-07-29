@@ -227,7 +227,9 @@ function buildTemplateData(d: Demo) {
     {
       _id: `${d.slug}-menu`,
       type: 'menu',
-      content: { title: 'Menu', currency: 'USD', sections: d.sections },
+      // Fictional menus, dated now so the dev target exercises the FRESH path. Without this
+      // every demo price renders "call to confirm" and the finder looks broken rather than honest.
+      content: { title: 'Menu', currency: 'USD', sections: d.sections, verified_at: new Date().toISOString() },
     },
     {
       _id: `${d.slug}-location`,

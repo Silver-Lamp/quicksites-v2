@@ -23,6 +23,7 @@ type Item = {
   restaurantName: string;
   restaurantUrl: string;
   openNow: boolean | null;
+  priceUnconfirmed?: boolean;
 };
 
 type Feed = {
@@ -95,6 +96,36 @@ export default function MenuFinderBlock({
       .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
       .slice(0, 14);
   }, [results, picked]);
+
+  // ── Unmet-demand capture ────────────────────────────────────────────────────────────────
+  // The ZERO-RESULT searches are the product: "47 people wanted vegan pad thai here and found
+  // nobody" is revenue that doesn't exist yet, and no incumbent sells it. This filtering is
+  // client-side, so without this every no-result search evaporated when the visitor gave up.
+  //
+  // Debounced to a SETTLED search, not per keystroke — "p", "pa", "pad" are not three demand
+  // signals. sendBeacon + ignored response: a dropped log must never be visible to someone
+  // who is just trying to find dinner. No identifiers are sent (see the route).
+  React.useEffect(() => {
+    if (previewOnly || !campaignId || !feed) return;
+    if (!q.trim() && picked.length === 0) return;
+    const t = setTimeout(() => {
+      const payload = JSON.stringify({
+        campaignId,
+        query: q.trim(),
+        tags: picked,
+        resultCount: results.length,
+        openOnly,
+      });
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/public/menu-search-log', new Blob([payload], { type: 'application/json' }));
+        } else {
+          void fetch('/api/public/menu-search-log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true });
+        }
+      } catch { /* never surface a logging failure to a hungry visitor */ }
+    }, 900);
+    return () => clearTimeout(t);
+  }, [q, picked, openOnly, results.length, campaignId, feed, previewOnly]);
 
   const byRestaurant = React.useMemo(() => {
     const m = new Map<string, { url: string; openNow: boolean | null; items: Item[] }>();
@@ -204,7 +235,13 @@ export default function MenuFinderBlock({
                       <div className="text-sm font-medium text-zinc-100">{i.name}</div>
                       {i.description && <div className="text-xs text-zinc-400">{i.description}</div>}
                     </div>
-                    {i.price && <div className="shrink-0 text-sm text-zinc-300">{i.price}</div>}
+                    {i.price && (
+                      // "call to confirm" is substituted upstream in cityMenuIndex; rendered
+                      // dimmer so it reads as a caveat rather than a price.
+                      <div className={`shrink-0 text-sm ${i.priceUnconfirmed ? 'text-zinc-500 italic' : 'text-zinc-300'}`}>
+                        {i.price}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

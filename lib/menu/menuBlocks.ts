@@ -79,12 +79,16 @@ export function writeMenuSections(data: any, sections: MenuSection[]): any {
       if (b?.type !== 'menu') return b;
       wroteHere = true;
       wroteSomewhere = true;
-      const patched = { ...(b.content ?? b.props ?? {}), sections };
+      // Stamp the verification date. Whoever calls this has just SOURCED this menu — an
+      // operator photographing it on the doorstep, or an owner editing their own — which is
+      // exactly the event menuFreshness.ts wants dated. Without it every fresh menu would be
+      // treated as unknown-age and have its prices replaced with "call to confirm".
+      const patched = { ...(b.content ?? b.props ?? {}), sections, verified_at: new Date().toISOString() };
       return b.content ? { ...b, content: patched } : { ...b, props: patched };
     });
     // No menu block in this array — insert one after the hero so it lands where a diner looks.
     if (!wroteHere) {
-      const block = { type: 'menu', _id: 'menu-run', content: { title: 'Menu', sections } };
+      const block = { type: 'menu', _id: 'menu-run', content: { title: 'Menu', sections, verified_at: new Date().toISOString() } };
       const heroAt = page[key].findIndex((b: any) => b?.type === 'hero');
       page[key] = heroAt >= 0
         ? [...page[key].slice(0, heroAt + 1), block, ...page[key].slice(heroAt + 1)]

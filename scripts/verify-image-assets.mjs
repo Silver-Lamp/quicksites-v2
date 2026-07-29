@@ -50,6 +50,30 @@ const SKIP = /(__tests__|\.test\.|\.spec\.|\.stories\.)/;
  */
 const NEXT_CONVENTIONS = new Set(['/favicon.ico']);
 
+/**
+ * Prefixes served by a route at runtime, not from public/. A local-LOOKING path that was never
+ * a static asset. (PorchHearth's addition: their run flagged eight `/api/v1/cooks/logos/*.png`
+ * paths that were correct, and the pull to make a red check green would have deleted them.)
+ */
+const RUNTIME_SERVED = [/^\/api\//];
+
+/**
+ * Weight ceiling. The bug this catches is a big file rendered tiny — PorchHearth found a
+ * 1745 KB avatar drawn at 32 CSS px inside a root-layout widget, i.e. on every page load, and
+ * this repo produced the same shape within the hour: eight references repointed at a 1175 KB
+ * logo rendered at 48 px.
+ *
+ * ⚠️ HONEST LIMIT: weight alone is the wrong signal and this check knows it. A 250 KB hero
+ * photograph is fine; a 250 KB favicon is not. The real ratio is bytes-vs-RENDERED-SIZE, which
+ * a filesystem scan cannot see. So the ceiling is set high enough that only absurdity trips it
+ * — it catches the catastrophic case and will happily pass a merely-wasteful one. Treat a pass
+ * as "nothing insane," never as "optimised."
+ */
+const MAX_KB = 600;
+const HEAVY_OK = new Set([
+  '/brand/qs-loader.mp4', // a video; the ceiling is about images rendered small
+]);
+
 function walk(dir, out = []) {
   let entries;
   try {
@@ -83,13 +107,30 @@ function collect() {
   return refs;
 }
 
+function skip(asset) {
+  return NEXT_CONVENTIONS.has(asset) || RUNTIME_SERVED.some((re) => re.test(asset));
+}
+
 function missingFrom(refs) {
   const missing = [];
   for (const [asset, files] of refs) {
-    if (NEXT_CONVENTIONS.has(asset)) continue;
+    if (skip(asset)) continue;
     if (!existsSync(join(ROOT, 'public', asset))) missing.push({ asset, files });
   }
   return missing;
+}
+
+/** `ceiling` is a parameter so --selftest can prove the guard fires without a huge fixture. */
+function overweightFrom(refs, ceiling = MAX_KB) {
+  const heavy = [];
+  for (const [asset, files] of refs) {
+    if (skip(asset) || HEAVY_OK.has(asset)) continue;
+    const p = join(ROOT, 'public', asset);
+    if (!existsSync(p)) continue; // reported as missing instead
+    const kb = Math.round(statSync(p).size / 1024);
+    if (kb > ceiling) heavy.push({ asset, files, kb });
+  }
+  return heavy;
 }
 
 const selftest = process.argv.includes('--selftest');
@@ -106,27 +147,62 @@ if (refs.size === 0) {
 }
 
 if (selftest) {
-  // Property 2: prove it goes red. Inject a reference that cannot resolve.
-  refs.set('/__selftest__/definitely-not-here.png', ['(injected by --selftest)']);
-  const found = missingFrom(refs);
-  const caught = found.some((m) => m.asset.startsWith('/__selftest__/'));
-  console.log(
-    caught
-      ? '✓ selftest: the check detects a missing asset (it goes red when it should).'
-      : '✖ selftest: the check FAILED to detect an injected missing asset.',
+  // Property 2: prove it goes red — for EVERY guard, not just the first one.
+  //
+  // This matters more than it looks. The weight guard was added in a patch that silently
+  // failed to wire it into the exit path: `overweightFrom` was defined, never called, and the
+  // script printed ✓. A half-proven selftest would have blessed that — the same
+  // reports-success-while-doing-nothing failure the whole file exists to prevent, this time
+  // inside the check itself.
+  const results = [];
+
+  refs.set('/__selftest__/definitely-not-here.png', ['(injected)']);
+  results.push([
+    'missing asset',
+    missingFrom(refs).some((m) => m.asset.startsWith('/__selftest__/')),
+  ]);
+
+  // Weigh a real, present file against a deliberately impossible ceiling: if nothing in the
+  // repo exceeds MAX_KB, a real-threshold test would pass vacuously and prove nothing.
+  const present = [...refs.keys()].find(
+    (a) => !skip(a) && existsSync(join(ROOT, 'public', a)) && statSync(join(ROOT, 'public', a)).size > 0,
   );
-  process.exit(caught ? 0 : 1);
+  const heavyCaught = present
+    ? statSync(join(ROOT, 'public', present)).size / 1024 > 0 &&
+      overweightFrom(new Map([[present, ['(injected)']]]), 0).length === 1
+    : false;
+  results.push(['overweight asset', heavyCaught]);
+
+  for (const [name, ok] of results) console.log(`${ok ? '✓' : '✖'} selftest: detects ${name}`);
+  process.exit(results.every(([, ok]) => ok) ? 0 : 1);
 }
+
+let failed = false;
 
 const missing = missingFrom(refs);
 if (missing.length) {
+  failed = true;
   console.error(`✖ ${missing.length} referenced asset(s) missing from public/:\n`);
   for (const { asset, files } of missing) {
     console.error(`  ${asset}`);
     for (const f of files) console.error(`      ← ${f}`);
   }
   console.error('\nAdd the file to public/, fix the path, or delete the dead reference.');
-  process.exit(1);
 }
 
-console.log(`✓ ${refs.size} local asset reference(s) all resolve in public/.`);
+const heavy = overweightFrom(refs);
+if (heavy.length) {
+  failed = true;
+  console.error(`\n✖ ${heavy.length} referenced asset(s) over ${MAX_KB} KB:\n`);
+  for (const { asset, files, kb } of heavy) {
+    console.error(`  ${asset} (${kb} KB)`);
+    for (const f of files) console.error(`      ← ${f}`);
+  }
+  console.error(
+    '\nResize/re-encode it, or add it to HEAVY_OK with a reason. Check what size it actually\n' +
+      'RENDERS at — the bug this catches is a huge file drawn small, on every page load.',
+  );
+}
+
+if (failed) process.exit(1);
+console.log(`✓ ${refs.size} local asset reference(s) resolve, none over ${MAX_KB} KB.`);

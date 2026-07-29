@@ -133,8 +133,14 @@ export default function RestaurantsDirectoryBlock({
       </div>
       {/* Operator curation. Renders NOTHING for anyone whose session isn't an admin — it
           probes an admin-gated endpoint and unmounts on 403, so no candidate names or
-          campaign state reach a public visitor. The gate is the server's, not this flag. */}
-      {campaignId ? <DirectoryCurator campaignId={campaignId} /> : null}
+          campaign state reach a public visitor. The gate is the server's, not this flag.
+
+          ⚠️ NOT in the editor (`previewOnly`, set by renderBlockRegistry as `!live`). The
+          curator edits the LIVE public list, so inside the builder it was both wrong and in
+          the way: a fixed-position panel floating over the canvas, colliding with the Shuffle
+          button and the editor toolbar, offering to change something the editor doesn't
+          control. Curate on the site; lay out blocks in the editor. */}
+      {campaignId && !previewOnly ? <DirectoryCurator campaignId={campaignId} /> : null}
     </section>
   );
 }

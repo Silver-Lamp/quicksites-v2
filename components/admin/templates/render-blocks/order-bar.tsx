@@ -19,7 +19,12 @@ export default function RenderOrderBar(props: any) {
   const phone: string = content.phone || '';
   const callLabel: string = content.call_label || 'Call';
   const ctaLabel: string = content.cta_label || 'View Menu';
-  const ctaHref: string = content.cta_href || '#menu';
+  // `??` not `||`, so an EXPLICIT empty string means "this site has no menu — show only the
+  // Call button". Several listing-import restaurants have no menu we can honestly publish
+  // (no menu photo in their listing, no website to scrape), and their menu block is removed
+  // rather than filled with scaffold placeholders. With `||`, an empty value fell back to
+  // '#menu' and rendered a "View Menu" button that scrolled to nothing.
+  const ctaHref: string = content.cta_href ?? '#menu';
   const tel = telHref(phone);
 
   // Nothing actionable → render nothing (avoids an empty bar on non-restaurant sites).

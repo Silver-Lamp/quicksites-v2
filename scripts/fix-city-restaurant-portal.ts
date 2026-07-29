@@ -124,10 +124,20 @@ async function main() {
           // Honest about today. Every clause here is true of a visitor who clicks right now:
           // the menus are real, the phone numbers work, and nothing claims an order button
           // that does not exist.
+          // ⚠️ This sentence has been wrong twice; both times because it promised something
+          // the pages behind it couldn't do. First it claimed "direct online ordering" when
+          // no restaurant could take an order. Then it claimed "see their menu" — but four of
+          // five had no real menu, only scaffold placeholders, which have since been removed
+          // (scripts/strip-placeholder-menus.ts) because there is no honest menu to publish:
+          // no menu photo in their listing, and no website to scrape.
+          //
+          // So it now promises only the two things that are true of every entry: these are
+          // real local kitchens, and the phone number works. Menus appear as owners claim.
+          // Before editing this, check what the linked pages actually contain.
           subheadline:
-            `${n} real ${campaign.city} kitchens — see their menu and call to order direct. ` +
+            `${n} real ${campaign.city} kitchens — find them here and call them direct. ` +
             `No delivery-app markup, no commission out of the restaurant's pocket. ` +
-            `Online ordering switches on for each restaurant as they claim their page.`,
+            `Menus and online ordering appear as each restaurant claims their page.`,
           cta_text: 'Browse restaurants',
           cta_link: '#restaurants',
           hide_cta: false,
@@ -164,9 +174,11 @@ async function main() {
             {
               question: 'Can I order online from these restaurants?',
               answer:
-                `Not yet. Right now this is the fastest way to see what ${campaign.city} kitchens ` +
-                `actually serve and call them direct — their menus and phone numbers are here. ` +
-                `Online ordering turns on for a restaurant once they claim their page.`,
+                `Not yet, and most don't have a menu here either — we only publish a menu when ` +
+                `we can source a real one, and we won't invent one. What's here is real: the ` +
+                `right ${campaign.city} kitchens, their address, hours and a phone number that ` +
+                `works. Menus and online ordering turn on for a restaurant once they claim ` +
+                `their page and add them.`,
               appearance: 'default',
             },
             {

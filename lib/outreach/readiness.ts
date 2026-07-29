@@ -271,7 +271,111 @@ export function readinessScore(data: any, industryKey: string): ReadinessScore {
   return { pct, done, total, hardLeft, nextStep: buildNextStep(firstUnmet(items), industryKey) };
 }
 
+/**
+ * True when this template is a CITY DIRECTORY PORTAL (<city>-restaurant.com), not a single
+ * business's site. Detected from the block rather than the campaign so it works anywhere the
+ * data is available, including client-side in the editor.
+ */
+export function isDirectoryPortal(data: any): boolean {
+  return collectBlocks(data).some(
+    (b) => b?.type === 'restaurants_directory' || b?.type === 'auto_shops_directory',
+  );
+}
+
+/**
+ * Readiness for a city directory portal.
+ *
+ * ⚠️ A PORTAL IS NOT A BUSINESS, and running the normal checklist over one produces advice
+ * that is actively harmful: it demands a menu, a street address and a tap-to-call number for
+ * a page that lists a dozen different restaurants. Following it would turn the portal back
+ * into the single-restaurant page it was mistakenly built from — the exact bug that shipped
+ * "Our Menu — Breakfast/Lunch/Dinner" onto a city directory.
+ *
+ * So the portal gets its own items, about the things that actually decide whether it works:
+ * does it list anybody, does it say where it is, and does it answer the question every
+ * restaurant owner who lands on it will ask.
+ */
+export function portalReadinessChecklist(data: any): ChecklistItem[] {
+  const blocks = collectBlocks(data);
+  const dir = blocks.find((b) => b?.type === 'restaurants_directory' || b?.type === 'auto_shops_directory');
+  const dirContent = dir?.content ?? dir?.props ?? {};
+  const entries: any[] = Array.isArray(dirContent?.entries) ? dirContent.entries : [];
+  const hero = blocks.find((b) => b?.type === 'hero');
+  const heroContent = hero?.content ?? hero?.props ?? {};
+  const headline = String(heroContent?.headline ?? '').trim();
+  const subheadline = String(heroContent?.subheadline ?? heroContent?.subheading ?? '').trim();
+  const title = String(data?.meta?.title ?? data?.pages?.[0]?.meta?.title ?? '').trim();
+  const faq = blocks.find((b) => b?.type === 'faq');
+  const faqItems: any[] = Array.isArray((faq?.content ?? faq?.props ?? {})?.items)
+    ? (faq?.content ?? faq?.props).items
+    : [];
+
+  const defs: Array<Omit<ChecklistItem, 'ok'> & { ok: boolean }> = [
+    {
+      id: 'portal-directory',
+      label: 'Directory block on the page',
+      severity: 'hard',
+      ok: !!dir,
+      blockTypes: ['restaurants_directory', 'auto_shops_directory'],
+      hint: 'Without it the page promises a list and shows nothing.',
+      fix: 'Add the Restaurants Directory block and link it to this city’s campaign.',
+    },
+    {
+      id: 'portal-entries',
+      label: 'At least one business listed',
+      severity: 'hard',
+      ok: entries.length > 0,
+      blockTypes: ['restaurants_directory'],
+      hint: 'An empty directory is worse than no directory — a visitor bounces and a prospect sees a ghost town.',
+      fix: 'Attach prospects to this campaign, then re-run the portal builder. Buffets are excluded automatically (dine-in, not an ordering fit).',
+    },
+    {
+      id: 'portal-hero',
+      label: 'Hero names the city (no placeholder)',
+      severity: 'hard',
+      ok: !!headline && !PLACEHOLDER_COPY.test(headline),
+      blockTypes: ['hero'],
+      hint: 'The city name in the headline is what this domain ranks for.',
+      fix: 'Edit the Hero block: name the city, and say what a visitor can do here today.',
+    },
+    {
+      id: 'portal-promise',
+      label: 'Subhead promises only what works today',
+      severity: 'hard',
+      // The one check that exists because we got it wrong twice: the subhead claimed
+      // "direct online ordering" and then "see their menu" when neither was true of the
+      // linked pages. Anything asserting ordering on a portal is a claim to verify.
+      ok: !!subheadline && !/order online|online ordering|order direct/i.test(subheadline),
+      blockTypes: ['hero'],
+      hint: 'Listed restaurants are mostly unclaimed drafts that cannot take an order. Promising ordering makes the page untrue.',
+      fix: 'Say what every listed business can actually do today — usually “find them here and call them direct”.',
+    },
+    {
+      id: 'portal-faq',
+      label: 'Answers “why is my restaurant here?”',
+      severity: 'soft',
+      ok: faqItems.length > 0,
+      blockTypes: ['faq'],
+      hint: 'Owners who find their own page need to know who built it and how to take it over. It is also the claim funnel.',
+      fix: 'Add an FAQ covering: can I order online, why is my business listed, and how do I take my page over.',
+    },
+    {
+      id: 'portal-title',
+      label: 'Page title 15–60 characters',
+      severity: 'soft',
+      ok: title.length >= 15 && title.length <= 60,
+      hint: 'The <title> is the biggest single ranking + click-through lever.',
+      fix: 'Set a page title like “Renton Restaurants — Order Direct” in Site/SEO settings.',
+    },
+  ];
+
+  return defs;
+}
+
 export function readinessChecklist(data: any, industryKey: string): ChecklistItem[] {
+  // A city portal is a different animal from a business site — see the note above.
+  if (isDirectoryPortal(data)) return portalReadinessChecklist(data);
+
   const { blockers } = analyzeReadiness(data, industryKey);
   const failing = new Set(blockers.map((b) => b.id));
   const isFood = FOOD_INDUSTRIES.has(industryKey);

@@ -19,7 +19,7 @@ import {
   type ThemeLayout,
 } from '@/lib/theme/curatedThemes';
 import { industryStyle } from '@/lib/builder/industryStyle';
-import { pickHeroCopy, pickFaqItems, pickTestimonials } from '@/lib/builder/industryCopy';
+import { pickHeroCopy, pickFaqItems } from '@/lib/builder/industryCopy';
 
 export type StarterTheme = {
   colorMode: 'light' | 'dark';
@@ -431,13 +431,28 @@ export function buildIndustryStarter(opts: {
       };
       return b;
     };
+    /**
+     * An EMPTY testimonial block — structure, not content.
+     *
+     * ⚠️ This used to seed invented quotes interpolating the real business name ("I'd hire
+     * {business} again in a heartbeat" — Satisfied Client, ★5). On a site auto-built for a
+     * real, named local business that is a fabricated review: a person who does not exist
+     * vouching for one who never earned it. Rule 9's logic (no generated people) applied to
+     * words instead of images.
+     *
+     * Three persona testers independently judged a trades site and all named "no testimonials"
+     * as the top gap — so the gap is real. The fix is still not to fill it for the owner: the
+     * block ships empty, prompts them in the editor, and renders NOTHING on the published site
+     * until they add something true.
+     */
     const makeTestimonial = () => {
       const b: any = createDefaultBlock('testimonial');
-      b.content = b.content ?? {};
-      // Seed industry-flavored testimonials (default is a single generic quote).
-      b.content.testimonials = pickTestimonials({ industryKey, businessName });
+      b.content = { ...(b.content ?? {}), testimonials: [] };
       return b;
     };
+
+    /** Proof-of-work, same rule: real photos or no section at all. */
+    const makeBeforeAfter = () => createDefaultBlock('before_after');
     const makeCta = () => {
       const b: any = createDefaultBlock('cta');
       b.content = { ...b.content, label: copy.ctaText, link: '#contact' };
@@ -450,14 +465,14 @@ export function buildIndustryStarter(opts: {
         blocks = [hero, makeStory(), services, makeTestimonial(), contact];
         break;
       case 'proof_led':
-        blocks = [hero, services, makeTestimonial(), faq, makeCta(), contact];
+        blocks = [hero, services, makeBeforeAfter(), makeTestimonial(), faq, makeCta(), contact];
         break;
       case 'conversion':
         blocks = [hero, services, makeCta(), faq, contact];
         break;
       case 'showcase':
         // Comprehensive long-form brand page — the fullest stack.
-        blocks = [hero, makeStory(), services, makeTestimonial(), faq, makeCta(), contact];
+        blocks = [hero, makeStory(), services, makeBeforeAfter(), makeTestimonial(), faq, makeCta(), contact];
         break;
       case 'benefits_led':
         // Story/benefits + an early CTA, then services and FAQ.

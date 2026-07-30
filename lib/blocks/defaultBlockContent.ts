@@ -62,7 +62,8 @@ export const DEFAULT_BLOCK_CONTENT = {
 
   audio: { url: 'https://example.com/audio.mp3', title: '', provider: 'suno' },
 
-  quote: { text: 'This changed everything.', attribution: 'Jane Doe' },
+  // Empty: a default quote + named attribution is a fabricated statement by a named person.
+  quote: { text: '', attribution: '' },
 
   button: { label: 'Click Me', href: '#', style: 'primary' },
 
@@ -139,14 +140,15 @@ export const DEFAULT_BLOCK_CONTENT = {
   /* ───────── testimonial (avatar_url per schema) ───────── */
 
   testimonial: {
-    testimonials: [
-      {
-        quote: 'They did a great job!',
-        attribution: 'Happy Client',
-        avatar_url: '',
-        rating: 5,
-      },
-    ],
+    // ⚠️ EMPTY ON PURPOSE — do not put a specimen back.
+    // This default used to ship { quote: 'They did a great job!', attribution: 'Happy Client',
+    // rating: 5 }. A block default is a GENERATOR that runs every time the block is created by
+    // any path (scaffold, editor add-block, createDefaultBlock), so a fabricated quote here is
+    // not a placeholder — it is a fabrication with unlimited reach, authored once and emitted
+    // forever. It reached a real named business's draft (florencetow) before anyone noticed.
+    // A fabricated `rating` is the worst part: a star is what gets aggregated and believed at a
+    // glance. See crosstalk/contracts/honest-scaffold-standard.md.
+    testimonials: [],
     randomized: false,
     layout: 'list',
   },
@@ -293,9 +295,12 @@ export const DEFAULT_BLOCK_CONTENT = {
   testimonial_audio: {
     title: 'What customers say',
     testimonials: [
+      // Empty claim fields. The guidance that used to sit in `quote` was good advice in the
+      // wrong place — anything in a claim field can RENDER as a claim, so it belongs in the
+      // editor's placeholder, not in content.
       {
-        quote: 'Replace this with a real review — word-for-word from Google, Yelp, or an email.',
-        author: 'A happy customer',
+        quote: '',
+        author: '',
         audio_url: '',
         testimonial_id: '',
       },
@@ -367,10 +372,13 @@ export const DEFAULT_BLOCK_CONTENT = {
     product_name: '',
     show_schema: true,
     reviews: [
+      // ⚠️ This shipped `rating: 5` with `show_schema: true` — a fabricated five-star review
+      // emitted as structured data for search engines to ingest. A star is the part that gets
+      // aggregated and believed at a glance; it is the first thing to pull, not the last.
       {
-        author: 'A happy customer',
-        rating: 5,
-        text: 'Replace this with a real review — copy it word-for-word from Google, Yelp, or an email.',
+        author: '',
+        rating: 0,
+        text: '',
         date: '',
       },
     ],
@@ -595,10 +603,11 @@ export const DEFAULT_BLOCK_CONTENT = {
     title: 'Endorsements',
     subtitle: 'Trusted by community leaders',
     endorsements: [
+      // Empty: a default endorsement invents a named public figure backing a real candidate.
       {
-        name: 'Jane Smith',
-        title: 'Former Mayor',
-        quote: 'John has the experience and vision we need.',
+        name: '',
+        title: '',
+        quote: '',
         image_url: '',
       },
     ],

@@ -224,5 +224,12 @@ work. (Operational authority, not equity split, governs what a session may act o
   > **Verified:** `parts.join(' ')` discards the structure (read the source).
   > **Assumed:** that `shopping-list` consumes it — I did not check.
 
-  Three things make it work: (1) **the assumption line carries all the value** — a wrong *observation* fails loudly and gets corrected, a wrong *inference* fails silently and gets built on; (2) **be strictest about other people's code**, because across a repo boundary verifying costs most exactly where your priors are worst, which is why most instances cross one; (3) **label the inference that supports your conclusion** — every instance so far ran toward "and therefore my point stands," never toward "and therefore I'm wrong."
+  Four things make it work:
+
+  1. **`Assumed:` carries the value.** A wrong *observation* fails loudly — whoever owns that code corrects it. A wrong *inference* fails silently, because it doesn't look like a claim, it looks like the conclusion, and it gets built on.
+  2. **`Verified:` must state SCOPE, not just that checking happened** — that's where over-claiming hides. *"I grepped rather than remembered"* can be perfectly true and still be a single-directory search reported as a repo-wide conclusion. `Verified: X` invites trust; `Verified: X (grepped lib/ only)` invites the correction. The checked half only fails loudly if the reader can see how far the check reached.
+  3. **Be strictest about other people's code.** Across a repo boundary, verifying costs most exactly where your priors are worst, which is why most instances cross one.
+  4. **Label the inference that supports your conclusion.** Every instance ran toward "and therefore my point stands," never toward "and therefore I'm wrong." That asymmetry is **locally rational, not lazy** — checking an inference that would undercut you has a clear payoff, while checking one that supports you either teaches you nothing or costs you the point. Incentives produce it, so it needs a structural habit rather than more diligence.
+
+  ⚠️ It does not work retroactively, and the tempting version of a wrong claim is usually the one that makes the point more sharply. When a check would change what you'd report, run it *before* reporting — including against the live surface, not just the DB row (the renderer serves the published snapshot, not `templates.data`).
 - **Keep docs + public surfaces in sync in the same commit** (a mesh-wide rule — HJ + DeckSketch codify it too): when you change a feature, update its doc/this file/the relevant `crosstalk/contracts/*` in the *same* PR. A stale doc is worse than a missing one. When you notice a doc contradicting the code, fix or delete it rather than working around it.

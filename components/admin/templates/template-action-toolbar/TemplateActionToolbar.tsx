@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useIsGuest } from '@/hooks/useIsGuest';
 import { createPortal } from 'react-dom';
 import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
 import { Button } from '@/components/ui';
@@ -60,6 +61,7 @@ function useUndoRedo(template: Template) {
   const redoStackRef = useRef<TData[]>([]);
   const prevDataRef  = useRef<TData | null>(null);
   const lastKeyRef   = useRef<string>('');
+
   const [stats, setStats] = useState({ past: 0, future: 0 });
   const isReplayingRef = useRef(false);
   const initRef = useRef(false);
@@ -179,6 +181,9 @@ export default function TemplateActionToolbar({
   onApplyTemplate,
   onSetRawJson,
 }: Props) {
+  // Guest-only suffix on the save status — see the comment at that render site for why the
+  // reassurance lives in this always-visible toolbar rather than in a banner.
+  const isGuest = useIsGuest();
   const tplRef = useRef(template);
   useEffect(() => { tplRef.current = template; }, [template]);
 
@@ -820,12 +825,35 @@ useEffect(() => {
 
             {/* Save + autosave status */}
             <div className="flex items-center gap-2">
+              {/*
+                ⚠️ THE GUEST SUFFIX IS THE POINT — put the reassurance where the DOUBT is.
+                A persona building as a guest reported being "left wondering if I could save my
+                progress without signing up" — AFTER customizing, and after the fix that was
+                supposed to answer it had already deployed. That fix put the message on /build
+                and in a banner at the top of the editor, and both are structurally unable to
+                reach the moment: the doubt arrives once effort is invested, and by then the
+                landing page is gone and GuestPublishBanner has scrolled out of view (it sits
+                below the sticky header, in normal flow — verified).
+
+                This toolbar is `fixed bottom-4`, so it is the one thing always on screen, and
+                it was already reporting save state. "Saved" is complete information for an
+                owner and half an answer for a guest, whose real question is not *did it save*
+                but *is it still mine tomorrow.* So say both, in the place they are already
+                looking.
+
+                Only claimed when NOT dirty — an unsaved edit must never be described as saved.
+              */}
               {saveError ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 mr-1" title={saveError}>
                   <AlertTriangle className="w-3.5 h-3.5" /> Not saved
                 </span>
               ) : typeof autosaveStatus === 'string' && autosaveStatus ? (
-                <span className="text-[11px] text-zinc-400 mr-1">{autosaveStatus}</span>
+                <span className="text-[11px] text-zinc-400 mr-1">
+                  {autosaveStatus}
+                  {isGuest ? ' · yours when you sign up' : ''}
+                </span>
+              ) : isGuest && !dirty ? (
+                <span className="text-[11px] text-zinc-400 mr-1">Saved · yours when you sign up</span>
               ) : null}
               <Button
                 size="sm"

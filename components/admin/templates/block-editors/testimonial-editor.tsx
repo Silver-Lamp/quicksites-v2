@@ -157,9 +157,19 @@ function SortableItem({
             )}
             <span>{item.attribution || 'Anonymous'}</span>
             {item.rating ? <span>• {item.rating}★</span> : null}
+            {/*
+              The badge has to state the CONSEQUENCE, not just the fact. "AI Sample" told an
+              operator what it was; it didn't tell them it will not appear on their site — so
+              the obvious reading was "generated, and live." Now it says what happens, and the
+              title explains how to make it publishable, because every edit path below clears
+              ai_generated.
+            */}
             {item.ai_generated ? (
-              <span className="ml-2 px-1.5 py-0.5 rounded bg-purple-700/40 border border-purple-500/40">
-                AI Sample
+              <span
+                className="ml-2 px-1.5 py-0.5 rounded bg-purple-700/40 border border-purple-500/40"
+                title="Generated samples are drafting aids — they never appear on your published site. Edit one and put a real customer's words in it, and it publishes normally."
+              >
+                AI Sample · won&rsquo;t publish
               </span>
             ) : null}
           </div>

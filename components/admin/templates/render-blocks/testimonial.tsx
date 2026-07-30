@@ -62,9 +62,29 @@ export default function TestimonialBlock({
   previewOnly?: boolean;
 }) {
   const final = pickContent(block, content);
+  const all: TestimonialItem[] = final.testimonials ?? [];
+
+  // ⚠️ AI SAMPLES NEVER REACH A VISITOR.
+  //
+  // The testimonial editor can generate testimonials ("Generate" / "Replace all with AI") and
+  // stamps each `ai_generated: true`. The editor is honest about it — every generated item
+  // carries a purple "AI Sample" badge, so the operator always knows which are invented.
+  //
+  // That badge stopped at the editor door. This renderer never read the flag, so on the
+  // published page an invented "Jake M. ★★★★★" rendered identically to a real customer's
+  // review. Four live sites were serving exactly that. The honesty existed and did not survive
+  // publication, which is the worst place for it to fail — the operator, who already knows,
+  // was told; the visitor, who cannot know, was not.
+  //
+  // So generated items are DRAFTING AIDS: useful against blank-page paralysis, invisible to
+  // the public. Every edit path in the editor already sets `ai_generated: false`, so an
+  // operator who rewrites a sample in a real customer's words publishes it normally — the
+  // gate is "a human has touched this", and it was already being recorded.
+  const publishable = previewOnly ? all : all.filter((t) => !(t as any)?.ai_generated);
+
   const list: TestimonialItem[] = final.randomized
-  ? [...(final.testimonials ?? [])].sort(() => 0.5 - Math.random())
-  : (final.testimonials ?? []);
+    ? [...publishable].sort(() => 0.5 - Math.random())
+    : publishable;
 
   // ⚠️ SILENT UNTIL FILLED — the about_that pattern. The block now ships EMPTY (its default no
   // longer carries a fabricated quote), so without this a visitor to a real business's site

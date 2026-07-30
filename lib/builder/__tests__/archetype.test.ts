@@ -11,6 +11,12 @@ const KNOWN = new Set([
   // It renders nothing until an embed is set, so it's silent on the page — but it IS
   // in the block list, and omitting it here is what made this suite fail on main.
   'about_that',
+  // Proof-of-work slot for the proof_led/showcase archetypes (2026-07-30). Seeded EMPTY:
+  // before-and-after renders nothing until the owner supplies real photos, so it is silent on
+  // the page but present in the block list — the same shape as about_that above. Three persona
+  // testers independently named "no proof of work" as the top gap on a trades site; the fix is
+  // to give it a home, never to generate the photos.
+  'before_after',
 ]);
 
 const types = (tpl: any): string[] => tpl.data.pages[0].blocks.map((b: any) => b.type);

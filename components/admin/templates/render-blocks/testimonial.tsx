@@ -51,17 +51,27 @@ export default function TestimonialBlock({
   colorMode = 'dark',
   template, // (unused here, but kept for parity with your API)
   content,  // allow optional override like other renderers
+  previewOnly,
 }: {
   block: Block;
   compact?: boolean;
   colorMode?: 'light' | 'dark';
   template: Template;
   content?: Block['content'];
+  /** True in the editor/preview. The PUBLISHED render must stay silent when empty. */
+  previewOnly?: boolean;
 }) {
   const final = pickContent(block, content);
   const list: TestimonialItem[] = final.randomized
   ? [...(final.testimonials ?? [])].sort(() => 0.5 - Math.random())
   : (final.testimonials ?? []);
+
+  // ⚠️ SILENT UNTIL FILLED — the about_that pattern. The block now ships EMPTY (its default no
+  // longer carries a fabricated quote), so without this a visitor to a real business's site
+  // would read a "Testimonials" heading over "No testimonials yet." — advertising the absence,
+  // which is worse than omitting the section. In the editor the prompt still shows, because
+  // that is where the owner can act on it.
+  if (!list.length && !previewOnly) return null;
 
   return (
     <section className="px-6 py-12">
@@ -96,7 +106,9 @@ export default function TestimonialBlock({
           ))}
 
           {list.length === 0 && (
-            <p className="italic p-4 rounded-md text-muted-foreground bg-muted">No testimonials yet.</p>
+            <p className="italic p-4 rounded-md text-muted-foreground bg-muted">
+              No testimonials yet — add a real one from a real customer.
+            </p>
           )}
         </div>
       </div>

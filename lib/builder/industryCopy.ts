@@ -123,36 +123,11 @@ export function pickFaqItems(opts: {
 
 /* --------------------------- Testimonial copy ---------------------------- */
 
-type Quote = { quote: string; attribution: string };
+// ⚠️ The invented-testimonial generator that used to live here was REMOVED (2026-07-30).
+// It emitted 5-star reviews interpolating the real business's name ("I'd hire {business} again
+// in a heartbeat" — Satisfied Client) onto sites auto-built for real named businesses. Deleted
+// rather than left unused, so it cannot be switched back on without someone rewriting it and
+// noticing what they are writing — the same call as removing the `include_people` opt-in for
+// rule 9. Testimonial blocks ship EMPTY; the owner supplies real ones.
+// See crosstalk/contracts/honest-scaffold-standard.md.
 
-const QUOTES_GENERIC: Quote[] = [
-  { quote: 'Professional, on time, and the results speak for themselves. Highly recommend.', attribution: 'Local Customer' },
-  { quote: 'Great communication from start to finish — I’d hire {business} again in a heartbeat.', attribution: 'Satisfied Client' },
-];
-
-const QUOTES_BY_STYLE: Record<IndustryStyle, Quote[]> = {
-  generic: [],
-  urgency: [{ quote: 'Called in a panic and they had someone out fast. Absolute lifesavers.', attribution: 'Relieved Customer' }],
-  visual:  [{ quote: 'The before-and-after was night and day — my place has never looked better.', attribution: 'Happy Homeowner' }],
-  trust:   [{ quote: 'They explained everything clearly and made the whole process easy.', attribution: 'Grateful Client' }],
-};
-
-/** 2 seed testimonials (one style-flavored where available, one generic), varied per site. */
-export function pickTestimonials(opts: {
-  industryKey: IndustryKey;
-  businessName?: string | null;
-  rng?: () => number;
-}): Array<{ quote: string; attribution: string; avatar_url: string; rating: number }> {
-  const rng = opts.rng ?? Math.random;
-  const style = industryStyle(opts.industryKey);
-  const business = (opts.businessName || '').trim() || 'them';
-  const styled = QUOTES_BY_STYLE[style];
-  const generic = shuffle(QUOTES_GENERIC, rng);
-  const chosen = [...styled.slice(0, 1), ...generic].slice(0, 2);
-  return chosen.map((q) => ({
-    quote: q.quote.replace(/\{business\}/g, business),
-    attribution: q.attribution,
-    avatar_url: '',
-    rating: 5,
-  }));
-}

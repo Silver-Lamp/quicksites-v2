@@ -8,6 +8,11 @@ export default {
   // was converted to Jest and runs. Reviving the React tests needs the admin module
   // resolution sorted out — tracked.
   testPathIgnorePatterns: [
+    // Git worktrees live INSIDE the repo (.claude/worktrees/<name>), so jest discovers their
+    // test files too — doubling every suite and, worse, running a STALE copy of a test against
+    // the CURRENT source (the `@/` alias resolves to this root, not the worktree's). That
+    // produces failures that look real and cannot be reproduced by editing the file jest names.
+    '<rootDir>/.claude/',
     '/node_modules/',
     '<rootDir>/admin/__tests__/Template',       // Template*.test.tsx — Vitest + heavy component render
     '<rootDir>/admin/__tests__/useCurrentUser',  // hook test entangled with admin/node_modules React

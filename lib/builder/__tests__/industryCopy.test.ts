@@ -1,4 +1,4 @@
-import { pickHeroCopy, pickFaqItems, pickTestimonials } from '../industryCopy';
+import { pickHeroCopy, pickFaqItems } from '../industryCopy';
 import { industryStyle } from '../industryStyle';
 
 describe('industryStyle', () => {
@@ -60,14 +60,6 @@ describe('pickFaqItems', () => {
   });
 });
 
-describe('pickTestimonials', () => {
-  it('returns 2 seeded testimonials with no leftover placeholders', () => {
-    const t = pickTestimonials({ industryKey: 'landscaping' as any, businessName: 'Green Co' });
-    expect(t).toHaveLength(2);
-    for (const q of t) {
-      expect(q.quote).not.toMatch(/\{business\}/);
-      expect(q.rating).toBe(5);
-      expect(q.avatar_url).toBe('');
-    }
-  });
-});
+// pickTestimonials was DELETED (see industryCopy.ts) — it fabricated 5-star reviews
+// interpolating a real business's name. Its test went with it; a test that asserts a
+// generator produces plausible fake reviews is a test that argues for keeping it.

@@ -1,4 +1,4 @@
-import { buildCityMenuIndex, narrow, nextTags, isOpenAt } from '../cityMenuIndex';
+import { buildCityMenuIndex, narrow, nextTags, isOpenAt, nearestAvailable } from '../cityMenuIndex';
 
 const site = (slug: string, name: string, items: any[], hours?: any) => ({
   slug,
@@ -102,5 +102,70 @@ describe('open now', () => {
     const idx = buildCityMenuIndex([site('c', 'No Hours', [{ name: 'Thing', tags: ['x'] }])]);
     expect(narrow(idx, {})).toHaveLength(1);
     expect(narrow(idx, { openOnly: true })).toHaveLength(0);
+  });
+});
+
+// ── Graduated fallback ──────────────────────────────────────────────────────────────────────
+// Two bugs in one: leading with "want to cook?" is tone-deaf to someone who just failed while
+// hungry, AND it inflates the cook_intent it exists to measure. "Nobody is OPEN" is not the
+// same fact as "nobody SERVES it" — the first isn't unmet demand at all.
+describe('nearestAvailable', () => {
+  // One restaurant, lunch-only, so "open now" can be made to fail deterministically.
+  const idx = buildCityMenuIndex([
+    site(
+      'a',
+      'Noodle House',
+      [
+        { name: 'Pad Thai', price: '$13', tags: ['vegan', 'noodles'] },
+        { name: 'Beef Pho', price: '$14', tags: ['beef'] },
+      ],
+      { days: [{ day: 'Monday', open: '11:00', close: '14:00' }] },
+    ),
+    // ⚠️ `now` belongs to buildCityMenuIndex, NOT to narrow() — openNow is computed once, at
+    // index build. An earlier draft passed `now` in the narrow options, where it is silently
+    // ignored: the test still went green, but only because of the real wall clock on the day
+    // it ran, and would have flipped on a Monday lunchtime. Pin it here or the assertion is
+    // about the calendar, not the code.
+  ] as any, new Date('2026-07-27T03:00:00')); // 3am Sunday — nothing is open
+
+  it('says CLOSED NOW rather than nothing, when the dish exists but kitchens are shut', () => {
+    // The index above is pinned to 3am; the dish is on a menu, nobody is serving it.
+    const opts = { query: 'pad thai', openOnly: true };
+    expect(narrow(idx, opts)).toHaveLength(0); // precondition
+    const near = nearestAvailable(idx, opts);
+    expect(near.kind).toBe('closed_now');
+    expect(near.items.map((i) => i.name)).toContain('Pad Thai');
+  });
+
+  it('relaxes our own tag chips before the words they typed', () => {
+    const near = nearestAvailable(idx, { query: 'pho', tags: ['vegan'] });
+    expect(near.kind).toBe('relaxed_tags');
+    expect(near.items.map((i) => i.name)).toContain('Beef Pho');
+  });
+
+  it('admits none when nobody nearby serves it — the only case that is real unmet demand', () => {
+    expect(nearestAvailable(idx, { query: 'biryani' }).kind).toBe('none');
+  });
+
+  it('returns none when the search actually had results (nothing to fall back from)', () => {
+    expect(nearestAvailable(idx, { query: 'pad thai' }).kind).toBe('none');
+  });
+});
+
+// PorchHearth's fourth conflation: a matching failure counted as unmet demand is evidence for
+// the wrong remedy entirely — the dish is on a menu we already hold.
+describe('nearestAvailable — naming rung', () => {
+  const idx = buildCityMenuIndex([
+    site('a', 'Bangkok Kitchen', [{ name: 'Phad Thai', price: '$13', tags: ['noodles'] }]),
+  ] as any);
+
+  it('separates "served under another spelling" from genuine unmet demand', () => {
+    const near = nearestAvailable(idx, { query: 'pad thai' });
+    expect(near.kind).toBe('naming');
+    expect(near.items.map((i) => i.name)).toContain('Phad Thai');
+  });
+
+  it('still reports none when the dish genuinely is not served', () => {
+    expect(nearestAvailable(idx, { query: 'biryani' }).kind).toBe('none');
   });
 });

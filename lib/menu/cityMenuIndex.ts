@@ -11,6 +11,7 @@
 // Pure and dependency-free so the narrowing can be unit-tested without a database or a DOM.
 import { readMenuSections, type MenuItem, type MenuSection } from '@/lib/menu/menuBlocks';
 import { assessFreshness, priceOrConfirm } from '@/lib/menu/menuFreshness';
+import { looseMatch } from '@/lib/menu/looseMatch';
 
 export type IndexedItem = {
   id: string;
@@ -183,11 +184,31 @@ export type NarrowOptions = {
   openOnly?: boolean;
 };
 
-export function narrow(index: CityMenuIndex, opts: NarrowOptions): IndexedItem[] {
+/**
+ * The minimum an item needs to be searchable. Both the server-built index rows and the flat
+ * rows the public feed hands the browser satisfy this, which is the point: ONE filter, two
+ * callers.
+ *
+ * ⚠️ This generalisation is not tidiness. The finder component carried its own hand-rolled
+ * copy of the filter below, annotated "mirrors cityMenuIndex#narrow" — two copies of one
+ * truth, which is the single most repeated bug in this repo (`blocks` vs `content_blocks`,
+ * `subheadline` vs `subheading`, base_slug in four places). Every fix that held deleted a
+ * copy instead of syncing it, so adding a third copy for the fallback was not an option.
+ */
+export type MatchableItem = {
+  name: string;
+  description?: string;
+  tags: string[];
+  restaurantName: string;
+  openNow: boolean | null;
+};
+
+/** Filter any matchable rows. AND across tags — narrowing means narrowing. */
+export function filterItems<T extends MatchableItem>(items: T[], opts: NarrowOptions): T[] {
   const tags = (opts.tags ?? []).map(normTag).filter(Boolean);
   const q = String(opts.query ?? '').trim().toLowerCase();
 
-  return index.items.filter((i) => {
+  return items.filter((i) => {
     if (opts.openOnly && i.openNow !== true) return false;
     if (tags.length && !tags.every((t) => i.tags.includes(t))) return false;
     if (q && !`${i.name} ${i.description ?? ''} ${i.restaurantName}`.toLowerCase().includes(q)) {
@@ -195,6 +216,81 @@ export function narrow(index: CityMenuIndex, opts: NarrowOptions): IndexedItem[]
     }
     return true;
   });
+}
+
+export function narrow(index: CityMenuIndex, opts: NarrowOptions): IndexedItem[] {
+  return filterItems(index.items, opts);
+}
+
+/** What we could still offer someone whose search matched nothing. */
+export type NearestAvailable =
+  /** The dish exists nearby; the kitchens are shut right now. NOT unmet demand. */
+  | { kind: 'closed_now'; items: IndexedItem[] }
+  /** No exact match, but relaxing the tag filters finds near misses. */
+  | { kind: 'relaxed_tags'; items: IndexedItem[] }
+  /** Served nearby under a DIFFERENT SPELLING. Our index failed, not the market. */
+  | { kind: 'naming'; items: IndexedItem[] }
+  /** Genuinely nobody nearby serves this. */
+  | { kind: 'none'; items: [] };
+
+/**
+ * The graduated fallback for a zero-result search.
+ *
+ * ⚠️ WHY THIS EXISTS, and it's two bugs not one.
+ *
+ * (1) UX. A zero-result visitor is hungry and has just failed. Hard-pivoting them into a
+ *     40-minute cooking project reads as tone-deaf, and leading with it is also dishonest
+ *     about what we know: if a restaurant nearby serves the dish and is merely CLOSED, the
+ *     honest answer is "here it is, come back at 11" — not "why not cook?". Cook-it is the
+ *     consolation, never the headline. (HiveJournal's catch.)
+ *
+ * (2) MEASUREMENT, and this is the load-bearing half. A cook-first prompt inflates the very
+ *     number it exists to measure — offer cooking to everyone who fails and cook_intent
+ *     counts the offer's prominence, not the appetite. Worse, "nobody is OPEN" and "nobody
+ *     SERVES it" are different facts that a bare zero-result conflates: the first is not
+ *     unmet demand at all, the dish exists. Counting an 11pm closure as demand for a recipe
+ *     overstates both the leak and the remedy. Same principle as showing time instead of
+ *     price at the fork: an instrument that moves what it measures is worse than none.
+ *
+ * Order matters — most-available first, so the strongest real answer wins before we ever
+ * suggest a stove.
+ */
+export function nearestAvailableFrom<T extends MatchableItem>(
+  items: T[],
+  opts: NarrowOptions,
+): { kind: NearestAvailable['kind']; items: T[] } {
+  // Only reachable when the caller already got nothing; being defensive costs one filter.
+  if (filterItems(items, opts).length) return { kind: 'none', items: [] };
+
+  if (opts.openOnly) {
+    const anyHour = filterItems(items, { ...opts, openOnly: false });
+    if (anyHour.length) return { kind: 'closed_now', items: anyHour };
+  }
+
+  // Drop the tag chips but keep what they typed — the words are the intent; the chips were
+  // our suggestion. Relaxing our own guess before their query is the right order.
+  if ((opts.tags ?? []).length) {
+    const looser = filterItems(items, { ...opts, tags: [], openOnly: false });
+    if (looser.length) return { kind: 'relaxed_tags', items: looser };
+  }
+
+  // Last: is it served under a different SPELLING? `pad thai` vs "Phad Thai". This is our
+  // index failing to join two strings, not the market failing to serve a dish — and it must
+  // be split out, because a matching bug counted as unmet demand is evidence for the wrong
+  // remedy entirely (a synonym layer, not a recipe surface).
+  const q = String(opts.query ?? '').trim();
+  if (q) {
+    const spelled = items.filter((i) =>
+      looseMatch(q, `${i.name} ${i.description ?? ''} ${i.restaurantName}`),
+    );
+    if (spelled.length) return { kind: 'naming', items: spelled };
+  }
+
+  return { kind: 'none', items: [] };
+}
+
+export function nearestAvailable(index: CityMenuIndex, opts: NarrowOptions): NearestAvailable {
+  return nearestAvailableFrom(index.items, opts) as NearestAvailable;
 }
 
 /**

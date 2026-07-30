@@ -219,4 +219,10 @@ work. (Operational authority, not equity split, governs what a session may act o
 - The authoritative data model is **`supabase/migrations/*` + `types/supabase.ts`**, not any prose doc.
 - When unsure whether code is live, check for the legacy markers in §8 and grep for imports before assuming.
 - Keep `tsc --noEmit` green; run `npm run typecheck` after non-trivial changes.
+- **⚠️ Say which half you checked.** The most repeated failure across this repo and the mesh is *a true observation plus an unverified inference, reported as one thing* — arriving with identical confidence, because the checked half really was checked. Five instances across three products in two days, e.g. *"we flatten the ingredient structure"* (read the source ✓) *"so fixing it unblocks the shopping list"* (never checked — that consumer reads a different table). So mark it, in PR bodies, messages and comments:
+
+  > **Verified:** `parts.join(' ')` discards the structure (read the source).
+  > **Assumed:** that `shopping-list` consumes it — I did not check.
+
+  Three things make it work: (1) **the assumption line carries all the value** — a wrong *observation* fails loudly and gets corrected, a wrong *inference* fails silently and gets built on; (2) **be strictest about other people's code**, because across a repo boundary verifying costs most exactly where your priors are worst, which is why most instances cross one; (3) **label the inference that supports your conclusion** — every instance so far ran toward "and therefore my point stands," never toward "and therefore I'm wrong."
 - **Keep docs + public surfaces in sync in the same commit** (a mesh-wide rule — HJ + DeckSketch codify it too): when you change a feature, update its doc/this file/the relevant `crosstalk/contracts/*` in the *same* PR. A stale doc is worse than a missing one. When you notice a doc contradicting the code, fix or delete it rather than working around it.

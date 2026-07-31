@@ -50,13 +50,22 @@ export default function SiteMapExplorer({
 
       {/* An empty result still shows the full map underneath rather than a blank pane — the
           visitor is already lost; a dead end is the one thing this page must not produce. */}
+      {/*
+        CSS COLUMNS, NOT GRID — these sections are variable-height blocks that should flow, not
+        align. A `grid` force-aligns rows: every section in row 2 starts only after the TALLEST
+        section in row 1 ends, so a short group like "Legal" leaves a ragged vertical gap
+        beneath it. Columns let each section stack directly under the one above it in its own
+        column, and `break-inside-avoid` stops a group splitting across a column boundary.
+
+        Rule of thumb (HiveJournal, who hit this on their own sitemap): grid when you WANT
+        aligned rows; CSS columns when you want even vertical flow of variable-height blocks.
+        A sitemap is emphatically the latter.
+      */}
       <div
-        className={`mt-6 grid gap-x-8 gap-y-7 ${
-          compact ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'
-        }`}
+        className={`mt-6 gap-x-10 ${compact ? 'columns-1 sm:columns-2' : 'columns-1 sm:columns-2 lg:columns-3'}`}
       >
         {(total === 0 ? SITE_MAP : groups).map((g) => (
-          <section key={g.title}>
+          <section key={g.title} className="mb-8 break-inside-avoid">
             <h2 className="text-[11px] font-semibold uppercase tracking-wider text-sky-300/80">
               {g.title}
             </h2>

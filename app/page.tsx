@@ -4,6 +4,7 @@
 // client component HomeClient.
 
 import { Suspense } from 'react';
+import { organizationSchemaJson } from '@/lib/seo/organizationSchema';
 import HomeClient from '@/components/home/home-client';
 import SiteShowcase from '@/components/home/site-showcase';
 import ResellerDiagram from '@/components/home/reseller-diagram';
@@ -50,6 +51,19 @@ async function ResellersSSR() {
 
 export default function Page() {
   return (
+    <>
+      {/*
+        Organization JSON-LD — the entity record for a branded-query ranking problem.
+        Search Console shows average position 12.3 for "quicksites", our OWN name, on 663
+        impressions. Server-rendered here (not injected client-side) so a crawler sees it in the
+        first response; the homepage already SSRs ~8k characters, so this joins content that is
+        genuinely there rather than propping up an empty shell.
+        See lib/seo/organizationSchema.ts for the full diagnosis and its limits.
+      */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: organizationSchemaJson() }}
+      />
     <HomeClient
       showcase={
         <Suspense fallback={<SiteShowcase initialData={undefined} />}>
@@ -62,5 +76,6 @@ export default function Page() {
         </Suspense>
       }
     />
+    </>
   );
 }

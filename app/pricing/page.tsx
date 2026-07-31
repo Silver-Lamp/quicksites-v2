@@ -23,7 +23,30 @@ import SiteFooter from '@/components/site/site-footer';
  */
 
 // ---- Config ----
-const ORDER_FEE_PCT = 0.05;        // Path A: take-rate on orders
+//
+// ⚠️ THE ORDER FEE IS IMPORTED, NOT RESTATED. This file used to declare its own
+// `const ORDER_FEE_PCT = 0.05`, which meant the marketing page could never be *wrong* about
+// 5% — it defined its own 5% — and had no idea the restaurant rate existed. So the page said
+// "5% per order — that's it" four times while a food-ordering site is charged 8% + 60¢, seeded
+// automatically by resolveMerchantFeeDefault() the moment a site has a `menu` block. A visitor
+// in the vertical we market hardest was reading a number nobody would charge them.
+//
+// Same failure as everywhere else this month: two copies of one truth, quietly diverging. The
+// fix is to delete the copy, not to sync it.
+//
+// Caveat, stated because it is real: these constants read server env with defaults, and this
+// is a client component, so an env OVERRIDE would not reach the browser — the page shows the
+// defaults. Those are the values in force today; a test pins the page to them so a change to
+// the policy defaults fails loudly here rather than drifting silently.
+import {
+  GENERAL_FEE_PERCENT,
+  RESTAURANT_FEE_PERCENT,
+  RESTAURANT_FEE_MIN_CENTS,
+} from '@/lib/commerce/pricingPolicy';
+
+const ORDER_FEE_PCT = GENERAL_FEE_PERCENT;              // most storefronts
+const FOOD_FEE_PCT = RESTAURANT_FEE_PERCENT;            // any site with a menu block
+const FOOD_FEE_MIN = RESTAURANT_FEE_MIN_CENTS;          // per-order floor, in cents
 const AI_ADDON_PER_USER = 10;      // $/user/mo
 const FOUNDER_PLAN = { platform: 15, perSite: 5 }; // Path B (agency) — beta
 const PUBLIC_PLAN = { platform: 19, perSite: 6 };
@@ -124,7 +147,10 @@ function OrderFeeCalc() {
     <Card className="border-zinc-800/60">
       <CardHeader>
         <CardTitle>What “pay when you sell” looks like</CardTitle>
-        <CardDescription>We take {pct(ORDER_FEE_PCT)} of each order. No monthly fee on the free plan.</CardDescription>
+        <CardDescription>
+          We take {pct(ORDER_FEE_PCT)} of each order. No monthly fee on the free plan. Food ordering
+          is {pct(FOOD_FEE_PCT)} + {FOOD_FEE_MIN}¢ per order — the figures below use the {pct(ORDER_FEE_PCT)} rate.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <div>
@@ -385,7 +411,8 @@ function AddOns() {
 
 // ---- FAQs ----
 const FAQS: { q: string; a: string }[] = [
-  { q: 'Is it really free to start?', a: 'Yes — building, hosting, and publishing to a quicksites.ai subdomain are free. On the free (merchant) plan we only take a 5% fee on orders you actually sell. No sales, no fee.' },
+  { q: 'Is it really free to start?', a: 'Yes — building, hosting, and publishing to a quicksites.ai subdomain are free. On the free (merchant) plan we only take a fee on orders you actually sell. No sales, no fee.' },
+  { q: 'What do you charge on a restaurant or food-ordering site?', a: `8% plus 60¢ per order, with no monthly fee. It is higher than the 5% on other storefronts for one reason: card processing takes a fixed ~30¢ off every transaction, so on a $9 order a flat percentage does not cover the cost of moving the money. The 60¢ floor is what makes small tickets work at all. You are told this rate before you connect payments, and it is the same rate on the claim page.` },
   { q: 'When would I pay a subscription instead?', a: 'If you’re an agency running many client sites and prefer flat, predictable costs over a per-order fee, the Agency plan bills per user + per site with no order fee. Talk to us to get set up during the beta.' },
   { q: 'How do partners make money?', a: 'Partners white-label QuickSites, set their merchants’ order fee (up to 10%), and keep 80% of every fee as a lifetime residual. See the partner program for details.' },
   { q: 'What about payment processing fees?', a: 'Standard Stripe processing fees apply on top of our platform fee, the same as any checkout. You’ll always see fees before you publish.' },
@@ -413,7 +440,8 @@ export default function PricingPage() {
               <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">Start free. Pay when you sell.</h1>
               <p className="mt-3 max-w-2xl text-muted-foreground">
                 Build and host your site for free — including a storefront, Stripe checkout, and a customer CRM. We take a small {pct(ORDER_FEE_PCT)} fee
-                only on the orders you actually sell. No online store? Service trades can host on a premium local domain for a flat monthly rate.
+                only on the orders you actually sell — {pct(FOOD_FEE_PCT)} plus {FOOD_FEE_MIN}¢ on food ordering, where card fees eat a small ticket alive.
+                No online store? Service trades can host on a premium local domain for a flat monthly rate.
                 Running sites for clients or reselling under your brand? There’s a path for that too.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -421,7 +449,7 @@ export default function PricingPage() {
                 <Link href={CTA.contactHref}><Button size="lg" variant="ghost">Talk to us</Button></Link>
               </div>
               <div className="mt-6 flex flex-wrap gap-2">
-                {['Free to build & host', 'No card to start', `${pct(ORDER_FEE_PCT)} per order — that’s it on free`].map((r) => (
+                {['Free to build & host', 'No card to start', `${pct(ORDER_FEE_PCT)} per order on free (${pct(FOOD_FEE_PCT)} + ${FOOD_FEE_MIN}¢ for food)`].map((r) => (
                   <Badge key={r} variant="secondary">{r}</Badge>
                 ))}
               </div>
@@ -461,7 +489,7 @@ export default function PricingPage() {
                 <Feature text="Storefront + Stripe checkout on every site" />
                 <Feature text="Customer CRM + email campaigns — built in, free" />
                 <Feature text="Starter AI allowance (copy, images)" />
-                <Feature text={`We take ${pct(ORDER_FEE_PCT)} per order — nothing until you sell`} />
+                <Feature text={`We take ${pct(ORDER_FEE_PCT)} per order — nothing until you sell (${pct(FOOD_FEE_PCT)} + ${FOOD_FEE_MIN}¢ on food ordering)`} />
                 <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
                   Want your own domain or to remove the QuickSites badge? Those are paid add-ons below.
                 </div>

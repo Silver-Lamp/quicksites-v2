@@ -22,6 +22,14 @@ export type ProfileSpec = {
   photoUrl: string | null;
   location: string | null;
   links: ProfileLink[]; // social/contact links
+  /**
+   * Résumé-shaped extras (importResume). Optional so the URL path is unchanged — a scraped
+   * profile has no structured skills or job history, and inventing them would be exactly the
+   * thing the deterministic spirit of this module exists to avoid.
+   */
+  skills?: string[];
+  experience?: { heading: string; body: string }[];
+  email?: string | null;
 };
 
 const SOCIAL_HOSTS = [
@@ -149,9 +157,16 @@ export function rebuildSpecFromProfile(profile: ProfileSpec): RebuildSpec {
     industryLabel: 'Personal / About Me',
     headline: name,
     subheadline: profile.headline || 'Here’s a little about me.',
-    about: profile.bio || 'Share who you are, what you care about, and what you’re working on.',
-    services: [],
+    about: profile.bio || 'Share who you are, what you’re working on, and what you care about.',
+    // Skills become the services list and roles become story panels — both already render in
+    // the `personal` scaffold, so a résumé needs no new block types. Empty when absent (the
+    // URL path), which leaves that path byte-identical to before.
+    services: profile.skills ?? [],
     faqs: [],
+    ...(profile.experience?.length ? { story: profile.experience } : {}),
+    ...(profile.email || profile.location
+      ? { contact: { ...(profile.email ? { email: profile.email } : {}), ...(profile.location ? { address: profile.location } : {}) } as any }
+      : {}),
     original: {
       headline: name,
       ...(profile.headline ? { subheadline: profile.headline } : {}),

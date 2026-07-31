@@ -10,11 +10,27 @@
 // was committed and stored, and the live page never showed it), so it lives here as one
 // named helper rather than as a line every caller has to remember.
 //
-// ⚠️ THE GUARD IS THE POINT: only republish something that was ALREADY published.
+// ⚠️ THE GUARD IS THE POINT: only republish something that is ALREADY LIVE.
 // `publish_template_demo` will happily take a never-published draft live. That's correct
 // for apex refreshes (apexes are meant to be public) but would be a serious side effect
 // for a fleet-wide cosmetic upgrade — silently publishing drafts nobody chose to publish.
-// Pass the row's own `published` value; don't infer it.
+//
+// ⚠️ AND THE GUARD ASKS `published_sites`, NOT `templates.published`.
+// This used to take the row's own `published` flag. That flag is NOT what makes a page
+// live: the renderer serves whatever the most recent `published_sites` row points at and
+// never reads `templates.published`, `is_public` or `archived`. The flag is only set by
+// /api/templates/[id]/publish — sites published by `publish_template_demo`, demo seeding
+// or older flows keep `published: false` while serving perfectly well, and it defaults
+// false on create/duplicate/seed.
+//
+// Measured on the live fleet: 11 templates were `published: false` and serving, and 7
+// ARCHIVED templates still had live published_sites rows. Trusting the flag made this
+// helper skip the republish for exactly those, so a cleanup that removed a fabricated
+// testimonial from the draft left the fake one serving from a stale snapshot — through two
+// passes, until the snapshot was checked directly.
+//
+// A second copy of "is this live" that drifts is worse than no copy. Ask the thing the
+// renderer asks.
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
@@ -68,11 +84,37 @@ export type RepublishResult = {
   warning?: string;
 };
 
+/**
+ * Is a page actually being served for this template?
+ *
+ * The renderer's own test: does a `published_sites` row exist pointing at one of this
+ * template's versions. Errors return `false` — the safe direction is to skip a republish,
+ * never to publish something on a failed lookup.
+ */
+export async function isLive(templateId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('published_sites')
+      .select('id')
+      .eq('template_id', templateId)
+      .limit(1);
+    if (error) return false;
+    return (data?.length ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function republishIfPublished(
   templateId: string,
-  wasPublished: boolean | null | undefined,
+  /**
+   * @deprecated Ignored. Liveness is derived from `published_sites` — see the note at the
+   * top of this file. The parameter is kept so existing call sites stay valid; passing
+   * `templates.published` is harmless but pointless, and passing nothing is preferred.
+   */
+  _wasPublished?: boolean | null,
 ): Promise<RepublishResult> {
-  if (!wasPublished) return { republished: false };
+  if (!(await isLive(templateId))) return { republished: false };
 
   const { error } = await (supabaseAdmin as any).rpc('publish_template_demo', {
     p_template_id: templateId,

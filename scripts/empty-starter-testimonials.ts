@@ -51,21 +51,24 @@ function stripTestimonials(data: any): { next: any; cleared: number } {
         // Pick the side that actually holds the list.
         const fromContent = Array.isArray(b.content?.testimonials) ? b.content.testimonials : null;
         const fromProps = Array.isArray(b.props?.testimonials) ? b.props.testimonials : null;
-        // ⚠️ AND an EMPTY array is truthy, so `fromContent ? …` and `fromContent ?? fromProps`
-        // both pick an empty content list over a POPULATED props list. florencetow carries
-        // content.testimonials: [] alongside props.testimonials: [fabricated], and two
-        // successive "fixes" to this line still reported it clean. The side that actually has
-        // ENTRIES wins — presence, not existence.
-        const side: 'content' | 'props' = fromContent?.length ? 'content' : fromProps?.length ? 'props' : 'content';
-        const c = (side === 'content' ? b.content : b.props) ?? {};
-        const list = fromContent?.length ? fromContent : (fromProps ?? []);
-        if (!list.length) return b;
-        // Only clear what we seeded. An owner-written testimonial on a starter would be real
-        // content and none of this script's business.
-        if (!SEEDED.test(JSON.stringify(list))) return b;
-        cleared += list.length;
-        const patched = { ...c, testimonials: [] };
-        return side === 'content' ? { ...b, content: patched } : { ...b, props: patched };
+        // ⚠️ BOTH SIDES CAN HOLD TESTIMONIALS, AND THEY DIFFER. Picking one is what three
+        // successive attempts at this line got wrong. florencetow carries FOUR AI-generated
+        // testimonials in `content` and the stock 'They did a great job!' in `props`; any rule
+        // that selects a single side examines one and leaves the other in place. Filter each
+        // independently and keep whatever is real on both.
+        let touched = false;
+        const next = { ...b };
+        for (const key of ['content', 'props'] as const) {
+          const holder = (b as any)[key];
+          const items = Array.isArray(holder?.testimonials) ? holder.testimonials : null;
+          if (!items?.length) continue;
+          const keep = items.filter((it: any) => !SEEDED.test(JSON.stringify(it)));
+          if (keep.length === items.length) continue;
+          cleared += items.length - keep.length;
+          (next as any)[key] = { ...holder, testimonials: keep };
+          touched = true;
+        }
+        return touched ? next : b;
       });
     }
   }
@@ -105,7 +108,9 @@ async function main() {
       .from('templates')
       .select('id, slug, business_name, rev, published')
       .eq('is_site', true)
-      .eq('archived', false)
+      // ⚠️ NOT filtering archived. Archiving a template does NOT unpublish it — six of these
+      // kept a published_sites row and a live snapshot, so they were still serving a
+      // fabricated review while being excluded from the cleanup for looking retired.
       .order('id', { ascending: true })
       .range(from, from + 499);
     if (pageErr) throw pageErr;

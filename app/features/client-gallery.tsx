@@ -11,6 +11,7 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { featureDetail } from '@/lib/features/detail';
 import LazyVideoEmbed from '@/components/ui/lazy-video-embed';
 
 const COPY = {
@@ -52,6 +53,7 @@ type FeatureRow = {
   title: string;
   blurb: string;
   category: string;
+  slug?: string | null;
   video_url?: string | null;
   doc_href?: string | null;
   demo_href?: string | null;
@@ -69,11 +71,23 @@ function FeatureCard({ f }: { f: FeatureRow }) {
     'ring-1 ring-sky-500/25 bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent ' +
     'shadow-[0_10px_40px_-12px_rgba(56,189,248,0.4)]';
   const Icon = CATEGORY_ICONS[f.category] ?? Layers;
+  const detail = featureDetail(f.slug);
 
-  return (
+  // ⚠️ THE CARD USED TO LIFT AND SHOW A POINTER WITH NOWHERE TO GO. Fourteen of sixteen
+  // features had no doc_href and no demo_href, so the affordance was writing a cheque the
+  // page could not cash. Every feature with a slug now has a real detail page, so the whole
+  // card is a link — and a feature without a slug stays inert rather than pretending.
+  const href = f.slug ? `/features/${f.slug}` : null;
+
+  // Featured cards take two columns: they carry the mechanics list, so they need the room.
+  const wide = !!f.featured && !!detail;
+
+  const body = (
     <Card
       className={classNames(
-        'h-full flex flex-col overflow-hidden border-zinc-800/50 transition-colors hover:border-zinc-700',
+        'h-full flex flex-col overflow-hidden border-zinc-800/50 transition-all duration-200',
+        href && 'group-hover:-translate-y-1 group-hover:border-sky-500/40 group-hover:shadow-2xl group-hover:shadow-sky-500/10',
+        !href && 'hover:border-zinc-700',
         f.featured && featuredGlow
       )}
     >
@@ -88,8 +102,8 @@ function FeatureCard({ f }: { f: FeatureRow }) {
           </div>
         </div>
         <div className="space-y-1">
-          <CardTitle className="text-lg">{f.title}</CardTitle>
-          <CardDescription>{f.blurb}</CardDescription>
+          <CardTitle className={classNames('text-lg', wide && 'text-2xl')}>{f.title}</CardTitle>
+          <CardDescription className={classNames(wide && 'text-base')}>{f.blurb}</CardDescription>
         </div>
       </CardHeader>
 
@@ -99,30 +113,47 @@ function FeatureCard({ f }: { f: FeatureRow }) {
             <LazyVideoEmbed url={f.video_url} title={f.title} className="h-full w-full" />
           </div>
         </CardContent>
+      ) : wide ? (
+        // The extra width earns its keep: show what the feature actually does rather than
+        // stretching a 119-character blurb across two columns.
+        <CardContent>
+          <ul className="grid gap-2.5 sm:grid-cols-2">
+            {detail!.how.slice(0, 4).map((h) => (
+              <li key={h} className="flex gap-2.5 text-sm leading-relaxed text-muted-foreground">
+                <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400/70" />
+                <span>{h}</span>
+              </li>
+            ))}
+          </ul>
+          {detail!.caveat ? (
+            <p className="mt-4 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-100/90">
+              {detail!.caveat}
+            </p>
+          ) : null}
+        </CardContent>
       ) : null}
 
       <CardFooter className="mt-auto items-center justify-between pt-2">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">{f.category}</span>
-        {/* "Read docs" is a promise of documentation; "See it live" is a promise of a
-            working demo. They're different claims, so they're different fields — two
-            features once shipped with doc_href="/" and sent readers to the homepage. */}
-        {f.doc_href ? (
-          <Link href={f.doc_href} className="inline-flex">
-            <Button variant="ghost" size="sm">
-              Read docs
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        ) : f.demo_href ? (
-          <Link href={f.demo_href} className="inline-flex">
-            <Button variant="ghost" size="sm">
-              See it live
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+        {href ? (
+          <span className="inline-flex items-center text-sm font-medium text-sky-400 transition group-hover:text-sky-300">
+            Learn more
+            <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5" />
+          </span>
         ) : null}
       </CardFooter>
     </Card>
+  );
+
+  if (!href) return <div className={wide ? 'md:col-span-2' : undefined}>{body}</div>;
+
+  return (
+    <Link
+      href={href}
+      className={classNames('group block focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-xl', wide && 'md:col-span-2')}
+    >
+      {body}
+    </Link>
   );
 }
 

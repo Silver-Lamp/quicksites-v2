@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 // Structured data is a machine-readable claim about a real entity, so the rule is the same one
 // the honest-scaffold standard applies to reviews: every field must be true, and a field we
 // can't substantiate is omitted rather than invented. A fabricated `sameAs` or founding date is
@@ -46,5 +48,29 @@ describe('organizationSchema', () => {
   // has already shipped six assets that 404'd without anyone noticing.
   it('references a logo path the asset checker covers', () => {
     expect(s.logo).toContain('/brand/qs-mark.png');
+  });
+});
+
+// The <h1> is the other half of the branded-query fix, and it carries a trap: the same fallback
+// string is what a WHITE-LABEL RESELLER lands on when they haven't set their own headline.
+// Putting "QuickSites" there unconditionally would print our brand on a reseller's homepage and
+// undo the entire point of white-labelling.
+describe('homepage headline stays brand-aware', () => {
+  const src = readFileSync(join(process.cwd(), 'components/home/home-client.tsx'), 'utf8');
+
+  it('says QuickSites on the default brand', () => {
+    expect(src).toContain('QuickSites — a site, a store, and a CRM. Built in.');
+  });
+
+  it('keeps an unbranded fallback for resellers', () => {
+    // Both strings must exist: the branded one and the plain one it falls back to.
+    expect(src).toContain("'A site, a store, and a CRM. Built in.'");
+  });
+
+  it('gates the branded variant on the same signal as the QuickSites-only motif', () => {
+    // showCharacter is `billingMode !== 'reseller'`. If someone swaps this for an
+    // unconditional string, a reseller's homepage starts advertising us.
+    const block = src.slice(src.indexOf('const heroHeadline'), src.indexOf('const heroSubhead'));
+    expect(block).toContain('showCharacter');
   });
 });

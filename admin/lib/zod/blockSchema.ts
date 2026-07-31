@@ -511,8 +511,19 @@ export const blockContentSchemaMap = {
         subheadline: z.string().optional().default(''),
         cta_text: z.string().optional().default(''),
         cta_link: z.string().optional().default('/'),
+        // ⚠️ RELATIVE PATHS ARE VALID IMAGE SOURCES. This was z.string().url(), which rejects
+        // a same-origin path — and our Places photo proxy stores exactly that
+        // (/api/public/place-photo?ref=…, so the API key never reaches the browser). The
+        // result was worse than a validation error: normalizePageBlocks catches the throw and
+        // REPLACES the block with an "Invalid block removed: {…}" text block, so simply
+        // opening the editor destroyed the hero on seven real restaurants' drafts, and
+        // autosave would have persisted it. The published snapshot still rendered, which is
+        // why nobody noticed.
+        //
+        // RelativeOrAbsoluteUrl already existed in this file and was already used by the
+        // services block below — the hero just never got it.
         image_url: z
-          .union([z.string().url(), z.literal('')])
+          .union([RelativeOrAbsoluteUrl, z.literal('')])
           .optional()
           .default(''),
         layout_mode: z
@@ -720,7 +731,7 @@ export const blockContentSchemaMap = {
           z.object({
             quote: z.string().min(1),
             attribution: z.string().optional(),
-            avatar_url: z.union([z.string().url(), z.literal('')]).optional(),
+            avatar_url: z.union([RelativeOrAbsoluteUrl, z.literal('')]).optional(),
             rating: z.number().min(1).max(5).optional(),
           })
         )
@@ -1503,7 +1514,7 @@ export const blockContentSchemaMap = {
               id: z.string().min(1),
               title: z.string().min(1),
               price_cents: z.number().int().min(0).default(0),
-              image_url: z.union([z.string().url(), z.literal('')]).optional(),
+              image_url: z.union([RelativeOrAbsoluteUrl, z.literal('')]).optional(),
             })
           )
           .default([]),
@@ -1557,7 +1568,7 @@ export const blockContentSchemaMap = {
         description_html: z.string().optional().default(''),
         price_cents: z.number().int().min(0).optional(),
         compare_at_cents: z.number().int().min(0).optional(),
-        image_url: z.union([z.string().url(), z.literal('')]).optional(),
+        image_url: z.union([RelativeOrAbsoluteUrl, z.literal('')]).optional(),
         cta_text: z.string().optional().default('Get Started'),
         cta_link: RelativeOrAbsoluteUrl.optional().default('/contact'),
         productId: z.string().min(1).optional(),

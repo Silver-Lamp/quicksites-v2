@@ -17,6 +17,7 @@ type FeatureRow = {
   title: string;
   blurb: string;
   category: string;
+  slug?: string | null;
   video_url?: string | null;
   doc_href?: string | null;
   demo_href?: string | null;

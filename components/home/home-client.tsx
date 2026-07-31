@@ -79,7 +79,16 @@ export default function HomeClient({
   // The QuickSites motif character — never on a white-labeled reseller homepage.
   const showCharacter = (brand.billingMode ?? 'central') !== 'reseller';
 
-  const heroHeadline = brand.hero?.headline || 'A site, a store, and a CRM. Built in.';
+  // ⚠️ BRAND-AWARE, NOT A BLANKET STRING. Leading with the brand name helps the branded query —
+  // Search Console has us at average position 12.3 for "quicksites", our own name, and the <h1>
+  // never said it. But this fallback is ALSO what a white-label reseller lands on when they
+  // haven't set their own headline, and putting "QuickSites" on a reseller's homepage would
+  // undo the entire point of white-labelling. Same guard as the motif character above.
+  const heroHeadline =
+    brand.hero?.headline ||
+    (showCharacter
+      ? 'QuickSites — a site, a store, and a CRM. Built in.'
+      : 'A site, a store, and a CRM. Built in.');
   const heroSubhead =
     brand.hero?.subhead ||
     'A powerful, efficient website builder with e-commerce built in — drag-and-drop pages, a product catalog, and Stripe-powered checkout. Every paid order builds a customer you can segment and email — all published to your own domain.';

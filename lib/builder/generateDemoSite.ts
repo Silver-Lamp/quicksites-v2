@@ -33,7 +33,19 @@ function uuid() {
   return globalThis.crypto?.randomUUID?.() ?? `id_${Math.random().toString(36).slice(2)}${Date.now()}`;
 }
 
-type Copy = { headline: string; subheadline: string; about: string; services: string[]; faqs: { q: string; a: string }[] };
+/**
+ * ⚠️ `services` CARRIES DESCRIPTIONS NOW, and that is the whole point of the change.
+ *
+ * It used to be `string[]` — bare names. Two personas independently judged a generated demo and
+ * both named "no detailed service descriptions" as a top reason not to trust the site. Before
+ * this, REGENERATING the demo cohort would have spent ~$0.04/site on new hero images and
+ * produced the identical bare list, i.e. paid for a no-op and reported it as a fix.
+ *
+ * Kept tolerant of the old shape on parse: a model can still return plain strings, and a demo
+ * with names but no descriptions is worse copy, not a crash.
+ */
+type ServiceCopy = { name: string; description: string };
+type Copy = { headline: string; subheadline: string; about: string; services: ServiceCopy[]; faqs: { q: string; a: string }[] };
 
 export type GenerateResult =
   | { ok: true; dryRun: true; spec: DemoSpec }
@@ -87,9 +99,22 @@ export async function generateDemoSite(opts: {
       hero.content.subheadline = copy.subheadline || hero.content.subheadline;
       if (heroUrl) hero.content.image_url = heroUrl;
     }
-    const services = copy.services?.length ? copy.services : tpl.services;
+    // ⚠️ TWO DIFFERENT THINGS, DELIBERATELY SEPARATED.
+    //   `tpl.services`  — the site's OFFER LIST. Names only. The contact form renders it as the
+    //                     "I'm Interested In:" dropdown, so a sentence in there is nonsense.
+    //   services block  — what a visitor READS. Names plus the description the persona asked for.
+    const serviceCopy: ServiceCopy[] = copy.services?.length
+      ? copy.services
+      : (tpl.services ?? []).map((n: string) => ({ name: n, description: '' }));
+    const services = serviceCopy.map((sv) => sv.name);
     tpl.services = services;
     tpl.data.services = services;
+
+    // Put the descriptions where they are actually read.
+    for (const b of page?.blocks ?? []) {
+      if (b?.type !== 'services' || !b.content) continue;
+      b.content.items = serviceCopy.map((sv) => ({ name: sv.name, description: sv.description }));
+    }
     tpl.data.meta = {
       ...(tpl.data.meta ?? {}),
       business_name: spec.businessName,
@@ -152,7 +177,9 @@ export async function ideateCopy(spec: DemoSpec, userId: string | null): Promise
   const sys =
     'You write concise, conversion-oriented website copy for local businesses. Return JSON ONLY ' +
     'with keys: headline (<=8 words), subheadline (<=18 words), about (2-3 sentences), ' +
-    'services (array of 5 short service names), faqs (array of 3 {q,a}).';
+    'services (array of 5 objects {name, description} — name is 1-4 words, description is ONE ' +
+    'short sentence saying what the job actually involves for the customer), ' +
+    'faqs (array of 3 {q,a}).';
   const user = `${spec.aiPrompt} Industry: ${spec.industryLabel}.`;
 
   return meterLLMCall<Copy>(
@@ -177,7 +204,17 @@ export async function ideateCopy(spec: DemoSpec, userId: string | null): Promise
         headline: String(parsed.headline || spec.businessName),
         subheadline: String(parsed.subheadline || `Trusted ${spec.industryLabel.toLowerCase()} in ${spec.city}.`),
         about: String(parsed.about || ''),
-        services: Array.isArray(parsed.services) ? parsed.services.map(String).slice(0, 6) : [],
+        // Accept both shapes: {name, description} (current) and a bare string (older responses).
+        services: Array.isArray(parsed.services)
+          ? parsed.services
+              .map((v: any) =>
+                typeof v === 'string'
+                  ? { name: v.trim(), description: '' }
+                  : { name: String(v?.name ?? '').trim(), description: String(v?.description ?? '').trim() },
+              )
+              .filter((v: ServiceCopy) => v.name)
+              .slice(0, 6)
+          : [],
         faqs: Array.isArray(parsed.faqs)
           ? parsed.faqs.map((f: any) => ({ q: String(f?.q ?? ''), a: String(f?.a ?? '') })).slice(0, 3)
           : [],

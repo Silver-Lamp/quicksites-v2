@@ -1,6 +1,8 @@
 // components/admin/templates/render-blocks/header.tsx
 'use client';
 
+import { isEditorContext } from '@/lib/editor/isEditorContext';
+
 import * as React from 'react';
 import Link from 'next/link';
 import type { Block } from '@/types/blocks';
@@ -256,7 +258,10 @@ export default function HeaderRender({
                 </a>
               ))
             ) : (
-              <span className="text-muted-foreground text-sm">No links configured.</span>
+              // Editor-only: a visitor should see an empty nav, not a setup instruction.
+              isEditorContext() ? (
+                <span className="text-muted-foreground text-sm">No links configured.</span>
+              ) : null
             )}
           </nav>
         </div>

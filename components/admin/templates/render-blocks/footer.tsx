@@ -236,6 +236,22 @@ export default function FooterRender({
     (final?.businessName && String(final.businessName).trim()) ||
     'Business';
 
+  // ⚠️ A PERSON IS NOT A COMPANY. The footer's three columns — "Company Info" (address,
+  // Business, Phone), "Find Us" (a map) — are business chrome, and on an About-Me page built
+  // from a résumé they rendered as "Business: Silver Zhao · Phone: — · Map unavailable".
+  // Columns of em-dashes announcing everything we don't know about someone. A personal site
+  // keeps the links and the contact it actually has, and drops the storefront furniture.
+  const isPersonal =
+    (typeof db.industry === 'string' && db.industry === 'personal') ||
+    (typeof meta.industry === 'string' && meta.industry === 'personal') ||
+    (typeof meta.site_type === 'string' && meta.site_type === 'personal');
+
+  // Optional, and deliberately never defaulted — see the note at the copyright line below.
+  const tagline =
+    (typeof final?.tagline === 'string' && final.tagline.trim()) ||
+    (typeof meta.tagline === 'string' && meta.tagline.trim()) ||
+    '';
+
   const addressLine1 =
     (typeof contact.address === 'string' && contact.address.trim()) ||
     (db.address_line1 && String(db.address_line1).trim()) ||
@@ -443,8 +459,8 @@ export default function FooterRender({
           </nav>
         </div>
 
-        {/* Company Info (read-only) */}
-        <div className="space-y-3">
+        {/* Company Info (read-only) — business sites only; see isPersonal above. */}
+        <div className={`space-y-3 ${isPersonal ? 'hidden' : ''}`}>
           <h3 className={`text-base font-semibold ${headingColor}`}>Company Info</h3>
           <div className="whitespace-pre-line leading-relaxed">
             {fullAddressForDisplay || <span className={subText}>—</span>}
@@ -469,10 +485,14 @@ export default function FooterRender({
           </div>
         </div>
 
-        {/* Map + Socials */}
+        {/* Map + Socials. On a personal page the map goes but the socials stay — links to
+            someone's other work are the most useful thing in a portfolio footer. */}
         <div className="space-y-3">
-          <h3 className={`text-base font-semibold ${headingColor}`}>Find Us</h3>
-          <div className="rounded-md overflow-hidden border border-border">
+          <h3 className={`text-base font-semibold ${headingColor}`}>{isPersonal ? 'Elsewhere' : 'Find Us'}</h3>
+          {/* No map on a personal page: "Map unavailable" is a 180px box announcing that we
+              don't know where someone lives — and on an About-Me page we have no business
+              asking. */}
+          <div className={`rounded-md overflow-hidden border border-border ${isPersonal ? 'hidden' : ''}`}>
             {centerOk ? (
               <LeafletMap
                 center={coords as [number, number]}
@@ -505,8 +525,20 @@ export default function FooterRender({
         </div>
       </div>
 
+      {/*
+        ⚠️ THIS TAGLINE USED TO BE UNCONDITIONAL. Every site in the fleet ended with
+        "Fast, Reliable, Local Service 24/7." — including personal About-Me pages, where it
+        appeared under a real person's name as though they were advertising 24-hour service.
+        It is a trades slogan, and it is a CLAIM: nobody asked us to promise availability on
+        their behalf. A résumé page reading "© 2026 Silver Zhao. Fast, Reliable, Local Service
+        24/7." is the same category of error as a fabricated review, just quieter.
+
+        Now it appears only where the site itself supplies it. No tagline is the safe default:
+        a missing line reads as nothing, a wrong one reads as a promise.
+      */}
       <div className={`text-center mt-8 text-xs ${subText}`}>
-        © {new Date().getFullYear()} {businessName}. Fast, Reliable, Local Service 24/7.
+        © {new Date().getFullYear()} {businessName}
+        {tagline ? `. ${tagline}` : ''}
       </div>
     </footer>
   );

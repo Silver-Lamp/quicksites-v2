@@ -385,7 +385,10 @@ Service: ${formData.service || 'N/A'}
                 )}
               </div>
 
-              <div>
+              {/* No services and not in the editor? Render nothing at all — label included.
+                  The label used to sit outside this check, so a site with no service list showed
+                  a heading "I'm Interested In:" above empty space. */}
+              <div className={services.length === 0 && !isEditor ? 'hidden' : undefined}>
                 <label className="block font-semibold mb-1">
                   I&apos;m Interested In:
                 </label>

@@ -11,6 +11,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import SiteMapExplorer from '@/components/site/sitemap-explorer';
+import PainterlyBackdrop from '@/components/site/painterly-backdrop';
 
 export const metadata: Metadata = {
   title: 'Page not found — QuickSites',
@@ -21,19 +22,11 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-zinc-950 text-zinc-100">
-      {/* Painterly backdrop — a committed build-artifact, not a bucket fetch, so it versions
-          with this file and has no runtime dependency (painterly recipe, page-level case). */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-40"
-        style={{ backgroundImage: 'url(/brand/404.webp)' }}
-      />
-      {/* Legibility scrim. The image is decorative; the text must win regardless of how the
-          render came out — a dark corner in the painting must never eat a link. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-950/85 via-zinc-950/75 to-zinc-950/95"
-      />
+      {/* Painterly backdrop + legibility scrim, both via the shared component. This page used
+          to hold its own copy of that markup; /verbatim became the second caller, which the
+          painterly recipe names as the moment to EXTRACT rather than duplicate — otherwise
+          rules 7/8/9 end up living in two places and drifting. */}
+      <PainterlyBackdrop src="/brand/404.webp" opacity={0.4} scrim="even" />
 
       <div className="relative mx-auto max-w-5xl px-6 py-16 sm:py-24">
         <p className="text-sm font-medium uppercase tracking-widest text-sky-300/80">404</p>

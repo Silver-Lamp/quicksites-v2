@@ -341,7 +341,8 @@ export function buildIndustryStarter(opts: {
     cloneNudge.content = {
       ...cloneNudge.content,
       label: 'Record your voice — make this page talk',
-      link: 'https://hivejournal.com/dashboard/lovio/voice-setup',
+      // `href`, not `link` — the schema's field. See the cta note in blockSchema.ts.
+      href: 'https://hivejournal.com/dashboard/lovio/voice-setup',
     };
 
     blocks = [hero, bio, voiceAbout, askMe, cloneNudge, contact];
@@ -405,7 +406,7 @@ export function buildIndustryStarter(opts: {
     const message: any = createDefaultBlock('about_that');
 
     const give: any = createDefaultBlock('cta');
-    give.content = { ...give.content, label: 'Give', link: '#contact' };
+    give.content = { ...give.content, label: 'Give', href: '#contact' };
 
     blocks = [hero, times, welcome, message, give, contact];
   } else if (STOREFRONT_INDUSTRIES.has(industryKey)) {
@@ -455,7 +456,7 @@ export function buildIndustryStarter(opts: {
     const makeBeforeAfter = () => createDefaultBlock('before_after');
     const makeCta = () => {
       const b: any = createDefaultBlock('cta');
-      b.content = { ...b.content, label: copy.ctaText, link: '#contact' };
+      b.content = { ...b.content, label: copy.ctaText, href: '#contact' };
       return b;
     };
 

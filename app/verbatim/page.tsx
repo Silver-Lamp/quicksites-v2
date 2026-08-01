@@ -24,7 +24,7 @@
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import SiteFooter from '@/components/site/site-footer';
-import PageBackdrop from '@/components/site/page-backdrop';
+import PainterlyBackdrop from '@/components/site/painterly-backdrop';
 import VerbatimIntake from './intake';
 
 export const metadata: Metadata = {
@@ -38,7 +38,15 @@ export default function VerbatimPage() {
     <>
       <SiteHeader sticky />
       <main className="relative min-h-screen bg-background text-foreground">
-        <PageBackdrop style="paper" />
+        {/* Painterly, not the free CSS `paper` style this page used to carry: a blank sheet
+            under lamplight is the page's own claim rendered as an image — someone's words about
+            to be set down, and nothing written for them. Committed build artifact (~$0.04, once),
+            so it versions with this copy and costs nothing at runtime.
+
+            scrim="top" because the copy sits high AND the brightest thing in the painting (the
+            lamp) is upper-right — a bottom-weighted scrim would have left the headline fighting
+            the glow. That is rule 8's positionable-scrim redline, applied rather than quoted. */}
+        <PainterlyBackdrop src="/brand/verbatim.webp" opacity={0.34} scrim="top" />
 
         <div className="relative mx-auto max-w-3xl px-6 pt-16 pb-10">
           <div className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">Verbatim</div>

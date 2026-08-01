@@ -9,6 +9,7 @@
 // Deleting this list would make the product quietly worse in exactly the way it claims not to be.
 import * as React from 'react';
 import { extractPdfText } from '@/lib/rebuild/pdfText';
+import PostingMatchPanel from '@/components/verbatim/posting-match';
 
 type Result = {
   ok?: boolean;
@@ -98,37 +99,44 @@ export default function VerbatimIntake() {
 
   if (result?.ok && result.editorUrl) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-7">
-        <h2 className="text-xl font-semibold text-card-foreground">Your page is ready to edit.</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Read {result.read?.skills ?? 0} skills and {result.read?.roles ?? 0} roles
-          {result.read?.name ? ` for ${result.read.name}` : ''}.
-        </p>
+      <>
+        <div className="rounded-2xl border border-border bg-card p-7">
+          <h2 className="text-xl font-semibold text-card-foreground">Your page is ready to edit.</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Read {result.read?.skills ?? 0} skills and {result.read?.roles ?? 0} roles
+            {result.read?.name ? ` for ${result.read.name}` : ''}.
+          </p>
 
-        {!!result.gaps?.length && (
-          // Stated plainly and before they click through — this is the honest half of the
-          // product, and burying it after the editor loads would defeat the point.
-          <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-            <div className="text-sm font-medium text-foreground">
-              Your résumé didn’t tell us everything — these are blank rather than guessed:
+          {!!result.gaps?.length && (
+            // Stated plainly and before they click through — this is the honest half of the
+            // product, and burying it after the editor loads would defeat the point.
+            <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+              <div className="text-sm font-medium text-foreground">
+                Your résumé didn’t tell us everything — these are blank rather than guessed:
+              </div>
+              <p className="mt-1.5 text-sm text-amber-100/90">
+                {result.gaps.map((g) => GAP_LABEL[g] ?? g).join(' · ')}
+              </p>
+              <p className="mt-2 text-xs text-amber-100/70">
+                You can fill any of them in the editor. We’d rather leave a space than put words in
+                your mouth.
+              </p>
             </div>
-            <p className="mt-1.5 text-sm text-amber-100/90">
-              {result.gaps.map((g) => GAP_LABEL[g] ?? g).join(' · ')}
-            </p>
-            <p className="mt-2 text-xs text-amber-100/70">
-              You can fill any of them in the editor. We’d rather leave a space than put words in
-              your mouth.
-            </p>
-          </div>
-        )}
+          )}
 
-        <a
-          href={result.editorUrl}
-          className="mt-6 inline-block rounded-xl bg-sky-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-sky-400"
-        >
-          Open my page →
-        </a>
-      </div>
+          <a
+            href={result.editorUrl}
+            className="mt-6 inline-block rounded-xl bg-sky-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-sky-400"
+          >
+            Open my page →
+          </a>
+        </div>
+
+        {/* A second act, not a step. Offered only once a page exists, and it reuses the résumé
+            already sitting in this component's state — so nothing is re-uploaded and the
+            posting never leaves the browser at all. */}
+        <PostingMatchPanel resumeText={resumeText} />
+      </>
     );
   }
 

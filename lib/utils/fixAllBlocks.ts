@@ -6,7 +6,9 @@ export function fixAllBlocks(template: Template): Template {
     ...template,
     data: {
       ...template.data,
-      pages: template.data?.pages?.map(normalizePageBlocks) || [],
+      // Wrapped, not passed by reference: .map() supplies the ARRAY INDEX as the second
+      // argument, which would land in normalizePageBlocks' onDrop slot. tsc caught it.
+      pages: template.data?.pages?.map((p) => normalizePageBlocks(p)) || [],
     },
   };
 }

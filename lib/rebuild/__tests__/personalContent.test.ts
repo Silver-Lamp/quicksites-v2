@@ -58,21 +58,47 @@ describe('a résumé page actually contains the résumé', () => {
   });
 
   it('keeps their paragraphing instead of running the summary together', () => {
-    // Two thoughts in the résumé must stay two sections. Merging them is an editorial change
+    // Two thoughts in the résumé must stay two paragraphs. Merging them is an editorial change
     // to text we promised only to rearrange.
     //
-    // ⚠️ THIS TEST ONCE PASSED WHILE THE BEHAVIOUR WAS BROKEN. It asserted `sections.length > 1`
-    // on the whole block — and the ROLES supplied those extra sections, so it stayed green while
-    // the two summary paragraphs were being flattened into one run-on body. An end-to-end run
-    // showed it. Assert the bio paragraphs specifically, not the section count.
+    // ⚠️ THIS TEST HAS NOW BEEN WRONG TWICE, BOTH TIMES BY ASSERTING A MECHANISM INSTEAD OF THE
+    // OUTCOME. v1 asserted `sections.length > 1` and passed while the summary was being
+    // flattened, because the ROLES supplied the extra sections. v2 asserted the two paragraphs
+    // sat in two distinct sections — which broke the moment the story schema (`heading:
+    // min(1)`) forced continuation text to merge upward instead of carrying an empty heading.
+    //
+    // The thing that actually matters is neither: it is that the two thoughts are SEPARATED
+    // when a reader sees them. The renderer carries `whitespace-pre-line`, so a blank line is a
+    // paragraph break. Assert that, and the test survives the next structural change too.
     const story = blocksOf(template).find((b) => b.type === 'story');
-    const bodies: string[] = story.content.sections.map((s: any) => s.body);
+    const all: string = story.content.sections.map((s: any) => s.body).join('\n\n');
 
-    const first = bodies.find((b) => b.includes('did not ask for tools'));
-    const second = bodies.find((b) => b.includes('worst day'));
-    expect(first).toBeDefined();
-    expect(second).toBeDefined();
-    expect(first).not.toBe(second); // two paragraphs, two sections — not one merged blob
+    expect(all).toContain('did not ask for tools');
+    expect(all).toContain('worst day');
+
+    // Separated by a blank line, not welded together by a single space.
+    expect(all).toMatch(/failure cases\.\s*\n\s*\n\s*I care most/);
+    expect(all).not.toMatch(/failure cases\. I care most/);
+  });
+
+  // The bug that put this file here: an empty heading fails `heading: z.string().min(1)`, and
+  // normalizePageBlocks used to turn the failed block into published raw JSON of the person's
+  // life. No section may ever carry one.
+  it('never emits a section with an empty heading', () => {
+    for (const b of blocksOf(template)) {
+      for (const s of b.content?.sections ?? []) {
+        expect(typeof s.heading).toBe('string');
+        expect(s.heading.trim().length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('does not invent a heading for continuation text — it merges it upward', () => {
+    // The alternative fix was to manufacture a heading per paragraph. A heading is a claim about
+    // what a passage IS; inventing one for someone's own prose is writing for them.
+    const story = blocksOf(template).find((b) => b.type === 'story');
+    const headings = story.content.sections.map((s: any) => s.heading);
+    expect(headings.filter((h: string) => h.startsWith('A bit about'))).toHaveLength(1);
   });
 
   it('does not treat the contact line as a biography', () => {

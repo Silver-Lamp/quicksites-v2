@@ -157,7 +157,11 @@ export function rebuildSpecFromProfile(profile: ProfileSpec): RebuildSpec {
     industryLabel: 'Personal / About Me',
     headline: name,
     subheadline: profile.headline || 'Here’s a little about me.',
-    about: profile.bio || 'Share who you are, what you’re working on, and what you care about.',
+    // ⚠️ NO INVENTED ABOUT. This used to fall back to 'Share who you are, what you're working
+    // on...' — prompt copy, written for the owner, stored on their site as though it were their
+    // description of themselves. It is exactly the text that is neither theirs nor visibly ours.
+    // Empty is honest, and the gaps list already tells them a summary is missing.
+    about: profile.bio || '',
     // Skills become the services list and roles become story panels — both already render in
     // the `personal` scaffold, so a résumé needs no new block types. Empty when absent (the
     // URL path), which leaves that path byte-identical to before.

@@ -236,6 +236,12 @@ export default function FooterRender({
     (final?.businessName && String(final.businessName).trim()) ||
     'Business';
 
+  // Optional, and deliberately never defaulted — see the note at the copyright line below.
+  const tagline =
+    (typeof final?.tagline === 'string' && final.tagline.trim()) ||
+    (typeof meta.tagline === 'string' && meta.tagline.trim()) ||
+    '';
+
   const addressLine1 =
     (typeof contact.address === 'string' && contact.address.trim()) ||
     (db.address_line1 && String(db.address_line1).trim()) ||
@@ -505,8 +511,20 @@ export default function FooterRender({
         </div>
       </div>
 
+      {/*
+        ⚠️ THIS TAGLINE USED TO BE UNCONDITIONAL. Every site in the fleet ended with
+        "Fast, Reliable, Local Service 24/7." — including personal About-Me pages, where it
+        appeared under a real person's name as though they were advertising 24-hour service.
+        It is a trades slogan, and it is a CLAIM: nobody asked us to promise availability on
+        their behalf. A résumé page reading "© 2026 Silver Zhao. Fast, Reliable, Local Service
+        24/7." is the same category of error as a fabricated review, just quieter.
+
+        Now it appears only where the site itself supplies it. No tagline is the safe default:
+        a missing line reads as nothing, a wrong one reads as a promise.
+      */}
       <div className={`text-center mt-8 text-xs ${subText}`}>
-        © {new Date().getFullYear()} {businessName}. Fast, Reliable, Local Service 24/7.
+        © {new Date().getFullYear()} {businessName}
+        {tagline ? `. ${tagline}` : ''}
       </div>
     </footer>
   );

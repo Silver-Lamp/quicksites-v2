@@ -635,11 +635,32 @@ export const blockContentSchemaMap = {
   cta: {
     label: 'Call to Action',
     icon: '🔘',
-    schema: z.object({
-      label: z.string().min(1),
-      href: RelativeOrAbsoluteUrl.default('/'),
-      style: z.enum(['primary', 'secondary', 'ghost']).optional(),
-    }),
+    // ⚠️ TWO NAMES FOR ONE URL, AND THE FLEET PAID FOR IT. Scaffolds write `link`; this schema
+    // knew only `href`; and z.object STRIPS unknown keys at parse time — so validation deleted
+    // the URL and the renderer, which required `link`, printed "⚠️ Missing content for CTA
+    // block". Three components, two spellings, guaranteed failure: a scan of 2560 live
+    // templates found 149 cta blocks using `link` and ZERO with a real `href`, i.e. every
+    // single CTA block in the fleet was rendering as a red error.
+    //
+    // `href` is canonical (it is what the schema and the anchor attribute call it). This
+    // preprocess folds the `link` spelling into it so the 149 existing blocks heal on read
+    // without a data migration — the same trick the `services` block above already uses for
+    // its items (`if (o.link && !o.href) o.href = o.link`). That precedent existing here, one
+    // block away, is the whole lesson: the fix was known and simply never applied twice.
+    schema: z.preprocess(
+      (raw) => {
+        const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+        if (!c.href && typeof c.link === 'string' && c.link) c.href = c.link;
+        // A default-only href ('/') is not a real destination; prefer the explicit link.
+        if (c.href === '/' && typeof c.link === 'string' && c.link) c.href = c.link;
+        return c;
+      },
+      z.object({
+        label: z.string().min(1),
+        href: RelativeOrAbsoluteUrl.default('/'),
+        style: z.enum(['primary', 'secondary', 'ghost']).optional(),
+      })
+    ),
   },
 
   service_areas: {

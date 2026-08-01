@@ -72,7 +72,14 @@ function sectionise(text: string): Record<'summary' | 'skills' | 'experience', s
 
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.replace(/^[#*\s]+/, '').trimEnd();
-    if (isBlank(line)) continue;
+    // ⚠️ A BLANK LINE IS CONTENT, NOT NOISE. Dropping it used to flatten a two-paragraph summary
+    // into one run-on block — an editorial change to text we promised only to rearrange. Record
+    // it as a paragraph break; consumers that don't care (skills, roles) filter it out.
+    if (isBlank(line)) {
+      const cur = out[current];
+      if (cur.length && cur[cur.length - 1] !== '') cur.push('');
+      continue;
+    }
 
     // A heading is short and matches a known word — "Skills" is a heading, a sentence
     // beginning "Skills I picked up along the way…" is not.
@@ -138,14 +145,54 @@ export function profileFromResume(intake: ResumeIntake): ProfileSpec {
   const email = intake.email || text.match(EMAIL_RX)?.[0] || null;
 
   const since = clean(intake.sinceParagraph ?? '');
-  const summaryBody = s.summary.map(clean).filter(Boolean).join(' ');
+
+  // ⚠️ THE NAME LINE IS NOT A BIOGRAPHY. sectionise files everything above the first recognised
+  // heading under `summary`, and on almost every résumé that includes the name line itself. Left
+  // in, a CV that is just "Jo Mensah" + a skills list produced an About-me block whose entire
+  // body was "Jo Mensah" — the page telling you who someone is by repeating their name back at
+  // you. Worse, it made `bio` non-null, so `gaps` reported a summary we did not actually have
+  // and the person was never told to write one.
+  const summaryLines = s.summary.slice();
+  if (guessedName && (summaryLines[0] ?? '').trim() === firstLine) summaryLines.shift();
+
+  // ⚠️ CONTACT DETAILS ARE NOT A BIOGRAPHY. Résumés put the email/phone/site directly under the
+  // name, above any heading, so sectionise files them under `summary` — and a real run opened
+  // someone's About-me with "priya@example.com Product designer with eleven years...". The
+  // address is already captured as contact; here it is just debris in a sentence about them.
+  const isContactOnly = (l: string) => {
+    const t = l.trim();
+    if (!t) return false;
+    const stripped = t
+      .replace(EMAIL_RX, '')
+      .replace(/https?:\/\/\S+/gi, '')
+      .replace(/\+?[\d][\d\s().-]{6,}\d/g, '')
+      .replace(/[·|,;•\-–—]/g, '')
+      .trim();
+    return stripped.length === 0;
+  };
+
+  // Rebuild paragraphs: consecutive lines are one paragraph, blanks separate them.
+  const paragraphs: string[] = [];
+  let buf: string[] = [];
+  const flush = () => {
+    const joined = buf.map(clean).filter(Boolean).join(' ').trim();
+    if (joined) paragraphs.push(joined);
+    buf = [];
+  };
+  for (const l of summaryLines) {
+    if (l === '') flush();
+    else if (!isContactOnly(l)) buf.push(l);
+  }
+  flush();
+  const summaryBody = paragraphs.join('\n\n');
   const bio = [since, summaryBody].filter(Boolean).join('\n\n') || null;
 
-  const skills = s.skills.flatMap(splitList);
+  const skills = s.skills.filter(Boolean).flatMap(splitList);
 
   // Experience keeps its own line breaks — each line is a role, and flattening them into a
   // paragraph would blur employers together.
   const experience = s.experience
+    .filter(Boolean)
     .map(clean)
     .filter(Boolean)
     .map((line) => {

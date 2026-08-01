@@ -93,7 +93,7 @@ export function buildCityServicePage(opts: {
     `<a href="${contactHref}">contact us</a> for a fast, free quote in ${city}.</p>`;
 
   const cta: any = createDefaultBlock('cta');
-  cta.content = { ...cta.content, label: `Get ${serviceLabel} in ${city}`, link: contactHref };
+  cta.content = { ...cta.content, label: `Get ${serviceLabel} in ${city}`, href: contactHref };
 
   const blocks = [hero, svc, body, cta];
   return {
@@ -156,7 +156,7 @@ export function buildAreaGuidePage(opts: {
     `<a href="${contactHref}">get in touch</a> for a personalized look at ${area}.</p>`;
 
   const cta: any = createDefaultBlock('cta');
-  cta.content = { ...cta.content, label: `Explore ${area} homes`, link: contactHref };
+  cta.content = { ...cta.content, label: `Explore ${area} homes`, href: contactHref };
 
   const blocks = [hero, listings, body, cta];
   return {

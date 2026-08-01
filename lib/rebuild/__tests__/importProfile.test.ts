@@ -117,10 +117,21 @@ describe('rebuildSpecFromProfile', () => {
     expect(spec.original?.about).toBe('I design calm software.'); // revertible
   });
 
-  it('supplies safe defaults when fields are missing', () => {
+  it('supplies structural defaults when fields are missing — but never an invented bio', () => {
     const spec = rebuildSpecFromProfile({ name: null, headline: null, bio: null, photoUrl: null, location: null, links: [] });
+    // Structural defaults are fine: these are OUR labels for OUR scaffold, not claims about a
+    // person, and something has to name the industry and title an untitled page.
     expect(spec.businessName).toBe('About Me');
     expect(spec.industryKey).toBe('personal');
-    expect(spec.about.length).toBeGreaterThan(0);
+
+    // ⚠️ `about` USED TO BE DEFAULTED TOO, and this test asserted it. The default was
+    // 'Share who you are, what you're working on, and what you care about.' — prompt copy,
+    // addressed to the owner, stored on their site in the field that holds their description of
+    // themselves. It reached a real person's published page.
+    //
+    // A default for a LABEL is harmless. A default for someone's SELF-DESCRIPTION is text that
+    // is neither theirs nor recognisably ours, which is the one kind a visitor misreads as
+    // meant. Empty is honest; the gaps list is what tells them a summary is missing.
+    expect(spec.about).toBe('');
   });
 });

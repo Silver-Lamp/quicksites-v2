@@ -93,10 +93,19 @@ export function buildRebuildTemplate(opts: {
   // Brand storytelling → an alternating image+text `story` block. Pairs each AI story
   // point with a real image (product photos beyond the hero, or scraped images) so a
   // converted store reads like the original brand site, not just hero + grid.
-  if (spec.story?.length) {
+  // ⚠️ The personal/About-Me scaffold is handled separately, below. applyStoryBlock REPLACES
+  // the "About me" block wholesale, which on a résumé page threw away the person's summary the
+  // moment they also had a work history — the two things they most wanted on the page competing
+  // for one block.
+  if (spec.story?.length && spec.industryKey !== 'personal') {
     const heroUrl = effectiveHero || undefined;
     const storyImages = (opts.galleryImages ?? []).filter((u) => u && u !== heroUrl);
     applyStoryBlock(blocks, spec.story, storyImages);
+  }
+
+  // An About-Me page is built from words the person supplied, so it gets its own assembly.
+  if (spec.industryKey === 'personal') {
+    applyPersonalContent(blocks, spec);
   }
 
   // If the AI reconstructed a real menu (restaurant conversion), replace the
@@ -405,4 +414,74 @@ export function wireCatalogIntoTemplate(
     ecom: { ...(data.meta?.ecom ?? {}), merchant_id: merchantId },
   };
   return data;
+}
+
+
+/**
+ * Put a person's own words onto their About-Me page.
+ *
+ * ⚠️ WHY THIS EXISTS. /verbatim promises "Verbatim arranges the words you wrote — it doesn't
+ * write new ones." The first real résumé run produced a page with SIX blocks and exactly one
+ * scrap of the person's own writing: their name, in the hero. Their summary had been parsed
+ * correctly and filed into `tpl.data.meta.about`, which nothing renders. Forty parsed skills
+ * went into `tpl.services`, which the personal scaffold has no block for. And the "About me"
+ * block still carried the scaffold's own placeholder — "Share who you are... or paste your
+ * LinkedIn / about.me and we'll draft it for you" — instructions, addressed to the owner,
+ * published on a real person's page, telling them to paste the résumé they had just pasted.
+ *
+ * Nothing was fabricated, so the honesty claim held. But the page under-delivered on the
+ * sentence it leads with, which erodes the same trust from the other side: a tool that promises
+ * your words and shows none of them reads as a tool that didn't work.
+ *
+ * The rule here is the mirror of the no-invention rule: SHOW EVERYTHING THEY GAVE US, INVENT
+ * NOTHING THEY DIDN'T. Where there is nothing, render nothing — never a placeholder, which is
+ * the one kind of text that is both not-theirs and not-obviously-ours.
+ */
+function applyPersonalContent(blocks: any[], spec: RebuildSpec): void {
+  const who = spec.businessName;
+
+  // `spec.about` carries a generic fallback when the résumé had no summary, so it cannot be
+  // trusted as "their words". `spec.original.about` is set only from a real parsed bio.
+  const realBio = (spec.original?.about ?? '').trim();
+  const roles = spec.story ?? [];
+
+  const sections: any[] = [];
+  if (realBio) {
+    // Keep their paragraphing — a résumé summary is often two distinct thoughts, and running
+    // them together is an editorial change to text we promised only to rearrange.
+    const paras = realBio.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean);
+    paras.forEach((body, i) => {
+      sections.push({ heading: i === 0 ? `A bit about ${who}` : '', body, image_url: '', cta_text: '', cta_link: '' });
+    });
+  }
+  for (const r of roles) {
+    sections.push({ heading: r.heading || '', body: r.body || '', image_url: '', cta_text: '', cta_link: '' });
+  }
+
+  const storyIdx = blocks.findIndex((b) => b?.type === 'story');
+  if (storyIdx >= 0) {
+    if (sections.length) {
+      blocks[storyIdx].content = { ...blocks[storyIdx].content, title: 'About me', sections };
+    } else {
+      // Nothing of theirs to say here. Drop the block rather than publish the placeholder.
+      blocks.splice(storyIdx, 1);
+    }
+  }
+
+  // Skills were parsed and then had nowhere to go: the personal scaffold ships no services
+  // block. Give them one. The block type is `services` but the heading is "Skills", because
+  // that is what they are on a person's page.
+  if (spec.services.length) {
+    const skills: any = createDefaultBlock('services');
+    skills.content = {
+      ...skills.content,
+      title: 'Skills',
+      columns: 3,
+      items: spec.services.map((name) => ({ name, description: '' })),
+    };
+    // Straight after the About-me story if there is one, else after the hero.
+    const anchor = blocks.findIndex((b) => b?.type === 'story');
+    const heroIdx = blocks.findIndex((b) => b?.type === 'hero');
+    blocks.splice(anchor >= 0 ? anchor + 1 : heroIdx + 1, 0, skills);
+  }
 }

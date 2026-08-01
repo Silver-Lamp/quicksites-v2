@@ -4,7 +4,29 @@ import type { Block } from '@/types/blocks';
 import { normalizeBlock } from '@/lib/utils/normalizeBlock';
 import { ensureBlockId } from '@/admin/lib/ensureBlockId';
 
-export function normalizePageBlocks(page: Page): Page {
+/**
+ * ⚠️ AN INVALID BLOCK IS DROPPED, NEVER TURNED INTO VISIBLE CONTENT.
+ *
+ * This used to replace a failed block with a text block whose value was
+ * `Invalid block removed: ${JSON.stringify(raw)}` — and that string is CONTENT. It gets saved
+ * with the template and published, so it stops being an editor diagnostic and becomes a
+ * paragraph of internal JSON on a stranger's live website. A real one shipped: a person's entire
+ * biography, their email and their home city, rendered as raw JSON on their own published page,
+ * because one section had an empty heading.
+ *
+ * Two things were wrong with it. It leaked the owner's data to visitors in a format that reads as
+ * a crash, and it PERSISTED — a corrupted block that survives a save is not a warning, it's
+ * damage. (The original author's own comment called the fallback "optional", so dropping was
+ * always the intent.)
+ *
+ * Now: drop it, warn on the console, and tell the caller via `onDrop` so the editor can surface
+ * the loss to the owner without putting anything on the page. Same rule as a missing backdrop —
+ * where we have nothing valid to render, render nothing at all.
+ */
+export function normalizePageBlocks(
+  page: Page,
+  onDrop?: (info: { type?: string; _id?: string; error: unknown }) => void,
+): Page {
   const rawBlocks = Array.isArray(page?.content_blocks) ? page.content_blocks : [];
   const normalized: Block[] = [];
   const seenIds = new Set<string>();
@@ -29,12 +51,8 @@ export function normalizePageBlocks(page: Page): Page {
         '⚠️ normalizePageBlocks: dropped invalid block',
         { type: (raw as any)?.type, _id: (raw as any)?._id, err }
       );
-      // optional: push a text fallback instead of dropping
-      normalized.push({
-        type: 'text',
-        _id: crypto.randomUUID(),
-        content: { value: `Invalid block removed: ${JSON.stringify(raw)}` },
-      } as any);
+      onDrop?.({ type: (raw as any)?.type, _id: (raw as any)?._id, error: err });
+      // Deliberately NOT replaced with a text block — see the note above.
     }
   }
 

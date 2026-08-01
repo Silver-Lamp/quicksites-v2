@@ -452,18 +452,45 @@ function applyPersonalContent(blocks: any[], spec: RebuildSpec): void {
   const realBio = (spec.original?.about ?? '').trim();
   const roles = spec.story ?? [];
 
+  // ⚠️ EVERY SECTION MUST HAVE A NON-EMPTY HEADING, AND THIS IS NOT A STYLE RULE.
+  // The story schema is `heading: z.string().min(1)`. An empty one fails validation, and
+  // normalizePageBlocks used to replace the whole failed block with a text block containing the
+  // RAW JSON of its content — which then saved and published. A real person's biography, email
+  // and home city shipped as a wall of JSON on their own live site because I emitted
+  // `heading: ''` for the second paragraph of their summary.
+  //
+  // The honest fix is NOT to invent a heading for every paragraph. A heading is a claim about
+  // what a passage is; making one up for continuation text is writing for them. So a section
+  // with nothing to head gets MERGED into the one before it — the renderer already carries
+  // `whitespace-pre-line`, so paragraphs separated by a blank line still read as paragraphs.
+  // Nothing is invented and nothing is lost.
   const sections: any[] = [];
+  const addSection = (heading: string, body: string) => {
+    const text = (body ?? '').trim();
+    if (!text) return;
+    const head = (heading ?? '').trim();
+    if (!head) {
+      if (sections.length) {
+        // No heading of its own: it belongs to the passage above it.
+        sections[sections.length - 1].body = `${sections[sections.length - 1].body}\n\n${text}`;
+        return;
+      }
+      // Nothing above it to join, so this is the opening passage and takes the block's own name.
+      sections.push({ heading: `A bit about ${who}`, body: text, image_url: '', cta_text: '', cta_link: '' });
+      return;
+    }
+    sections.push({ heading: head, body: text, image_url: '', cta_text: '', cta_link: '' });
+  };
+
   if (realBio) {
     // Keep their paragraphing — a résumé summary is often two distinct thoughts, and running
     // them together is an editorial change to text we promised only to rearrange.
     const paras = realBio.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean);
-    paras.forEach((body, i) => {
-      sections.push({ heading: i === 0 ? `A bit about ${who}` : '', body, image_url: '', cta_text: '', cta_link: '' });
-    });
+    paras.forEach((body, i) => addSection(i === 0 ? `A bit about ${who}` : '', body));
   }
-  for (const r of roles) {
-    sections.push({ heading: r.heading || '', body: r.body || '', image_url: '', cta_text: '', cta_link: '' });
-  }
+  // Roles: `heading` is the employer, which is real. importResume leaves it empty when a line
+  // has no " — " separator, and those merge upward rather than inventing an employer name.
+  for (const r of roles) addSection(r.heading || '', r.body || '');
 
   const storyIdx = blocks.findIndex((b) => b?.type === 'story');
   if (storyIdx >= 0) {
@@ -478,13 +505,18 @@ function applyPersonalContent(blocks: any[], spec: RebuildSpec): void {
   // Skills were parsed and then had nowhere to go: the personal scaffold ships no services
   // block. Give them one. The block type is `services` but the heading is "Skills", because
   // that is what they are on a person's page.
-  if (spec.services.length) {
+  if (spec.services.some((n) => String(n ?? '').trim())) {
     const skills: any = createDefaultBlock('services');
     skills.content = {
       ...skills.content,
       title: 'Skills',
       columns: 3,
-      items: spec.services.map((name) => ({ name, description: '' })),
+      // Blank names render as empty bullets — a real page showed ~20 of them under the real
+      // skills. `z.string().min(1)` accepts a single space, so trim before deciding.
+      items: spec.services
+        .map((name) => String(name ?? '').trim())
+        .filter(Boolean)
+        .map((name) => ({ name, description: '' })),
     };
     // Straight after the About-me story if there is one, else after the hero.
     const anchor = blocks.findIndex((b) => b?.type === 'story');

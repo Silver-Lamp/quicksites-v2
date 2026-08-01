@@ -485,39 +485,34 @@ export const DEFAULT_BLOCK_CONTENT = {
     about_that_width: '',
   },
 
+  /**
+   * ⚠️ SHIPS EMPTY — STRUCTURE, NOT PEOPLE.
+   *
+   * This default used to carry THREE INVENTED EMPLOYEES: "Jordan Avery, Listing Agent —
+   * fifteen years matching families to the right block", "Priya Nair, Buyer's Agent",
+   * "Marcus Bellamy, Broker". Names, job titles and biographies for people who do not exist,
+   * on a block an agency drops onto its own site. Anyone who didn't fully edit it published a
+   * staff page for a team it never hired — and a prospective client could try to phone them.
+   *
+   * Exactly the fabricated-testimonial bug (#652) wearing a different shape, and worse: a
+   * review invents an opinion, this invents colleagues. It is rule 9 (no generated people)
+   * applied to words instead of images.
+   *
+   * It survived the guard written for #652 because that one checks CLAIM_FIELDS —
+   * quote/attribution/rating — and an agent has none of those. The test now also looks for
+   * PERSON-SHAPED objects (a `name` alongside a bio/photo/title), which is what these are.
+   *
+   * The renderer already returns null on an empty list, so a site shows nothing here until
+   * the owner adds someone real.
+   */
   agent_roster: {
     title: 'Meet Our Agents',
     subtitle: 'Every one of our agents will walk you through their listings — in their own voice.',
     columns: 3,
-    agents: [
-      {
-        name: 'Jordan Avery',
-        title: 'Listing Agent',
-        photo_url: '',
-        bio: 'Fifteen years matching families to the right block, not just the right house. Knows every cul-de-sac in the district.',
-        phone: '',
-        email: '',
-        about_that_embed_id: '',
-      },
-      {
-        name: 'Priya Nair',
-        title: 'Buyer’s Agent',
-        photo_url: '',
-        bio: 'First-time buyers are her specialty — patient, straight about the numbers, and relentless on inspection details.',
-        phone: '',
-        email: '',
-        about_that_embed_id: '',
-      },
-      {
-        name: 'Marcus Bellamy',
-        title: 'Broker',
-        photo_url: '',
-        bio: 'Runs the desk and the luxury portfolio. If it has a view and a story, Marcus has the pitch.',
-        phone: '',
-        email: '',
-        about_that_embed_id: '',
-      },
-    ],
+    agents: [] as Array<{
+      name: string; title: string; photo_url: string; bio: string;
+      phone: string; email: string; about_that_embed_id: string;
+    }>,
   },
 
   neighborhood_stay: {
@@ -573,7 +568,10 @@ export const DEFAULT_BLOCK_CONTENT = {
   /* ───────── candidate blocks ───────── */
 
   candidate_hero: {
-    name: 'John Doe',
+    // Empty, not "John Doe". A blank headline reads as unfinished; a placeholder NAME on a
+    // political candidate's page reads as a candidate. Nothing real ships it (a fleet scan
+    // found it on three dev templates only), so the cost of removing it is zero.
+    name: '',
     title: 'Mayor Candidate',
     tagline: 'Building a Better Future Together',
     image_url: '',

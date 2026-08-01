@@ -157,6 +157,7 @@ export const DYNAMIC_RENDERERS: Record<
   daily_artifact: () => import('@/components/admin/templates/render-blocks/daily-artifact'),
   listing_card: () => import('@/components/admin/templates/render-blocks/listing-card'),
   neighborhood_stay: () => import('@/components/admin/templates/render-blocks/neighborhood-stay'),
+  mortgage_calculator: () => import('@/components/admin/templates/render-blocks/mortgage-calculator'),
   listings_grid: () => import('@/components/admin/templates/render-blocks/listings-grid'),
   agent_roster: () => import('@/components/admin/templates/render-blocks/agent-roster'),
   vehicles_grid: () => import('@/components/admin/templates/render-blocks/vehicles-grid'),

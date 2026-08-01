@@ -137,6 +137,21 @@ export const DEFAULT_BLOCK_CONTENT = {
     style: 'primary',
   },
 
+  mortgage_calculator: {
+    title: 'Estimate your monthly payment',
+    subtitle: 'Play with the numbers — see what this home could cost per month.',
+    price: '$524,900',
+    down_payment_percent: 20,
+    interest_rate: 6.8,
+    loan_term_years: 30,
+    property_tax_rate: 1.1,
+    home_insurance_monthly: 120,
+    hoa_monthly: 0,
+    cta_text: 'Get pre-approved',
+    cta_link: '#contact',
+    disclaimer: 'Estimate only — not a loan offer or a commitment to lend. Actual rates, taxes, and insurance vary.',
+  },
+
   /* ───────── testimonial (avatar_url per schema) ───────── */
 
   testimonial: {

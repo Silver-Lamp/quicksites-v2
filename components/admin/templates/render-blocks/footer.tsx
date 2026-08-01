@@ -217,6 +217,23 @@ export default function FooterRender({
 
   const enableFooterEdit = inIframe || inlineHints || previewOnly;
 
+  /**
+   * ⚠️ EDITOR HINTS MUST NOT REACH VISITORS. The published footer of a live business site read:
+   *
+   *     Company Info  —          Phone  —
+   *     Find Us       Map unavailable   No social links yet.
+   *
+   * Every one of those is a message written for the OWNER, addressed to a customer. "No social
+   * links yet." tells a prospect the business is half-built; "Map unavailable" tells them our
+   * renderer failed; the em-dashes announce what we don't know about them. A persona evaluating
+   * QuickSites through a demo site named exactly this as a reason not to trust it.
+   *
+   * Same rule as a missing backdrop, a dropped invalid block, and an unpainted image: where
+   * there is nothing true to render, render NOTHING. The hint still shows in the editor, which
+   * is the only place it was ever useful.
+   */
+  const showEditorHints = enableFooterEdit;
+
   // Auto-compact below 420px, or when editor forces a narrow device
   const isNarrowMedia = useMediaQuery('(max-width: 420px)');
   const forcedNarrow = device === 'mobile';
@@ -454,7 +471,7 @@ export default function FooterRender({
                 )
               )
             ) : (
-              <span className={subText}>No links configured.</span>
+              showEditorHints && <span className={subText}>No links configured.</span>
             )}
           </nav>
         </div>
@@ -462,32 +479,40 @@ export default function FooterRender({
         {/* Company Info (read-only) — business sites only; see isPersonal above. */}
         <div className={`space-y-3 ${isPersonal ? 'hidden' : ''}`}>
           <h3 className={`text-base font-semibold ${headingColor}`}>Company Info</h3>
-          <div className="whitespace-pre-line leading-relaxed">
-            {fullAddressForDisplay || <span className={subText}>—</span>}
-          </div>
+          {(fullAddressForDisplay || showEditorHints) && (
+            <div className="whitespace-pre-line leading-relaxed">
+              {fullAddressForDisplay || <span className={subText}>—</span>}
+            </div>
+          )}
           <div className="space-y-1">
             <div className={subText}>Business</div>
             <div>{businessName || <span className={subText}>—</span>}</div>
           </div>
-          <div className="space-y-1">
-            <div className={subText}>Phone</div>
-            {phone ? (
-              <a
-                href={previewOnly ? '#' : `tel:${(phone || '').replace(/\D/g, '')}`}
-                className={linkColor}
-                {...maybePreventLink}
-              >
-                {phone}
-              </a>
-            ) : (
-              <span className={subText}>—</span>
-            )}
-          </div>
+          {(phone || showEditorHints) && (
+            <div className="space-y-1">
+              <div className={subText}>Phone</div>
+              {phone ? (
+                <a
+                  href={previewOnly ? '#' : `tel:${(phone || '').replace(/\D/g, '')}`}
+                  className={linkColor}
+                  {...maybePreventLink}
+                >
+                  {phone}
+                </a>
+              ) : (
+                <span className={subText}>—</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Map + Socials. On a personal page the map goes but the socials stay — links to
             someone's other work are the most useful thing in a portfolio footer. */}
-        <div className="space-y-3">
+        {/* A heading over nothing is its own kind of editor-speak: it tells a visitor a section
+            exists and then shows them an empty box. With the map and the socials both gated
+            above, this column can be genuinely empty — so hide the whole thing rather than
+            leave "Find Us" hovering over blank space. */}
+        <div className={`space-y-3 ${!centerOk && !socials.length && !showEditorHints ? 'hidden' : ''}`}>
           <h3 className={`text-base font-semibold ${headingColor}`}>{isPersonal ? 'Elsewhere' : 'Find Us'}</h3>
           {/* No map on a personal page: "Map unavailable" is a 180px box announcing that we
               don't know where someone lives — and on an About-Me page we have no business
@@ -502,9 +527,11 @@ export default function FooterRender({
                 interactive={false}
               />
             ) : (
-              <div className={`h-[180px] flex items-center justify-center ${subText}`}>
-                Map unavailable
-              </div>
+              showEditorHints && (
+                <div className={`h-[180px] flex items-center justify-center ${subText}`}>
+                  Map unavailable
+                </div>
+              )
             )}
           </div>
 
@@ -520,7 +547,7 @@ export default function FooterRender({
                 {renderSocialContent({ icon: s.icon, label: s.label })}
               </a>
             ))}
-            {!socials.length && <span className={subText}>No social links yet.</span>}
+            {!socials.length && showEditorHints && <span className={subText}>No social links yet.</span>}
           </div>
         </div>
       </div>

@@ -1,6 +1,8 @@
 // components/admin/templates/render-blocks/services.tsx
 'use client';
 
+import { isEditorContext } from '@/lib/editor/isEditorContext';
+
 import type { ReactNode } from 'react';
 import type { Block } from '@/types/blocks';
 import SectionShell from '@/components/ui/section-shell';
@@ -68,6 +70,11 @@ export default function ServicesRender({
       : 1;
 
   if (items.length === 0) {
+    // ⚠️ EDITOR ONLY. This warning names an internal data path (`template.data.services`), and
+    // it was rendering on PUBLISHED pages — a red error message quoting our own schema at a
+    // business's customers. An empty services block now renders nothing at all in public, which
+    // is the same rule a missing backdrop and a dropped invalid block already follow.
+    if (!isEditorContext()) return null;
     return (
       <div className="text-destructive italic text-sm p-2 bg-muted rounded">
         ⚠️ No services configured. This block prefers <code>template.data.services</code>.

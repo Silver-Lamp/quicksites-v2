@@ -118,10 +118,17 @@ export function profileFromResume(intake: ResumeIntake): ProfileSpec {
   // "Name — Senior Thing · Other Thing", which blew past a 60-char limit and returned NULL for
   // the person's own name. Judge the candidate, not the line it arrived on.
   const nameCandidate = firstLine.replace(/\s*[—–|]\s*.*$/, '').trim();
+  // ⚠️ A SECTION HEADING IS NOT A PERSON. Plenty of résumés open straight onto "Skills" or
+  // "Summary" — the name lives in a header, a logo, or an image the extractor can't read. Taking
+  // the first line on faith then produced an About-Me page for someone called "Skills", which is
+  // exactly the confidently-wrong-name failure this parser is supposed to refuse to make.
+  // Found by the PDF round-trip tests; it was always reachable from a pasted résumé too.
+  const looksLikeHeading = SECTION_PATTERNS.some((p) => p.re.test(nameCandidate));
   // Still refuse when it doesn't look like a name — a wrong name on an About-Me page is the
   // worst possible first impression, and blank is honest.
   const guessedName =
     nameCandidate &&
+    !looksLikeHeading &&
     nameCandidate.length <= 60 &&
     !EMAIL_RX.test(nameCandidate) &&
     !/\d/.test(nameCandidate)

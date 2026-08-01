@@ -8,6 +8,7 @@
 // of this feature is that it tells you what it doesn't know rather than filling the silence.
 // Deleting this list would make the product quietly worse in exactly the way it claims not to be.
 import * as React from 'react';
+import { extractPdfText } from '@/lib/rebuild/pdfText';
 
 type Result = {
   ok?: boolean;
@@ -32,6 +33,49 @@ export default function VerbatimIntake() {
   const [sinceParagraph, setSince] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [result, setResult] = React.useState<Result | null>(null);
+  const [reading, setReading] = React.useState(false);
+  const [pdfNote, setPdfNote] = React.useState<string | null>(null);
+
+  /**
+   * ⚠️ THE FILE NEVER LEAVES THE DEVICE. Extraction runs in the browser and only the resulting
+   * TEXT is posted — the server needs the words, not a document full of the person's address,
+   * phone number and employment history. Don't "simplify" this by uploading the PDF.
+   *
+   * And the text lands in the textarea rather than being submitted straight through: PDF
+   * extraction is lossy (multi-column CVs interleave, image-only exports yield nothing), and
+   * the parser downstream refuses to invent — so anything wrong has to be VISIBLE and
+   * correctable before it becomes a page.
+   */
+  const onPickPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // let the same file be re-picked after a failure
+    if (!file) return;
+    setPdfNote(null);
+    setReading(true);
+    try {
+      const { text, pages, quality } = await extractPdfText(file);
+      if (quality === 'empty') {
+        // The one diagnosis we can actually support: zero characters really does mean no text
+        // layer. Even here we say what we OBSERVED before offering the likely cause.
+        setPdfNote(
+          'We couldn’t find any text in that PDF — it’s probably a scan or an image. Pasting the text works fine.',
+        );
+        return;
+      }
+      // ⚠️ ALWAYS KEEP THE TEXT. An earlier version discarded anything short and announced it
+      // was a scan; it was wrong about a real résumé the first time it met one.
+      setResumeText(text);
+      setPdfNote(
+        quality === 'thin'
+          ? `Read ${pages} page${pages === 1 ? '' : 's'}, but that came out shorter than most résumés — worth checking nothing’s missing before you continue.`
+          : `Read ${pages} page${pages === 1 ? '' : 's'} — have a look before you continue. PDFs don’t always come out in order, and we’d rather you fix it here than find it on your page.`,
+      );
+    } catch {
+      setPdfNote('Couldn’t read that PDF. Pasting the text works just as well.');
+    } finally {
+      setReading(false);
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,9 +134,24 @@ export default function VerbatimIntake() {
 
   return (
     <form onSubmit={submit} className="rounded-2xl border border-border bg-card p-7">
-      <label className="block text-sm font-medium text-card-foreground" htmlFor="resume">
-        Paste your résumé
-      </label>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <label className="block text-sm font-medium text-card-foreground" htmlFor="resume">
+          Paste your résumé
+        </label>
+        <label className="cursor-pointer rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-sky-500/40 hover:text-foreground">
+          {reading ? 'Reading…' : '…or upload a PDF'}
+          <input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={onPickPdf} disabled={reading} />
+        </label>
+      </div>
+      {/* Said plainly, because it's true and it's the reason to prefer the upload. */}
+      <p className="mt-1 text-xs text-muted-foreground">
+        A PDF is read on your device — the file never reaches our servers, only the text you see below.
+      </p>
+      {pdfNote && (
+        <p className="mt-2 rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-xs text-foreground">
+          {pdfNote}
+        </p>
+      )}
       <textarea
         id="resume"
         value={resumeText}

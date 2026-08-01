@@ -513,6 +513,12 @@ export function buildIndustryStarter(opts: {
       0,
       createDefaultBlock('home_valuation') as any,
       createDefaultBlock('affordability_calculator') as any,
+      // ⚠️ NOT a duplicate of affordability_calculator, despite the similar name. That one
+      // answers "how much house can I afford?" (income → price). This one answers "what would
+      // THIS house cost me per month?" (price → payment). Buyers ask both, at different stages,
+      // and blockSchema.ts already carried a comment distinguishing them before the block
+      // existed. Seeded from #536, re-applied onto current main.
+      createDefaultBlock('mortgage_calculator') as any,
       createDefaultBlock('listing_alert') as any
     );
   }

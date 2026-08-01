@@ -11,7 +11,13 @@ import GuestStart from '@/components/home/guest-start';
 
 export const dynamic = 'force-dynamic';
 
-export default function BuildPage() {
+export default async function BuildPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ industry?: string }>;
+}) {
+  const sp = await searchParams;
+  const initialIndustry = typeof sp.industry === 'string' ? sp.industry : undefined;
   if (!guestBuildEnabled()) redirect('/login');
 
   return (
@@ -34,7 +40,7 @@ export default function BuildPage() {
           Describe your business and watch a real site appear. Edit it live — your work
           saves as you go, and the site stays yours when you sign up to publish. No credit card.
         </p>
-        <GuestStart />
+        <GuestStart initialIndustry={initialIndustry} />
       </main>
     </>
   );

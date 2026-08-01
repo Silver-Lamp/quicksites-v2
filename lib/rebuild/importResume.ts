@@ -50,6 +50,19 @@ const URL_RX = /\b((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s,;]*)?)/gi
 const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
 const isBlank = (s: string) => !s.trim();
 
+/**
+ * Leading list markers, stripped from every parsed item.
+ *
+ * ⚠️ A REAL RÉSUMÉ TAUGHT US THIS ONE. Word's bullet lists export as the letter "o" plus a
+ * space, and outline lists as "A." / "1." / "i." — so a live page shipped skills reading
+ * "o C/C++/C#", "o React Native" and "A. Project Manager". The glyph is invisible in the
+ * original document and very visible on the page built from it.
+ *
+ * "o" is only treated as a marker when it stands alone before a space, so a skill legitimately
+ * beginning with the letter (say "o3 tuning") survives.
+ */
+const BULLET_PREFIX = /^(?:[-–—*•·◦▪‣]|o|[A-Za-z]\.|\d+[.)]|[ivxIVX]+\.)\s+/;
+
 /** Split a line of comma/·/pipe-separated skills into individual entries. */
 function splitList(line: string): string[] {
   // Strip a leading category label: real résumés write "Mobile: React Native · Expo", and
@@ -57,7 +70,7 @@ function splitList(line: string): string[] {
   const body = line.replace(/^[A-Za-z][\w &/+-]{0,24}:\s*/, '');
   return body
     .split(/[·|•,;]|\s+\/\s+/)
-    .map((s) => clean(s).replace(/^[-–—*]\s*/, ''))
+    .map((s) => clean(s).replace(BULLET_PREFIX, ''))
     .filter((s) => s.length > 1 && s.length < 60);
 }
 

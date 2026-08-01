@@ -189,7 +189,14 @@ export function buildRebuildTemplate(opts: {
     }
   }
 
-  const services = spec.services.length ? spec.services : tpl.services;
+  // ⚠️ SKILLS ARE NOT SERVICES. `spec.services` carries a person's SKILLS on the personal path
+  // (they share a field so the scaffold can reuse one block). But `tpl.services` is the
+  // site-level offer list, and the contact form renders it as the "I'm Interested In:"
+  // dropdown — so a résumé produced a form inviting visitors to enquire about "React Native".
+  // A person is not a menu. The skills still render, in their own block (applyPersonalContent);
+  // they just never become things to buy.
+  const isPersonalSite = spec.industryKey === 'personal';
+  const services = isPersonalSite ? [] : spec.services.length ? spec.services : tpl.services;
   tpl.services = services;
   tpl.data.services = services;
   // Mirror the real contact info into meta.contact — the footer renders address /

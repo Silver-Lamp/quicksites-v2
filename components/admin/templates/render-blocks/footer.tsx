@@ -236,6 +236,16 @@ export default function FooterRender({
     (final?.businessName && String(final.businessName).trim()) ||
     'Business';
 
+  // ⚠️ A PERSON IS NOT A COMPANY. The footer's three columns — "Company Info" (address,
+  // Business, Phone), "Find Us" (a map) — are business chrome, and on an About-Me page built
+  // from a résumé they rendered as "Business: Silver Zhao · Phone: — · Map unavailable".
+  // Columns of em-dashes announcing everything we don't know about someone. A personal site
+  // keeps the links and the contact it actually has, and drops the storefront furniture.
+  const isPersonal =
+    (typeof db.industry === 'string' && db.industry === 'personal') ||
+    (typeof meta.industry === 'string' && meta.industry === 'personal') ||
+    (typeof meta.site_type === 'string' && meta.site_type === 'personal');
+
   // Optional, and deliberately never defaulted — see the note at the copyright line below.
   const tagline =
     (typeof final?.tagline === 'string' && final.tagline.trim()) ||
@@ -449,8 +459,8 @@ export default function FooterRender({
           </nav>
         </div>
 
-        {/* Company Info (read-only) */}
-        <div className="space-y-3">
+        {/* Company Info (read-only) — business sites only; see isPersonal above. */}
+        <div className={`space-y-3 ${isPersonal ? 'hidden' : ''}`}>
           <h3 className={`text-base font-semibold ${headingColor}`}>Company Info</h3>
           <div className="whitespace-pre-line leading-relaxed">
             {fullAddressForDisplay || <span className={subText}>—</span>}
@@ -475,10 +485,14 @@ export default function FooterRender({
           </div>
         </div>
 
-        {/* Map + Socials */}
+        {/* Map + Socials. On a personal page the map goes but the socials stay — links to
+            someone's other work are the most useful thing in a portfolio footer. */}
         <div className="space-y-3">
-          <h3 className={`text-base font-semibold ${headingColor}`}>Find Us</h3>
-          <div className="rounded-md overflow-hidden border border-border">
+          <h3 className={`text-base font-semibold ${headingColor}`}>{isPersonal ? 'Elsewhere' : 'Find Us'}</h3>
+          {/* No map on a personal page: "Map unavailable" is a 180px box announcing that we
+              don't know where someone lives — and on an About-Me page we have no business
+              asking. */}
+          <div className={`rounded-md overflow-hidden border border-border ${isPersonal ? 'hidden' : ''}`}>
             {centerOk ? (
               <LeafletMap
                 center={coords as [number, number]}

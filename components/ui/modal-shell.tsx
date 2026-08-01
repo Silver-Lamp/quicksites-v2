@@ -1,5 +1,7 @@
 'use client';
 
+import { lockBodyScroll } from '@/lib/ui/bodyScrollLock';
+
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
@@ -51,20 +53,9 @@ export default function ModalShell({
   // Body scroll lock
   useEffect(() => {
     if (!open) return;
-    const body = document.body;
-    const html = document.documentElement;
-    html.style.setProperty('scrollbar-gutter', 'stable');
-    const prevOverflow = body.style.overflow;
-    const prevPadRight = body.style.paddingRight;
-
-    const scrollbar = window.innerWidth - html.clientWidth;
-    if (scrollbar > 0) body.style.paddingRight = `${scrollbar}px`;
-    body.style.overflow = 'hidden';
-
-    return () => {
-      body.style.overflow = prevOverflow;
-      body.style.paddingRight = prevPadRight;
-    };
+    // Refcounted — see lib/ui/bodyScrollLock.ts. The naive save/restore that used to live
+    // here is correct for one overlay and leaves the page permanently locked for two.
+    return lockBodyScroll();
   }, [open]);
 
   // Focus management + simple focus trap

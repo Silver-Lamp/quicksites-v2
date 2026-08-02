@@ -56,7 +56,8 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   story: 'content', // alternating image+text brand storytelling
   about_that: 'content', // HiveJournal narrated-audio embed (loader script only)
   audio_faq: 'interactive', // HiveJournal /ask — grounded owner-voice Q&A on the page
-  bill_estimator: 'interactive', // upload a bill, get a savings range — client-side redaction first
+  bill_estimator: 'interactive',
+  cloud_savings_agency: 'content', // bespoke whole-page block (PNW pattern) — see docs/CUSTOM_SITES.md §6b // upload a bill, get a savings range — client-side redaction first
   quote_of_the_day: 'content', // HiveJournal cached daily quote (zero-consent)
   daily_artifact: 'content', // HiveJournal daily comic (consent-gated, opt-in token)
   listing_card: 'content', // real-estate listing w/ built-in About That agent slot

@@ -657,6 +657,25 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // ⚠️ A BESPOKE WHOLE-PAGE BLOCK — the PNW pattern, built deliberately for comparison.
+  // One block renders an entire landing page. Total design control; the trade is that it does
+  // NOT inherit fleet-wide improvements the way composed blocks do, and it is a permanent
+  // maintenance item for one client. See docs/CUSTOM_SITES.md §6b before adding another.
+  cloud_savings_agency: {
+    label: 'Cloud Savings (whole page)',
+    icon: '☁️',
+    schema: z.object({
+      headline: z.string().default(''),
+      subheadline: z.string().default(''),
+      operator_name: z.string().default(''),
+      operator_bio: z.string().default(''),
+      provider_name: z.string().default(''),
+      provider_claim: z.string().default(''),
+      fee_disclosure: z.string().default(''),
+      proof_points: z.array(z.object({ label: z.string(), detail: z.string().default('') })).default([]),
+    }),
+  },
+
   bill_estimator: {
     label: 'Bill Estimator',
     icon: '🧾',

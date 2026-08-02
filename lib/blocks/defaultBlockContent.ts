@@ -526,6 +526,18 @@ export const DEFAULT_BLOCK_CONTENT = {
    * — the same failure as a seeded testimonial, aimed at a competitor's pricing instead of a
    * customer's opinion. The owner fills these in with a figure they can point at.
    */
+  /** Ships empty for the same reason bill_estimator does: no unattributed claims by default. */
+  cloud_savings_agency: {
+    headline: '',
+    subheadline: '',
+    operator_name: '',
+    operator_bio: '',
+    provider_name: '',
+    provider_claim: '',
+    fee_disclosure: '',
+    proof_points: [] as Array<{ label: string; detail: string }>,
+  },
+
   bill_estimator: {
     title: 'Send a bill, not your account details',
     blurb: '',

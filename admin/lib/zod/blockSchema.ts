@@ -657,6 +657,21 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  bill_estimator: {
+    label: 'Bill Estimator',
+    icon: '🧾',
+    // A document-upload block. The heavy lifting (extraction + redaction) happens client-side in
+    // the renderer; the schema only carries the words around it, all of which are the site
+    // owner's to write. `provider_claim` exists so a third party's savings figure stays
+    // ATTRIBUTED in the data model rather than becoming the owner's own assertion in prose.
+    schema: z.object({
+      title: z.string().default('Send a bill, not your account details'),
+      blurb: z.string().default(''),
+      provider_name: z.string().default(''),
+      provider_claim: z.string().default(''),
+    }),
+  },
+
   cta: {
     label: 'Call to Action',
     icon: '🔘',

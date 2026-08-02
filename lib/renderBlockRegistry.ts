@@ -153,6 +153,8 @@ export const DYNAMIC_RENDERERS: Record<
     import('@/components/admin/templates/render-blocks/service-transparency'),
   about_that: () => import('@/components/admin/templates/render-blocks/about-that'),
   audio_faq: () => import('@/components/admin/templates/render-blocks/audio-faq'),
+  bill_estimator: () => import('@/components/admin/templates/render-blocks/bill-estimator'),
+  cloud_savings_agency: () => import('@/components/admin/templates/render-blocks/cloud-savings-agency'),
   quote_of_the_day: () => import('@/components/admin/templates/render-blocks/quote-of-the-day'),
   daily_artifact: () => import('@/components/admin/templates/render-blocks/daily-artifact'),
   listing_card: () => import('@/components/admin/templates/render-blocks/listing-card'),

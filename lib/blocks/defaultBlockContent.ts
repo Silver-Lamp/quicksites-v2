@@ -520,6 +520,31 @@ export const DEFAULT_BLOCK_CONTENT = {
    * The renderer already returns null on an empty list, so a site shows nothing here until
    * the owner adds someone real.
    */
+  /**
+   * ⚠️ THE PROVIDER FIELDS SHIP EMPTY. A savings figure belongs to whoever published it, and a
+   * default like "save 20–50%" would put an unattributed third-party claim into every new block
+   * — the same failure as a seeded testimonial, aimed at a competitor's pricing instead of a
+   * customer's opinion. The owner fills these in with a figure they can point at.
+   */
+  /** Ships empty for the same reason bill_estimator does: no unattributed claims by default. */
+  cloud_savings_agency: {
+    headline: '',
+    subheadline: '',
+    operator_name: '',
+    operator_bio: '',
+    provider_name: '',
+    provider_claim: '',
+    fee_disclosure: '',
+    proof_points: [] as Array<{ label: string; detail: string }>,
+  },
+
+  bill_estimator: {
+    title: 'Send a bill, not your account details',
+    blurb: '',
+    provider_name: '',
+    provider_claim: '',
+  },
+
   agent_roster: {
     title: 'Meet Our Agents',
     subtitle: 'Every one of our agents will walk you through their listings — in their own voice.',

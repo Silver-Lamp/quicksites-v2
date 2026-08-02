@@ -4,6 +4,7 @@
 import type { Block, BlockType } from '@/types/blocks';
 // import type { JSX } from 'react';
 import React, { Suspense } from 'react';
+import { isEditorContext } from '@/lib/editor/isEditorContext';
 
 import { useBlockFix } from '@/components/ui/block-fix-context';
 import DebugOverlay from '@/components/ui/debug-overlay';
@@ -48,12 +49,34 @@ console.log('[renderers]', Object.keys(STATIC_RENDERERS), Object.keys(DYNAMIC_RE
 
 assertAllRenderersCovered();
 
+/**
+ * A block whose renderer this build does not have.
+ *
+ * ⚠️ EDITOR ONLY. This shipped to a live customer URL: a published site whose template referenced
+ * a block type that existed on a branch but not in the deployed build rendered
+ * "⚠️ No renderer for block type: cloud_savings_agency" to the public, in red, on the page a
+ * visitor came to read. Internal vocabulary, an internal symbol, and a warning colour, on
+ * somebody's business.
+ *
+ * It is a real and recurring situation, not a hypothetical: template DATA and renderer CODE
+ * deploy on different clocks, so any published site can briefly reference a block this build
+ * lacks — after a rollback, during a staged deploy, or when someone publishes ahead of a merge
+ * (which is exactly how it happened).
+ *
+ * In public it now renders NOTHING. One missing section on an otherwise working page is a far
+ * smaller failure than an error message addressed to a developer, and it is the same rule as the
+ * dropped invalid block and the gated footer hints: where there is nothing valid to render,
+ * render nothing.
+ */
 function fallbackRenderer(type: string): React.ComponentType<any> {
-  return () => (
-    <div className="text-red-500 bg-red-900/10 border border-red-500/30 p-2 rounded text-sm">
-      ⚠️ No renderer for block type: <strong>{type}</strong>
-    </div>
-  );
+  return () => {
+    if (!isEditorContext()) return null;
+    return (
+      <div className="text-red-500 bg-red-900/10 border border-red-500/30 p-2 rounded text-sm">
+        ⚠️ No renderer for block type: <strong>{type}</strong>
+      </div>
+    );
+  };
 }
 
 function getClientRenderer(type: BlockType): React.ComponentType<any> {

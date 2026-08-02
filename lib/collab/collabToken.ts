@@ -24,14 +24,25 @@ import crypto from 'crypto';
 /** 90 days. A collaboration is a slow conversation; a 15-minute link would be hostile. */
 export const COLLAB_TOKEN_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
+/**
+ * ⚠️ A SHORT CHAIN, ON PURPOSE — A LONG ONE MAKES THE SECRET DEPEND ON THE PROCESS.
+ *
+ * This started as a four-link fallback copied from the site-claim token, and it produced a bug
+ * within minutes of first use: a token minted by a script (which had SUPABASE_SERVICE_ROLE_KEY
+ * exported but not SUPABASE_JWT_SECRET) was signed with the service-role key, while the dev
+ * server (which loads .env.local, where SUPABASE_JWT_SECRET IS present) verified with a
+ * different one. Same code, same machine, two secrets — and the only symptom was the client
+ * page saying "this link isn't working", with no error logged anywhere.
+ *
+ * A fallback chain silently resolves to whatever a given process happens to have. That is fine
+ * when minting and verifying always happen in the same server process, and quietly broken the
+ * moment anything mints out-of-process — which is exactly what a seeding script does.
+ *
+ * Two links only, both of which exist in every real environment, and `mintCollabToken` throws if
+ * neither is set rather than signing with an empty string.
+ */
 function secret(): string {
-  return (
-    process.env.COLLAB_TOKEN_SECRET ||
-    process.env.SUPABASE_JWT_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SECRET_KEY ||
-    ''
-  );
+  return process.env.COLLAB_TOKEN_SECRET || process.env.SUPABASE_JWT_SECRET || '';
 }
 
 function sign(body: string): string {
@@ -40,6 +51,9 @@ function sign(body: string): string {
 
 /** `base64url(payload).base64url(hmac)` binding the holder to ONE collab. */
 export function mintCollabToken(collabId: string, now = Date.now()): string {
+  // Fail loudly at mint time. Signing with '' produces a token that verifies only against
+  // another '' — i.e. a link that works nowhere and explains itself nowhere.
+  if (!secret()) throw new Error('mintCollabToken: no COLLAB_TOKEN_SECRET or SUPABASE_JWT_SECRET set');
   const body = Buffer.from(
     JSON.stringify({ c: collabId, exp: now + COLLAB_TOKEN_TTL_MS }),
   ).toString('base64url');

@@ -47,6 +47,62 @@ function normalizeContent(block?: Block, override?: any) {
   return { logo_url, nav };
 }
 
+/**
+ * Point nav items at things that exist, and drop the ones that don't.
+ *
+ * ⚠️ 83 OF 98 LIVE SITES — 85% — SHIPPED NAV LINKS TO PAGES THAT DO NOT EXIST. The scaffold
+ * seeds `/services` and `/contact` regardless of whether those pages were ever created, and
+ * almost no site creates them: the services list and the contact form are BLOCKS on the single
+ * index page, not separate routes. So the two most prominent links in the header of most sites
+ * we host went nowhere.
+ *
+ * It compounds with the tenant soft-404 (an unknown path returns 200 with 404 content), so those
+ * dead links are also indexable. Found while polishing one custom site and looking at the header.
+ *
+ * The fix is not to hide them — the destination usually EXISTS, as a block. So:
+ *   1. a real page at that path  → leave it alone
+ *   2. a matching block on the page → rewrite to an in-page anchor, which is what the visitor wanted
+ *   3. neither → drop the item, because a link to nothing is worse than one fewer link
+ *
+ * Renderer-side on purpose: it repairs every already-published site on deploy, with no data
+ * migration and nothing for an owner to re-save.
+ */
+function resolveNav(nav: NavItem[], template?: Template): NavItem[] {
+  const data: any = (template as any)?.data ?? {};
+  const pages: any[] = Array.isArray(data.pages) ? data.pages : [];
+
+  const pagePaths = new Set<string>(['/']);
+  for (const p of pages) {
+    if (typeof p?.slug === 'string' && p.slug) pagePaths.add(p.slug === 'index' ? '/' : `/${p.slug}`);
+  }
+
+  const blockTypes = new Set<string>(
+    pages.flatMap((p: any) => [...(p?.content_blocks ?? []), ...(p?.blocks ?? [])]).map((b: any) => b?.type),
+  );
+
+  /** Which block type would satisfy a link to this path. */
+  const ANCHOR_FOR: Record<string, string[]> = {
+    '/services': ['services'],
+    '/contact': ['contact_form'],
+    '/menu': ['menu'],
+    '/faq': ['faq'],
+    '/about': ['story'],
+  };
+
+  return nav.flatMap((item) => {
+    const href = item.href;
+    // External, anchors, tel/mailto — not ours to judge.
+    if (!href.startsWith('/') || href.startsWith('/#')) return [item];
+    if (pagePaths.has(href)) return [item];
+
+    const wanted = ANCHOR_FOR[href] ?? [];
+    if (wanted.some((t) => blockTypes.has(t))) {
+      return [{ ...item, href: `/#${href.slice(1)}` }];
+    }
+    return [];
+  });
+}
+
 function useMediaQuery(q: string) {
   const [match, setMatch] = React.useState(false);
   React.useEffect(() => {
@@ -83,8 +139,10 @@ export default function HeaderRender({
 
   const { logo_url, nav } = React.useMemo(() => {
     const base = normalizeContent(block, content);
-    return { logo_url: base.logo_url || fallLogo || '', nav: base.nav };
-  }, [block, content, fallLogo]);
+    // Resolve before render: dead links become anchors where the section exists, and disappear
+    // where it doesn't. See resolveNav — this was 85% of live sites.
+    return { logo_url: base.logo_url || fallLogo || '', nav: resolveNav(base.nav, template) };
+  }, [block, content, fallLogo, template]);
 
   // We consider ourselves "in editor" if inside an iframe OR previewOnly is true
   const inIframe =

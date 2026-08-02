@@ -68,9 +68,15 @@ const PATTERNS: Array<{ kind: RedactionKind; re: RegExp }> = [
   { kind: 'arn', re: /\barn:[a-z0-9-]*:[a-z0-9-]+:[^\s,;]*/gi },
   { kind: 'ip', re: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g },
   // "Account ID: 1234-5678-9012", "Invoice #INV-00123", "Customer No. 88213"
+  // ⚠️ `[ \t]` NOT `\s` — \s MATCHES A NEWLINE, AND THAT PRODUCED A LIE. On a real bill reading
+  // "AWS Invoice\nAccount ID: 8841-2290-1174", the keyword `invoice` on line 1 skipped the line
+  // break and captured the word `Account` on line 2 as its value. So it struck "Invoice\nAccount",
+  // LEFT the actual account number in the text, and still reported `account: 1` in the counts —
+  // the redaction summary claiming a removal that had not happened. A missed identifier is bad;
+  // one the summary says was removed is worse, because it stops anyone looking.
   {
     kind: 'account',
-    re: /\b(?:account|acct|customer|invoice|payer|billing)\s*(?:id|no\.?|number|#)?\s*[:#]?\s*([A-Z0-9][A-Z0-9-]{4,})/gi,
+    re: /\b(?:account|acct|customer|invoice|payer|billing)[ \t]*(?:id|no\.?|number|#)?[ \t]*[:#]?[ \t]*([A-Z0-9][A-Z0-9-]{4,})/gi,
   },
   // ⚠️ The country code must be OPTIONAL, not "one or two digits". The first version required
   // leading digits, so "(714) 555-0134" — the way a phone number is actually written on an
@@ -81,7 +87,9 @@ const PATTERNS: Array<{ kind: RedactionKind; re: RegExp }> = [
   // A US-ish street line. Deliberately loose — an over-flag costs one click.
   {
     kind: 'address',
-    re: /\b\d{1,6}\s+[A-Z][A-Za-z.]*(?:\s+[A-Z][A-Za-z.]*){0,4}\s+(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Ct|Court|Suite|Ste|Fl|Floor)\b\.?/g,
+    // The trailing unit number is part of the address: striking "…Suite" and leaving "400"
+    // removes the word and keeps the datum.
+    re: /\b\d{1,6}\s+[A-Z][A-Za-z.]*(?:\s+[A-Z][A-Za-z.]*){0,4}\s+(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Ct|Court|Suite|Ste|Fl|Floor)\b\.?(?:[ \t]*#?\d{1,6}\b)?/g,
   },
 ];
 

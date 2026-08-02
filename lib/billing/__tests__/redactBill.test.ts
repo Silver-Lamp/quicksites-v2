@@ -126,3 +126,57 @@ describe('the over-flag bias is deliberate', () => {
     expect(found).toHaveLength(0);
   });
 });
+
+// ⚠️ THE BUG MY FIRST FIXTURE MISSED, BECAUSE IT WAS TOO TIDY.
+//
+// A real bill starts "AWS Invoice" on its own line, then "Account ID: …" on the next. The
+// keyword pattern used `\s*` between the keyword and its value — and `\s` matches a NEWLINE. So
+// `invoice` on line 1 reached across the line break and captured the word `Account` on line 2 as
+// its value. It struck "Invoice\nAccount", LEFT the actual account number in the text, and still
+// reported `account: 1`.
+//
+// That last part is what makes it serious. A missed identifier is a bug; one the summary claims
+// was removed is a lie that stops anyone looking. Found by posting a realistic multi-line bill
+// through the live endpoint and then READING THE STORED ROW rather than trusting the counts.
+describe('keyword patterns must not reach across a line break', () => {
+  const REAL = [
+    'AWS Invoice',
+    'Account ID: 8841-2290-1174',
+    'Bill to: Crosstie Logistics, 1200 Harbor Blvd Suite 400',
+    'Contact: ops@crosstie-logistics.com (714) 555-0134',
+    'EC2 On-Demand Linux  $4,182.55',
+  ].join('\n');
+
+  const out = redact(REAL, findIdentifiers(REAL));
+
+  it('removes the account number itself, not the word above it', () => {
+    expect(out).not.toContain('8841-2290-1174');
+  });
+
+  it('leaves the heading on its own line intact', () => {
+    // "AWS Invoice" is a document title, not an identifier.
+    expect(out).toContain('AWS Invoice');
+  });
+
+  it('takes the suite number with the address rather than leaving it behind', () => {
+    expect(out).not.toContain('Harbor Blvd');
+    expect(out).not.toMatch(/Suite\s*400|\b400\b/);
+  });
+
+  it('still removes the email and phone', () => {
+    expect(out).not.toContain('ops@crosstie-logistics.com');
+    expect(out).not.toContain('555-0134');
+  });
+
+  it('still keeps the money', () => {
+    expect(out).toContain('$4,182.55');
+    expect(out).toContain('EC2 On-Demand Linux');
+  });
+
+  it('reports only what it actually struck', () => {
+    // The counts and the text must agree. They did not, which is how the bug hid.
+    const kinds = summarise(findIdentifiers(REAL)).map((s) => s.kind);
+    for (const k of kinds) expect(out).toContain('removed]');
+    expect(kinds).toContain('account');
+  });
+});

@@ -23,7 +23,16 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const DIR = join(process.cwd(), 'components/admin/templates/render-blocks');
+// ⚠️ TWO DIRECTORIES, BECAUSE BESPOKE CLIENT BLOCKS LIVE SOMEWHERE ELSE. This swept only
+// `components/admin/templates/render-blocks` and therefore missed every block written for one
+// custom site — e.g. `exterior_agency`, a 556-line whole-page block for a real client, which
+// escaped this guard AND the SectionShell colour guard purely by living in another folder.
+// A sweep that defines its own scope by directory will always miss the file someone put beside it.
+const DIRS = [
+  join(process.cwd(), 'components/admin/templates/render-blocks'),
+  join(process.cwd(), 'components/sites/render-blocks'),
+];
+const DIR = DIRS[0];
 const footer = readFileSync(join(DIR, 'footer.tsx'), 'utf8');
 
 /** Strip comments so the prose explaining a rule can't satisfy or violate it. */
@@ -68,14 +77,22 @@ describe('footer editor hints are gated to the editor', () => {
 // empty block rendered "⚠️ No services configured. This block prefers `template.data.services`"
 // — a red error quoting our own schema at a business's customers. Both now return null in public.
 describe('no renderer publishes a setup instruction unconditionally', () => {
-  const files = readdirSync(DIR).filter((f) => f.endsWith('.tsx'));
+  const files = DIRS.flatMap((d) =>
+    readdirSync(d)
+      .filter((f) => f.endsWith('.tsx'))
+      .map((f) => join(d, f)),
+  );
 
   it('scans a real set of files (a sweep matching nothing reports success)', () => {
     expect(files.length).toBeGreaterThan(20);
   });
 
+  it('covers the bespoke-client renderer directory too, not just the block library', () => {
+    expect(files.some((f) => f.includes('components/sites/render-blocks'))).toBe(true);
+  });
+
   it.each(files as string[])('%s', (f) => {
-    const body = code(readFileSync(join(DIR, String(f)), 'utf8'));
+    const body = code(readFileSync(String(f), 'utf8'));
     // Phrases that are unambiguously addressed to the site's owner.
     const owner = /(No \w+ configured\.|not configured\b|Set in Template Identity)/g;
 

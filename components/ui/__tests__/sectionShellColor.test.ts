@@ -54,17 +54,32 @@ describe('SectionShell does not decide text colour', () => {
 // The same hard-coded-colour trap, checked across every block renderer. CLAUDE.md §7 calls this
 // out as a bug that never shows up in tsc, only in a screenshot.
 describe('block renderers do not hard-code a light surface', () => {
-  const dir = join(process.cwd(), 'components/admin/templates/render-blocks');
-  const files = require('node:fs')
-    .readdirSync(dir)
-    .filter((f: string) => f.endsWith('.tsx'));
+  // ⚠️ BOTH renderer directories. This scanned only the shared block library, so a bespoke
+  // whole-page block written for ONE client (`components/sites/render-blocks/`) escaped it —
+  // exactly the file most likely to hard-code a colour, since it was designed against one
+  // client's palette rather than the theme tokens. A scan scoped by directory misses whatever
+  // someone puts in the folder next door.
+  const dirs = [
+    join(process.cwd(), 'components/admin/templates/render-blocks'),
+    join(process.cwd(), 'components/sites/render-blocks'),
+  ];
+  const files: string[] = dirs.flatMap((d) =>
+    require('node:fs')
+      .readdirSync(d)
+      .filter((f: string) => f.endsWith('.tsx'))
+      .map((f: string) => join(d, f)),
+  );
 
   it('scans a real set of renderers (a scan matching nothing reports success)', () => {
     expect(files.length).toBeGreaterThan(20);
   });
 
+  it('covers the bespoke-client renderers too', () => {
+    expect(files.some((f) => f.includes('components/sites/render-blocks'))).toBe(true);
+  });
+
   it.each(files as string[])('%s uses no bg-white / literal light fills', (f) => {
-    const body = readFileSync(join(dir, String(f)), 'utf8')
+    const body = readFileSync(String(f), 'utf8')
       .split('\n')
       .filter((l) => !l.trim().startsWith('//'))
       .join('\n');

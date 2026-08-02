@@ -65,6 +65,10 @@ function getClientRenderer(type: BlockType): React.ComponentType<any> {
     const key = String(type);
     const cached = lazyCache.get(key);
     if (cached) return cached;
+    // NOTE: swapping this for next/dynamic({ ssr: true }) was tried and measured — it changed
+    // NOTHING (same h1/h2/a/p counts, same 19,616-char body, same 13 unresolved boundaries on a
+    // clean restart), so it was reverted rather than shipped as an unproven change inside a
+    // critical fix. The remaining boundaries are a separate, smaller question.
     const Lazy = React.lazy(loader as any);
     lazyCache.set(key, Lazy);
     return Lazy;
@@ -383,6 +387,34 @@ ID: ${blockId || 'n/a'}`}
     return () => cancelAnimationFrame(id);
   }, [hydrated]);
 
+  /**
+   * ⚠️ DEFER TO THE CLIENT ONLY INSIDE THE EDITOR. THIS IS AN SEO FIX, NOT A PERF TWEAK.
+   *
+   * `mounted` starts false and only flips a frame after hydration, and the render below was
+   * gated on it unconditionally — so on the SERVER every block rendered `null`. Every customer
+   * site we build was serving an empty shell: h1=0, a=0, p=0, img=0, main=0, with 44 KB of body
+   * of which 36 KB was `<script>` and the business name appearing exactly once in the document.
+   *
+   * For a product whose pitch is "get found locally", that is the worst possible bug: the sites
+   * cannot be crawled without JS execution. It was invisible from inside the app — the builder
+   * looked perfect, because the builder is the one place the client always boots.
+   * (Found because PorchHearth hit the same class of bug and told us to check the raw bytes.)
+   *
+   * The public path now renders straight through, server-side. The editor keeps the deferral,
+   * because that is where the ref/measure plumbing (`scrollRef`, drag targets, the controls bar)
+   * expects a post-hydration mount, and this fix has no business changing builder behaviour.
+   *
+   * ⚠️ THE LATCH IS LOAD-BEARING. `isEmbedded` is detected in an effect, so it is false on the
+   * first client render and flips true a tick later. Without latching, an editor render sequence
+   * goes render(shows) → isEmbedded=true, mounted=false (HIDES) → mounted=true (shows) — a
+   * visible flash of every block disappearing and coming back. Once a block has rendered we keep
+   * it rendered.
+   */
+  const deferToClient = isEmbedded || mode === 'editor';
+  const hasRenderedRef = React.useRef(false);
+  const shouldRenderBlock = mounted || !deferToClient || hasRenderedRef.current;
+  if (shouldRenderBlock) hasRenderedRef.current = true;
+
   // Toolbar chrome colors per mode (no global dark variant)
   const toolbarBg =
     computedMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60';
@@ -534,7 +566,7 @@ ID: ${blockId || 'n/a'}`}
           }
         >
           <Suspense fallback={<span />}>
-            {mounted ? (
+            {shouldRenderBlock ? (
               // Wrap renderer in a vars-scope so `.prose` colors follow site mode
               <div className={resolveContainerClass(blockForChild)} style={proseVars}>
                 <Component

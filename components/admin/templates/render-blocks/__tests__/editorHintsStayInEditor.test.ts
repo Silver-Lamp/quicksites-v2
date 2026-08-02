@@ -132,3 +132,31 @@ describe('isEditorContext fails closed toward PUBLIC', () => {
     expect(src).toContain('qs-editor');
   });
 });
+
+// ⚠️ THE ONE THAT REACHED A CUSTOMER URL. A published site referencing a block type this build
+// does not have rendered "⚠️ No renderer for block type: cloud_savings_agency" — in red, to the
+// public, on somebody's business page. Template DATA and renderer CODE deploy on different
+// clocks, so this is a recurring situation rather than a hypothetical: a rollback, a staged
+// deploy, or publishing ahead of a merge all produce it.
+describe('an unrenderable block is silent in public', () => {
+  const src = readFileSync(
+    join(process.cwd(), 'components/admin/templates/render-block.tsx'),
+    'utf8',
+  );
+  const body = src
+    .split('\n')
+    .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/*'))
+    .join('\n');
+
+  it('returns null outside the editor', () => {
+    const at = body.indexOf('No renderer for block type');
+    expect(at).toBeGreaterThan(-1);
+    const before = body.slice(Math.max(0, at - 300), at);
+    expect(before).toMatch(/if \(!isEditorContext\(\)\) return null/);
+  });
+
+  it('still shows the diagnostic to whoever can act on it', () => {
+    // Silent in public, loud in the editor — the point is the audience, not the silence.
+    expect(body).toContain('No renderer for block type');
+  });
+});

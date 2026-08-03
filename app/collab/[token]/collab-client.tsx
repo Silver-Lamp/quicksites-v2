@@ -24,16 +24,31 @@ type Msg = {
 
 type Tpl = { id: string; slug: string; template_name: string | null; business_name: string | null };
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * Deliberately NOT toLocaleDateString: this component is server-rendered and then hydrated, and
+ * the server's locale/timezone is not the client's — a date formatted twice differently is a
+ * hydration mismatch, which React resolves by silently swapping the text after paint.
+ */
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
+
 export default function CollabClient({
   token,
   collab,
   templates,
   initialMessages,
+  previews = {},
 }: {
   token: string;
   collab: { id: string; title: string; clientName: string | null; status: string; decidedTemplateId: string | null };
   templates: Tpl[];
   initialMessages: Msg[];
+  previews?: Record<string, { url: string; capturedAt: string | null }>;
 }) {
   const [messages, setMessages] = React.useState<Msg[]>(initialMessages);
   const [draft, setDraft] = React.useState('');
@@ -165,6 +180,7 @@ export default function CollabClient({
             {templates.map((t, i) => {
               const url = `https://${t.slug}.quicksites.ai/`;
               const isPicked = decided === t.id;
+              const preview = previews[t.slug];
               return (
                 <article
                   key={t.id}
@@ -187,6 +203,32 @@ export default function CollabClient({
                       </span>
                     )}
                   </div>
+
+                  {/* ⚠️ A DATED STILL, NOT A LIVE EMBED. Three iframes is three full page loads on
+                      a phone; a screenshot is calm and cannot misbehave. But a screenshot is also a
+                      claim about a past moment, so it says when it was taken — an undated preview of
+                      an edited site is indistinguishable from the site itself. Options with no
+                      stored capture simply show no image rather than a broken one. */}
+                  {preview && (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 block overflow-hidden rounded-xl border border-border"
+                    >
+                      <img
+                        src={preview.url}
+                        alt={`Preview of ${t.template_name || t.slug}`}
+                        loading="lazy"
+                        className="block max-h-64 w-full object-cover object-top"
+                      />
+                    </a>
+                  )}
+                  {preview?.capturedAt && (
+                    <p className="mt-1.5 text-[11px] text-muted-foreground">
+                      Screenshot from {shortDate(preview.capturedAt)} — open it for the live version.
+                    </p>
+                  )}
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     <a

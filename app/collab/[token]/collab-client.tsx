@@ -40,6 +40,19 @@ export default function CollabClient({
   const [busy, setBusy] = React.useState(false);
   const [decided, setDecided] = React.useState<string | null>(collab.decidedTemplateId);
   const [replyTo, setReplyTo] = React.useState<Msg | null>(null);
+  const composerRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+  /**
+   * ⚠️ "Answer this" USED TO DO NOTHING VISIBLE. It set reply state and left her where she was —
+   * and on mobile the reply box sat at y=1690 of an 1886px page, i.e. below everything. A button
+   * that silently changes off-screen state reads as broken, so it now scrolls AND focuses.
+   */
+  const jumpToComposer = React.useCallback((q?: Msg) => {
+    if (q) setReplyTo(q);
+    composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // focus after the scroll starts, or the browser yanks the viewport back
+    setTimeout(() => composerRef.current?.focus(), 350);
+  }, []);
 
   const send = async () => {
     const body = draft.trim();
@@ -106,27 +119,25 @@ export default function CollabClient({
         </p>
       </header>
 
-      {/* ── Open questions first: the thing most likely to be waiting on them ── */}
+      {/* ⚠️ A POINTER, NOT A SECOND COPY. This box used to repeat each question in full, so every
+          question appeared TWICE on the page — once here and once in the thread below. Two copies
+          of a question read as two questions, and the one you answer is ambiguous. The full text
+          now lives once, in the conversation, where the reply box is; this just says how many are
+          waiting and takes her there. */}
       {!!openQuestions.length && (
-        <section className="mt-8 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5">
-          <h2 className="text-sm font-semibold text-foreground">
-            {openQuestions.length} question{openQuestions.length === 1 ? '' : 's'} for you
-          </h2>
-          <ul className="mt-3 space-y-3">
-            {openQuestions.map((q) => (
-              <li key={q.id} className="text-sm text-foreground">
-                <p>{q.body}</p>
-                <button
-                  type="button"
-                  onClick={() => setReplyTo(q)}
-                  className="mt-1 text-xs font-medium text-sky-400 underline underline-offset-2"
-                >
-                  Answer this
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <span className="text-sm text-foreground">
+            {openQuestions.length} question{openQuestions.length === 1 ? '' : 's'} waiting for you
+            {openQuestions.length === 1 ? '' : ' — both are in the conversation'}
+          </span>
+          <button
+            type="button"
+            onClick={() => jumpToComposer()}
+            className="rounded-lg border border-amber-500/40 px-3 py-1 text-xs font-medium text-foreground transition hover:bg-amber-500/10"
+          >
+            Go answer {openQuestions.length === 1 ? 'it' : 'them'}
+          </button>
+        </div>
       )}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1.4fr_1fr]">
@@ -194,7 +205,9 @@ export default function CollabClient({
         {/* ── The conversation ───────────────────────────────────────── */}
         <section>
           <h2 className="text-lg font-semibold text-foreground">Conversation</h2>
-          <div className="mt-4 max-h-[26rem] space-y-3 overflow-auto pr-1">
+          <div // ⚠️ Scroll only where the two-column layout needs it. On mobile the cap clipped a message
+          // mid-sentence, which reads as a broken page rather than a scrollable one.
+          className="mt-4 space-y-3 lg:max-h-[26rem] lg:overflow-auto lg:pr-1">
             {messages.length === 0 && (
               <p className="text-sm text-muted-foreground">
                 Nothing yet. Ask anything — including “why these three?”
@@ -216,6 +229,15 @@ export default function CollabClient({
                   {m.kind === 'answer' && ' · answered'}
                 </div>
                 <p className="mt-1 whitespace-pre-line text-sm text-foreground">{m.body}</p>
+                {m.kind === 'question' && !messages.some((r) => r.answers_id === m.id) && (
+                  <button
+                    type="button"
+                    onClick={() => jumpToComposer(m)}
+                    className="mt-2 text-xs font-medium text-sky-400 underline underline-offset-2"
+                  >
+                    Answer this
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -230,6 +252,7 @@ export default function CollabClient({
           )}
 
           <textarea
+            ref={composerRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={4}

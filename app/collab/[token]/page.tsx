@@ -12,6 +12,7 @@
 import type { Metadata } from 'next';
 import { verifyCollabToken } from '@/lib/collab/collabToken';
 import { getCollab, listMessages, listCollabTemplates } from '@/lib/collab/collabs';
+import { getCollabPreviews } from '@/lib/collab/previews';
 import CollabClient from './collab-client';
 
 export const runtime = 'nodejs';
@@ -55,9 +56,14 @@ export default async function CollabPage({ params }: { params: Promise<{ token: 
     listCollabTemplates(collab),
   ]);
 
+  const previews = await getCollabPreviews(
+    (templates as any[]).map((t) => t?.slug).filter(Boolean),
+  );
+
   return (
     <CollabClient
       token={token}
+      previews={previews}
       collab={{
         id: collab.id,
         title: collab.title,

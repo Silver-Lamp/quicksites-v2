@@ -369,7 +369,18 @@ export async function generateMetadata({
   // presence — index it (flag-gated) so it ranks for their name and can actually feed
   // the demand signal. Admin previews + every other draft stay noindex.
   const indexableDraft = isDraft && menuHost && claimSource === 'listing_import' && MENU_DRAFT_INDEXABLE;
-  return isDraft && !indexableDraft ? { ...md, robots: { index: false, follow: false } } : md;
+  if (isDraft && !indexableDraft) return { ...md, robots: { index: false, follow: false } };
+
+  // ⚠️ PUBLISHED IS NOT THE SAME AS READY TO BE FOUND. A custom site under client review is
+  // published so the client can open it on a phone from an email — that is the only way to show
+  // her the real thing — but it is one of several options, most of which will be deleted, and its
+  // copy is still being argued about. A discarded draft of a REAL NAMED PERSON'S business sitting
+  // in a search index, competing with the one they chose, is a liability nobody asked us to create.
+  // `meta.noindex` lets a site be publicly reachable without being publicly discoverable.
+  const meta = (normalized as any)?.meta ?? (normalized as any)?.data?.meta;
+  if (meta?.noindex === true) return { ...md, robots: { index: false, follow: false } };
+
+  return md;
 }
 
 /* ---------------------- Page ---------------------- */

@@ -75,7 +75,17 @@ export default function CollabClient({
     }
   };
 
-  const decide = async (templateId: string) => {
+  /**
+   * ⚠️ REVERSIBLE, BECAUSE THE FIRST CLICK ON THIS BUTTON IN THE WILD WAS AN ACCIDENT. The owner
+   * mis-clicked it on the client's behalf minutes after the page went live, and there was no way
+   * back — the pick was recorded, a sentence appeared in her voice, and nothing on the page
+   * offered to undo it.
+   *
+   * The fix is not a confirm dialog. This is a PREFERENCE in a conversation, not a contract; the
+   * right shape is "change your mind freely", which also makes the button safe to press when you
+   * are only half sure — which is the state most people are in when they first look.
+   */
+  const decide = async (templateId: string | null) => {
     if (busy) return;
     setBusy(true);
     try {
@@ -84,8 +94,11 @@ export default function CollabClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, templateId }),
       });
+      const json = await res.json().catch(() => ({}));
       if (res.ok) {
-        setDecided(templateId);
+        setDecided(json?.decidedTemplateId ?? null);
+        const idx = templateId ? templates.findIndex((t) => t.id === templateId) : -1;
+        const label = idx >= 0 ? `Option ${String.fromCharCode(65 + idx)}` : 'this one';
         setMessages((m) => [
           ...m,
           {
@@ -94,7 +107,7 @@ export default function CollabClient({
             author_name: collab.clientName,
             kind: 'message',
             answers_id: null,
-            body: 'Picked this one.',
+            body: templateId ? `Leaning towards ${label}.` : 'Actually — still deciding.',
             template_id: templateId,
             created_at: new Date().toISOString(),
           },
@@ -144,6 +157,10 @@ export default function CollabClient({
         {/* ── The options ────────────────────────────────────────────── */}
         <section>
           <h2 className="text-lg font-semibold text-foreground">The options</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Picking one just tells me where you&rsquo;re leaning — you can change it or undo it any
+            time, and nothing happens until we talk.
+          </p>
           <div className="mt-4 space-y-4">
             {templates.map((t, i) => {
               const url = `https://${t.slug}.quicksites.ai/`;
@@ -166,7 +183,7 @@ export default function CollabClient({
                     </div>
                     {isPicked && (
                       <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs text-foreground">
-                        Your pick
+                        Leaning this way
                       </span>
                     )}
                   </div>
@@ -180,14 +197,27 @@ export default function CollabClient({
                     >
                       Open it ↗
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => decide(t.id)}
-                      disabled={busy || isPicked}
-                      className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sky-400 disabled:opacity-40"
-                    >
-                      {isPicked ? 'Chosen' : 'I want this one'}
-                    </button>
+                    {isPicked ? (
+                      // The undo that did not exist. Same button position, so the way back is
+                      // exactly where the way in was.
+                      <button
+                        type="button"
+                        onClick={() => decide(null)}
+                        disabled={busy}
+                        className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-emerald-500/20 disabled:opacity-40"
+                      >
+                        Undo
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => decide(t.id)}
+                        disabled={busy}
+                        className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sky-400 disabled:opacity-40"
+                      >
+                        {decided ? 'Pick this instead' : 'I like this one'}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setReplyTo({ ...(({} as any)), id: '', body: '', template_id: t.id } as any)}
@@ -244,7 +274,10 @@ export default function CollabClient({
 
           {replyTo && (
             <p className="mt-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              Replying to: {replyTo.body ? `“${replyTo.body.slice(0, 60)}”` : 'a specific option'}{' '}
+              Replying to:{' '}
+              {replyTo.body
+                ? `“${replyTo.body.slice(0, 60)}${replyTo.body.length > 60 ? '…' : ''}”`
+                : `Option ${String.fromCharCode(65 + Math.max(0, templates.findIndex((t) => t.id === replyTo.template_id)))}`}{' '}
               <button type="button" onClick={() => setReplyTo(null)} className="underline">
                 cancel
               </button>

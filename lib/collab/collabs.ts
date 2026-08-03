@@ -119,17 +119,29 @@ export async function postMessage(
  * would be meaningless — and worse, it would let a crafted request point a client's recorded
  * choice at a site they were never shown.
  */
-export async function recordDecision(collabId: string, templateId: string): Promise<boolean> {
+export async function recordDecision(collabId: string, templateId: string | null): Promise<boolean> {
   const s = db();
   if (!s) return false;
 
   const collab = await getCollab(collabId);
   if (!collab) return false;
-  if (!collab.template_ids?.includes(templateId)) return false;
+
+  // null = "I have not decided after all". A preference someone can't take back is a trap,
+  // not a decision — see the note on the route.
+  if (templateId !== null && !collab.template_ids?.includes(templateId)) return false;
+
+  // Idempotent: clicking the same option twice is not a second decision, and must not produce
+  // a second entry in the thread. (It did: an accidental double-click left TWO "Picked this
+  // one." messages attributed to the client, neither of which she wrote.)
+  if (collab.decided_template_id === templateId) return true;
 
   const { error } = await s
     .from('client_collabs')
-    .update({ decided_template_id: templateId, status: 'decided', updated_at: new Date().toISOString() } as any)
+    .update({
+      decided_template_id: templateId,
+      status: templateId ? 'decided' : 'shared',
+      updated_at: new Date().toISOString(),
+    } as any)
     .eq('id', collabId);
   return !error;
 }

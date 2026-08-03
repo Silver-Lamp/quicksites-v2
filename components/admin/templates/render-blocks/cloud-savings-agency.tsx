@@ -98,6 +98,20 @@ export default function CloudSavingsAgencyRender({ block, content, template, pre
       {/* ── The estimator, inline rather than a separate section ─────── */}
       <section id="estimate" className="border-b border-border">
         <div className="mx-auto max-w-2xl px-6 py-16">
+          {/* ⚠️ THE FEE DISCLOSURE HAS TO CLEAR THE UPLOAD CONTROL, NOT JUST EXIST ON THE PAGE.
+              It lived in the "who you are talking to" section further down, which put it ~600px
+              BELOW the control that takes someone's invoice: you were asked to hand over billing
+              data before learning that a provider pays the person receiving it. That is a
+              sequencing failure, and a correctly-worded disclosure in the wrong place still
+              produces the "wait, who are you working for" moment — just later, and after you have
+              already handed over the document. It renders in both places; this is the one that
+              arrives in time. */}
+          {c.fee_disclosure && (
+            <p className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-foreground">
+              {c.fee_disclosure}
+            </p>
+          )}
+
           {c.provider_claim && (
             // A third party's figure, attributed in the markup as well as the copy.
             <p className="mb-6 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">

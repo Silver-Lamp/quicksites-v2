@@ -76,6 +76,28 @@ console.log(JSON.stringify({ blocks: page.blocks.map(b => b.type) }));
 One line, and it is the difference between "five blocks in the right order" and discovering three
 of them evaporated. Every silent failure in this doc was caught by printing rather than assuming.
 
+### ⚠️ Trap 4: a block's content can lose to the template's, silently
+
+`render-blocks/services.tsx` resolves its items in this order:
+
+```
+template.data.services  →  a prop  →  the template row  →  block.content.items
+```
+
+The block's own content is **last**. So a custom site built on an industry scaffold renders the
+scaffold's generic offer list — *Consulting / Installation / Support / Upgrades / Maintenance* —
+in place of the copy written for the block, and the block content still reads correctly in the DB,
+in the editor, and in every check that inspects blocks. Two of Amy's three live variants shipped
+this way; nobody noticed until a **screenshot** was taken.
+
+The fix is to clear `data.services` (and `meta.services`, and the `services` column) on a custom
+site that isn't selling a scaffolded service list. The general lesson is Trap 2 again in a new
+costume: **two copies of one truth, and the one you didn't write wins.** Before assuming a block
+renders what you gave it, read the renderer's resolution order.
+
+And the reason this stayed invisible is worth naming separately: every verification up to that
+point read the *inputs*. Only rendering the page compared them to the *output*.
+
 ### Inserting
 
 Service-role insert; `INSERT` is not trigger-guarded (`UPDATE` is — see §5).
@@ -229,7 +251,17 @@ grep -nE 'text-zinc-(700|800|900)|bg-white(\b[^/-]|$)|border-zinc-(200|300)|bg-(
 
 # 4. Does it SERVER-RENDER? (post-#673 — this was broken fleet-wide)
 curl -s https://<slug>.quicksites.ai/ | grep -c '<h1'    # expect >= 1, NOT 0
+
+# 5. Does the RENDERED page contain the copy you wrote? (trap 4)
+#    Not the block JSON — the served HTML. This is the only check that compares
+#    what you wrote against what a visitor is shown.
+curl -s https://<slug>.quicksites.ai/ | grep -c '<a phrase you wrote>'   # expect >= 1
 ```
+
+⚠️ **Grep the HTML for a whole phrase, not a phrase containing a value.** React splits
+`Option {letter}` into separate text nodes and inserts `<!-- -->` between them, so
+`grep 'Option A'` returns zero on a page that plainly says *Option A*. Two "bugs" in this doc's
+history were the grep being wrong, not the page. When a check fails, suspect the check first.
 
 ⚠️ **Check the instance the claim is about** (CLAUDE.md §9 2b). Testing the marketing pages told us
 SSR was fine while every customer site served an empty shell. A clean result only clears what you

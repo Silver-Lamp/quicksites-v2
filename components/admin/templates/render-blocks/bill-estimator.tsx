@@ -75,7 +75,12 @@ export default function BillEstimatorRender({ block, content, template, previewO
           <p className="mt-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
             {c.provider_name ? `${c.provider_name} publishes: ` : 'The provider publishes: '}
             <span className="text-foreground">{c.provider_claim}</span>{' '}
-            <span className="italic">— their figure, which this estimate does not assume.</span>
+            {/* ⚠️ A NEGATION IS THE WRONG SHAPE FOR A DISCLAIMER HERE. This read "— their figure,
+                which this estimate does not assume", which raises "then what DOES it assume?" and
+                never answers — drawing attention to a gap and leaving it open is worse than either
+                asserting the number or omitting it. Attribution stays; the second clause now
+                answers the question it provokes, which also turns the weak spot into the ask. */}
+            <span className="italic">— their published figure. Send yours and find out what it actually is, for you.</span>
           </p>
         )}
 

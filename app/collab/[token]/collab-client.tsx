@@ -37,19 +37,105 @@ function shortDate(iso: string): string {
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 }
 
+/**
+ * Reviews of an option.
+ *
+ * ⚠️ THE HEADING SAYS "AI REVIEW", NOT "REVIEWS", AND THAT IS NOT A DETAIL. Every reviewer here is
+ * an AI — a sibling assistant reading the page, or a browsing persona working through a goal.
+ * "Two reviewers preferred B" is a sentence a client reads as two people, and she is deciding
+ * about her own business on the strength of it. The label is on the section, on every row, and in
+ * the database column that made the row (`reviewer_is_ai`, NOT NULL, no default) — three places,
+ * because a label that lives only in a renderer is one refactor from gone.
+ *
+ * The pitch is "AI personas browse it as a real person WOULD", never "as real people". The first
+ * is a claim about behaviour; the second asserts humans did it, and they did not.
+ */
+function ReviewList({ items }: { items: Feedback[] }) {
+  const anyHuman = items.some((f) => !f.reviewer_is_ai);
+  return (
+    <div className="mt-4 border-t border-border pt-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {anyHuman ? `Reviews (${items.length})` : `AI review (${items.length})`}
+      </div>
+      {!anyHuman && (
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Written by AI reviewers reading the page as a first-time visitor would — not people.
+        </p>
+      )}
+      <ul className="mt-2 space-y-2">
+        {items.map((f) => (
+          <li key={f.id} className="rounded-lg border border-border bg-muted/30 p-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">{f.source_label}</span>
+              {f.reviewer_is_ai && (
+                <span className="rounded border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
+                  AI
+                </span>
+              )}
+              {f.picked_option && <span>· would pick {f.picked_option}</span>}
+            </div>
+            <p className="mt-1.5 whitespace-pre-line text-sm text-foreground">{f.body}</p>
+            {/* Verbatim, never stripped — the same rule the persona receiver applies to the task
+                body. A note that gets summarised away is a note that stopped doing its job. */}
+            {f.honesty_note && (
+              <p className="mt-1.5 text-[11px] italic text-muted-foreground">{f.honesty_note}</p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export type OptionVersion = { version: number; templateId: string; note: string | null };
+export type CollabOption = { key: string; versions: OptionVersion[]; latest: OptionVersion };
+export type Feedback = {
+  id: string;
+  template_id: string | null;
+  source: 'mesh' | 'persona' | 'operator';
+  source_label: string;
+  reviewer_is_ai: boolean;
+  honesty_note: string | null;
+  body: string;
+  picked_option: string | null;
+};
+
 export default function CollabClient({
   token,
   collab,
-  templates,
   initialMessages,
   previews = {},
+  options,
+  templatesById,
+  feedback = [],
 }: {
   token: string;
   collab: { id: string; title: string; clientName: string | null; status: string; decidedTemplateId: string | null };
-  templates: Tpl[];
   initialMessages: Msg[];
   previews?: Record<string, { url: string; capturedAt: string | null }>;
+  options: CollabOption[];
+  templatesById: Record<string, Tpl>;
+  feedback?: Feedback[];
 }) {
+  // Which version of each option is on screen. Defaults to the newest — the revision is the
+  // current answer — but v1 stays one tap away, because "I preferred the old headline" has to be
+  // a sayable thing.
+  const [shownVersion, setShownVersion] = React.useState<Record<string, number>>(() =>
+    Object.fromEntries(options.map((o) => [o.key, o.latest.version])),
+  );
+
+  /**
+   * Which option a template belongs to.
+   *
+   * ⚠️ THIS USED TO BE AN ARRAY INDEX, AND THAT BREAKS THE MOMENT AN OPTION HAS A v2. The letter
+   * has to come from the lineage: B's revision is still B, because she has been calling it B in
+   * conversation. A position-derived label would quietly rename it to D.
+   */
+  const optionKeyOf = React.useCallback(
+    (templateId: string | null | undefined): string | null =>
+      options.find((o) => o.versions.some((v) => v.templateId === templateId))?.key ?? null,
+    [options],
+  );
   const [messages, setMessages] = React.useState<Msg[]>(initialMessages);
   const [draft, setDraft] = React.useState('');
   const [busy, setBusy] = React.useState(false);
@@ -112,8 +198,8 @@ export default function CollabClient({
       const json = await res.json().catch(() => ({}));
       if (res.ok) {
         setDecided(json?.decidedTemplateId ?? null);
-        const idx = templateId ? templates.findIndex((t) => t.id === templateId) : -1;
-        const label = idx >= 0 ? `Option ${String.fromCharCode(65 + idx)}` : 'this one';
+        const key = optionKeyOf(templateId);
+        const label = key ? `Option ${key}` : 'this one';
         setMessages((m) => [
           ...m,
           {
@@ -177,13 +263,25 @@ export default function CollabClient({
             time, and nothing happens until we talk.
           </p>
           <div className="mt-4 space-y-4">
-            {templates.map((t, i) => {
+            {options.map((opt) => {
+              const shown =
+                opt.versions.find((v) => v.version === shownVersion[opt.key]) ?? opt.latest;
+              const t = templatesById[shown.templateId];
+              if (!t) return null;
               const url = `https://${t.slug}.quicksites.ai/`;
               const isPicked = decided === t.id;
               const preview = previews[t.slug];
+              const optionFeedback = feedback.filter(
+                (f) =>
+                  // Feedback follows the OPTION, not one version of it: a note about v1's headline
+                  // is still the reason v2 exists, and hiding it when the switcher moves would
+                  // leave the revision looking unmotivated.
+                  opt.versions.some((v) => v.templateId === f.template_id) ||
+                  (f.template_id === null && f.picked_option === opt.key),
+              );
               return (
                 <article
-                  key={t.id}
+                  key={opt.key}
                   className={`rounded-2xl border p-4 transition ${
                     isPicked ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-border bg-card'
                   }`}
@@ -191,7 +289,7 @@ export default function CollabClient({
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                        Option {String.fromCharCode(65 + i)}
+                        Option {opt.key}
                       </div>
                       <h3 className="text-base font-semibold text-card-foreground">
                         {t.template_name || t.business_name || t.slug}
@@ -203,6 +301,32 @@ export default function CollabClient({
                       </span>
                     )}
                   </div>
+
+                  {/* ⚠️ ONLY WHEN THERE IS SOMETHING TO SWITCH BETWEEN. A "v1" chip on an option
+                      with one version invites the question "where are the others?" and answers it
+                      with nothing. */}
+                  {opt.versions.length > 1 && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {opt.versions.map((v) => (
+                        <button
+                          key={v.version}
+                          type="button"
+                          onClick={() => setShownVersion((s) => ({ ...s, [opt.key]: v.version }))}
+                          className={`rounded-md border px-2 py-0.5 text-xs transition ${
+                            v.version === shown.version
+                              ? 'border-sky-500/50 bg-sky-500/10 text-foreground'
+                              : 'border-border text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          v{v.version}
+                          {v.version === opt.latest.version && opt.versions.length > 1 && ' · newest'}
+                        </button>
+                      ))}
+                      {shown.note && (
+                        <span className="text-xs text-muted-foreground">{shown.note}</span>
+                      )}
+                    </div>
+                  )}
 
                   {/* ⚠️ A DATED STILL, NOT A LIVE EMBED. Three iframes is three full page loads on
                       a phone; a screenshot is calm and cannot misbehave. But a screenshot is also a
@@ -268,10 +392,24 @@ export default function CollabClient({
                       Comment on this
                     </button>
                   </div>
+
+                  {!!optionFeedback.length && <ReviewList items={optionFeedback} />}
                 </article>
               );
             })}
           </div>
+
+          {/* Reviews about the SET rather than one option — "I'd pick B" belongs here, next to
+              all three, not buried inside the card it happens to name. */}
+          {(() => {
+            const general = feedback.filter((f) => !f.template_id && !f.picked_option);
+            return general.length ? (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-foreground">On all three</h3>
+                <ReviewList items={general} />
+              </div>
+            ) : null;
+          })()}
         </section>
 
         {/* ── The conversation ───────────────────────────────────────── */}
@@ -319,7 +457,7 @@ export default function CollabClient({
               Replying to:{' '}
               {replyTo.body
                 ? `“${replyTo.body.slice(0, 60)}${replyTo.body.length > 60 ? '…' : ''}”`
-                : `Option ${String.fromCharCode(65 + Math.max(0, templates.findIndex((t) => t.id === replyTo.template_id)))}`}{' '}
+                : `Option ${optionKeyOf(replyTo.template_id) ?? '—'}`}{' '}
               <button type="button" onClick={() => setReplyTo(null)} className="underline">
                 cancel
               </button>

@@ -11,8 +11,10 @@
 // link, must never end up in a search index.
 import type { Metadata } from 'next';
 import { verifyCollabToken } from '@/lib/collab/collabToken';
-import { getCollab, listMessages, listCollabTemplates } from '@/lib/collab/collabs';
+import { getCollab, listMessages, templatesByIds } from '@/lib/collab/collabs';
 import { getCollabPreviews } from '@/lib/collab/previews';
+import { resolveOptions } from '@/lib/collab/versions';
+import { listClientFeedback } from '@/lib/collab/feedback';
 import CollabClient from './collab-client';
 
 export const runtime = 'nodejs';
@@ -51,19 +53,31 @@ export default async function CollabPage({ params }: { params: Promise<{ token: 
     );
   }
 
-  const [messages, templates] = await Promise.all([
+  // Options carry their version history; feedback is only what an operator has promoted — the
+  // filter lives inside listClientFeedback, not here (see lib/collab/feedback.ts).
+  const [messages, options, feedback] = await Promise.all([
     listMessages(collab.id),
-    listCollabTemplates(collab),
+    resolveOptions(collab),
+    listClientFeedback(collab.id),
   ]);
 
+  // ⚠️ Resolve EVERY version's template, not just each option's latest. A v1 card rendering with
+  // no name and no preview next to a v2 that has both reads as "the old one is broken", which is
+  // the opposite of what a version switcher is for.
+  const templatesById = await templatesByIds(
+    options.flatMap((o) => o.versions.map((v) => v.templateId)),
+  );
   const previews = await getCollabPreviews(
-    (templates as any[]).map((t) => t?.slug).filter(Boolean),
+    Object.values(templatesById).map((t) => t.slug).filter(Boolean),
   );
 
   return (
     <CollabClient
       token={token}
       previews={previews}
+      options={options}
+      templatesById={templatesById}
+      feedback={feedback}
       collab={{
         id: collab.id,
         title: collab.title,
@@ -71,7 +85,6 @@ export default async function CollabPage({ params }: { params: Promise<{ token: 
         status: collab.status,
         decidedTemplateId: collab.decided_template_id,
       }}
-      templates={templates as any[]}
       initialMessages={messages}
     />
   );

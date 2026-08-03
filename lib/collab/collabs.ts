@@ -113,6 +113,62 @@ export async function postMessage(
 }
 
 /**
+ * Is this template actually one of the options in this thread?
+ *
+ * ⚠️ `template_ids` ALONE IS NO LONGER THE ANSWER, AND THAT WAS A LIVE BUG WAITING. Once an option
+ * has a v2, the revision is a new template row that never enters that array — so a client clicking
+ * "I like this one" on the newest version of B would have been told *"That option is not on offer
+ * here"*, about a page we built for her and put in front of her. The lineage in
+ * `collab_option_versions` is equally on offer.
+ *
+ * Still a whitelist, not a relaxation: an id that is in neither place is refused, so a crafted
+ * request cannot point a recorded decision at a site she was never shown.
+ */
+async function isOnOffer(collabId: string, collab: Collab, templateId: string): Promise<boolean> {
+  if (collab.template_ids?.includes(templateId)) return true;
+  const s = db();
+  if (!s) return false;
+  const { data } = await s
+    .from('collab_option_versions')
+    .select('id')
+    .eq('collab_id', collabId)
+    .eq('template_id', templateId)
+    .limit(1);
+  return !!data?.length;
+}
+
+/**
+ * The option letter a template belongs to ('A'), or null. Used wherever a decision or a reply has
+ * to NAME which option it is about.
+ *
+ * ⚠️ NOT AN ARRAY INDEX. `template_ids.indexOf()` returns -1 for every revision, so the thread
+ * would record "Leaning towards this one" with no letter — in a document whose entire purpose is
+ * being readable months later by someone reconstructing what was agreed.
+ */
+export async function optionLabelFor(collab: Collab, templateId: string | null): Promise<string | null> {
+  if (!templateId) return null;
+  const s = db();
+  if (s) {
+    // ⚠️ NOT `.maybeSingle()`. Nothing constrains a template to one lineage — the unique key is
+    // (collab_id, option_key, version) — and maybeSingle() ERRORS on a second row, returning null,
+    // which drops us into the index fallback and answers with a different letter than the one the
+    // client has been using. Ambiguity resolves to the first option deterministically instead of
+    // silently becoming a wrong label.
+    const { data } = await s
+      .from('collab_option_versions')
+      .select('option_key')
+      .eq('collab_id', collab.id)
+      .eq('template_id', templateId)
+      .order('option_key', { ascending: true })
+      .limit(1);
+    const key = (data?.[0] as any)?.option_key;
+    if (key) return key as string;
+  }
+  const idx = (collab.template_ids ?? []).indexOf(templateId);
+  return idx >= 0 ? String.fromCharCode(65 + idx) : null;
+}
+
+/**
  * Record which layout the client chose.
  *
  * ⚠️ ONLY AN ID THAT IS ACTUALLY ON OFFER. A decision naming a template outside `template_ids`
@@ -128,7 +184,7 @@ export async function recordDecision(collabId: string, templateId: string | null
 
   // null = "I have not decided after all". A preference someone can't take back is a trap,
   // not a decision — see the note on the route.
-  if (templateId !== null && !collab.template_ids?.includes(templateId)) return false;
+  if (templateId !== null && !(await isOnOffer(collabId, collab, templateId))) return false;
 
   // Idempotent: clicking the same option twice is not a second decision, and must not produce
   // a second entry in the thread. (It did: an accidental double-click left TWO "Picked this
@@ -145,6 +201,30 @@ export async function recordDecision(collabId: string, templateId: string | null
     .eq('id', collabId);
   return !error;
 }
+
+/**
+ * Template identity for an arbitrary set of ids — every version of every option, not just the
+ * ones in `template_ids`. Keyed by id so a caller cannot accidentally render the wrong row.
+ */
+export async function templatesByIds(ids: string[]) {
+  const s = db();
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!s || !unique.length) return {} as Record<string, TemplateRef>;
+  const { data } = await s
+    .from('templates')
+    .select('id, slug, template_name, business_name')
+    .in('id', unique);
+  const out: Record<string, TemplateRef> = {};
+  for (const t of (data ?? []) as any[]) out[t.id] = t as TemplateRef;
+  return out;
+}
+
+export type TemplateRef = {
+  id: string;
+  slug: string;
+  template_name: string | null;
+  business_name: string | null;
+};
 
 /** The layouts under discussion, in the order the operator chose to present them. */
 export async function listCollabTemplates(collab: Collab) {

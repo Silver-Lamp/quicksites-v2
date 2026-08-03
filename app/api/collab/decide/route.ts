@@ -4,7 +4,7 @@
 // recordDecision refuses any template that was not actually on offer in that thread.
 import { NextResponse } from 'next/server';
 import { verifyCollabToken } from '@/lib/collab/collabToken';
-import { recordDecision, postMessage, getCollab } from '@/lib/collab/collabs';
+import { recordDecision, postMessage, getCollab, optionLabelFor } from '@/lib/collab/collabs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,8 +33,10 @@ export async function POST(req: Request) {
     // ⚠️ NAME THE OPTION. Two consecutive "Leaning towards this one." lines — which is what
     // switching produces — say nothing about WHICH one, and the thread is meant to be readable
     // months later by someone reconstructing what was agreed.
-    const idx = templateId ? (before?.template_ids ?? []).indexOf(templateId) : -1;
-    const label = idx >= 0 ? `Option ${String.fromCharCode(65 + idx)}` : 'this one';
+    // ⚠️ Lineage, not array position. indexOf() returns -1 for every v2, so a revision would be
+    // recorded as an unnamed "this one" in the very document meant to say which was chosen.
+    const key = before ? await optionLabelFor(before, templateId) : null;
+    const label = key ? `Option ${key}` : 'this one';
     await postMessage(viaToken.collabId, {
       authorRole: 'client',
       authorName: before?.client_name ?? null,

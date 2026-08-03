@@ -5,6 +5,7 @@
 // rather than only reply.
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { getCollab, listMessages, listCollabTemplates } from '@/lib/collab/collabs';
+import { listFeedback } from '@/lib/collab/feedback';
 import { mintCollabToken } from '@/lib/collab/collabToken';
 import OperatorThread from './operator-thread';
 
@@ -19,7 +20,13 @@ export default async function CollabDetail({ params }: { params: Promise<{ id: s
   const collab = await getCollab(id);
   if (!collab) return <div className="p-8 text-muted-foreground">No such collaboration.</div>;
 
-  const [messages, templates] = await Promise.all([listMessages(id), listCollabTemplates(collab)]);
+  // The operator view lists EVERYTHING, promoted or not — seeing the unpromoted rows is the
+  // entire point of this screen.
+  const [messages, templates, feedback] = await Promise.all([
+    listMessages(id),
+    listCollabTemplates(collab),
+    listFeedback(id),
+  ]);
 
   // Minted server-side, in the same process that will verify it — which is the whole lesson
   // from the secret-mismatch bug: an out-of-process mint resolved a different fallback link
@@ -33,6 +40,7 @@ export default async function CollabDetail({ params }: { params: Promise<{ id: s
 
   return (
     <OperatorThread
+      initialFeedback={feedback}
       collab={{
         id: collab.id,
         title: collab.title,

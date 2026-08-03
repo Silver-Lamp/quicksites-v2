@@ -273,6 +273,56 @@ raw JSON.
 
 ---
 
+## 7b. The review loop: previews, AI reviews, and option versions
+
+The collab page (`/collab/<token>`) is where the client compares options. Three things make that
+a loop rather than a one-shot presentation.
+
+**Previews.** Each option shows a stored screenshot (`scripts/capture-collab-previews.ts` →
+`previews` bucket) with **the date it was taken**. Not iframes — three live embeds is three page
+loads on a phone. Not the showcase thumb endpoint — that renders a branded monogram, so all three
+options would look identical. Captures are manual and go stale; that is exactly why the date
+renders. `getCollabPreviews` **lists the bucket** rather than building URLs from slugs, so an
+option with no capture shows no image instead of a broken one.
+
+**AI reviews** (`collab_feedback`). Two sources: mesh reviews from sibling Claude sessions (pasted
+in by an operator) and persona findings bridged automatically from `/api/persona-findings` when the
+URL is one of the collab's option sites.
+
+> ⚠️ **Every reviewer here is an AI, and that is labelled in three places** — the section heading
+> ("AI review", not "Reviews"), a badge on each row, and `reviewer_is_ai` in the database (NOT NULL,
+> **no default**, so a caller cannot skip the question). *"Two reviewers preferred B"* is a sentence
+> a client reads as two people while deciding about her own business. The pitch is that AI personas
+> browse a site **as a real person would**, never *"with real people"*.
+
+> ⚠️ **Nothing reaches the client until an operator promotes it.** `visible_to_client` defaults to
+> false. Persona findings are *claims* — that is why they file at `status:'triage'` rather than
+> `'open'` — and auto-publishing an unconfirmed claim onto a customer's page is the cry-wolf
+> failure with the customer as the victim.
+
+**Option versions** (`collab_option_versions`). An option is a **lineage**, not one template.
+Applying feedback by editing in place rewrites the page the client already looked at, with no way
+for her to say *"I preferred the old headline"*. A v2 is a new template row; v1 stays published and
+one tap away.
+
+- **The letter is stable.** B's revision is still B. It is stored, not derived from array position —
+  appending a v2 to an array would rename it to D after a conversation in which she called it B.
+- **Zero version rows is valid**, meaning "one version each, from `client_collabs.template_ids`".
+  A model that needs a backfill before it works breaks the thing already in production.
+- The API **registers** a version; it does not build or publish one. That is §2 + §7, deliberately
+  kept manual so the verification isn't the step that gets skipped.
+
+Two bugs versioning would have shipped, both caught by testing against a throwaway collab:
+`recordDecision` refused any v2 (it checked only `template_ids`, so clicking *"I like this one"* on
+the newest B answered *"that option is not on offer here"*), and every option label came from
+`indexOf`, which returns `-1` for a revision.
+
+⚠️ **Test against a throwaway collab, never the client's.** Test rows were twice written into a
+real client thread, once attributed to her. A test that touches production client data has already
+failed at something more important than its assertion.
+
+---
+
 ## 8. Toward a Custom Sites dashboard
 
 The manual path above is the specification. A dashboard would wrap it as:

@@ -33,6 +33,7 @@ import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
+import { bridgePersonaFindingToCollabs } from '@/lib/collab/personaBridge';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -166,6 +167,27 @@ export async function POST(req: Request) {
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
+
+  // If the surface visited is one of a client's option sites, cross-reference the finding onto
+  // that collab as well — unpromoted, like all feedback. Best-effort and deliberately swallowed:
+  // the task above is already stored, and failing the response would make HJ retry a report we
+  // have. Losing a cross-reference is cheap; losing the finding is not.
+  try {
+    await bridgePersonaFindingToCollabs({
+      url,
+      personaName,
+      personaId,
+      goal,
+      outcome: outcomeLabel,
+      summary,
+      issueLines: issues.map(
+        (i) => `- [${i.severity ?? 'low'}] ${i.kind ?? 'other'}${evidenceTag(i.evidence)} — ${i.detail ?? '(no detail)'}`,
+      ),
+      honestyNote: honesty,
+    });
+  } catch {
+    /* cross-reference only — see above */
   }
 
   return NextResponse.json({ ok: true, task_id: data?.id, status: 'triage' });

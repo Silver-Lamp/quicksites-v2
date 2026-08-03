@@ -329,7 +329,19 @@ export default function FooterRender({
   const bgColor = 'bg-card';
   const textColor = 'text-card-foreground';
   const subText = 'text-muted-foreground';
-  const linkColor = 'text-primary hover:opacity-80';
+  // ⚠️ NOT `text-primary`. The footer's background is `bg-card`, and `--primary` is the SITE'S
+  // ACCENT — chosen per industry, per theme preset, or by the owner in the colour lab. Nothing
+  // constrains an accent to contrast against a card, so a site whose accent is dark renders its
+  // whole footer navigation at 1.71:1 on a dark theme: present in the DOM, legible to no one.
+  // Found by a contrast check on the rendered page; invisible to `tsc`, to tests, and to reading
+  // the source, which is the same shape as the SectionShell `text-white` bug in CLAUDE.md §7.
+  //
+  // The fix is the same as that one: emit the token that TRACKS the surface rather than a colour
+  // that might collide with it. `text-card-foreground` is defined as readable on `bg-card` for
+  // every theme, which is the guarantee an accent cannot make. Accent styling stays on the
+  // underline, where a low-contrast colour is decoration rather than the text itself.
+  const linkColor =
+    'text-card-foreground underline-offset-4 hover:underline hover:decoration-primary hover:opacity-80';
   const headingColor = 'text-foreground';
 
   const socialStyle: SocialStyle = (() => {

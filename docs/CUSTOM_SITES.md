@@ -237,6 +237,11 @@ archiving-does-not-unpublish trap documented in §3, seen from the other side.)*
 
 ## 7. Verification checklist
 
+> ⚠️ **Most of this is now a command.** `npx tsx scripts/verify-rendered.ts <url…>` runs the render
+> gate (§7c) and exits non-zero. Prefer it to the manual checks below — a checklist run by hand is
+> skipped on the engagement where you are late. The manual list stays because it explains *why*
+> each rule exists, and because the honesty sweep and the cold read are not automatable.
+
 Run all of these. Each catches a failure that has actually shipped.
 
 ```bash
@@ -323,9 +328,98 @@ failed at something more important than its assertion.
 
 ---
 
-## 8. Toward a Custom Sites dashboard
+## 7c. The render gate — verify the page, not its inputs
 
-The manual path above is the specification. A dashboard would wrap it as:
+```bash
+npx tsx scripts/verify-rendered.ts https://<slug>.quicksites.ai/ \
+  --must "a phrase you wrote" --disclosure "text that must come first"
+```
+
+**The principle, which came out of a cold mesh poll that converged three ways:** every check that
+has ever lied to us on a client site inspected an **input** — DB blocks, the editor, `tsc`, a grep
+of the source, a grep of the served HTML, DOM index order. Six of nine recorded failures had a
+perfectly correct upstream artefact and a wrong rendered page. The only two instruments that told
+the truth operated on the **received** artefact: a screenshot, and rendered y-position.
+
+So the gate renders the published URL and asserts on what is visible, where it is, and what it
+looks like. `lib/verify/`: one browser-side extractor as a string (so the Playwright and serverless
+drivers cannot drift), sorting by `(y, x)` — **reading order, not DOM order** — and pure rules on
+top, one per failure class in §2:
+
+| rule | catches |
+|---|---|
+| `copy_present` | traps 2 and 4 — block content losing to something upstream |
+| `order` | a disclosure rendering *below* the control that collects from the visitor |
+| `no_owner_strings` | `No renderer for block type`, raw JSON, placeholders reaching a live page |
+| `min_contrast` | a shared component's colour that no eye can read on this theme |
+
+⚠️ **An `order` rule whose "after" side is absent returns `inapplicable`, never `pass`.** A rule
+that proved nothing is not a rule that succeeded, and folding the two together is how a green run
+comes to mean less than it looks like it means.
+
+⚠️ **A verifier's own false positives are worse than its blind spots.** The gate's first run
+flagged two things that were correct: it counted our fixed "Hear this page" launcher as a control
+that collects from visitors (same y on every page, so it outranked every disclosure everywhere),
+and it treated `bg-amber-500/10` as solid amber, reporting 2:1 on legible text — crying wolf on the
+alpha-tint pattern CLAUDE.md §7 recommends. A check that fires on correct code trains you to skip
+its output, which is the same silence-looks-like-success failure it was built to stop. Both fixed
+before it was trusted.
+
+**What it found on its first honest run:** footer nav links used `text-primary` over `bg-card`.
+`--primary` is the site's *accent*, and nothing constrains an accent to contrast against a card —
+so a site whose accent is dark rendered its entire footer navigation at 1.71:1. All 98 published
+sites render that footer; the one light-themed variant passed, which is why nobody had seen it.
+
+**What it deliberately does not do:** judge whether anything is *true*. Trap-9-class failures —
+a headline claiming more than the page evidences — are **reviewable, never checkable**, because
+the artefact is correct and the problem lives between the claim and a stranger's world-knowledge.
+The gate's job is to make the cold stranger read *affordable* by taking "is it even rendering" off
+that reader's plate — not to replace it.
+
+---
+
+## 8. The dashboard — deferred, on the mesh's advice
+
+⚠️ **This was the planned next layer and it is now explicitly NOT next.** A cold poll of all three
+sibling sessions came back unanimous against building it, with three separate arguments:
+
+- **Not one of the nine recorded failures was a visibility failure.** Nobody was ever unable to see
+  the state of an engagement. Every one was a missing gate or a missing human read. A dashboard
+  answers *"what is the state of this engagement"* — a question that has not yet cost anything.
+  Building it next optimises the part that has not failed.
+- **A board that can reach all-green without a human having read the page as a stranger is not
+  neutral — it retires the one gate that works.** The costliest failure (a headline claiming more
+  than the page evidences) passes every mechanical check by construction.
+- If it is built anyway, **its top row must be incapable of showing green**: *"has a stranger read
+  this claim-bearing page? y/n"*, un-auto-satisfiable. A dashboard's job here is to make the
+  un-automatable step unskippable, not to make the checklist feel complete.
+
+The agreed order is **render gate (§7c, built) → provenance/attribution → required stranger read →
+dashboard last, if ever.**
+
+Two items ahead of it, both from the same poll:
+
+1. **An attribution wall.** Failures 7 and 8 were an operator producing *client-attributed*
+   content — a mis-clicked decision recorded a sentence in her voice, and test messages landed in
+   her thread under her name. Undo makes that recoverable; it does not make it impossible. The
+   structural fix is that an operator session cannot produce client-attributed content at all, and
+   a decision recorded on her behalf reads *"recorded on her behalf by Sandon, 3 Aug"* — which is
+   true, and reads as diligence rather than as something discovered later.
+2. **An intake claims-ledger — provenance, not truth.** You cannot check whether *"I read cloud
+   bills for a living"* is true, but you can check whether it traces to something the client
+   actually asserted. That headline was written by the *pipeline*, not by Amy. Seeding "what can
+   this person verifiably say about themselves?" at intake makes an unsourced authority claim
+   flaggable **mechanically, at authoring**, before a stranger read is even needed.
+
+**The unit of reuse across clients is the questions, not the templates.** Trap 4 *was* a template
+failure — the scaffold's answer won the resolution order and became a default nobody chose.
+Templates encode answers; reuse the thing that encodes what to *ask*.
+
+---
+
+## 8b. If the dashboard is eventually built
+
+The manual path above is the specification. It would wrap it as:
 
 1. **Intake** — client name, industry, source material (LinkedIn/PDF/URL), supplier links.
 2. **Source review** — show what was extracted and **what it did not yield**, the Verbatim `gaps`

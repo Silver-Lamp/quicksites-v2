@@ -28,6 +28,8 @@ export type Collab = {
   template_ids: string[];
   status: string;
   decided_template_id: string | null;
+  /** Per-option rationale keyed by option letter. Absent key renders nothing — see the migration. */
+  option_notes: Record<string, string> | null;
   created_at: string;
 };
 

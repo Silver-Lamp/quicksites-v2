@@ -62,19 +62,24 @@ every read through it comes back as "no rows". So a contributor with anon-only c
 app that **renders as though the database were empty**, which looks like a bug in whatever you are
 working on rather than a missing key.
 
-**The arrangement here is a separate dev Supabase project** — its own non-production service-role
-key, its own seeded data, no access to real business records. You work full-stack; nothing you can
-reach is a real client's. Standing one up is a maintainer task: see
+**The intended arrangement is a separate dev Supabase project** — its own non-production
+service-role key, its own seeded data, no access to real business records. You work full-stack and
+nothing you can reach is a real client's. Standing one up is a maintainer task:
 [`DEV_SUPABASE_PROJECT.md`](DEV_SUPABASE_PROJECT.md).
 
-Two alternatives exist and are **not** the default here, recorded so nobody re-derives them:
+⚠️ **As of 2026-08-04 that project does not exist yet, so the current arrangement is
+frontend-scoped, anon-only** — components, public pages, block renderers, styling. Ask the
+maintainer which applies to you rather than inferring it from this paragraph; a doc describing the
+intended end state as though it were today's is exactly how someone spends an afternoon debugging
+a missing credential.
 
-- **Frontend-scoped, anon-only** — fine for components, public pages, styling and block renderers,
-  but admin and commerce surfaces render empty and you have to be *told* that is expected.
-- **Production credentials** — maintainers only.
+**On anon-only, admin and commerce surfaces render as though the database were empty. That is
+expected, not a bug in whatever you are working on.** It is the most confusing thing about this
+codebase for a new person, because nothing errors — see the note above on service-role clients
+returning empty rather than failing. If something you are *supposed* to be able to see is empty,
+that is a question for the maintainer, not a bug to work around.
 
-If something you are supposed to be able to see is empty, that is a question for the maintainer,
-not a bug to work around.
+**Production credentials** are maintainers only, in every arrangement.
 
 ## 4. What is off-limits, and how it is enforced
 

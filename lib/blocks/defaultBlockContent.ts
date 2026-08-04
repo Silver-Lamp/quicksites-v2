@@ -116,6 +116,16 @@ export const DEFAULT_BLOCK_CONTENT = {
 
   /* ───────── faq ───────── */
 
+  agreement: {
+    title: 'Before you book',
+    body:
+      'Please read and accept these terms.\n\n' +
+      '1. Replace this text with your own terms, waiver, or policy.\n\n' +
+      '2. Whoever accepts will see exactly this text, and a copy of it is kept with their acceptance.',
+    button_label: 'I accept',
+    require_email: false,
+    confirmation: 'Thank you — your acceptance has been recorded.',
+  },
   faq: {
     title: 'Frequently Asked Questions',
     subtitle: '',

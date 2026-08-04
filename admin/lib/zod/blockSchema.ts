@@ -1897,6 +1897,33 @@ export const blockContentSchemaMap = {
       title: z.string().optional(),
     }),
   },
+
+  // Terms a VISITOR accepts on a public page — a liability waiver, a cancellation policy, a
+  // safety acknowledgement.
+  //
+  // ⚠️ THIS IS NOT THE SIGNING PRODUCT, AND THE DISTINCTION IS THE WHOLE DESIGN. A private
+  // signing link (docs/AGREEMENTS.md) addresses ONE named person by email, so signing evidences
+  // possession of that inbox. A block on a public page has nobody to address — whoever is at
+  // the keyboard can type any name. So the labels, the button and the receipt all say
+  // "accepted", never "signed", and the editor says so too. Use this for terms; use a signing
+  // link for a contract.
+  agreement: {
+    label: 'Agreement / Waiver',
+    icon: '✍️',
+    schema: z.object({
+      title: z.string().min(1),
+      // The terms themselves. Plain text with blank-line paragraphs — deliberately not markdown,
+      // because the fingerprint is taken over this source and a renderer that reinterprets it
+      // opens a gap between what was hashed and what was read.
+      body: z.string().min(1),
+      button_label: z.string().optional(),
+      // Ask for an email as well as a name. Off by default: collecting one should be a decision.
+      require_email: z.boolean().optional(),
+      // Shown after acceptance. The default in defaultBlockContent stays honest about what
+      // just happened.
+      confirmation: z.string().optional(),
+    }),
+  },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
 /* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ───────────── */

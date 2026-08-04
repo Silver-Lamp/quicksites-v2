@@ -99,24 +99,50 @@ Two environment gotchas, both of which cost a cycle here:
 record attributed to a real person. Smoke-test with an obviously fictional signer on an
 `example.invalid` address, and delete the row afterwards.
 
-## 5. The "Agreements block" — why it is a different product, and second
+## 5. The "Agreements block" — a different product, and now built
 
 The natural next surface is a block a site owner drops onto a page. It is worth being precise
 about what changes, because the two are not the same feature:
 
-| | **private link** (built) | **block on a public page** (next) |
+| | **private link** (`/sign/<token>`) | **`agreement` block** on a public page |
 |---|---|---|
-| who signs | one named person we emailed | any visitor |
+| the verb | **signs** | **accepts** |
+| who | one named person we emailed | any visitor |
 | identity evidence | possession of that inbox | **none** — whoever is at the keyboard |
-| good for | contracts, contributor agreements, quotes | waivers, terms acceptance, liability release |
+| document frozen | yes, by DB trigger | **impossible** — the owner can edit the block |
+| good for | contracts, contributor agreements | waivers, terms, cancellation policies |
+| table | `agreements` + `agreement_signatures` | `agreement_acceptances` |
 
 **A block cannot inherit the private link's evidentiary weight**, because there is nobody to
 address it to. That does not make it useless — a MEHKO cook's liability waiver, a contractor's
-terms, a "I have read the cancellation policy" at checkout are all real, and all of them are
-about *the visitor accepting stated terms*, not about proving which person signed.
+terms, an "I have read the cancellation policy" at checkout are all real, and all of them are
+about *a visitor accepting stated terms*, not about proving which person signed.
 
-So the block is worth building, and its copy must not borrow the private link's language. The
-core here (hash, freeze, certificate, consent) is shared; only the addressing changes.
+So the language is enforced, not merely intended: **a test asserts the rendered block contains no
+form of the word "sign"**. If that ever fails because someone improved the wording, the block has
+started claiming an identity check it did not perform.
+
+⚠️ **The full accepted text is stored on every acceptance row, and that is the design's crux.**
+`agreements` freezes its document with a trigger; that is impossible here, because the terms live
+in the template JSON and the owner can edit them through the ordinary editor at any moment. Storing
+only a hash would leave us holding fingerprints of text nobody can reproduce — a record proving
+something was accepted that cannot say what. The snapshot is redundant per row, cheap at these
+volumes, and the only version that still answers the question a year later.
+
+⚠️ **And the text is hashed from what the PAGE posted, not re-read from the template.** Re-reading
+server-side would hash whatever is stored *now*, which is not necessarily what this visitor read if
+the owner edited mid-session. The trade-off, stated plainly: a caller could post terms that were
+never displayed. That is a limitation of any public form, it does not let anyone forge another
+person's acceptance, and the alternative — hashing text the visitor may never have seen — is worse.
+
+### Adding it to a site
+
+The block is in the palette as **Agreement / Waiver** (`agreement`). Set a title and the terms;
+optionally require an email. An unconfigured block shows a hint in the editor and renders
+**nothing** on a published page.
+
+Acceptances land in `agreement_acceptances`. There is no operator UI for reading them yet — query
+the table, or build one (§6).
 
 ## 6. Known gaps
 
@@ -129,3 +155,10 @@ core here (hash, freeze, certificate, consent) is shared; only the addressing ch
   signing is a real feature, not a duplicate row.
 - **No void endpoint.** The columns exist (`voided_at`, `voided_reason`) and the signing page
   honours them; nothing sets them yet except SQL.
+- **No operator view of block acceptances.** `agreement_acceptances` is written but never read
+  back by any UI. A site owner collecting waivers currently cannot see them without SQL, which
+  makes the feature half-delivered from their side.
+- **No acceptance receipt for the visitor.** The signing product hands over a certificate; the
+  block only shows a confirmation on screen. Someone who accepted a waiver has no copy of what
+  they accepted, which is the weaker half of the same artefact-not-dependency rule. The
+  certificate renderer already takes exactly the fields needed, so this is small.

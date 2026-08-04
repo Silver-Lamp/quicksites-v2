@@ -62,17 +62,19 @@ every read through it comes back as "no rows". So a contributor with anon-only c
 app that **renders as though the database were empty**, which looks like a bug in whatever you are
 working on rather than a missing key.
 
-There are only three honest ways to resolve that, and which one applies to you is a decision the
-maintainer makes per contributor — **ask, don't improvise**:
+**The arrangement here is a separate dev Supabase project** — its own non-production service-role
+key, its own seeded data, no access to real business records. You work full-stack; nothing you can
+reach is a real client's. Standing one up is a maintainer task: see
+[`DEV_SUPABASE_PROJECT.md`](DEV_SUPABASE_PROJECT.md).
 
-1. **Frontend-scoped work** — components, public pages, styling, block renderers. Anon-only is
-   fine; you will see empty data on admin/commerce surfaces and that is expected, not a bug.
-2. **A separate dev Supabase project** with its own (non-production) service-role key and seeded
-   data. Full-stack work, no access to real business data. This is the safer default.
-3. **Production credentials.** Reserved for maintainers.
+Two alternatives exist and are **not** the default here, recorded so nobody re-derives them:
 
-If you are told "empty data is expected", you are on option 1. If something you are *supposed* to
-be able to see is empty, that is a question for the maintainer, not a bug to work around.
+- **Frontend-scoped, anon-only** — fine for components, public pages, styling and block renderers,
+  but admin and commerce surfaces render empty and you have to be *told* that is expected.
+- **Production credentials** — maintainers only.
+
+If something you are supposed to be able to see is empty, that is a question for the maintainer,
+not a bug to work around.
 
 ## 4. What is off-limits, and how it is enforced
 
@@ -95,6 +97,12 @@ messages twice landed in a real client's thread, once attributed to her.
 - **Branch off `main`**, small descriptive commits, push the branch, open a PR.
 - **Conventional commits** — `npm run commit` walks you through it, and commitlint enforces it.
 - Merge with **`gh pr merge --squash`**.
+- **`main` requires a PR with one approval**, and rejects force-pushes, deletions and merge
+  commits (a GitHub *ruleset*, added 2026-08-04 when the repo went from one writer to two). So you
+  cannot push to `main`, and you will need a maintainer's review to land anything — that is the
+  intended shape, not a misconfiguration. ⚠️ Note for anyone auditing this later:
+  `GET /branches/main/protection` returns **404 even now**, because that endpoint does not see
+  rulesets. Check `GET /rulesets`.
 - Migrations: add the `supabase/migrations/<ts>_name.sql` file to your PR with idempotent DDL
   (`if [not] exists`) and say in the PR body that it is unapplied. A maintainer runs it.
 - **Keep `tsc --noEmit` green** and read [`CLAUDE.md`](../../CLAUDE.md) §7 before styling anything:

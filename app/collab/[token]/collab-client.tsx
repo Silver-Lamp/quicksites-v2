@@ -108,6 +108,7 @@ export default function CollabClient({
   options,
   templatesById,
   feedback = [],
+  optionNotes = {},
 }: {
   token: string;
   collab: { id: string; title: string; clientName: string | null; status: string; decidedTemplateId: string | null };
@@ -116,6 +117,8 @@ export default function CollabClient({
   options: CollabOption[];
   templatesById: Record<string, Tpl>;
   feedback?: Feedback[];
+  /** What each option bets on, keyed by option letter. An absent key renders nothing. */
+  optionNotes?: Record<string, string>;
 }) {
   // Which version of each option is on screen. Defaults to the newest — the revision is the
   // current answer — but v1 stays one tap away, because "I preferred the old headline" has to be
@@ -141,6 +144,12 @@ export default function CollabClient({
   const [busy, setBusy] = React.useState(false);
   const [decided, setDecided] = React.useState<string | null>(collab.decidedTemplateId);
   const [replyTo, setReplyTo] = React.useState<Msg | null>(null);
+  /**
+   * ⚠️ "NONE OF THESE" IS A MODE, NOT A MESSAGE WE WRITE FOR HER. It changes the composer's
+   * framing and nothing else — we never prefill words into her mouth, because the whole point of
+   * the affordance is to get HER account of what is off.
+   */
+  const [rejecting, setRejecting] = React.useState(false);
   const composerRef = React.useRef<HTMLTextAreaElement | null>(null);
 
   /**
@@ -170,6 +179,7 @@ export default function CollabClient({
         setMessages((m) => [...m, json.message]);
         setDraft('');
         setReplyTo(null);
+        setRejecting(false);
       }
     } finally {
       setBusy(false);
@@ -231,6 +241,25 @@ export default function CollabClient({
           {collab.clientName ? `${collab.clientName} — t` : 'T'}hree options, all working drafts.
           Nothing here is live yet, and everything is still yours to change.
         </p>
+        {/* ⚠️ WHAT YOUR CLICK DOES — the single highest-leverage line on the page, and all three
+            mesh sessions named it independently. For a half-sure, non-technical person the scary
+            part is not choosing; it is not knowing what choosing COMMITS her to. "Reversible with
+            an undo button" answers a question about the button; this answers the question about
+            the relationship, which is the one she is actually asking.
+
+            ⚠️ It renders ABOVE the pick buttons, and that ordering is the assertable part — the
+            same rule the render gate applies to a fee disclosure sitting above the control that
+            collects from a visitor (docs/CUSTOM_SITES.md §7c).
+
+            ⚠️ It says nothing about the other options disappearing. HiveJournal's suggested
+            wording was "the other two go away" — true of their flow, false of ours: all three
+            stay open and the pick is undoable. Copy describing mechanics we do not have is a
+            false promise however good it sounds. */}
+        <p className="mt-3 max-w-2xl rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-foreground">
+          <span className="font-medium">What happens after you pick:</span> I build that one out
+          properly and you see it again before anything goes live. Nothing gets built, scheduled or
+          billed until we&rsquo;ve talked — and you can change your mind at any point.
+        </p>
       </header>
 
       {/* ⚠️ A POINTER, NOT A SECOND COPY. This box used to repeat each question in full, so every
@@ -240,9 +269,13 @@ export default function CollabClient({
           waiting and takes her there. */}
       {!!openQuestions.length && (
         <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          {/* ⚠️ "both" was hard-coded on the plural branch, so three questions rendered
+              "3 questions waiting for you — both are in the conversation". A count and a word
+              that contradict each other in the same sentence is the page telling the client it
+              cannot count her questions, in the one box whose job is to say how many there are. */}
           <span className="text-sm text-foreground">
             {openQuestions.length} question{openQuestions.length === 1 ? '' : 's'} waiting for you
-            {openQuestions.length === 1 ? '' : ' — both are in the conversation'}
+            {openQuestions.length === 1 ? '' : ' — they’re in the conversation'}
           </span>
           <button
             type="button"
@@ -258,9 +291,12 @@ export default function CollabClient({
         {/* ── The options ────────────────────────────────────────────── */}
         <section>
           <h2 className="text-lg font-semibold text-foreground">The options</h2>
+          {/* Shortened: the commitment ("nothing gets built, scheduled or billed") now lives once,
+              above, where it precedes every pick button on the page. Two copies of one promise is
+              two promises to keep in sync — and the version that drifts is the one nobody reads
+              while editing the other. */}
           <p className="mt-1 text-sm text-muted-foreground">
-            Picking one just tells me where you&rsquo;re leaning — you can change it or undo it any
-            time, and nothing happens until we talk.
+            Picking one just tells me where you&rsquo;re leaning — you can undo it any time.
           </p>
           <div className="mt-4 space-y-4">
             {options.map((opt) => {
@@ -294,6 +330,17 @@ export default function CollabClient({
                       <h3 className="text-base font-semibold text-card-foreground">
                         {t.template_name || t.business_name || t.slug}
                       </h3>
+                      {/* ⚠️ WHAT THIS ONE IS BETTING ON. Three screenshots that differ in ways she
+                          has to reverse-engineer is a guess, not a choice — the axis was always
+                          explained, but in the conversation COLUMN, which is not where the
+                          comparison happens. Absent note renders nothing: a card with no stated
+                          bet is honest, a card with an invented one puts a rationale in the
+                          operator's mouth that he never chose. */}
+                      {optionNotes[opt.key] && (
+                        <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                          {optionNotes[opt.key]}
+                        </p>
+                      )}
                     </div>
                     {isPicked && (
                       <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs text-foreground">
@@ -379,7 +426,13 @@ export default function CollabClient({
                         type="button"
                         onClick={() => decide(t.id)}
                         disabled={busy}
-                        className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-sky-400 disabled:opacity-40"
+                        // ⚠️ DARK TEXT ON THE BRIGHT FILL, NOT WHITE. White on bg-sky-500
+                        // measures 2.77:1 — the render gate failed this page on it, on the two
+                        // most important buttons it has (this and Send). Same shape as the
+                        // 1.71:1 footer the gate found across 98 sites: legible-looking to
+                        // someone who already knows what it says. bg-sky-400 + slate-950 is
+                        // 9.4:1 and brighter, so nothing is lost by fixing it.
+                        className="rounded-lg bg-sky-400 px-3 py-1.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-300 disabled:opacity-40"
                       >
                         {decided ? 'Pick this instead' : 'I like this one'}
                       </button>
@@ -398,6 +451,46 @@ export default function CollabClient({
               );
             })}
           </div>
+
+          {/* ⚠️ THE BLAMELESS "NONE OF THESE", AT THE WEIGHT OF AN OPTION CARD.
+              All three mesh sessions, answering independently, named this as the thing the page
+              was missing — and none of them called it branding.
+
+              Three cards plus a button that says "I like this one" quietly frame the answer space
+              as PICK ONE OF THREE. The truthful answer "none of these feel right" then reads as
+              breaking the flow, and a polite person will not do it — she picks the least-bad and
+              we never learn what was wrong. That is the exact failure the whole page exists to
+              avoid, so the escape hatch is styled as a sibling of the options rather than as a
+              link in the margin.
+
+              ⚠️ Nothing is prefilled. The words have to be hers, or the affordance collects our
+              guess about her objection instead of her objection. */}
+          <article className="mt-4 rounded-2xl border border-dashed border-border bg-muted/20 p-4">
+            <h3 className="text-base font-semibold text-card-foreground">
+              None of these feel right?
+            </h3>
+            {/* ⚠️ FIRST PERSON THROUGHOUT. This briefly interpolated the presenter's name — "Tell
+                Sandon Jurowski what's off and I'll come back" — which mixes third and first person
+                in one sentence and reads as though two different people are speaking. The whole
+                page is the operator talking directly to her; the name belongs in the header, once.
+                Invisible to tsc and to the render gate, obvious in a screenshot. */}
+            <p className="mt-1 text-sm text-muted-foreground">
+              That&rsquo;s a normal answer, and a useful one — it&rsquo;s much easier to build the
+              right thing from &ldquo;not this&rdquo; than from a polite yes. Tell me what&rsquo;s
+              off and I&rsquo;ll come back with different directions.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setRejecting(true);
+                setReplyTo(null);
+                jumpToComposer();
+              }}
+              className="mt-3 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-sky-500/40"
+            >
+              Tell me what&rsquo;s off
+            </button>
+          </article>
 
           {/* Reviews about the SET rather than one option — "I'd pick B" belongs here, next to
               all three, not buried inside the card it happens to name. */}
@@ -464,19 +557,37 @@ export default function CollabClient({
             </p>
           )}
 
+          {/* The rejection mode's own context line, mirroring the reply chip so the composer
+              always says what it is about to send. */}
+          {rejecting && (
+            <p className="mt-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              About: none of these feel right.{' '}
+              <button type="button" onClick={() => setRejecting(false)} className="underline">
+                cancel
+              </button>
+            </p>
+          )}
+
           <textarea
             ref={composerRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={4}
-            placeholder="Ask a question, or say what you'd change."
+            placeholder={
+              rejecting
+                ? // Deliberately lowers the bar for an answer. "I don't know, it just isn't me"
+                  // is real information; a placeholder demanding specifics collects silence.
+                  "What's off about them? Even “I can't put my finger on it, they just don't feel like me” helps."
+                : "Ask a question, or say what you'd change."
+            }
             className="mt-3 w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground/70"
           />
           <button
             type="button"
             onClick={send}
             disabled={busy || !draft.trim()}
-            className="mt-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-400 disabled:opacity-40"
+            // Same 2.77:1 failure as the pick button above.
+            className="mt-2 rounded-lg bg-sky-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-300 disabled:opacity-40"
           >
             {busy ? 'Sending…' : 'Send'}
           </button>

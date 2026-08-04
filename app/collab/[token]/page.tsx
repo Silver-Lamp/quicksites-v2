@@ -15,6 +15,10 @@ import { getCollab, listMessages, templatesByIds } from '@/lib/collab/collabs';
 import { getCollabPreviews } from '@/lib/collab/previews';
 import { resolveOptions } from '@/lib/collab/versions';
 import { listClientFeedback } from '@/lib/collab/feedback';
+import { getSenderProfile } from '@/lib/outreach/senderProfile';
+import { presenterFromSenderProfile } from '@/lib/collab/presenter';
+import { lastActivityAt } from '@/lib/collab/lastActivity';
+import CollabChrome from '@/components/collab/collab-chrome';
 import CollabClient from './collab-client';
 
 export const runtime = 'nodejs';
@@ -29,27 +33,35 @@ export default async function CollabPage({ params }: { params: Promise<{ token: 
   const { token } = await params;
   const verified = verifyCollabToken(token);
 
+  // ⚠️ THE INVALID-LINK SCREENS GET THE FRAME BUT NOT THE PERSON. Whoever is holding a broken or
+  // expired link has not been authenticated as anyone, and the operator's name, face and email
+  // address are not owed to them. The frame still renders so the page reads as a real product
+  // rather than a bare error string.
   if (!verified) {
     // Deliberately vague and deliberately not a 404 page about a missing resource: whether a
     // thread exists is not something an unauthenticated holder of a bad link should learn.
     return (
-      <main className="mx-auto max-w-lg px-6 py-24 text-center">
-        <h1 className="text-2xl font-semibold text-foreground">This link isn’t working</h1>
-        <p className="mt-3 text-muted-foreground">
-          It may have expired, or been replaced by a newer one. Ask whoever sent it for a fresh
-          link and it’ll pick up exactly where you left off.
-        </p>
-      </main>
+      <CollabChrome presenter={null} lastUpdatedIso={null}>
+        <main className="mx-auto max-w-lg px-6 py-24 text-center">
+          <h1 className="text-2xl font-semibold text-foreground">This link isn’t working</h1>
+          <p className="mt-3 text-muted-foreground">
+            It may have expired, or been replaced by a newer one. Ask whoever sent it for a fresh
+            link and it’ll pick up exactly where you left off.
+          </p>
+        </main>
+      </CollabChrome>
     );
   }
 
   const collab = await getCollab(verified.collabId);
   if (!collab) {
     return (
-      <main className="mx-auto max-w-lg px-6 py-24 text-center">
-        <h1 className="text-2xl font-semibold text-foreground">This link isn’t working</h1>
-        <p className="mt-3 text-muted-foreground">Ask whoever sent it for a fresh one.</p>
-      </main>
+      <CollabChrome presenter={null} lastUpdatedIso={null}>
+        <main className="mx-auto max-w-lg px-6 py-24 text-center">
+          <h1 className="text-2xl font-semibold text-foreground">This link isn’t working</h1>
+          <p className="mt-3 text-muted-foreground">Ask whoever sent it for a fresh one.</p>
+        </main>
+      </CollabChrome>
     );
   }
 
@@ -71,21 +83,38 @@ export default async function CollabPage({ params }: { params: Promise<{ token: 
     Object.values(templatesById).map((t) => t.slug).filter(Boolean),
   );
 
+  // Who is asking her to decide. Global sender profile today — `collab.operator_id` is null on the
+  // live row, so there is nothing per-collab to resolve, and a per-org (white-label) presenter
+  // would need an org_id on the collab that no caller sets yet.
+  const presenter = presenterFromSenderProfile(await getSenderProfile());
+
+  // Derived from what a visitor can see changing, NOT from `updated_at` (untriggered — it would
+  // report the creation date as an update). See lib/collab/lastActivity.ts.
+  const lastUpdatedIso = lastActivityAt([
+    ...messages.map((m) => m.created_at),
+    ...options.flatMap((o) => o.versions.map((v) => v.createdAt)),
+    ...Object.values(previews).map((p) => p.capturedAt),
+    collab.created_at,
+  ]);
+
   return (
-    <CollabClient
-      token={token}
-      previews={previews}
-      options={options}
-      templatesById={templatesById}
-      feedback={feedback}
-      collab={{
-        id: collab.id,
-        title: collab.title,
-        clientName: collab.client_name,
-        status: collab.status,
-        decidedTemplateId: collab.decided_template_id,
-      }}
-      initialMessages={messages}
-    />
+    <CollabChrome presenter={presenter} lastUpdatedIso={lastUpdatedIso}>
+      <CollabClient
+        token={token}
+        previews={previews}
+        options={options}
+        templatesById={templatesById}
+        feedback={feedback}
+        optionNotes={collab.option_notes ?? {}}
+        collab={{
+          id: collab.id,
+          title: collab.title,
+          clientName: collab.client_name,
+          status: collab.status,
+          decidedTemplateId: collab.decided_template_id,
+        }}
+        initialMessages={messages}
+      />
+    </CollabChrome>
   );
 }

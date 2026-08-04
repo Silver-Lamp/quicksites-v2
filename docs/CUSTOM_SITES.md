@@ -326,6 +326,57 @@ the newest B answered *"that option is not on offer here"*), and every option la
 real client thread, once attributed to her. A test that touches production client data has already
 failed at something more important than its assertion.
 
+### The chrome — what a client-facing page may claim about us
+
+The page was asked to carry **agency branding**, "so it looks like part of a real custom-site
+process". A cold mesh poll came back **3/3 to add less than was asked**, with three separate
+arguments, and the design below is that answer.
+
+> **The line: chrome that describes the TRANSACTION is honest; chrome that dresses the VENDOR is
+> not.** Everything telling her *who is asking, what happens next, and how to say no* she needs.
+> Everything making the studio look bigger is the label-promising-more-than-exists failure this
+> repo keeps shipping, in a nicer font.
+
+| shipped | refused |
+|---|---|
+| **One accountable human** — name, face, and an email that isn't this page's composer (`lib/collab/presenter.ts`) | **A staged progress rail** (Intake → Drafts → Your pick → Build → Launch) |
+| **What your pick does**, above every pick button | **"Your producer / your team"** — it is one person and some models |
+| **A blameless "none of these feel right"**, at option-card weight | **Anything plural.** "Our designers", "our studio" |
+| **What each option bets on**, on the card (`option_notes`) | **The sender profile's TITLE** — see below |
+| **"This link isn't password-protected"** + when the page last changed | |
+
+Three details that are each a rule, not a preference:
+
+- **A progress rail cannot regress, and "she hates all three" is an outcome we explicitly invite.**
+  It also contradicts the page's own promise that everything is still hers to change. The lie is
+  not the steps; it is the implied irreversibility.
+- **The presenter drops the title, deliberately.** The source record is the *cold-postcard* sender
+  profile — marketing material. A name and a face mean the same thing in both places; a title is
+  written for outreach optics and reads as a different claim on a real client's decision page.
+  Enforced by a test, so re-adding it has to be a decision.
+- **Not `client_collabs.updated_at`.** Nothing maintains it, so a "last changed" stamp read from it
+  would be the creation date wearing an update's clothes — a specific false claim rather than a
+  silence. It is derived from artefacts a visitor can watch change (`lib/collab/lastActivity.ts`).
+
+⚠️ **A mesh suggestion can describe mechanics you don't have.** The proposed copy for the pick line
+was *"the other two go away"* — true of the session that suggested it, false here: all three stay
+open and the pick is undoable. Good wording is not evidence of a true claim.
+
+**The chrome earns render-gate rules** (§7c), which is the test of whether it belongs at all:
+
+```bash
+npx tsx scripts/verify-rendered.ts "http://localhost:3000/collab/<token>" \
+  --must "<the accountable human>" --must "None of these feel right?" \
+  --disclosure "What happens after you pick"
+```
+
+Its first run failed the page on something older than the chrome: **`text-white` on `bg-sky-500`
+measures 2.77:1**, on the two most important buttons the page has — *"I like this one"* and
+*"Send"*. Same shape as the 1.71:1 footer in §7c: legible-looking to whoever already knows what it
+says. And the screenshot then caught what the gate structurally cannot — *"Tell **Sandon Jurowski**
+what's off and **I'll** come back"*, third and first person in one sentence, from interpolating a
+name into first-person copy.
+
 ---
 
 ## 7c. The render gate — verify the page, not its inputs

@@ -17,6 +17,9 @@ type Result = {
   gaps?: string[];
   read?: { name: string | null; skills: number; roles: number; links: number };
   error?: string;
+  code?: string;
+  /** Set when the draft was refused but the file still isn't — see the rate-limit branch. */
+  exportAvailable?: boolean;
 };
 
 const GAP_LABEL: Record<string, string> = {
@@ -36,6 +39,8 @@ export default function VerbatimIntake() {
   const [result, setResult] = React.useState<Result | null>(null);
   const [reading, setReading] = React.useState(false);
   const [pdfNote, setPdfNote] = React.useState<string | null>(null);
+  const [downloading, setDownloading] = React.useState(false);
+  const [downloadError, setDownloadError] = React.useState<string | null>(null);
 
   /**
    * ⚠️ THE FILE NEVER LEAVES THE DEVICE. Extraction runs in the browser and only the resulting
@@ -75,6 +80,43 @@ export default function VerbatimIntake() {
       setPdfNote('Couldn’t read that PDF. Pasting the text works just as well.');
     } finally {
       setReading(false);
+    }
+  };
+
+  /**
+   * Download the page as one self-contained HTML file.
+   *
+   * ⚠️ THE POINT OF THE WHOLE FEATURE, NOT A CONVENIENCE. Everything else here produces a site on
+   * our platform, which is a bet that we still exist next year. This produces something the person
+   * owns outright — it opens offline, prints, and has no link back to us. It is also the only path
+   * that works when the draft limit has been hit, because it creates nothing.
+   */
+  const download = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const res = await fetch('/api/verbatim/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeText, sinceParagraph }),
+      });
+      if (!res.ok) throw new Error('export failed');
+      const blob = await res.blob();
+      // Filename comes from the server (Content-Disposition); this is the fallback for the
+      // browser-download path, which cannot read that header cross-origin-safely.
+      const name = (result?.read?.name || 'profile').toLowerCase().replace(/[^\w-]+/g, '-');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name}.html`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setDownloadError('Couldn’t build the file just now. Your text is still here — try again.');
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -124,12 +166,29 @@ export default function VerbatimIntake() {
             </div>
           )}
 
-          <a
-            href={result.editorUrl}
-            className="mt-6 inline-block rounded-xl bg-sky-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-sky-400"
-          >
-            Open my page →
-          </a>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <a
+              href={result.editorUrl}
+              className="inline-block rounded-xl bg-sky-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-sky-400"
+            >
+              Open my page →
+            </a>
+            {/* Offered next to the primary action rather than hidden in a menu: for a job-seeker
+                at a library, the file IS the outcome — it opens offline, prints, and carries no
+                link back to us. */}
+            <button
+              type="button"
+              onClick={download}
+              disabled={downloading}
+              className="rounded-xl border border-border px-5 py-3 text-sm font-medium text-foreground transition hover:border-sky-500/40 disabled:opacity-50"
+            >
+              {downloading ? 'Preparing…' : 'Download it to keep'}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            The download is one file that works on any computer, with or without us.
+          </p>
+          {downloadError && <p className="mt-2 text-sm text-red-400">{downloadError}</p>}
         </div>
 
         {/* A second act, not a step. Offered only once a page exists, and it reuses the résumé
@@ -183,7 +242,27 @@ export default function VerbatimIntake() {
         className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-sky-500 focus:outline-none"
       />
 
-      {result?.error && <p className="mt-4 text-sm text-red-400">{result.error}</p>}
+      {/* ⚠️ THE SHARED-WIFI CASE, GIVEN ITS OWN BRANCH ON PURPOSE. The draft cap is per-IP, and a
+          library or classroom puts everyone behind one address — so the person who trips it did
+          nothing wrong and is standing in a room where this was just recommended to them. Refusing
+          the site is correct; refusing them their page is not, and the export creates nothing so
+          it is always available. */}
+      {result?.exportAvailable ? (
+        <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+          <p className="text-sm text-foreground">{result.error}</p>
+          <button
+            type="button"
+            onClick={download}
+            disabled={downloading}
+            className="mt-3 rounded-lg bg-sky-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-300 disabled:opacity-50"
+          >
+            {downloading ? 'Preparing…' : 'Download my page'}
+          </button>
+          {downloadError && <p className="mt-2 text-sm text-red-400">{downloadError}</p>}
+        </div>
+      ) : (
+        result?.error && <p className="mt-4 text-sm text-red-400">{result.error}</p>
+      )}
 
       <button
         type="submit"

@@ -75,6 +75,69 @@ function splitList(line: string): string[] {
 }
 
 /**
+ * The separator between a role and its employer/dates, as people actually type it.
+ *
+ * ⚠️ THIS USED TO BE EM/EN DASH ONLY, AND THAT IS NOT HOW ANYONE TYPES. A résumé reading
+ * "Shift Lead - Acme Distribution, 2019-2026" matched nothing, so the line fell through to the
+ * headingless branch — and since EVERY line did, a two-job history rendered as four panels with
+ * blank headings. Found by exporting one and looking at it; invisible in the parsed JSON unless
+ * you read the empty strings, and invisible in `tsc` entirely.
+ *
+ * The spaces are load-bearing: they distinguish " - " from the hyphen inside "2019-2026".
+ */
+const ROLE_SEPARATOR = /\s+[—–|@]\s+|\s+-\s+/;
+
+/**
+ * Lines under EXPERIENCE → one entry per role.
+ *
+ * ⚠️ A LINE WITHOUT A SEPARATOR IS A CONTINUATION, NOT A NEW ROLE. Every line used to become its
+ * own entry, so a role's description ("Ran a team of nine") became a second, headingless entry
+ * sitting beside its own job. Attaching it to the role above invents nothing — it is the same
+ * text, grouped the way the résumé already grouped it — and it stops the parser fabricating
+ * entries that were never there.
+ *
+ * A blank line ends the current role, so a description-only first line under a new employer
+ * doesn't get glued to the previous one. (sectionise preserves blank lines for exactly this
+ * kind of use; see its comment.)
+ */
+export function parseExperience(lines: string[]): { heading: string; body: string }[] {
+  const out: { heading: string; body: string }[] = [];
+  let open = false; // is the last entry still accepting continuation lines?
+
+  for (const raw of lines) {
+    if (!raw || !raw.trim()) {
+      open = false; // blank line: the role is finished
+      continue;
+    }
+    // Same bullet-stripping as skills. Word exports bullets as a bare "o " and outline lists as
+    // "A." — the glyph is invisible in the original document and very visible on the page.
+    const line = clean(raw).replace(BULLET_PREFIX, '');
+    if (!line) continue;
+
+    const [head, ...rest] = line.split(ROLE_SEPARATOR);
+    if (rest.length && clean(head)) {
+      out.push({ heading: clean(head), body: clean(rest.join(' — ')) });
+      open = true;
+      continue;
+    }
+
+    if (open && out.length) {
+      // Continuation of the role above. Newline-joined rather than space-joined: these are
+      // usually separate bullets, and running them together makes one unreadable sentence.
+      const last = out[out.length - 1];
+      last.body = last.body ? `${last.body}\n${line}` : line;
+      continue;
+    }
+
+    // No separator and no open role — a bare line we cannot attribute. Kept, never dropped.
+    out.push({ heading: '', body: line });
+    open = true;
+  }
+
+  return out;
+}
+
+/**
  * Group the résumé into the sections we recognise.
  * Anything before the first recognised heading, or under one we don't know, becomes summary —
  * visible to the person rather than silently dropped.
@@ -184,6 +247,22 @@ export function profileFromResume(intake: ResumeIntake): ProfileSpec {
     return stripped.length === 0;
   };
 
+  // ⚠️ A CITY IN THE CONTACT LINE IS THE ONE THING isContactOnly LEAVES BEHIND. "Renton, WA |
+  // dana@example.com" strips down to "Renton WA", which is not empty, so the whole line survived
+  // into the biography — a person's About-me opening with their own address line. Found by
+  // exporting a résumé and reading it; the parsed JSON looked fine because the field it belonged
+  // in (`location`) was simply null and honestly reported as a gap.
+  //
+  // So the location is MOVED, not dropped: captured into the field it belongs to, which also
+  // closes the gap truthfully instead of leaving debris in a sentence.
+  //
+  // Deliberately conservative — "City, ST" with a two-letter state, and only when removing it
+  // leaves a line that is otherwise pure contact detail. Under-matching costs a null location
+  // that we already report as a gap; over-matching would put "Portland, OR" from the sentence
+  // "I worked in Portland, OR for years" into someone's address.
+  const LOCATION_RX = /\b[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,2},\s*[A-Z]{2}\b/;
+  let detectedLocation: string | null = null;
+
   // Rebuild paragraphs: consecutive lines are one paragraph, blanks separate them.
   const paragraphs: string[] = [];
   let buf: string[] = [];
@@ -193,8 +272,18 @@ export function profileFromResume(intake: ResumeIntake): ProfileSpec {
     buf = [];
   };
   for (const l of summaryLines) {
-    if (l === '') flush();
-    else if (!isContactOnly(l)) buf.push(l);
+    if (l === '') {
+      flush();
+      continue;
+    }
+    if (isContactOnly(l)) continue;
+
+    const hit = l.match(LOCATION_RX);
+    if (hit && isContactOnly(l.replace(LOCATION_RX, ''))) {
+      detectedLocation = detectedLocation ?? clean(hit[0]);
+      continue; // the rest of the line was contact detail we already captured
+    }
+    buf.push(l);
   }
   flush();
   const summaryBody = paragraphs.join('\n\n');
@@ -202,18 +291,7 @@ export function profileFromResume(intake: ResumeIntake): ProfileSpec {
 
   const skills = s.skills.filter(Boolean).flatMap(splitList);
 
-  // Experience keeps its own line breaks — each line is a role, and flattening them into a
-  // paragraph would blur employers together.
-  const experience = s.experience
-    .filter(Boolean)
-    .map(clean)
-    .filter(Boolean)
-    .map((line) => {
-      const [head, ...rest] = line.split(/\s+[—–]\s+/);
-      return rest.length
-        ? { heading: clean(head), body: clean(rest.join(' — ')) }
-        : { heading: '', body: line };
-    });
+  const experience = parseExperience(s.experience);
 
   return {
     name: intake.name?.trim() || guessedName,
@@ -221,7 +299,8 @@ export function profileFromResume(intake: ResumeIntake): ProfileSpec {
     // No photo. A résumé rarely carries one and we never invent an image of a person.
     photoUrl: null,
     bio,
-    location: intake.location?.trim() || null,
+    // What the person typed wins over what we read off a contact line — they know where they are.
+    location: intake.location?.trim() || detectedLocation,
     links: collectLinks(text, intake.links),
     ...(skills.length ? { skills: skills.slice(0, 40) } : {}),
     ...(experience.length ? { experience: experience.slice(0, 20) } : {}),

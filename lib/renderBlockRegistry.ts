@@ -132,6 +132,7 @@ export const DYNAMIC_RENDERERS: Record<
   service_areas: () => import('@/components/admin/templates/render-blocks/service-areas'),
   header: () => import('@/components/admin/templates/render-blocks/header'),
   faq: () => import('@/components/admin/templates/render-blocks/faq'),
+  agreement: () => import('@/components/admin/templates/render-blocks/agreement'),
   contact_form: () => import('@/components/admin/templates/render-blocks/contact-form'),
   home_valuation: () => import('@/components/admin/templates/render-blocks/home-valuation'),
   listing_alert: () => import('@/components/admin/templates/render-blocks/listing-alert'),

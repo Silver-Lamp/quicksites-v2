@@ -21,22 +21,12 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, clientIp } from '@/lib/rateLimit';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import { buildResumeSite } from '@/lib/rebuild/buildResumeSite';
-import type { ProfileLink } from '@/lib/rebuild/importProfile';
+import { resumeIntakeFromBody, MAX_RESUME_CHARS } from '@/lib/rebuild/resumeIntakeFromBody';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MAX_RESUME_CHARS = 40_000; // a long CV is ~10k; 40k is generous and bounds the parse
-const MAX_PARAGRAPH_CHARS = 2_000;
 const uuid = () => globalThis.crypto.randomUUID();
-
-function sanitizeLinks(raw: any): ProfileLink[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((l: any) => ({ label: String(l?.label ?? '').trim(), href: String(l?.href ?? '').trim() }))
-    .filter((l) => l.href && /^(https?:\/\/|mailto:|tel:)/i.test(l.href))
-    .slice(0, 12);
-}
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({} as any));
@@ -57,8 +47,21 @@ export async function POST(req: Request) {
     3600,
   ).catch(() => ({ ok: true } as any));
   if (!limited?.ok) {
+    // ⚠️ A SHARED IP IS NOT AN ATTACKER, AND THIS IS THE CASE THAT WILL ACTUALLY HAPPEN. The cap
+    // is per-IP and a library, school or co-working space NATs everyone behind one address — so a
+    // room of a dozen people doing this together trips it, and the eleventh person sees a wall in
+    // front of the librarian whose trust is the entire reason we are in the room.
+    //
+    // The cap stays (inserted rows are the thing worth limiting), but the person is not sent away
+    // empty-handed: /api/verbatim/export creates nothing, so it is always available, and the file
+    // is the part that was theirs to keep anyway.
     return NextResponse.json(
-      { error: 'That’s a lot of drafts from one place. Try again in a bit.', code: 'rate_limited' },
+      {
+        error:
+          'A lot of sites have been started from this connection — which happens when everyone is on the same wifi. You can still download your page below and make a site later.',
+        code: 'rate_limited',
+        exportAvailable: true,
+      },
       { status: 429 },
     );
   }
@@ -70,15 +73,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Sign in to build a site.', code: 'needs_signup' }, { status: 401 });
   }
 
-  const { profile, template, gaps } = buildResumeSite({
-    resumeText,
-    sinceParagraph: String(body?.sinceParagraph ?? '').slice(0, MAX_PARAGRAPH_CHARS),
-    name: body?.name ? String(body.name).slice(0, 120) : undefined,
-    headline: body?.headline ? String(body.headline).slice(0, 160) : undefined,
-    location: body?.location ? String(body.location).slice(0, 120) : undefined,
-    email: body?.email ? String(body.email).slice(0, 160) : undefined,
-    links: sanitizeLinks(body?.links),
-  });
+  // ⚠️ Shared with /api/verbatim/export — same body, same parse, same caps. Two front doors onto
+  // one parser that read the body separately would eventually disagree about the same paste.
+  const { profile, template, gaps } = buildResumeSite(resumeIntakeFromBody(body));
 
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

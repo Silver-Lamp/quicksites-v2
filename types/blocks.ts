@@ -30,7 +30,8 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   hero: 'layout',
   services: 'content',
   faq: 'interactive',
-  agreement: 'interactive', // terms a visitor accepts — see admin/lib/zod/blockSchema.ts
+  agreement: 'interactive',
+  file_downloads: 'content', // downloadable copies of what the page is about
   testimonial: 'interactive',
   footer: 'meta',
   service_areas: 'meta',

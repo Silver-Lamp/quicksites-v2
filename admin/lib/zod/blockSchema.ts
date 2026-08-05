@@ -1924,6 +1924,35 @@ export const blockContentSchemaMap = {
       confirmation: z.string().optional(),
     }),
   },
+
+  // Downloadable copies of a document the page is about — a résumé in PDF, Word and Markdown.
+  //
+  // ⚠️ THE FILES ARE THE POINT, NOT THE PAGE. Someone reading an About-Me page to decide whether
+  // to hire the person wants a file they can keep, forward, and open in ten years — the same
+  // artefact-not-dependency rule the Verbatim export is built on. A page that only renders the
+  // content, with no way to take it away, quietly makes the visitor dependent on us staying up.
+  file_downloads: {
+    label: 'Downloads',
+    icon: '⬇️',
+    schema: z.object({
+      title: z.string().optional(),
+      note: z.string().optional(),
+      files: z
+        .array(
+          z.object({
+            label: z.string().min(1),
+            href: z.string().min(1),
+            // Free text, shown as a chip: "PDF", "Word", "Markdown". Not an enum — the set of
+            // formats a person wants to offer is not ours to close.
+            format: z.string().optional(),
+            // Measured at authoring time, never guessed — an optional field that is wrong is
+            // worse than one that is absent.
+            size: z.string().optional(),
+          }),
+        )
+        .default([]),
+    }),
+  },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
 /* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ───────────── */

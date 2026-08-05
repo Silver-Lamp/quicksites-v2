@@ -133,6 +133,7 @@ export const DYNAMIC_RENDERERS: Record<
   header: () => import('@/components/admin/templates/render-blocks/header'),
   faq: () => import('@/components/admin/templates/render-blocks/faq'),
   agreement: () => import('@/components/admin/templates/render-blocks/agreement'),
+  file_downloads: () => import('@/components/admin/templates/render-blocks/file-downloads'),
   contact_form: () => import('@/components/admin/templates/render-blocks/contact-form'),
   home_valuation: () => import('@/components/admin/templates/render-blocks/home-valuation'),
   listing_alert: () => import('@/components/admin/templates/render-blocks/listing-alert'),

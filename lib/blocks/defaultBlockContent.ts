@@ -116,6 +116,11 @@ export const DEFAULT_BLOCK_CONTENT = {
 
   /* ───────── faq ───────── */
 
+  file_downloads: {
+    title: 'Download',
+    note: '',
+    files: [],
+  },
   agreement: {
     title: 'Before you book',
     body:

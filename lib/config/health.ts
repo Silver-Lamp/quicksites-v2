@@ -114,6 +114,16 @@ export const CONFIG_GATES: ConfigGate[] = [
       'Outreach texts and claim-verification codes are not sent. Flows that depend on an SMS code cannot complete.',
   },
   {
+    key: 'postcard_mail',
+    label: 'Physical mail (Lob postcards)',
+    // Only meaningful when someone has switched it on — the pipeline is off by default because
+    // every piece costs real money.
+    enabledBy: 'POSTCARD_MAIL_ENABLED',
+    requires: ['LOB_API_KEY', 'LOB_FROM_NAME', 'LOB_FROM_LINE1', 'LOB_FROM_CITY', 'LOB_FROM_STATE', 'LOB_FROM_ZIP'],
+    breaks:
+      'Postcards are not mailed. The send route fails closed with a 501, so nothing is charged and nothing is printed — but an operator who thinks a batch went out will be wrong, and prospects are marked as contacted by a separate code path.',
+  },
+  {
     key: 'cron',
     label: 'Scheduled jobs',
     requires: ['CRON_SECRET'],

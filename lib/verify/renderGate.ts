@@ -57,12 +57,27 @@ const OWNER_FACING = [
   'Invalid block removed',
   'No services configured',
   'No social links yet',
-  'undefined',
-  'NaN',
   '[object Object]',
   'Lorem ipsum',
-  'TODO',
 ];
+
+/**
+ * Needles that are CASE-SENSITIVE TOKENS, not prose — matched with word boundaries and without
+ * lowercasing.
+ *
+ * ⚠️ THIS SPLIT EXISTS BECAUSE THE GATE FAILED A CORRECT PAGE. `norm()` lowercases before
+ * comparing, which is right for prose like "No services configured" and catastrophic for `NaN`:
+ * lowercased it becomes `nan`, a substring of **multi-tenant**, financial, maintenance,
+ * governance, covenant, tenancy. It fired on a published About-Me page whose only crime was
+ * describing a multi-tenant platform — and "multi-tenant" is a word this codebase uses constantly.
+ *
+ * Same trap for `undefined` and `TODO`: "undefined" appears inside ordinary sentences about
+ * undefined behaviour, and `todo` is a substring of nothing useful but lowercases into prose all
+ * the same. A verifier's false positives are worse than its blind spots — a check that fires on
+ * correct work trains you to skip its output, which is the silence-looks-like-success failure it
+ * was built to prevent (CUSTOM_SITES §7c, second instance).
+ */
+const OWNER_FACING_TOKENS = ['NaN', 'undefined', 'TODO'];
 
 function norm(s: string): string {
   return s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -154,6 +169,12 @@ export function runRules(page: RenderedPage, rules: Rule[]): Finding[] {
         for (const node of page.nodes) {
           for (const n of needles) {
             if (norm(node.text).includes(norm(n))) hits.push(`"${n}" at y=${node.y} (${node.text.slice(0, 60)})`);
+          }
+          // Case-sensitive, word-bounded. See OWNER_FACING_TOKENS.
+          for (const tok of OWNER_FACING_TOKENS) {
+            if (new RegExp(`\\b${tok}\\b`).test(node.text)) {
+              hits.push(`"${tok}" at y=${node.y} (${node.text.slice(0, 60)})`);
+            }
           }
         }
         // Raw JSON reaching a visitor: a leaf text node that parses as an object/array.

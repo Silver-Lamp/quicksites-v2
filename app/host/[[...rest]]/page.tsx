@@ -297,6 +297,8 @@ export default async function HostSitePage({
         templateName={site.template_name ?? site.slug ?? String(site.id)}
         colorMode={colorMode}
         initialData={site as any}
+        // Custom-domain public render — same visitor's-browser case as /sites/[slug].
+        readOnly
       >
         <SiteRenderer
           site={site as any}

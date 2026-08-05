@@ -33,6 +33,39 @@ function pickContent(block?: Block, override?: Block['content']): StoryContent {
   return { title: c?.title ?? p?.title, sections };
 }
 
+/**
+ * Body typography for a story section.
+ *
+ * ⚠️ `whitespace-pre-line` ON ONE <p> IS NOT TYPOGRAPHY, IT IS A LINE-BREAK SETTING. It preserves
+ * newlines and nothing else — no space between items, no measure, no rhythm. A body of eight
+ * achievements rendered that way is a grey wall the eye slides off, and it looked fine in review
+ * because every WORD was correct. Seen on a published résumé at full width: eleven lines running
+ * ~150 characters each, indistinguishable from one another.
+ *
+ * So: a body containing newlines is a LIST of things and gets spacing between them; a body without
+ * newlines is prose and is left exactly as it was. The distinction is the author's own line breaks,
+ * which is the only signal available and the one they actually meant.
+ *
+ * ⚠️ AND THE MEASURE IS CAPPED. Line length is the single biggest lever on readability — past
+ * roughly 75 characters the eye loses the line's start on the return sweep. The container is
+ * max-w-6xl for images; the text does not want to be.
+ */
+function StoryBody({ text, className }: { text: string; className: string }) {
+  const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+
+  if (lines.length < 2) {
+    return <p className={`max-w-[68ch] text-base leading-relaxed ${className}`}>{text}</p>;
+  }
+
+  return (
+    <div className={`max-w-[68ch] space-y-2.5 text-base leading-relaxed ${className}`}>
+      {lines.map((line, i) => (
+        <p key={i}>{line}</p>
+      ))}
+    </div>
+  );
+}
+
 export default function StoryBlock({
   block,
   colorMode = 'dark',
@@ -80,7 +113,7 @@ export default function StoryBlock({
               )}
               <div className={`space-y-4 ${hasImage && reversed ? 'md:order-1' : 'md:order-2'}`}>
                 {s.heading && <h3 className={`text-2xl font-semibold ${headingColor}`}>{s.heading}</h3>}
-                {s.body && <p className={`whitespace-pre-line text-base leading-relaxed ${bodyColor}`}>{s.body}</p>}
+                {s.body && <StoryBody text={s.body} className={bodyColor} />}
                 {s.cta_text && s.cta_link && (
                   <Link
                     href={previewOnly ? '#' : s.cta_link}

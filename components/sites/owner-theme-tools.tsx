@@ -22,6 +22,7 @@
 // published site should be able to enter by accident.
 
 import * as React from 'react';
+import { CANONICAL_ORIGIN } from '@/lib/site/canonicalOrigin';
 
 type ThemePreview = { accent: string; backdrop: string; label: string };
 
@@ -67,10 +68,13 @@ function hexToHsl(hex: string): string {
 export default function OwnerThemeTools({
   enabled,
   slug,
+  host,
 }: {
   /** Computed server-side. See the header: this is the whole guard. */
   enabled: boolean;
   slug: string;
+  /** Custom domain, if this site has one — the editor resolves by slug + host. */
+  host?: string | null;
 }) {
   const [anchor, setAnchor] = React.useState<DOMRect | null>(null);
   const [hovering, setHovering] = React.useState(false);
@@ -172,12 +176,35 @@ export default function OwnerThemeTools({
     }
   };
 
+  /**
+   * ⚠️ THE SAME TARGET AS THE BOTTOM-LEFT PILL, BUILT THE SAME WAY. Two edit affordances that
+   * resolve differently is how one of them silently rots. It carries no template id and lands on
+   * /admin/templates/resolve, which requires an admin session before it resolves anything — so
+   * the worst case for anyone who reached this via ?edit=1 is a login screen.
+   */
+  const editHref =
+    `${CANONICAL_ORIGIN}/admin/templates/resolve` +
+    `?slug=${encodeURIComponent(slug)}` +
+    (host ? `&host=${encodeURIComponent(host)}` : '');
+
   return (
     <div
+      className="flex items-center gap-1.5"
       style={{ position: 'fixed', top: anchor.top + anchor.height / 2 - 14, left: anchor.right + 8, zIndex: 60 }}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
+      {/* Edit first: it is the thing an owner hovering their own site name almost always wants,
+          and a theme shuffle is the occasional one. Ordering by frequency, not by novelty. */}
+      <a
+        href={editHref}
+        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/40 bg-card/90 px-2.5 py-1 text-xs font-medium text-emerald-300 shadow-sm backdrop-blur transition hover:border-emerald-400"
+        title="Open this site in the QuickSites editor"
+      >
+        <span aria-hidden>✎</span>
+        Edit
+      </a>
+
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

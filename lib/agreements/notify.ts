@@ -36,6 +36,30 @@ ${bodyHtml}
 }
 
 /**
+ * Turn whatever the mailer handed back into something a human can act on.
+ *
+ * ⚠️ `String(err)` ON A PROVIDER ERROR OBJECT PRODUCES "[object Object]", AND THAT IS EXACTLY WHAT
+ * THIS COLUMN GOT ON ITS FIRST REAL RUN. The whole point of notify_error is that a failed notice
+ * on a legal record is visible and diagnosable; an error string that names no cause is a louder
+ * version of the silence it replaced. The real message was "API key is invalid" — one glance
+ * would have saved a probe.
+ */
+export function describeSendError(err: unknown): string {
+  if (!err) return 'send failed';
+  if (typeof err === 'string') return err;
+  const e = err as any;
+  const parts = [e.name, e.message ?? e.error, e.statusCode ? `HTTP ${e.statusCode}` : null]
+    .filter(Boolean)
+    .map(String);
+  if (parts.length) return parts.join(': ');
+  try {
+    return JSON.stringify(err).slice(0, 300);
+  } catch {
+    return 'send failed (unserialisable error)';
+  }
+}
+
+/**
  * Was this actually delivered?
  *
  * ⚠️ THE DEV FALLBACK IS NOT A DELIVERY, AND TREATING IT AS ONE IS THE EXACT FAILURE THIS MODULE
@@ -103,7 +127,7 @@ export async function notifySigned(
     errors.push(
       (toSigner as any).id === 'dev'
         ? 'signer: no mailer configured — nothing was sent'
-        : `signer: ${String((toSigner as any).error ?? 'send failed')}`,
+        : `signer: ${describeSendError((toSigner as any).error)}`,
     );
   }
 
@@ -128,7 +152,7 @@ export async function notifySigned(
       errors.push(
         (toParty as any).id === 'dev'
           ? 'party: no mailer configured — nothing was sent'
-          : `party: ${String((toParty as any).error ?? 'send failed')}`,
+          : `party: ${describeSendError((toParty as any).error)}`,
       );
     }
   } else {

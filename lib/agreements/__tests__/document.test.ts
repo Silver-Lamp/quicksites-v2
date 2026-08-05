@@ -150,3 +150,24 @@ describe('shortHash', () => {
     expect(shortHash(h)).toBe(h.slice(0, 8).toUpperCase());
   });
 });
+
+describe('isDelivered — the dev fallback is not a delivery', () => {
+  // This exists because the bug shipped for about ten minutes: the mailer's no-key fallback
+  // returns { ok: true, id: 'dev' }, so the first dry run of the notification backfill stamped
+  // notified_at on a real signed agreement and reported "sent." — asserting that two people held
+  // a copy of a contract neither had been sent. A guard against silent failure that silently
+  // records success is worse than no guard.
+  const { isDelivered } = require('../notify');
+
+  it('does not count the no-mailer fallback as sent', () => {
+    expect(isDelivered({ ok: true, id: 'dev' })).toBe(false);
+  });
+
+  it('counts a real provider send', () => {
+    expect(isDelivered({ ok: true, id: 're_abc123' })).toBe(true);
+  });
+
+  it('does not count a failure', () => {
+    expect(isDelivered({ ok: false })).toBe(false);
+  });
+});

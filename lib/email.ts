@@ -10,9 +10,16 @@ type SendEmailParams = {
   html: string;
   from?: string;                     // optional override
   headers?: Record<string, string>;  // optional provider headers
+  /**
+   * File attachments. Added for signed agreements: the signer's copy of a contract has to arrive
+   * IN their inbox as a file they hold, not as a link back to us — a signing product whose
+   * evidence lives only on the vendor's server asks the weaker party to trust the stronger one
+   * about what was agreed (crosstalk/contracts/agreements-record.md §2.6).
+   */
+  attachments?: Array<{ filename: string; content: string | Buffer }>;
 };
 
-export async function sendEmail({ to, subject, html, from, headers }: SendEmailParams) {
+export async function sendEmail({ to, subject, html, from, headers, attachments }: SendEmailParams) {
   const sender =
     from ??
     process.env.EMAIL_FROM ??
@@ -20,7 +27,8 @@ export async function sendEmail({ to, subject, html, from, headers }: SendEmailP
 
   if (!RESEND) {
     // Dev fallback: don't send, just log
-    console.log('\n[dev-email]\nFROM:', sender, '\nTO:', to, '\nSUBJECT:', subject, '\n');
+    console.log('\n[dev-email]\nFROM:', sender, '\nTO:', to, '\nSUBJECT:', subject,
+      attachments?.length ? `\nATTACHMENTS: ${attachments.map((a) => a.filename).join(', ')}` : '', '\n');
     return { ok: true, id: 'dev' as const };
   }
 
@@ -31,6 +39,14 @@ export async function sendEmail({ to, subject, html, from, headers }: SendEmailP
     html,
     text: htmlToText(html),
     headers,
+    ...(attachments?.length
+      ? {
+          attachments: attachments.map((a) => ({
+            filename: a.filename,
+            content: typeof a.content === 'string' ? Buffer.from(a.content, 'utf8') : a.content,
+          })),
+        }
+      : {}),
   });
 
   if (error) return { ok: false as const, error };

@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { verifySignToken } from '@/lib/agreements/signToken';
 import { recordSignature, getSignature, getAgreement } from '@/lib/agreements/store';
 import { agreementCertificateHtml } from '@/lib/agreements/certificate';
+import { notifySigned } from '@/lib/agreements/notify';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 import { clientIp } from '@/lib/rateLimit';
 
@@ -49,10 +50,20 @@ export async function POST(req: Request) {
     );
   }
 
+  // ⚠️ AWAITED, BUT ITS FAILURE CANNOT FAIL THE SIGNATURE. The record is already written; a
+  // bounced email must not undo an agreement someone signed. Awaited rather than fired and
+  // forgotten because a serverless function can be frozen the moment it responds, which would
+  // turn "we'll send it in the background" into "sometimes nobody is told" — and the outcome is
+  // written to the row either way, so a silent failure is visible instead of invisible.
+  const notified = await notifySigned(result.agreement, result.signature);
+
   return NextResponse.json({
     ok: true,
     signedAt: result.signature.signed_at,
     documentSha256: result.signature.document_sha256,
+    // Surfaced so the page can tell the signer to keep the download rather than wait for an
+    // email that is not coming.
+    emailed: notified.ok,
   });
 }
 

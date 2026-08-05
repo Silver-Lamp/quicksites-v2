@@ -41,12 +41,30 @@ A librarian's existing job-help hour, with one tool added:
    in the browser and only the text is posted.
 2. Verbatim parses it and shows **what it read** and **what the résumé did not yield**. It invents
    nothing: no summary written for them, no job title inferred, no photograph, ever.
-3. They correct anything wrong, then **download their résumé — as PDF, Word (.docx) or Markdown**,
+3. Before anything is published, **the finished page is read once more by a model** looking for
+   the defects a person misses on their own document — words mangled by PDF extraction, leftover
+   placeholder text, a name spelled two ways. It produces a list; it changes nothing. See §2c.
+4. They correct anything wrong, then **download their résumé — as PDF, Word (.docx) or Markdown**,
    plus the one-page HTML profile. Theirs, offline, printable, no account.
-4. *Optionally*, and only if they want it, they publish it as a page with a link they can send —
+5. *Optionally*, and only if they want it, they publish it as a page with a link they can send —
    with the same three files downloadable from that page (see §2b).
 
-Step 3 is the completion. Step 4 is the upsell, and it is allowed to not happen.
+Step 4 is the completion. Step 5 is the upsell, and it is allowed to not happen.
+
+## 2c. The proofread, and why it is safe to mention to a librarian
+
+A librarian's first question about an AI résumé tool is the right one: *does it write things for
+people?* The answer stays no, and this layer is the sharpest illustration of it.
+
+Before a page goes live a model **reads** the finished text and flags: a real word corrupted by
+PDF extraction, leftover scaffolding, an internal inconsistency. It hands back a list with the
+exact quote. **It cannot edit the page.** Every other AI résumé product on the market offers to
+rewrite someone's history; this one is only permitted to point at it.
+
+Say it that way round in the room. "We check it and tell you what we found" is true and useful.
+"AI-checked" or "error-free" would be neither — the checker missed a spaced variant of the very
+corruption it was built for during its own test, and a claim of correctness is exactly the kind of
+thing a library should not be lending its name to.
 
 ### ⚠️ PDF and Word matter more than the webpage, and it took building them to see it
 
@@ -154,6 +172,11 @@ anything for anyone.** It only recognises and rearranges the text a person suppl
 résumé doesn't state a job title or a summary, the page says so and leaves the space empty rather
 than inventing something plausible. A résumé is a factual claim about someone's employment, and a
 tool that tidies a job history invents one.
+
+Before anyone publishes a page, we run one more check over the finished version — looking for
+words that got mangled when their PDF was read, leftover placeholder text, or a name spelled two
+different ways. It produces a list of things to look at. It does not change anyone's words; it is
+not allowed to. A second pair of eyes, not a guarantee.
 
 **The commercial part, up front:** I run QuickSites, which builds and hosts websites. If someone
 wants their profile online as a link they can send — like https://sandon.quicksites.ai, which is my

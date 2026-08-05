@@ -22,6 +22,7 @@ import DemandCapture from '@/components/sites/demand-capture';
 import CompetitionBanner from '@/components/sites/competition-banner';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import AdminEditPill from '@/components/sites/admin-edit-pill';
+import OwnerThemeTools from '@/components/sites/owner-theme-tools';
 import { getSiteCompetition } from '@/lib/outreach/competitionForSite';
 import { MENU_DEMAND_CAPTURE_ENABLED, MENU_DRAFT_INDEXABLE } from '@/lib/flags/menuDemand';
 import { getDemandCount } from '@/lib/menu/demand';
@@ -538,6 +539,14 @@ export default async function SitePreviewPage({
         host={siteRow.domain ?? null}
         admin={admin}
         editParam={sp.edit === '1' || sp.edit === 'true'}
+      />
+      {/* Owner-only theme controls on the wordmark. Same two triggers as the pill above and for
+          the same reason — a session on the canonical host is not sent to this one, so `admin`
+          is the automatic case and ?edit=1 is the universal one. A visitor gets neither, and the
+          component renders nothing at all without one. */}
+      <OwnerThemeTools
+        slug={slug}
+        enabled={admin || sp.edit === '1' || sp.edit === 'true'}
       />
     </TemplateEditorProvider>
   );

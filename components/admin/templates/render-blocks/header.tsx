@@ -230,6 +230,12 @@ export default function HeaderRender({
                 href={homeHref}
                 aria-label="Home"
                 prefetch={false}
+                // ⚠️ ANCHOR FOR OWNER-ONLY TOOLS, NOT A STYLE HOOK. components/sites/owner-theme-tools
+                // positions a gear beside this element for a signed-in owner. It is a data
+                // attribute rather than a class so nothing can "clean it up" as unused CSS, and it
+                // is inert for every visitor — the attribute renders for everyone, the tools render
+                // for nobody unless the owner signal is present.
+                data-qs-wordmark=""
                 className="text-lg font-semibold tracking-tight text-foreground hover:opacity-80"
               >
                 {wordmark}

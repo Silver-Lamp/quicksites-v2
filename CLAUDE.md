@@ -80,7 +80,13 @@ middleware.ts        # host → org/site routing, ref-cookie capture
 admin/               # NOTE: a second top-level dir (legacy/parallel admin tooling)
 ```
 
-> The README and `ROUTER_STRATEGY.md` at the root are **stale** — they describe a Pages Router that was already migrated to App Router. `_pages-legacy/`, `_deprecated__domains/`, `_deprecating_sites/` are corpses pending cleanup. Trust this doc and `docs/ARCHITECTURE.md` over them.
+> The README and `ROUTER_STRATEGY.md` at the root are **stale** — they describe a Pages Router that was already migrated to App Router. Trust this doc and `docs/ARCHITECTURE.md` over them.
+> *(Falsifying condition: `ROUTER_STRATEGY.md` stops mentioning the Pages Router, or the README is rewritten. Verified 2026-08-05 — still stale, 2 Pages-Router mentions.)*
+>
+> ⚠️ **`_pages-legacy/`, `_deprecated__domains/` and `_deprecating_sites/` no longer exist.** This
+> line said they were "corpses pending cleanup" long after they were deleted — checked 2026-08-05,
+> all three absent. Left here as the example, because a note describing debt that is already gone is
+> the cheap end of the same failure as a note describing a CI break that was already fixed.
 
 ## 5. The two core flows (read these to understand 80% of the system)
 
@@ -234,4 +240,16 @@ work. (Operational authority, not equity split, governs what a session may act o
   4. **Label the inference that supports your conclusion.** Every instance ran toward "and therefore my point stands," never toward "and therefore I'm wrong." That asymmetry is **locally rational, not lazy** — checking an inference that would undercut you has a clear payoff, while checking one that supports you either teaches you nothing or costs you the point. Incentives produce it, so it needs a structural habit rather than more diligence.
 
   ⚠️ It does not work retroactively, and the tempting version of a wrong claim is usually the one that makes the point more sharply. When a check would change what you'd report, run it *before* reporting — including against the live surface, not just the DB row (the renderer serves the published snapshot, not `templates.data`).
+- **⚠️ An "ignore X" note must name the condition that would make it false.** A standing
+  instruction not to look is the most expensive thing this file can contain, because ignoring it
+  becomes the *diligent* act — you are following the runbook. On 2026-08-05 a memory reading
+  *"CI runs Node 18, verify locally, not from CI"* outlived its condition by weeks: CI had been
+  fixed, `build-and-test` was reporting a **real** failure (an undeclared `AGREEMENT_TOKEN_SECRET`),
+  and five PRs were merged straight through it with `--admin`. It was found by accident.
+  A *remembered* "that's always red" still costs a flicker of judgement each time; a *written* one
+  removes even that, and nothing re-checks a document against the world.
+  So: state the falsifying condition, or you are not recording a fact — you are installing a blind
+  spot with a citation on it. (Convergent with PorchHearth's §12; crosstalk 2026-08-05.)
+  Audited the same day: the three "corpse" directories above were already gone; the purged-files
+  list in §8 is still accurate; `ROUTER_STRATEGY.md` is still stale.
 - **Keep docs + public surfaces in sync in the same commit** (a mesh-wide rule — HJ + DeckSketch codify it too): when you change a feature, update its doc/this file/the relevant `crosstalk/contracts/*` in the *same* PR. A stale doc is worse than a missing one. When you notice a doc contradicting the code, fix or delete it rather than working around it.

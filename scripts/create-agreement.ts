@@ -20,6 +20,7 @@ import { readFileSync } from 'node:fs';
 import { createAgreement } from '../lib/agreements/store';
 import { mintSignToken } from '../lib/agreements/signToken';
 import { documentHash, shortHash } from '../lib/agreements/document';
+import { markdownToPlainText, looksLikeMarkdown } from '../lib/agreements/plainText';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -37,7 +38,19 @@ async function main() {
     );
   }
 
-  const bodyMd = readFileSync(file, 'utf8');
+  const source = readFileSync(file, 'utf8');
+
+  // ⚠️ CONVERTED AT AUTHORING TIME, SO WHAT IS STORED IS WHAT IS SHOWN IS WHAT IS HASHED. The
+  // signing page renders plain paragraphs on purpose (no display-time transform, no gap between
+  // the hashed text and the read text), which means markdown source would reach the signer as
+  // syntax. The first real agreement did exactly that — a contributor's contract rendered live as
+  // `# Volunteer Contributor Agreement` and `**Between:**`, caught only by screenshotting the
+  // production page. Converting here keeps the property and fixes the input.
+  const bodyMd = looksLikeMarkdown(source) ? markdownToPlainText(source) : source;
+  if (bodyMd !== source) {
+    console.log('\n  note: markdown syntax was converted to plain text before storing.');
+    console.log('        the signer sees exactly the text stored — read it back below.');
+  }
 
   const agreement = await createAgreement({
     title,

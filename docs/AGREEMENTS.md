@@ -99,6 +99,23 @@ Two environment gotchas, both of which cost a cycle here:
 record attributed to a real person. Smoke-test with an obviously fictional signer on an
 `example.invalid` address, and delete the row afterwards.
 
+### ⚠️ Markdown is converted at AUTHORING time, never at display time
+
+The signing page renders the stored text as plain paragraphs on purpose: no display-time
+transform means no gap between what was hashed and what was read. So markdown source would reach
+the signer **as syntax** — and it did. The first real agreement rendered live as
+`# Volunteer Contributor Agreement`, `**Between:**` and `### 1. Nature of the relationship`,
+because the repo's own template is a markdown file (and the column is called `body_md`).
+
+`markdownToPlainText` now runs in `create-agreement.ts` *before storing*, so what is stored **is**
+what is shown **is** what is hashed. It strips syntax and never words — the tests assert a
+blockquote's text survives (our "not legal advice" disclaimer is one), that a link keeps its href,
+and that no word is dropped. When in doubt it leaves characters alone: an unconverted document
+reads slightly oddly, a converted one that lost a clause is a different agreement.
+
+**Nothing caught this except a screenshot of the production page.** Not `tsc`, not the tests, not
+the stored text — which was correct. Look at the page before sending the link.
+
 ## 5. The "Agreements block" — a different product, and now built
 
 The natural next surface is a block a site owner drops onto a page. It is worth being precise

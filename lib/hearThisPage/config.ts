@@ -105,6 +105,13 @@ const EXCLUDED_PREFIXES = [
   '/actions',
   '/jobs', // SecondSet service-job portal has its own "Hear this report" player
   '/service-jobs',
+  // ⚠️ A CONTRACT PAGE, WHERE THE ONE THING THAT MATTERS IS THAT SOMEONE READS THE WORDS. The
+  // launcher is fixed bottom-left and sat on top of the agreement text — found by screenshotting
+  // the live page a real contributor was about to be sent to. Two reasons it must not be here,
+  // and the second is the load-bearing one: it obscures the document, and a house narrator
+  // offering to summarise ("the short version") a legal agreement someone is about to sign is
+  // the wrong thing to offer at that moment, however good the summary is.
+  '/sign',
 ];
 
 /** Which configurable surface a pathname belongs to. */

@@ -37,7 +37,16 @@ export type ResumeIntake = {
 /** Headings people actually write, mapped to what we do with the block beneath them. */
 const SECTION_PATTERNS: Array<{ key: 'summary' | 'skills' | 'experience'; re: RegExp }> = [
   { key: 'summary', re: /^(summary|profile|about|objective|professional summary)\b/i },
-  { key: 'skills', re: /^(key skills|skills|technologies|tech stack|expertise|competencies)\b/i },
+  // ⚠️ THE QUALIFIER PREFIX IS LOAD-BEARING. This was `^(key skills|skills|…)`, anchored — so
+  // "TECHNICAL SKILLS", which is one of the commonest headings on an engineering CV, did not
+  // match and the entire section was dropped. The parser then correctly reported `skills` as a
+  // gap, so it never lied; it was simply blind to a heading most of its users write. Found by
+  // running a real senior engineer's résumé through it and getting 0 skills from a full page of
+  // them.
+  {
+    key: 'skills',
+    re: /^((technical|core|key|professional|relevant|primary|principal|other)\s+)?(skills|technologies|technical proficiencies|tech stack|expertise|competencies)\b/i,
+  },
   {
     key: 'experience',
     re: /^(experience|recent experience|work experience|employment|featured|roles|history|career)\b/i,
@@ -45,7 +54,33 @@ const SECTION_PATTERNS: Array<{ key: 'summary' | 'skills' | 'experience'; re: Re
 ];
 
 const EMAIL_RX = /[\w.+-]+@[\w-]+\.[\w.]+/;
+const EMAIL_RX_G = /[\w.+-]+@[\w-]+\.[\w.]+/g;
 const URL_RX = /\b((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s,;]*)?)/gi;
+
+/**
+ * ⚠️ A BARE DOMAIN NEEDS A REAL TLD, BECAUSE A CV IS FULL OF THINGS SHAPED LIKE ONE.
+ *
+ * `URL_RX` accepts any `word.word` whose tail is 2+ letters, which is exactly the shape of
+ * **Next.js**, **Node.js**, **React.js** and **ASP.NET**. Running a real engineer's résumé through
+ * this produced clickable links to `https://Next.js` and `https://Node.js` on a page built to be
+ * sent to hiring managers — broken links, labelled with the technologies the person is best at.
+ *
+ * The allowlist is deliberately short and boring. A TLD missing from it means a real link is
+ * dropped, which is recoverable — the person can add it — whereas a false one ships a broken link
+ * under their name. Given the choice, drop it.
+ */
+const KNOWN_TLDS = new Set([
+  'com', 'org', 'net', 'edu', 'gov', 'io', 'dev', 'ai', 'co', 'me', 'app', 'xyz', 'info', 'biz',
+  'us', 'uk', 'ca', 'au', 'de', 'fr', 'nl', 'se', 'no', 'jp', 'in', 'eu', 'tech', 'site', 'page',
+  'blog', 'design', 'studio', 'agency', 'digital', 'cloud', 'sh', 'gg', 'to', 'ly', 'so', 'is',
+]);
+
+function looksLikeRealDomain(bare: string): boolean {
+  const host = bare.split('/')[0];
+  const parts = host.split('.');
+  if (parts.length < 2) return false;
+  return KNOWN_TLDS.has(parts[parts.length - 1].toLowerCase());
+}
 
 const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
 const isBlank = (s: string) => !s.trim();
@@ -67,10 +102,36 @@ const BULLET_PREFIX = /^(?:[-–—*•·◦▪‣]|o|[A-Za-z]\.|\d+[.)]|[ivxIVX
 function splitList(line: string): string[] {
   // Strip a leading category label: real résumés write "Mobile: React Native · Expo", and
   // without this the first skill in every row carries the category glued to it.
-  const body = line.replace(/^[A-Za-z][\w &/+-]{0,24}:\s*/, '');
-  return body
-    .split(/[·|•,;]|\s+\/\s+/)
+  // ⚠️ 40, not 24. Real category labels are longer than you expect — "State Management & Data
+  // Fetching:" is 32 characters, and at the old cap it survived the strip and shipped as a skill
+  // chip reading "State Management & Data Fetching: Zustand".
+  const body = line.replace(/^[A-Za-z][\w &/+-]{0,40}:\s*/, '');
+
+  // ⚠️ DO NOT SPLIT INSIDE PARENTHESES. Engineers write "JavaScript (React, Next.js, Node.js)",
+  // and a naive comma split turns one skill into the chips "JavaScript (React" … "Node.js)" —
+  // rendered on the page as literal unbalanced brackets. Depth-tracking keeps the qualifier
+  // attached to the thing it qualifies, which is also how the person meant it to read.
+  const parts: string[] = [];
+  let buf = '';
+  let depth = 0;
+  for (const ch of body) {
+    if (ch === '(' || ch === '[') depth++;
+    else if (ch === ')' || ch === ']') depth = Math.max(0, depth - 1);
+    if (depth === 0 && /[·|•,;]/.test(ch)) {
+      parts.push(buf);
+      buf = '';
+    } else {
+      buf += ch;
+    }
+  }
+  parts.push(buf);
+
+  return parts
+    .flatMap((s) => (s.includes('(') ? [s] : s.split(/\s+\/\s+/))) // " / " splits only outside a qualifier
     .map((s) => clean(s).replace(BULLET_PREFIX, ''))
+    // A wrapped line can hand us a fragment whose opening bracket was on the previous line
+    // ("…, CodePipeline)"). Depth-tracking is per line and cannot see it, so drop the orphan.
+    .map((s) => (s.includes('(') ? s : s.replace(/\)+$/, '').trim()))
     .filter((s) => s.length > 1 && s.length < 60);
 }
 
@@ -174,10 +235,19 @@ function sectionise(text: string): Record<'summary' | 'skills' | 'experience', s
 function collectLinks(text: string, provided: ProfileLink[] = []): ProfileLink[] {
   const seen = new Set(provided.map((l) => l.href.replace(/^https?:\/\//, '').replace(/\/$/, '')));
   const links: ProfileLink[] = [...provided];
-  for (const m of text.matchAll(URL_RX)) {
+
+  // ⚠️ STRIP EMAILS BEFORE SCANNING, NOT WHILE SCANNING. The per-match `EMAIL_RX.test(raw)` guard
+  // below cannot help, because the URL pattern matches *inside* an address: from
+  // "sandon.jurowski@pointsevenstudio.com" it pulls out `sandon.jurowski` and
+  // `pointsevenstudio.com` as two separate "domains", neither of which is an email on its own.
+  // Removing addresses first is the only version that works.
+  const scannable = text.replace(EMAIL_RX_G, ' ');
+
+  for (const m of scannable.matchAll(URL_RX)) {
     const raw = m[1];
     if (EMAIL_RX.test(raw)) continue; // an email is contact, not a link
     const bare = raw.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (!looksLikeRealDomain(bare)) continue; // Next.js is not a website
     if (bare.split('.').length < 2 || seen.has(bare)) continue;
     seen.add(bare);
     links.push({ label: bare, href: raw.startsWith('http') ? raw : `https://${raw}` });

@@ -496,6 +496,10 @@ export default async function SitePreviewPage({
       templateName={normalized.template_name ?? normalized.slug ?? String(normalized.id)}
       colorMode={colorMode}
       initialData={normalized as any}
+      // This is a visitor's browser: no session, nothing to reconcile. See the prop's comment —
+      // without it every page view of every published site fires an authenticated fetch that can
+      // only 401.
+      readOnly
     >
       {competition && claimToken && (
         <CompetitionBanner

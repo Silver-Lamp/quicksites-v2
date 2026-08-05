@@ -45,12 +45,22 @@ export function TemplateEditorProvider({
   onRename,
   children,
   colorMode,
+  readOnly = false,
 }: {
   templateName: string;
   initialData?: Snapshot;
   onRename?: (name: string) => void;
   children: ReactNode;
   colorMode: 'light' | 'dark';
+  /**
+   * ⚠️ SET THIS ON A PUBLIC RENDER. The published site page wraps its output in this provider so
+   * block renderers can read template context — but it is a VISITOR's browser, with no session
+   * and nothing to reconcile. Without this the mount effect below fired
+   * `GET /api/templates/state` on every page view of every published site: a guaranteed 401, a
+   * wasted round-trip, and a red console error on 98 customer sites, none of which affected what
+   * a visitor saw, which is exactly why it survived so long.
+   */
+  readOnly?: boolean;
 }) {
   const editor = useTemplateEditorState({ templateName, initialData, onRename, colorMode, mode: 'template' });
 
@@ -144,11 +154,13 @@ export function TemplateEditorProvider({
     [editor, loadState, commitPatch, refreshFromServer, colorMode]
   );
 
-  // Initial mount: make sure we reconcile with server once
+  // Initial mount: reconcile with the server once — but only where there is an editor to
+  // reconcile FOR. On a public render there is no session, so this can only ever 401.
   React.useEffect(() => {
+    if (readOnly) return;
     void refreshFromServer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [readOnly]);
 
   return (
     <TemplateEditorContext.Provider value={value}>

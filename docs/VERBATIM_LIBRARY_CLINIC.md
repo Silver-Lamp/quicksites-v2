@@ -41,10 +41,42 @@ A librarian's existing job-help hour, with one tool added:
    in the browser and only the text is posted.
 2. Verbatim parses it and shows **what it read** and **what the résumé did not yield**. It invents
    nothing: no summary written for them, no job title inferred, no photograph, ever.
-3. They correct anything wrong, then **download one HTML file** — theirs, offline, printable.
-4. *Optionally*, and only if they want it, they publish it as a page with a link they can send.
+3. They correct anything wrong, then **download their résumé — as PDF, Word (.docx) or Markdown**,
+   plus the one-page HTML profile. Theirs, offline, printable, no account.
+4. *Optionally*, and only if they want it, they publish it as a page with a link they can send —
+   with the same three files downloadable from that page (see §2b).
 
 Step 3 is the completion. Step 4 is the upsell, and it is allowed to not happen.
+
+### ⚠️ PDF and Word matter more than the webpage, and it took building them to see it
+
+The first version of this offered a single self-contained **HTML** file, and the reasoning was
+sound: it opens anywhere, forever, without us. It is still the right artefact for a *profile page*.
+
+But it is the wrong artefact for a **job application.** Employers ask for a PDF. Recruiters and
+applicant-tracking systems parse `.docx` — and they parse it *structurally*, which is why the Word
+export uses real heading styles rather than bold body text; a document that merely looks like it
+has headings reads to a parser as one undifferentiated blob. Handing a job seeker an HTML file and
+calling the session finished was solving our problem, not theirs.
+
+All three come from **one parse and three emitters** (`lib/resume/outline.ts` + `formats.ts`), never
+three parsers, because three code paths drift until the Word version quietly loses a job the PDF
+still lists. The PDF is the print HTML rendered in headless Chromium, so it is provably the same
+document rather than a fourth interpretation.
+
+## 2b. And it can be hosted, with the files attached to the page
+
+A patron who wants a link gets a real one — `https://<name>.quicksites.ai` — and the page carries a
+**Downloads** section offering the same résumé in PDF, Word and Markdown, with the format and file
+size on each button.
+
+Live example, built end to end through this exact flow: **https://sandon.quicksites.ai/**
+
+⚠️ **The hosted page does not replace the files, it carries them.** A page that renders someone's
+résumé and offers no way to take it away makes every reader — including a hiring manager who wants
+to forward it — dependent on us staying online. The download section exists so that the answer to
+"what happens if QuickSites disappears" is "you already have the file", not "you lose your
+résumé".
 
 ## 3. The things that would have broken it, found by running it
 
@@ -111,9 +143,11 @@ I'm Sandon Jurowski, based in Renton. I'd like to offer a free session at your b
 working on their résumés.
 
 Someone brings a résumé — on paper, as a PDF, or just typed out. In about ten minutes they leave
-with a clean one-page profile of their own work history: a single file they keep, that opens on any
-computer without an internet connection, and that prints. It's theirs. Nothing is stored, no
-account is needed, and no email address is collected.
+with their own work history laid out cleanly, and they can take it away in whichever format they
+actually need: **a PDF to attach to an application, a Word document because most job boards and
+recruiters want one, or a plain-text copy.** The files open on any computer without an internet
+connection, and they print. They're theirs. Nothing is stored, no account is needed, and no email
+address is collected.
 
 The tool is deliberately narrow, and I'd rather say why than oversell it: **it does not write
 anything for anyone.** It only recognises and rearranges the text a person supplied. If their
@@ -122,9 +156,10 @@ than inventing something plausible. A résumé is a factual claim about someone'
 tool that tidies a job history invents one.
 
 **The commercial part, up front:** I run QuickSites, which builds and hosts websites. If someone
-wants their page online as a link they can send, we can do that — but it is optional, it is not the
-point of the session, and nobody is asked for it. The file they walk out with works whether or not
-they ever deal with me again. If a session where nobody signs up for anything isn't worth your room
+wants their profile online as a link they can send — like https://sandon.quicksites.ai, which is my
+own — we can do that, and the page carries the same downloadable files. But it is optional, it is
+not the point of the session, and nobody is asked for it. The files they walk out with work whether
+or not they ever deal with me again. If a session where nobody signs up for anything isn't worth your room
 and your patrons' time, that's a fair reason to say no.
 
 What I'd need: a table, a few chairs, and a wifi connection. Attendees can use library computers or
@@ -144,5 +179,12 @@ Happy to run it once and see whether it's useful to your patrons before either o
 - [ ] Check whether the branch bans commercial solicitation — if so, this proposal is the wrong
       shape and should be withdrawn rather than reworded.
 - [ ] Try the flow on a library computer: an old browser, no admin rights, a locked-down download
-      folder. The export is a plain HTML file specifically so this is survivable.
+      folder. The HTML export is a single plain file specifically so this is survivable — but
+      **check the PDF and .docx downloads there too**, since those are the ones people actually
+      need and they are the ones a locked-down machine is most likely to block.
+- [ ] ⚠️ **Test with a PDF exported from Google Docs.** Some PDFs map the `fi`/`fl` ligatures to
+      the letter `g`, so extraction silently produces "ginancial", "girmware", "workglows" — real
+      words, corrupted, with nothing to flag them. This was found on a real résumé *after it had
+      been published*. The parser does not yet detect it; until it does, read the extracted text
+      before anyone leaves with a file.
 - [ ] Print the instructions. The session should work if the wifi doesn't.

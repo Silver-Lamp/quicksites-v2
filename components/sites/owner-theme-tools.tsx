@@ -2,11 +2,25 @@
 
 // Owner-only theme controls on a published site: hover the wordmark, get a gear, shuffle a look.
 //
-// ⚠️ A VISITOR MUST NEVER SEE THIS, AND "never" HAS TO SURVIVE A MISTAKE. The page this sits on is
-// someone's business — or, in the first case, a person's job search. A gear icon on a résumé page
-// a hiring manager is reading is worse than a missing feature. So the component returns null
-// before it renders anything, on a signal computed server-side, and the DOM anchor it attaches to
-// (`[data-qs-wordmark]`) is inert on its own.
+// ⚠️ TWO CONTROLS, TWO DIFFERENT AUDIENCES — AND THE SPLIT IS THE WHOLE DESIGN.
+//
+//   • "✎ Edit"  — shown to ANYONE who hovers. Owner's explicit call, and it is safe: the link
+//     carries no template id and lands on /admin/templates/resolve, which demands an admin
+//     session before it resolves anything. A stranger who clicks it gets a login screen, which
+//     is exactly the intended behaviour rather than a consolation prize.
+//   • "⚙" theme tools — OWNER ONLY, still. These mutate a live site. A visitor must never be one
+//     click from republishing someone's business.
+//
+// This started life owner-only for both, on the argument that a hiring manager reading a résumé
+// page should not see "Edit this site". That argument is about taste and it lost to a real
+// requirement: an owner arriving on their own site from a phone, a different browser or a
+// logged-out session had no way in at all, because auth cookies are host-only and the page
+// genuinely cannot tell them from a stranger. An affordance that only appears once you are
+// already authenticated is useless precisely when you need it.
+//
+// ⚠️ IT RENDERS ON EVERY PUBLISHED TENANT SITE. Not just ours — a customer's restaurant site shows
+// it to their diners too. That is a deliberate, reversible, fleet-wide product decision, not a
+// side effect: to scope it, gate the edit link on the same `enabled` signal the gear uses.
 //
 // ⚠️ WHY THE OWNER SIGNAL IS NOT SIMPLY "IS THERE A SESSION". Auth cookies here are HOST-ONLY —
 // nothing configures a cookie domain — so a session on www.quicksites.ai is not sent to
@@ -91,7 +105,6 @@ export default function OwnerThemeTools({
    * instead, and disconnects the moment it has it.
    */
   React.useEffect(() => {
-    if (!enabled) return;
     let el: HTMLElement | null = null;
     let cleanup: (() => void) | null = null;
 
@@ -128,11 +141,12 @@ export default function OwnerThemeTools({
     }
 
     return () => { cleanup?.(); obs?.disconnect(); };
-  }, [enabled]);
+  }, []);
 
   // Visible while the pointer is on the wordmark or the tools, and always while the panel is open —
-  // otherwise the gear disappears in the gap between the two, which reads as a broken control.
-  const visible = enabled && !!anchor && (hovering || open);
+  // otherwise it disappears in the gap between the two, which reads as a broken control.
+  // ⚠️ NOT gated on `enabled`: the edit link is for everyone. The gear below still is.
+  const visible = !!anchor && (hovering || open);
   if (!visible) return null;
 
   const shuffle = () => {
@@ -205,6 +219,7 @@ export default function OwnerThemeTools({
         Edit
       </a>
 
+      {enabled && (
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -214,8 +229,9 @@ export default function OwnerThemeTools({
       >
         ⚙
       </button>
+      )}
 
-      {open && (
+      {enabled && open && (
         <div className="mt-2 w-64 rounded-xl border border-border bg-card p-3 text-card-foreground shadow-lg">
           {/* Says whose view this is, every time. An owner-only control that doesn't announce
               itself is one screen-share away from looking like part of the site. */}

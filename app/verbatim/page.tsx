@@ -69,9 +69,20 @@ export default function VerbatimPage() {
             what’s missing instead of inventing something to fill the space.
           </p>
 
+          {/*
+            ⚠️ "there is no model call in this at all" USED TO BE HERE, AND IT HAD TO GO — not
+            because we got looser, but because it stopped being true in one specific place. The
+            PARSER still makes no model call: nothing writes, rewrites or infers a word of anyone's
+            history. What changed is that a model now READS the finished page and flags defects
+            (see the proofread bullet below), which is the opposite act.
+
+            A nice absolute that quietly goes stale is worse than a precise sentence, and this page
+            is the one place in the product where the copy IS the promise. So the bullet now says
+            exactly which step is model-free.
+          */}
           <ul className="mt-6 space-y-2.5 text-sm text-muted-foreground">
             {[
-              'No AI wrote your history — there is no model call in this at all.',
+              'No AI wrote your history — the part that reads your résumé makes no model call.',
               'No invented job titles, dates, or achievements.',
               'No generated photo of you.',
               'You edit everything before anything is published.',
@@ -82,6 +93,30 @@ export default function VerbatimPage() {
               </li>
             ))}
           </ul>
+        </div>
+
+        {/*
+          The proofread layer, stated as what it is. It is a genuine differentiator precisely
+          because of the restriction: every other AI résumé tool offers to REWRITE your words, and
+          this one is only allowed to point at them.
+        */}
+        <div className="relative mx-auto max-w-3xl px-6 pb-2">
+          <div className="rounded-xl border border-border bg-card/60 p-4">
+            <h2 className="text-sm font-semibold text-foreground">
+              And we check it before it goes live
+            </h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
+              Before a page is published we read the finished version and look for the things that
+              slip through — words mangled by PDF extraction (a résumé that arrives saying
+              “ginancial” instead of “financial”), leftover placeholder text, or your own name
+              spelled two ways. <span className="text-foreground">You get a list. Nothing is
+              changed for you</span> — the suggestions are ours, the words stay yours.
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              It is a second pair of eyes, not a guarantee. Read your page before you send it to
+              anyone.
+            </p>
+          </div>
         </div>
 
         <div className="relative mx-auto max-w-3xl px-6 pb-20">

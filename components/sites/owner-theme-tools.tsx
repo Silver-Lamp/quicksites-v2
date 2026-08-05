@@ -92,6 +92,65 @@ export default function OwnerThemeTools({
 }) {
   const [anchor, setAnchor] = React.useState<DOMRect | null>(null);
   const [hovering, setHovering] = React.useState(false);
+
+  /**
+   * ⚠️ THE GAP BETWEEN THE NAME AND THE BUTTONS IS WHERE THIS BROKE. The wordmark's `mouseleave`
+   * fires the instant the pointer starts travelling toward the controls, and the controls'
+   * `mouseenter` has not happened yet — so the cluster unmounted mid-journey and could never be
+   * clicked. It appeared on hover and was unreachable, which is worse than not appearing.
+   *
+   * Two fixes together, because either alone still loses a fast diagonal: a short close DELAY that
+   * any re-enter cancels, and a hit area that physically bridges the gap (see the padding below).
+   */
+  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keepOpen = React.useCallback(() => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+    setHovering(true);
+  }, []);
+  const scheduleClose = React.useCallback(() => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setHovering(false), 320);
+  }, []);
+  React.useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
+
+  /**
+   * ⚠️ POINTER POSITION, NOT enter/leave — BECAUSE enter/leave LOST A RACE THAT A PERSON CAN FEEL.
+   *
+   * mouseenter/mouseleave on two ADJACENT elements is the wrong primitive for "is the pointer
+   * around here". Leaving the name fires immediately; entering the buttons fires only once the
+   * pointer arrives, and between them the component unmounted — so the controls appeared on hover
+   * and vanished on the way to being clicked. A close delay and a padded hit area each fixed SOME
+   * paths: a slow diagonal worked, a straight fast traverse still failed. Two partial fixes that
+   * disagree about which journeys work is worse than one that always does.
+   *
+   * So: watch the pointer and ask whether it is inside the union of the name and the controls,
+   * padded. No ordering, no race, no dependence on how fast someone moves. The listener is
+   * passive and only runs while the anchor exists.
+   */
+  const zoneRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    if (!anchor) return;
+    const PAD = 14;
+
+    const onMove = (e: MouseEvent) => {
+      const el = document.querySelector('[data-qs-wordmark]') as HTMLElement | null;
+      if (!el) return;
+      const w = el.getBoundingClientRect();
+      const t = zoneRef.current?.getBoundingClientRect() ?? null;
+
+      const inside = (r: DOMRect | null) =>
+        !!r &&
+        e.clientX >= r.left - PAD && e.clientX <= r.right + PAD &&
+        e.clientY >= r.top - PAD && e.clientY <= r.bottom + PAD;
+
+      if (inside(w) || inside(t)) keepOpen();
+      else scheduleClose();
+    };
+
+    document.addEventListener('mousemove', onMove, { passive: true });
+    return () => document.removeEventListener('mousemove', onMove);
+  }, [anchor, keepOpen, scheduleClose]);
   const [open, setOpen] = React.useState(false);
   const [preview, setPreview] = React.useState<ThemePreview | null>(null);
   const [busy, setBusy] = React.useState(false);
@@ -111,8 +170,8 @@ export default function OwnerThemeTools({
     const attach = (node: HTMLElement) => {
       el = node;
       const measure = () => setAnchor(node.getBoundingClientRect());
-      const enter = () => { measure(); setHovering(true); };
-      const leave = () => setHovering(false);
+      const enter = () => { measure(); keepOpen(); };
+      const leave = () => scheduleClose();
 
       node.addEventListener('mouseenter', enter);
       node.addEventListener('mouseleave', leave);
@@ -141,7 +200,7 @@ export default function OwnerThemeTools({
     }
 
     return () => { cleanup?.(); obs?.disconnect(); };
-  }, []);
+  }, [keepOpen, scheduleClose]);
 
   // Visible while the pointer is on the wordmark or the tools, and always while the panel is open —
   // otherwise it disappears in the gap between the two, which reads as a broken control.
@@ -203,10 +262,21 @@ export default function OwnerThemeTools({
 
   return (
     <div
+      ref={zoneRef}
       className="flex items-center gap-1.5"
-      style={{ position: 'fixed', top: anchor.top + anchor.height / 2 - 14, left: anchor.right + 8, zIndex: 60 }}
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
+      style={{
+        position: 'fixed',
+        // Sit flush against the name and pad inward: the padding IS the bridge across the old
+        // dead zone, so the pointer never leaves a hovered element on its way here.
+        top: anchor.top - 6,
+        left: anchor.right,
+        paddingLeft: 10,
+        paddingTop: 6,
+        paddingBottom: 6,
+        zIndex: 60,
+      }}
+      onMouseEnter={keepOpen}
+      onMouseLeave={scheduleClose}
     >
       {/* Edit first: it is the thing an owner hovering their own site name almost always wants,
           and a theme shuffle is the occasional one. Ordering by frequency, not by novelty. */}

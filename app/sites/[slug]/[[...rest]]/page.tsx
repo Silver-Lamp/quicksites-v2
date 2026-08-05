@@ -546,6 +546,7 @@ export default async function SitePreviewPage({
           component renders nothing at all without one. */}
       <OwnerThemeTools
         slug={slug}
+        host={siteRow.domain ?? null}
         enabled={admin || sp.edit === '1' || sp.edit === 'true'}
       />
     </TemplateEditorProvider>

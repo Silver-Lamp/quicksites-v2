@@ -3,6 +3,13 @@
 > Send a named person a private link, they read a document and sign it, and both parties end up
 > holding a self-contained file that proves what was signed. No vendor, no per-document cost.
 > First use case: the QuickSites volunteer contributor agreement.
+>
+> **The cross-product standard lives in
+> [`crosstalk/contracts/agreements-record.md`](../../crosstalk/contracts/agreements-record.md)**
+> (Status: PROPOSED) — the required properties and the bright lines are there, not here, and this
+> doc must never fork a copy of them. All three sibling products adopted it as a **copied pattern
+> behind a shared contract, explicitly not a shared service**: one product custodying another's
+> legal records *is* the vendor-dependency this design exists to avoid, moved up a level.
 
 ---
 
@@ -121,8 +128,20 @@ the stored text — which was correct. Look at the page before sending the link.
 The natural next surface is a block a site owner drops onto a page. It is worth being precise
 about what changes, because the two are not the same feature:
 
+**The clearest way to choose between them** (PorchHearth's framing, from the mesh review — it says
+what each is *for* rather than what to call it):
+
+> The **private signing link** proves *a specific party agreed*.
+> The **public acceptance block** proves *terms were presented*.
+
+⚠️ **Choosing wrong fails quietly, in both directions.** A public block where you needed identity
+gives an unattributable record; a signing link where you needed presentation adds friction for
+nothing. And DeckSketch's rule for when you may say *signature* at all: **only when you addressed a
+specific named person through a possession-of-inbox channel.**
+
 | | **private link** (`/sign/<token>`) | **`agreement` block** on a public page |
 |---|---|---|
+| proves | **a specific party agreed** | **terms were presented** |
 | the verb | **signs** | **accepts** |
 | who | one named person we emailed | any visitor |
 | identity evidence | possession of that inbox | **none** — whoever is at the keyboard |
@@ -160,6 +179,24 @@ optionally require an email. An unconfigured block shows a hint in the editor an
 
 Acceptances land in `agreement_acceptances`. There is no operator UI for reading them yet — query
 the table, or build one (§6).
+
+## 5b. Two bright lines that bind us, not just the standard
+
+Full set in the [contract](../../crosstalk/contracts/agreements-record.md) §3. These two constrain
+what QuickSites may build next, so they are repeated here deliberately:
+
+**A frozen signature must never imply consent is irrevocable.** *(HiveJournal.)* The record says
+what was agreed **on a date**. Where the underlying right is withdrawable, the certificate is
+**evidence, not a cage** — and that matters most where the person consenting is vulnerable, because
+a solemn-looking artefact can make someone feel more locked in than they are. That is coercion by
+production values, and it is a live risk the moment this is pointed at anything more emotive than
+an IP assignment.
+
+**A record must not close an identity question it never answered.** *(PorchHearth.)* Our signing
+link has **no identity step beyond the emailed token** — possession of an inbox, and nothing more.
+The danger is not that the record is weak; it is that a signed record *feels* like proof and stops
+anyone asking the harder question underneath. Any future use that turns on *who* someone is
+(a parent, a licensee, an account holder) needs a real identity step, not this.
 
 ## 6. Known gaps
 

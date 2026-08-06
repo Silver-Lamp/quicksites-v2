@@ -2,7 +2,7 @@ import { getOpenAI } from '@/lib/ai/openaiClient';
 import { lazyClient } from '@/lib/lazyClient';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
-import { NO_PEOPLE_INSTRUCTION, NO_PEOPLE_NEGATIVES } from '@/lib/images/noPeople';
+import { NO_PEOPLE_INSTRUCTION, NO_PEOPLE_NEGATIVES, NO_TEXT_INSTRUCTION } from '@/lib/images/noPeople';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
@@ -120,7 +120,7 @@ export async function POST(req: Request) {
 
     // Build a *banner-specific* prompt. Treat "hero" as website header, not a person.
     const subjectOrPreset = (subject && String(subject).trim()) || presetSubjectFor(finalIndustry, finalServices);
-    const peopleInstruction = NO_PEOPLE_INSTRUCTION;
+    const peopleInstruction = `${NO_TEXT_INSTRUCTION} ${NO_PEOPLE_INSTRUCTION}`;
 
     // Fold in optional negatives (OpenAI images API has no separate negative param,
     // so bake them into the instruction text).

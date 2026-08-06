@@ -79,6 +79,10 @@
     {
       "path": "/api/cron/seo-coach-weekly",
       "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cron/outreach-reply-nudge",
+      "schedule": "0 15 * * *"
     }
   ]
 }

@@ -26,3 +26,26 @@ export const NO_PEOPLE_NEGATIVES =
 
 /** Both, joined — for prompts that take one flat constraint string. */
 export const NO_PEOPLE_CLAUSE = `${NO_PEOPLE_INSTRUCTION} Strictly: ${NO_PEOPLE_NEGATIVES}.`;
+
+/**
+ * ⚠️ NO LETTERING — AND THIS NEEDS ITS OWN POSITIVE-FORM INSTRUCTION, NOT A NEGATIVE.
+ *
+ * `NO_PEOPLE_NEGATIVES` has said "no text, no watermarks, no logos" since it existed, and the
+ * model ignores it often enough to matter: a hero generated for a real paving company came back
+ * with "VB FERAONT SMLPEE" stencilled on the tanker, and an earlier one rendered the trade word
+ * as "Seacoating". Misspelled pseudo-lettering on a business's own advertising is worse than no
+ * image at all — on a paving flyer it reads as illiteracy, and the business did not write it.
+ *
+ * Image models follow positive instructions ("surfaces are clean and unmarked") far more reliably
+ * than prohibitions ("no text"), because a negative still puts the concept in the prompt. So this
+ * is phrased as a description of the scene, and it is stated FIRST rather than appended to a list.
+ *
+ * ⚠️ Do not delete the "no text" clause from NO_PEOPLE_NEGATIVES to avoid duplication — belt and
+ * braces is the point, and generateHero.test.ts pins that wording.
+ */
+export const NO_TEXT_INSTRUCTION =
+  'Every surface is clean and unmarked: vehicles, equipment, signs, walls and pavement carry no lettering, numbers, logos, branding or written characters of any kind.';
+
+/** People + lettering, joined — the constraint most prompts want. */
+export const NO_PEOPLE_NO_TEXT_CLAUSE =
+  `${NO_TEXT_INSTRUCTION} ${NO_PEOPLE_INSTRUCTION} Strictly: ${NO_PEOPLE_NEGATIVES}.`;

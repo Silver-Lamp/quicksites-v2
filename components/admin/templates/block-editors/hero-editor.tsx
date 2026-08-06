@@ -1454,21 +1454,15 @@ export default function HeroEditor({
                           >
                             Open
                           </a>
-                          <button
-                            className="text-xs px-2 py-1 rounded border border-white/15 hover:bg-white/10"
-                            onClick={() => {
-                              setLocal((p: any) => ({
-                                ...p,
-                                layout_mode: 'background',
-                                layout: 'background',
-                                overlay_level: p?.overlay_level ?? 'soft',
-                                overlay: p?.overlay ?? 'soft',
-                              }));
-                              bumpPreview();
-                            }}
-                          >
-                            Use as Background
-                          </button>
+                          {/* ⚠️ "Use as Background" WAS HERE AND DID NOTHING NEW. applyHeroImage()
+                              already sets layout_mode/layout to 'background' the moment an image is
+                              chosen or generated, so the button re-applied state the image had
+                              itself applied. Its real cost was implying that picking an image was
+                              NOT enough — an operator who saw a button called "Use as Background"
+                              reasonably concluded the image would not be used until they pressed
+                              it, which is a false model of a system that had already done the work.
+                              The Layout dropdown below still offers "Image as Background" for the
+                              rare case of changing it back. Removed on operator feedback. */}
                           <button
                             className="text-xs px-2 py-1 rounded border border-white/15 hover:bg-white/10"
                             onClick={() => {

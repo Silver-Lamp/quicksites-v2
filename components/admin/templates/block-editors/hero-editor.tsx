@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import type { BlockEditorProps } from './index';
+import { shouldReloadLocal } from './heroEditorState';
 import { useBlockAiFocus } from '@/lib/editor/blockAiFocus';
 import RenderBlock from '@/components/admin/templates/render-block';
 import {
@@ -323,7 +324,33 @@ export default function HeroEditor({
   const altKey = fieldKey === 'props' ? 'content' : 'props';
 
   const [local, setLocal] = useState<any>(initialLocal);
-  useEffect(() => setLocal(initialLocal), [initialLocal]);
+
+  /**
+   * ⚠️ RELOAD LOCAL STATE ONLY WHEN THIS IS A DIFFERENT BLOCK.
+   *
+   * This was `useEffect(() => setLocal(initialLocal), [initialLocal])`, and `initialLocal` is a
+   * useMemo whose deps include **`template`** — a fresh object on every autosave round-trip and
+   * every provider refresh. So mid-edit, the effect fired and replaced local state with the
+   * block's SAVED content, silently discarding whatever the operator had just done.
+   *
+   * It cost a hero image, reported from real use: pick an image → it appears in the modal → an
+   * autosave tick lands → local is reset from the block → Save writes back the pre-image state.
+   * The database showed exactly that fingerprint — `image_url` absent and `layout_mode` still
+   * 'inline', while `blur_amount`/`parallax_enabled`/`mobile_crop_behavior` (which only the save
+   * path writes) were present. A save had run; the image was never in it.
+   *
+   * Same family as this repo's other two-copies-of-one-truth bugs: the block is the source of
+   * truth, local state is the edit, and a dependency nobody intended re-asserted the block over
+   * the edit. Resetting on block IDENTITY is what the effect was always for.
+   */
+  const blockKey = String((block as any)?._id ?? (block as any)?.id ?? '');
+  const loadedBlockKey = useRef(blockKey);
+  useEffect(() => {
+    if (!shouldReloadLocal(loadedBlockKey.current, blockKey)) return;
+    loadedBlockKey.current = blockKey;
+    setLocal(initialLocal);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blockKey]);
 
   // preview nonce
   const [previewNonce, setPreviewNonce] = useState(0);

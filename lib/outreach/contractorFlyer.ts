@@ -37,6 +37,16 @@ export type ContractorFlyer = {
   closingNote?: string | null;
   /** Keep their write-in quote line — it is why door-to-door flyers work. */
   quoteLine?: boolean;
+  /**
+   * Optional trade image, as a data URI.
+   *
+   * ⚠️ DECORATIVE ONLY — NEVER A BEFORE/AFTER. A generic image of the work illustrates the trade
+   * and claims nothing. A before/after pair is a CLAIM ("we produced this result"), and a
+   * generated one is a fabricated portfolio on a real contractor's advertising — the same class
+   * as an invented testimonial. If they want before/afters, they must be photographs of their own
+   * jobs, supplied by them.
+   */
+  imageDataUri?: string | null;
 };
 
 function esc(s: string): string {
@@ -58,32 +68,40 @@ export function renderContractorFlyerHtml(f: ContractorFlyer): string {
   :root { color-scheme: only light; }
   @page { size: Letter; margin: 0; }
   * { box-sizing: border-box; }
-  body { margin: 0; width: 8.5in; height: 11in; padding: 0.7in 0.75in;
+  body { margin: 0; width: 8.5in; height: 11in; padding: 0.55in 0.7in;
          font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #000; background: #fff;
-         display: flex; flex-direction: column; }
+         display: flex; flex-direction: column;
+         /* ⚠️ ONE PAGE, GUARANTEED. A flyer that silently becomes two pages wastes half of every
+            print run and nobody notices until the paper comes out. The sizes above are tuned to
+            fit; this is the backstop. The generator asserts the page count as well, because
+            clipping and fitting look identical in a PDF viewer. */
+         overflow: hidden; }
 
-  h1 { font-size: 58pt; line-height: .95; margin: 0; letter-spacing: -.02em; text-transform: uppercase; }
+  h1 { font-size: 50pt; line-height: .95; margin: 0; letter-spacing: -.02em; text-transform: uppercase; }
   .rule { height: 6pt; background: #000; margin: 14pt 0 0; }
-  .tagline { font-size: 17pt; margin: 12pt 0 0; }
+  .tagline { font-size: 15pt; margin: 10pt 0 0; }
 
-  .services { margin: 30pt 0 0; padding: 0; list-style: none;
-              display: grid; grid-template-columns: 1fr 1fr; gap: 16pt 20pt; }
-  .services li { font-size: 21pt; font-weight: 600; padding-left: 22pt; position: relative; }
+  .services { margin: 20pt 0 0; padding: 0; list-style: none;
+              display: grid; grid-template-columns: 1fr 1fr; gap: 11pt 20pt; }
+  .services li { font-size: 18pt; font-weight: 600; padding-left: 22pt; position: relative; }
   /* A drawn check, not an emoji or an image — prints black on any printer. */
   .services li::before { content: ""; position: absolute; left: 0; top: 6pt;
       width: 7pt; height: 14pt; border: solid #000; border-width: 0 3pt 3pt 0; transform: rotate(45deg); }
 
-  .guarantee { margin: 30pt 0 0; display: inline-block; border: 3pt solid #000;
+  .guarantee { margin: 20pt 0 0; display: inline-block; border: 3pt solid #000;
                padding: 7pt 14pt; font-size: 16pt; font-weight: 800; text-transform: uppercase; }
 
-  .spacer { flex: 1 1 auto; min-height: 12pt; }
+  .spacer { flex: 1 1 auto; min-height: 8pt; }
+  /* Decorative band. alt="" on purpose — it illustrates, it does not inform. */
+  .art { margin: 18pt 0 0; }
+  .art img { width: 100%; height: 1.9in; object-fit: cover; display: block; border: 2pt solid #000; }
 
   .callbar { border-top: 3pt solid #000; padding-top: 16pt; display: flex; align-items: center; gap: 22pt; }
-  .callbar .num { font-size: 46pt; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+  .callbar .num { font-size: 40pt; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
   .callbar .label { font-size: 12pt; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4pt; }
   .qr { text-align: center; }
-  .qr img { width: 1.8in; height: 1.8in; display: block; }
-  .qr span { font-size: 10pt; display: block; margin-top: 5pt; max-width: 1.8in; line-height: 1.25; }
+  .qr img { width: 1.5in; height: 1.5in; display: block; }
+  .qr span { font-size: 9.5pt; display: block; margin-top: 4pt; max-width: 1.5in; line-height: 1.25; }
 
   .foot { margin-top: 14pt; display: flex; justify-content: space-between; align-items: flex-end; gap: 20pt; }
   .quote { font-size: 15pt; }
@@ -101,6 +119,8 @@ ${services}
   </ul>
 
   ${f.guarantee ? `<div class="guarantee">${esc(f.guarantee)}</div>` : ''}
+
+  ${f.imageDataUri ? `<div class="art"><img src="${f.imageDataUri}" alt=""></div>` : ''}
 
   <div class="spacer"></div>
 

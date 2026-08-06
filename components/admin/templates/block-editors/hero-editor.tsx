@@ -908,7 +908,16 @@ export default function HeroEditor({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center"
+      // ⚠️ ABOVE THE FLOATING EDITOR TOOLBAR, WHICH SITS AT z-[2147483646].
+      // At z-[100] this modal rendered UNDER it, and the thing the toolbar covered was the
+      // modal's own sticky footer — Cancel and Save. So an operator could pick a hero image,
+      // see it in the preview, and have no reachable way to commit it: closing the modal was
+      // the only available action, and closing discards local state.
+      //
+      // That is what "the hero image won't save" actually was. Not the save path — the Save
+      // BUTTON, behind a toolbar. Two separate stacking contexts each assuming they were the
+      // frontmost thing on screen, which is what a z-index arms race buys you.
+      className="fixed inset-0 z-[2147483647] flex items-start justify-center"
       role="dialog"
       aria-modal="true"
       aria-label="Hero Editor"

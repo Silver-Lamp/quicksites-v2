@@ -521,12 +521,19 @@ export default async function SitePreviewPage({
   // Person JSON-LD for portfolio / résumé sites — the `sameAs` block that tells a search engine
   // this page and the owner's other profiles are one human. Same watermark rule as LocalBusiness:
   // an unclaimed draft asserts nothing about anyone.
-  const personSchema =
-    !showWatermark && personSchemaEnabled(normalized.data, (normalized as any).industry ?? (siteRow as any)?.industry ?? null)
-      ? buildPersonSchema(
-          personIdentityFromTemplate(normalized.data, { url: pageUrl })!,
-        )
+  // ⚠️ No `!`. `personIdentityFromTemplate` returns null when the site has no name to assert,
+  // and a non-null assertion there is a TypeError on the PUBLIC render — a published page 500ing
+  // because its owner had not filled in a field. The absent case is the normal one, not the
+  // impossible one.
+  const personIdentity =
+    !showWatermark &&
+    personSchemaEnabled(
+      normalized.data,
+      (normalized as any).industry ?? (siteRow as any)?.industry ?? null,
+    )
+      ? personIdentityFromTemplate(normalized.data, { url: pageUrl })
       : null;
+  const personSchema = personIdentity ? buildPersonSchema(personIdentity) : null;
 
   return (
     <TemplateEditorProvider

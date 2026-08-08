@@ -12,6 +12,12 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
+import {
+  PUBLIC_PATH_HEADER,
+  absoluteUrl,
+  publicPathFor,
+  stripHomeSegment,
+} from '@/lib/seo/canonicalUrl';
 import { buildLocalBusinessSchema, localBusinessSchemaEnabled } from '@/lib/seo/localBusinessSchema';
 import { buildPersonSchema, personIdentityFromTemplate, personSchemaEnabled } from '@/lib/seo/personSchema';
 import CartPageClient from '@/components/cart/CartPageClient';
@@ -65,6 +71,20 @@ async function originFromHeaders() {
     .replace(/\.$/, '');
   const proto = h.get('x-forwarded-proto') ?? (host.includes('localhost') ? 'http' : 'https');
   return `${proto}://${host}`;
+}
+
+/**
+ * The absolute URL the visitor is actually on.
+ *
+ * ⚠️ NOT `origin + '/sites/' + slug`. Every tenant host reaches this page through a rewrite, so
+ * the routed path is our routing table, not their address. See lib/seo/canonicalUrl.ts.
+ */
+async function publicUrlFromHeaders(slug: string, rest?: string[] | null): Promise<string> {
+  const h = await headers();
+  return absoluteUrl(
+    await originFromHeaders(),
+    publicPathFor({ headerPath: h.get(PUBLIC_PATH_HEADER), slug, rest: stripHomeSegment(rest) }),
+  );
 }
 
 /**
@@ -358,7 +378,10 @@ export async function generateMetadata({
   const md = generatePageMetadata({
     site: normalized as any,
     pageSlug,
-    baseUrl: `${await originFromHeaders()}/sites`,
+    // The page's own public URL — `generatePageMetadata` appends nothing when the base already
+    // resolves the page, so pass it whole rather than a base to be joined with a page slug.
+    baseUrl: await publicUrlFromHeaders(siteRow.slug ?? slug, rest),
+    canonicalIsExact: true,
   });
   // A restaurant-apex portal indexes as soon as its directory has real content (2+
   // restaurants) — it must start ranking BEFORE outreach so the "ranking domain" prize
@@ -451,6 +474,9 @@ export default async function SitePreviewPage({
 
   const pageSlug = rest?.[0] ?? firstPageSlug(normalized);
   const colorMode = (normalized.color_mode ?? 'light') as 'light' | 'dark';
+  // Absolute public URL of THIS page — used as the `url` in the JSON-LD blocks below, which is an
+  // address a search engine will follow. It must be the visitor's URL, not our rewrite target.
+  const pageUrl = await publicUrlFromHeaders(siteRow.slug ?? slug, rest);
   const baseUrl = `${await originFromHeaders()}/sites`;
 
   // Watermark only the public draft on the menu surface; a claimed+published site
@@ -489,7 +515,7 @@ export default async function SitePreviewPage({
   // operator turned it on in the Readiness coach. Skipped on the pre-claim watermarked draft.
   const localBusinessSchema =
     !showWatermark && localBusinessSchemaEnabled(normalized.data)
-      ? buildLocalBusinessSchema(normalized.data, { url: `${baseUrl}/${normalized.slug}` })
+      ? buildLocalBusinessSchema(normalized.data, { url: pageUrl })
       : null;
 
   // Person JSON-LD for portfolio / résumé sites — the `sameAs` block that tells a search engine
@@ -498,7 +524,7 @@ export default async function SitePreviewPage({
   const personSchema =
     !showWatermark && personSchemaEnabled(normalized.data, (normalized as any).industry ?? (siteRow as any)?.industry ?? null)
       ? buildPersonSchema(
-          personIdentityFromTemplate(normalized.data, { url: `${baseUrl}/${normalized.slug}` })!,
+          personIdentityFromTemplate(normalized.data, { url: pageUrl })!,
         )
       : null;
 

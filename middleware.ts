@@ -8,6 +8,24 @@ import {
   menuSubdomainSlug,
   menuPathSlug,
 } from '@/lib/menu/deliveredMenu';
+import { PUBLIC_PATH_HEADER } from '@/lib/seo/canonicalUrl';
+
+/**
+ * Carry the path the visitor actually requested into the rewritten render.
+ *
+ * ⚠️ A REWRITE DESTROYS THE ONLY COPY OF THE PUBLIC URL. After `NextResponse.rewrite`, the page
+ * sees `/sites/<slug>/home` and has no way back to `https://theirdomain.com/` — which is how every
+ * published site came to declare a canonical pointing at our internal routing path. The existing
+ * `x-qsites-rewrite` header records the same fact backwards (where we sent it) and is set on the
+ * RESPONSE, so a server component cannot read it at all.
+ *
+ * Request headers, not response headers. That distinction is the whole bug.
+ */
+function withPublicPath(req: NextRequest): Headers {
+  const h = new Headers(req.headers);
+  h.set(PUBLIC_PATH_HEADER, req.nextUrl.pathname || '/');
+  return h;
+}
 
 /** Guests (anonymous users) may only reach the template editor under /admin. */
 function isGuestAllowedAdminPath(pathname: string): boolean {
@@ -237,7 +255,7 @@ export async function middleware(req: NextRequest) {
   // (watermarked, noindex) to the public and drop the watermark once published.
   if (menuEnabled() && isMenuHost(host)) {
     const menuHeaders = () => {
-      const h = new Headers(req.headers);
+      const h = withPublicPath(req);
       h.set('x-qsites-menu-host', '1');
       return h;
     };
@@ -308,7 +326,7 @@ export async function middleware(req: NextRequest) {
   if (devSub && !['www', 'app'].includes(devSub)) {
     const rewriteUrl = req.nextUrl.clone();
     rewriteUrl.pathname = `/sites/${devSub}${pathname === '/' ? '' : pathname}`;
-    const res = NextResponse.rewrite(rewriteUrl);
+    const res = NextResponse.rewrite(rewriteUrl, { request: { headers: withPublicPath(req) } });
     res.headers.set('x-qsites-dev-sub', devSub);
     res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
     return withCookies(res);
@@ -320,7 +338,7 @@ export async function middleware(req: NextRequest) {
     const extra = pathname === '/' ? '/home' : pathname;
     const rewriteUrl = req.nextUrl.clone();
     rewriteUrl.pathname = `/sites/${platSlug}${extra}`;
-    const res = NextResponse.rewrite(rewriteUrl);
+    const res = NextResponse.rewrite(rewriteUrl, { request: { headers: withPublicPath(req) } });
     res.headers.set('x-qsites-platform-slug', platSlug);
     res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
     return withCookies(res);
@@ -334,7 +352,7 @@ export async function middleware(req: NextRequest) {
   const rewriteUrl = req.nextUrl.clone();
   rewriteUrl.pathname = `/sites/${apexLabel}${extra2}`;
 
-  const res = NextResponse.rewrite(rewriteUrl);
+  const res = NextResponse.rewrite(rewriteUrl, { request: { headers: withPublicPath(req) } });
   res.headers.set('x-qsites-host-in', hostname);
   res.headers.set('x-qsites-slug', apexLabel);
   res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));

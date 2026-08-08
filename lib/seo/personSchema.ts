@@ -19,6 +19,8 @@
 // the owner did not supply must never appear here — putting a stranger's GitHub in someone's
 // `sameAs` is an assertion about two people at once. Callers pass only what the owner entered.
 
+import { industryOfTemplate, isPersonIndustry } from '@/lib/sites/personSite';
+
 export type PersonIdentity = {
   name: string;
   /** Their words, not ours. */
@@ -118,5 +120,7 @@ export function buildPersonSchema(id: PersonIdentity): Record<string, unknown> |
 export function personSchemaEnabled(data: any, industry?: string | null): boolean {
   if (data?.meta?.person?.enabled === false) return false;
   if (data?.meta?.person?.enabled === true) return true;
-  return industry === 'personal' || industry === 'author';
+  // One definition of "this site is about a person", shared with the copy layer — two lists that
+  // can disagree is how a site emits Person schema while addressing the visitor as a company.
+  return isPersonIndustry(industry) || isPersonIndustry(industryOfTemplate(data));
 }

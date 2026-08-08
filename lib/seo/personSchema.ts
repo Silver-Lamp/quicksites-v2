@@ -21,6 +21,14 @@
 
 import { industryOfTemplate, isPersonIndustry } from '@/lib/sites/personSite';
 
+/** First non-blank string among the aliases a value is stored under. */
+function firstNonEmpty(...vals: unknown[]): string | null {
+  for (const v of vals) {
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return null;
+}
+
 export type PersonIdentity = {
   name: string;
   /** Their words, not ours. */
@@ -59,12 +67,21 @@ export function isPublishableProfileUrl(u: unknown): u is string {
  */
 export function personIdentityFromTemplate(data: any, opts: { url?: string } = {}): PersonIdentity | null {
   const meta = data?.meta ?? {};
-  const identity = meta.identity ?? {};
+  // `identity` sits under `meta` on some sites and at the top level on others.
+  const identity = { ...(data?.identity ?? {}), ...(meta.identity ?? {}) };
+  // ⚠️ THE NAME IS STORED IN FOUR PLACES AND THIS ORIGINALLY CHECKED THREE OF THEM — missing
+  // `meta.business_name`, which is the one `industryScaffold` actually writes. So the schema
+  // silently did not emit on the very sites it was built for, and the only symptom was an absent
+  // tag. When a value has this many aliases, the list is the feature; a "sensible" subset of it is
+  // a guess about where the data lives.
   const name =
-    (typeof identity.person_name === 'string' && identity.person_name.trim()) ||
-    (typeof meta.person_name === 'string' && meta.person_name.trim()) ||
-    (typeof data?.business_name === 'string' && data.business_name.trim()) ||
-    '';
+    firstNonEmpty(
+      identity.person_name,
+      meta.person_name,
+      meta.business_name,
+      data?.business_name,
+      data?.meta?.siteTitle,
+    ) ?? '';
   if (!name) return null;
 
   const sameAs = [

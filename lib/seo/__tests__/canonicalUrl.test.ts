@@ -83,6 +83,18 @@ describe('sitePagePath', () => {
     expect(sitePagePath(null)).toBe('/');
   });
 
+  // Regression: a real site's only page is slugged `index`, which a home-only rule published as
+  // https://.../index — the same page at a second address.
+  it('treats index as the root too', () => {
+    expect(sitePagePath('index')).toBe('/');
+    expect(sitePagePath('Index')).toBe('/');
+  });
+
+  it('treats the first page as the root whatever it is called', () => {
+    expect(sitePagePath('welcome', { isFirstPage: true })).toBe('/');
+    expect(sitePagePath('welcome')).toBe('/welcome');
+  });
+
   it('maps any other page to its own path', () => {
     expect(sitePagePath('services')).toBe('/services');
     expect(sitePagePath('/services/')).toBe('/services');

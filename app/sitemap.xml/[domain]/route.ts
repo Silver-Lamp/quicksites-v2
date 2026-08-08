@@ -67,14 +67,14 @@ export async function GET(req: Request, { params }: { params: { domain: string }
 
   const urls = pages
     .filter((page: any) => page && typeof page.slug === 'string')
-    .map((page: any) => {
-      const loc = `${base}${sitePagePath(page.slug)}`;
+    .map((page: any, i: number) => {
+      const loc = `${base}${sitePagePath(page.slug, { isFirstPage: i === 0 })}`;
       return `
       <url>
         <loc>${escapeXml(loc)}</loc>
         <lastmod>${lastmod}</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>${page.slug === 'home' || page.slug === '' ? '1.0' : '0.7'}</priority>
+        <priority>${i === 0 ? '1.0' : '0.7'}</priority>
       </url>
     `;
     });

@@ -98,7 +98,15 @@ export function siteSlugFromHost(host: string): string | null {
  * ⚠️ The home page is `/`, never `/home`. `home` is the slug our editor gives the first page and
  * the segment middleware injects when rewriting a bare root; neither is an address.
  */
-export function sitePagePath(pageSlug: string | null | undefined): string {
-  const s = (pageSlug ?? '').trim().replace(/^\/+|\/+$/g, '');
-  return !s || s === 'home' ? '/' : `/${s}`;
+export function sitePagePath(
+  pageSlug: string | null | undefined,
+  opts: { isFirstPage?: boolean } = {},
+): string {
+  const s = (pageSlug ?? '').trim().replace(/^\/+|\/+$/g, '').toLowerCase();
+  // ⚠️ `home` is not the only name a front page has. Sandon's site calls its only page `index`,
+  // so a `home`-only rule put `https://sandon.quicksites.ai/index` in his sitemap — one page
+  // advertised at two addresses, which is the duplicate this module exists to prevent. The
+  // positional rule is the reliable one: whatever the first page is called, it is the root.
+  if (!s || s === 'home' || s === 'index' || opts.isFirstPage) return '/';
+  return `/${s}`;
 }

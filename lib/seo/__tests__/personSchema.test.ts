@@ -55,3 +55,25 @@ describe('personSchemaEnabled — only for sites that are about a person', () =>
     expect(personSchemaEnabled({ meta: { person: { enabled: false } } }, 'personal')).toBe(false);
   });
 });
+
+describe('personIdentityFromTemplate — where the name actually lives', () => {
+  // ⚠️ Regression: the schema shipped reading three of the four aliases, missing the one
+  // `industryScaffold` writes — so it silently did not emit on the sites it was built for.
+  it('finds the name at meta.business_name', () => {
+    const id = personIdentityFromTemplate({ meta: { business_name: 'Sandon Jurowski' } });
+    expect(id?.name).toBe('Sandon Jurowski');
+  });
+
+  it('finds the name at meta.siteTitle', () => {
+    expect(personIdentityFromTemplate({ meta: { siteTitle: 'A Person' } })?.name).toBe('A Person');
+  });
+
+  it('reads an identity block stored at the top level, not only under meta', () => {
+    const id = personIdentityFromTemplate({ identity: { person_name: 'Top Level' } });
+    expect(id?.name).toBe('Top Level');
+  });
+
+  it('still returns null when there is no name to assert', () => {
+    expect(personIdentityFromTemplate({ meta: {} })).toBeNull();
+  });
+});

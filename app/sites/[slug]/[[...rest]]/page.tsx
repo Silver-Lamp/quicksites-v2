@@ -13,6 +13,7 @@ import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import { buildLocalBusinessSchema, localBusinessSchemaEnabled } from '@/lib/seo/localBusinessSchema';
+import { buildPersonSchema, personIdentityFromTemplate, personSchemaEnabled } from '@/lib/seo/personSchema';
 import CartPageClient from '@/components/cart/CartPageClient';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
@@ -491,6 +492,16 @@ export default async function SitePreviewPage({
       ? buildLocalBusinessSchema(normalized.data, { url: `${baseUrl}/${normalized.slug}` })
       : null;
 
+  // Person JSON-LD for portfolio / résumé sites — the `sameAs` block that tells a search engine
+  // this page and the owner's other profiles are one human. Same watermark rule as LocalBusiness:
+  // an unclaimed draft asserts nothing about anyone.
+  const personSchema =
+    !showWatermark && personSchemaEnabled(normalized.data, (normalized as any).industry ?? (siteRow as any)?.industry ?? null)
+      ? buildPersonSchema(
+          personIdentityFromTemplate(normalized.data, { url: `${baseUrl}/${normalized.slug}` })!,
+        )
+      : null;
+
   return (
     <TemplateEditorProvider
       templateName={normalized.template_name ?? normalized.slug ?? String(normalized.id)}
@@ -515,6 +526,12 @@ export default async function SitePreviewPage({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+        />
+      )}
+      {personSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
         />
       )}
       <SiteRenderer

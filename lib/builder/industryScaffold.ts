@@ -10,6 +10,7 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { generateServices } from '@/lib/generateServices';
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
+import { isPersonIndustry } from '@/lib/sites/personSite';
 import { defaultBackdropFor } from '@/lib/theme/backdrops';
 import {
   getCuratedTheme,
@@ -167,6 +168,9 @@ export function buildIndustryStarter(opts: {
   // Seed industry-appropriate FAQ items (default is a single generic Q&A).
   faq.content.items = pickFaqItems({ industryKey, businessName, label });
   const contact: any = createDefaultBlock('contact_form');
+  // ⚠️ Seeded, not left to the renderer default, because the scaffold WRITES a title into the
+  // block — so a renderer-side default would never be reached on any site we generate.
+  if (isPersonIndustry(industryKey)) contact.content.title = 'Get in Touch';
 
   // Commerce-forward industries get a storefront grid up top (e.g. authors selling
   // books + merch). Reuses the existing products_grid block.

@@ -4,6 +4,7 @@
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
+import { defaultContactHeading } from '@/lib/sites/personSite';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
@@ -48,7 +49,7 @@ export default function ContactFormRender({
 
   // Presentational bits from block
   const {
-    title: titleRaw = 'Contact Us',
+    title: titleRaw,
     services: includedSubset = [],
     notification_email: legacyBlockEmail,
   } = (block?.content as any) || {};
@@ -133,8 +134,9 @@ export default function ContactFormRender({
   const phoneDigits = phoneRaw.replace(/\D/g, '');
   const displayPhone = phoneDigits ? fmtPhone(phoneDigits) : '';
 
-  const title =
-    titleRaw || (businessName ? `Contact ${businessName}` : 'Contact Us');
+  // ⚠️ Person sites get "Get in Touch". A one-person portfolio headed "Contact Us" is wrong about
+  // who is on the page, not merely unfashionable. See lib/sites/personSite.ts.
+  const title = titleRaw || defaultContactHeading((t as any)?.data ?? t, businessName);
 
   // site slug for email subject/logs
   const siteSlug =

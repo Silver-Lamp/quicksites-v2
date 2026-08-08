@@ -33,10 +33,21 @@ export function generatePageMetadata({
   site,
   pageSlug,
   baseUrl,
+  canonicalIsExact = false,
 }: {
   site: Template;
   pageSlug: string;
   baseUrl: string;
+  /**
+   * `baseUrl` is already this page's full public URL — use it as the canonical unchanged.
+   *
+   * ⚠️ The default (`false`) builds `baseUrl + '/' + pageSlug`, which is how published sites came
+   * to declare `https://theirdomain.com/sites/home` as canonical: the caller passed
+   * `origin + '/sites'` and the page slug, and the visitor's real URL — `https://theirdomain.com/`
+   * — appeared nowhere in the calculation. Callers that know the public URL should say so rather
+   * than hand over parts to be reassembled into a guess.
+   */
+  canonicalIsExact?: boolean;
 }): Metadata {
   const pages = (site as any)?.data?.pages || [];
   const currentPage =
@@ -76,7 +87,7 @@ export function generatePageMetadata({
     icons = { icon: '/favicon.ico' };
   }
 
-  const canonical = joinUrl(baseUrl, pageSlug);
+  const canonical = canonicalIsExact ? baseUrl : joinUrl(baseUrl, pageSlug);
   const siteName = (site as any)?.template_name || title;
 
   return {

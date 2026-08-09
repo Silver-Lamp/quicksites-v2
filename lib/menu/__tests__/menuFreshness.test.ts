@@ -52,3 +52,30 @@ describe('menu freshness', () => {
     expect(f.pricesStale).toBe(true);
   });
 });
+
+describe('the renderer contract (regression: the rule had one caller)', () => {
+  // ⚠️ assessFreshness existed, was tested, and was wired ONLY into the city search index — so
+  // prices aged out in search results while the restaurant's own page quoted them as fact
+  // forever. These lock the behaviour the menu renderer now depends on.
+  it('treats an undated menu as unverified, because unknown age is not fresh', () => {
+    const f = assessFreshness({ sections: [] });
+    expect(f.verifiedAt).toBeNull();
+    expect(f.pricesStale).toBe(true);
+    expect(priceOrConfirm('$9.25', f)).toBe('call to confirm');
+  });
+
+  it('says so once, in a note a visitor can act on', () => {
+    expect(freshnessNote(assessFreshness({}))).toMatch(/call/i);
+  });
+
+  it('quotes the price when a human verified it recently', () => {
+    const f = assessFreshness({ verified_at: new Date().toISOString() });
+    expect(f.pricesStale).toBe(false);
+    expect(priceOrConfirm('$9.25', f)).toBe('$9.25');
+  });
+
+  // Drop the price, never the dish.
+  it('never returns an empty label for a priced item', () => {
+    expect(priceOrConfirm('$9.25', assessFreshness({}))).not.toBe('');
+  });
+});

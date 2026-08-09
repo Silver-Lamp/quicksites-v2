@@ -112,7 +112,21 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
   };
 
   const buildContent = React.useCallback(
-    (secs: Section[]) => ({ ...initial, title, note, sections: secs }),
+    (secs: Section[]) => ({
+      ...initial,
+      title,
+      note,
+      sections: secs,
+      // ⚠️ THE ONE PLACE A HUMAN ACTUALLY VERIFIES A PRICE, AND NOTHING WAS RECORDING IT.
+      // `lib/menu/menuFreshness.ts` reads `verified_at` to decide whether a price may be quoted
+      // as fact — and no writer in the codebase ever set it, so EVERY imported menu was
+      // permanently unverifiable while the field sat unused. This is the honest event to stamp:
+      // an owner in their own editor looking at their own prices. It is NOT stamped at import,
+      // because reading a diner's undated photograph today tells us when WE looked, never when
+      // the menu was current, and converting "unknown age" into "verified now" is the exact lie
+      // the rule exists to prevent.
+      verified_at: new Date().toISOString(),
+    }),
     [initial, title, note],
   );
 

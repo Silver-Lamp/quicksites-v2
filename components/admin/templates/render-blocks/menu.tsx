@@ -2,6 +2,12 @@
 'use client';
 
 import * as React from 'react';
+import {
+  assessFreshness,
+  freshnessNote,
+  priceOrConfirm,
+  type MenuFreshness,
+} from '@/lib/menu/menuFreshness';
 
 // Mobile-first restaurant menu: a sticky category chip-bar that jump-links to each
 // section, then sections of items (name + price row, description, optional thumbnail
@@ -86,7 +92,15 @@ function addToOrder(it: MenuItem, option?: MenuOption, addons: MenuAddon[] = [])
 }
 
 /** One menu item row — holds its own selected-option state for "choose one" items. */
-function MenuItemRow({ item, rowKey }: { item: MenuItem; rowKey: string }) {
+function MenuItemRow({
+  item,
+  rowKey,
+  freshness,
+}: {
+  item: MenuItem;
+  rowKey: string;
+  freshness: MenuFreshness;
+}) {
   const options = orderableOptions(item);
   const hasOptions = options.length > 0;
   const addons = orderableAddons(item);
@@ -99,10 +113,18 @@ function MenuItemRow({ item, rowKey }: { item: MenuItem; rowKey: string }) {
   const baseCents = selected
     ? (typeof selected.price_cents === 'number' ? selected.price_cents : undefined)
     : (typeof item.price_cents === 'number' ? item.price_cents : undefined);
+  // ⚠️ A PRICE WE CANNOT DATE IS NOT A FACT ABOUT THIS BUSINESS. These menus are read by a model
+  // from a diner's photo of unknown age; the restaurant never asked us to quote a number on their
+  // behalf. `priceOrConfirm` replaces an undatable price with "call to confirm" — the rule is DROP
+  // THE PRICE, NEVER THE DISH, so the menu still does its job.
+  //
+  // An ORDERABLE item (one with `price_cents`, meaning an owner published it to the catalog and
+  // the checkout will charge exactly that) keeps its number: that price is server-authoritative
+  // and owner-confirmed, not something we inferred from a photograph.
   const price =
     typeof baseCents === 'number'
       ? centsDisplay(baseCents + addonTotal)
-      : priceLabel(item);
+      : priceOrConfirm(priceLabel(item), freshness);
 
   const toggleAddon = (id: string) =>
     setSelAddonIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -195,6 +217,14 @@ export default function RenderMenu(props: any) {
   const note: string = content.note || '';
   const sections: MenuSection[] = Array.isArray(content.sections) ? content.sections : [];
 
+  // ⚠️ THE RULE EXISTED AND HAD EXACTLY ONE CALLER — the city SEARCH index — so prices aged out
+  // in search results while the restaurant's OWN page quoted them as fact forever. That is
+  // backwards: the page presents as the business's site, so an unverifiable number is a stronger
+  // claim there than in a list of results. Wired here 2026-08-09 after an import batch added 14
+  // more undated menus.
+  const freshness = assessFreshness(content);
+  const staleNote = freshnessNote(freshness);
+
   const nonEmpty = sections.filter((s) => s && s.name && Array.isArray(s.items) && s.items.length > 0);
   if (nonEmpty.length === 0) {
     return (
@@ -238,6 +268,15 @@ export default function RenderMenu(props: any) {
         </nav>
       )}
 
+      {/* ⚠️ Said ONCE, at the top, not stamped on every row. Repeating "call to confirm" beside
+          forty dishes reads as a broken page rather than an honest one, and a visitor stops seeing
+          it by the third line. */}
+      {staleNote && (
+        <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-center text-sm text-foreground">
+          {staleNote}
+        </p>
+      )}
+
       <div className="mt-8 space-y-12">
         {nonEmpty.map((section, si) => (
           <div key={slugId(section.name, si)} id={slugId(section.name, si)} className="scroll-mt-20">
@@ -250,7 +289,7 @@ export default function RenderMenu(props: any) {
 
             <ul className="mt-4 divide-y divide-border">
               {(section.items ?? []).map((it, ii) => (
-                <MenuItemRow key={`${slugId(section.name, si)}-${ii}`} item={it} rowKey={`${slugId(section.name, si)}-${ii}`} />
+                <MenuItemRow key={`${slugId(section.name, si)}-${ii}`} item={it} rowKey={`${slugId(section.name, si)}-${ii}`} freshness={freshness} />
               ))}
             </ul>
           </div>

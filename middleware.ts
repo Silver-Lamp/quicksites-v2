@@ -7,6 +7,7 @@ import {
   isMenuApexHost,
   menuSubdomainSlug,
   menuPathSlug,
+  apexRedirectTarget,
 } from '@/lib/menu/deliveredMenu';
 import { PUBLIC_PATH_HEADER } from '@/lib/seo/canonicalUrl';
 
@@ -276,6 +277,16 @@ export async function middleware(req: NextRequest) {
 
     // Apex form: delivered.menu/<slug>/<path> → /sites/<slug>/<path>
     if (isMenuApexHost(host)) {
+      // QuickSites' own marketing pages do not belong on the restaurant's address. 307 so the
+      // choice stays reversible while the surface is young.
+      const away = apexRedirectTarget(pathname);
+      if (away) return withCookies(NextResponse.redirect(away, 307));
+
+      // One directory, one URL: `/delivered` is the internal rewrite target of the apex root.
+      if (pathname === '/delivered' || pathname.startsWith('/delivered/')) {
+        return withCookies(NextResponse.redirect(`https://${host}/`, 307));
+      }
+
       const slug = menuPathSlug(pathname);
       if (slug) {
         const rest = pathname.replace(/^\/[^/]+/, ''); // strip the /<slug> segment

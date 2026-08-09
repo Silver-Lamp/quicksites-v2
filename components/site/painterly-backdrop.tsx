@@ -25,7 +25,7 @@
  * text fighting the glow. The rule says *enforce* contrast, not hope for it, which means putting
  * the scrim where THIS image's bright region actually is.
  */
-export type ScrimWeight = 'top' | 'bottom' | 'even';
+export type ScrimWeight = 'top' | 'bottom' | 'even' | 'left' | 'right';
 
 const SCRIMS: Record<ScrimWeight, string> = {
   // Copy sits high on the page — hold the top down hardest.
@@ -34,6 +34,13 @@ const SCRIMS: Record<ScrimWeight, string> = {
   bottom: 'bg-gradient-to-b from-zinc-950/80 via-zinc-950/70 to-zinc-950/95',
   // Long page, text throughout.
   even: 'bg-gradient-to-b from-zinc-950/85 via-zinc-950/75 to-zinc-950/95',
+  // ⚠️ HORIZONTAL, added for the portfolio hero — because a vertical scrim was the wrong shape
+  // for its painting. The bright region there is a sunlit wall on the CENTRE-RIGHT while the
+  // headline sits left, so any top/bottom gradient either dims the one good thing in the image or
+  // leaves the text fighting it. This is rule 8's point made concrete: the scrim goes where THIS
+  // image's light actually is, which is not always a direction the enum already had.
+  left: 'bg-gradient-to-r from-zinc-950/92 via-zinc-950/70 to-zinc-950/35',
+  right: 'bg-gradient-to-l from-zinc-950/92 via-zinc-950/70 to-zinc-950/35',
 };
 
 export default function PainterlyBackdrop({

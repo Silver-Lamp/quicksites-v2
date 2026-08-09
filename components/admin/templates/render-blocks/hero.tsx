@@ -3,6 +3,8 @@
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
+import PainterlyBackdrop from '@/components/site/painterly-backdrop';
+import { portfolioHeroBackdrop } from '@/lib/sites/portfolioTheme';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
@@ -402,15 +404,29 @@ export default function HeroRender({
   // baseline on legacy sites) drives it instead of hardcoded neutral/white.
   const inlineBg = 'bg-card text-card-foreground rounded-lg shadow';
 
+  // ⚠️ THE PORTFOLIO HERO, AND ITS NULL PATH FIRST. `portfolioHeroBackdrop` returns null for every
+  // business site, for a person who opted out, and for an unpainted asset — in all three the hero
+  // below renders exactly as it always did. Rule 7: the decoration can be absent and nothing about
+  // the page depends on it. The backdrop only replaces the card surface when there IS a painting,
+  // because a transparent hero over no image is just an unstyled hero.
+  const heroBackdrop = portfolioHeroBackdrop((template as any)?.data ?? template);
+
   return (
     <SectionShell
       key={renderKey}
       compact={compact}
-      bg={inlineBg}
+      bg={heroBackdrop ? 'rounded-lg overflow-hidden' : inlineBg}
       textAlign="center"
       data-device={device || 'auto'}
       className="relative"
     >
+      {heroBackdrop && (
+        <PainterlyBackdrop
+          src={heroBackdrop.src}
+          opacity={heroBackdrop.opacity}
+          scrim={heroBackdrop.scrim}
+        />
+      )}
       {/* Shimmer while a guest site auto-generates its hero image (CSS-gated on
           html[data-qs-autogen] — invisible on normal renders). */}
       {!hasImage && <div className="qs-hero-shimmer" aria-hidden />}

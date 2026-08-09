@@ -6,6 +6,8 @@ import { isEditorContext } from '@/lib/editor/isEditorContext';
 import type { ReactNode } from 'react';
 import type { Block } from '@/types/blocks';
 import SectionShell from '@/components/ui/section-shell';
+import { isPersonTemplate } from '@/lib/sites/personSite';
+import { groupSkills, shouldGroupSkills } from '@/lib/sites/skillGroups';
 import { resolveSiteLayout } from '@/lib/theme/resolveSiteLayout';
 
 type Props = {
@@ -61,6 +63,41 @@ export default function ServicesRender({
 
   const cfg = ((block?.content ?? {}) as any) || {};
   const heading = String(cfg.heading ?? cfg.title ?? '').trim() || 'Our Services';
+
+  // ⚠️ ON A PERSON'S SITE THIS BLOCK IS A SKILLS LIST, NOT A SERVICE MENU. Forty numbered bullets
+  // is a wall nobody reads top-to-bottom; grouped chips are scannable in about three seconds.
+  // Grouping is presentation only — every skill still appears, in the owner's own words and their
+  // own order (lib/sites/skillGroups.ts asserts nothing is lost).
+  const personSite = isPersonTemplate((template as any)?.data ?? template);
+  if (personSite && shouldGroupSkills(items.length)) {
+    const groups = groupSkills(items);
+    return (
+      <SectionShell compact={compact} className="bg-transparent" aria-label="Skills section">
+        <div className="mx-auto w-full max-w-4xl">
+          <h3 className="text-xl font-semibold mb-6 text-foreground">{heading}</h3>
+          <div className="space-y-5">
+            {groups.map((g) => (
+              <div key={g.label}>
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {g.label}
+                </h4>
+                <ul className="flex flex-wrap gap-2" role="list">
+                  {g.skills.map((skill, i) => (
+                    <li
+                      key={`${g.label}-${i}-${skill}`}
+                      className="rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground"
+                    >
+                      {skill}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </SectionShell>
+    );
+  }
 
   const columns: number =
     typeof cfg.columns === 'number' && cfg.columns >= 1 && cfg.columns <= 4

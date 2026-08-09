@@ -89,8 +89,14 @@ function selectHeroContent(propsRaw: any, contentRaw: any) {
   }
 
   if (!merged.cta_action && typeof merged.cta_link === 'string') {
-    const link = merged.cta_link;
-    if (link.startsWith('#')) merged.cta_action = 'jump_to_contact';
+    const link = merged.cta_link.trim();
+    // ⚠️ AN IN-PAGE ANCHOR IS NOT AUTOMATICALLY THE CONTACT FORM. This mapped EVERY `#…` link to
+    // `jump_to_contact`, which then throws the link away and scrolls to `#contact` — so a hero
+    // reading "Browse restaurants → #restaurants" landed on the contact form, as did every
+    // "See the menu", "Our services", "Read the FAQ". The button worked, went somewhere, and
+    // went somewhere wrong, which is why it survived: nothing errors when a CTA lies.
+    if (link === '#' || link === '#contact') merged.cta_action = 'jump_to_contact';
+    else if (link.startsWith('#')) merged.cta_action = 'jump_to_anchor';
     else if (link.startsWith('tel:')) merged.cta_action = 'call_phone';
     else merged.cta_action = 'go_to_page';
   }
@@ -219,11 +225,25 @@ export default function HeroRender({
     [contactAnchor]
   );
 
+  /** Smooth-scroll to the anchor the author actually named. */
+  const handleAnchorClick = useCallback<React.MouseEventHandler<HTMLAnchorElement>>(
+    (e) => {
+      const id = String(cta_link || '').replace(/^#/, '');
+      const el = id ? document.getElementById(id) : null;
+      if (el) {
+        e.preventDefault();
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    },
+    [cta_link]
+  );
+
   const dbPhoneDigits = (template?.phone || '').replace(/\D/g, '');
   const resolvedPhoneDigits = (cta_phone || dbPhoneDigits || '').replace(/\D/g, '');
   const resolvedPhoneDisplay = formatPhoneDisplay(resolvedPhoneDigits);
 
-  const action: 'jump_to_contact' | 'go_to_page' | 'call_phone' = (cta_action as any) || 'go_to_page';
+  const action: 'jump_to_contact' | 'jump_to_anchor' | 'go_to_page' | 'call_phone' =
+    (cta_action as any) || 'go_to_page';
   let href: string | undefined;
   let onClick: React.MouseEventHandler<HTMLAnchorElement> | undefined;
 
@@ -234,6 +254,11 @@ export default function HeroRender({
     if (action === 'jump_to_contact') {
       href = `#${contactAnchor}`;
       onClick = handleJumpClick;
+    } else if (action === 'jump_to_anchor') {
+      // The author's own anchor, kept. Falls back to a plain href if the id isn't on the page,
+      // so a mistyped anchor does nothing visible rather than silently going somewhere else.
+      href = cta_link;
+      onClick = handleAnchorClick;
     } else if (action === 'call_phone') {
       href = resolvedPhoneDigits ? `tel:${resolvedPhoneDigits}` : undefined;
     } else {
@@ -294,6 +319,8 @@ export default function HeroRender({
             ? 'Call us now'
             : action === 'jump_to_contact'
             ? 'Jump to contact form'
+            : action === 'jump_to_anchor'
+            ? undefined // the link text already says where it goes
             : 'Go to contact page'
         }
       >

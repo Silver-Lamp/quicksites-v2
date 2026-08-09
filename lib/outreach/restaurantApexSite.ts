@@ -62,6 +62,11 @@ export function apexTemplateSeed(input: ApexSeedInput): Record<string, any> {
       hero.content.subheadline =
         'Real local kitchens, direct online ordering — no middleman markup. Browse the spots below.';
       if ('cta_text' in hero.content) hero.content.cta_text = 'Browse restaurants';
+      // ⚠️ THE CTA HAD TEXT BUT NO DESTINATION, so it inherited the restaurant starter's link and
+      // landed on a contact form this portal does not have. `site-renderer` gives the first block
+      // of each type `id=<type>`, so this is the id that actually exists on the page — not an
+      // invented anchor that reads nicer and matches nothing.
+      hero.content.cta_link = '#restaurants_directory';
     }
     // Hero + the directory block: the cohort renders as first-class page content
     // (editable/movable in the editor; live-hydrated by campaign_id at render time).
@@ -72,7 +77,17 @@ export function apexTemplateSeed(input: ApexSeedInput): Record<string, any> {
       campaign_id: input.campaignId,
       entries: [],
     };
-    page0.blocks = [hero, directory];
+    // ⚠️ THE SEARCH BOX IS THE APEX'S REASON TO EXIST, and it was only on the demo. A directory
+    // answers "who is near me"; a diner usually arrives knowing what they want to EAT. Searching
+    // every dish across the cohort is the thing a delivery app does that a list of links cannot,
+    // and building it into the seed is why the next apex gets it without anyone remembering.
+    const finder: any = createDefaultBlock('menu_finder' as any);
+    finder.content = {
+      ...(finder.content ?? {}),
+      title: 'What are you hungry for?',
+      campaign_id: input.campaignId,
+    };
+    page0.blocks = [hero, finder, directory];
   }
 
   // Portal chrome: the starter's business nav (Services/Contact) points at pages a

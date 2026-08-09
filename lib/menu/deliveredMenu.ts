@@ -21,15 +21,45 @@ export const MENU_BASE_DOMAIN = (process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || '')
   .replace(/\.$/, '');
 
 /**
- * First path segments on the apex that are app/marketing routes, NOT restaurant
- * slugs. Everything else on `delivered.menu/<seg>` is treated as a site slug.
+ * First path segments on the apex that are app routes, NOT restaurant slugs.
+ * Everything else on `delivered.menu/<seg>` is treated as a site slug.
+ *
+ * ⚠️ THIS LIST ONLY ROTS IN THE SAFE DIRECTION, AND THAT IS THE POINT. A new marketing route
+ * added to the app and forgotten here is treated as a restaurant slug, finds no restaurant, and
+ * 404s — it does not appear on the deliverable domain. The reverse default (an allow-list of
+ * restaurant slugs) would fail by hiding real restaurants. When a list will inevitably be
+ * incomplete, choose the direction where incomplete means "absent" rather than "leaked".
  */
 const RESERVED_APEX_SEGMENTS = new Set([
-  '', 'api', 'admin', 'login', 'logout', 'signup', 'claim-site', 'preview',
-  'sites', 'orgs', 'restaurants', 'delivered', 'partners', 'compare', 'build',
-  'cart', 'checkout', 'orders', 'host', '_domains', '_next',
+  '', 'api', 'admin', 'login', 'logout', 'signup', 'claim-site', 'claim', 'auth',
+  'sites', 'orgs', 'delivered', 'cart', 'checkout', 'orders', 'thank-you',
+  'host', '_domains', '_next',
   'favicon.ico', 'robots.txt', 'sitemap.xml', 'manifest.json',
 ]);
+
+/**
+ * QuickSites' own marketing pages, which were reachable ON the restaurant's deliverable domain.
+ *
+ * ⚠️ delivered.menu IS THE RESTAURANT'S ADDRESS, NOT OUR STOREFRONT. An owner handed
+ * `delivered.menu/joes-pizza` who clicks around was finding `delivered.menu/partners`
+ * ("Resell QuickSites. Earn the slice.") and `delivered.menu/compare` — an agency pitching
+ * resellers and comparing itself to Duda, on the domain whose entire job is to look like Joe's
+ * own site. Same reasoning as the watermark being a thin strip: the vendor is a footnote here.
+ *
+ * They redirect rather than 404 because the pages are real and someone linking to them meant
+ * something; they just live at quicksites.ai.
+ */
+const APEX_REDIRECT_SEGMENTS = new Set([
+  'restaurants', 'partners', 'compare', 'build', 'preview', 'pricing', 'features',
+  'realtors', 'auto-shops', 'book', 'contact', 'verbatim', 'personas', 'tools', 'gigs',
+]);
+
+/** Where an apex path that belongs to QuickSites should send the visitor instead. */
+export function apexRedirectTarget(pathname: string): string | null {
+  const seg1 = (pathname || '/').replace(/^\/+/, '').split('/')[0] || '';
+  if (!APEX_REDIRECT_SEGMENTS.has(seg1)) return null;
+  return `https://www.quicksites.ai${pathname}`;
+}
 
 export function menuEnabled(): boolean {
   return !!MENU_BASE_DOMAIN;

@@ -314,9 +314,19 @@ export default function MenuFinderBlock({
                 </p>
               ) : (
                 <div className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3">
+                  {/* ⚠️ "NOBODY NEAR YOU" WAS A CLAIM ABOUT THE WORLD MADE FROM OUR DATABASE.
+                      This index covers the kitchens on THIS page — 4 of them in Renton. A visitor
+                      searching "thai" got "nobody near you is serving that" while 20 Thai
+                      restaurants sit within 8km (checked via Places, 2026-08-09). The existing
+                      design note here already separates "nobody is OPEN" from "nobody SERVES it";
+                      this is the same distinction one level further out, and the one that was
+                      missed: OUR INDEX is not THE WORLD. Say what we actually know — and the
+                      cook-it probe only measures appetite honestly if the premise above it is
+                      true, since a visitor who believes "nobody nearby" is answering a different
+                      question than one who knows we simply don't list it yet. */}
                   <p className="text-sm text-zinc-300">
-                    Nobody near you is serving that right now — would you cook it yourself if we
-                    showed you how?
+                    No kitchen on this page has that yet — we&rsquo;re still adding them. Would you
+                    cook it yourself if we showed you how?
                   </p>
                   <button
                     type="button"

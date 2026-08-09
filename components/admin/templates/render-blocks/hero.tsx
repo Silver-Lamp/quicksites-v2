@@ -441,10 +441,28 @@ export default function HeroRender({
           />
         )}
         {!hide_headline && headline && (
-          <h1 className={`${titleSize} font-bold mb-4 text-card-foreground`}>{headline}</h1>
+          <h1
+            className={`${titleSize} font-bold mb-4 ${
+              heroBackdrop ? 'text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]' : 'text-card-foreground'
+            }`}
+          >
+            {headline}
+          </h1>
         )}
+        {/* ⚠️ `text-muted-foreground` OVER A PAINTING IS THE CONTRAST BUG THE RENDER GATE EXISTS
+            TO CATCH. Muted is defined against a flat card surface; over a sunlit wall it is grey
+            on grey, and the subheadline is where the "available for contract work" line lives —
+            the one sentence on a portfolio that has to be read. Both hero lines get an explicit
+            light colour and a shadow when there IS a backdrop, and keep the semantic tokens when
+            there is not (rule 7: the no-backdrop path stays exactly as it was). */}
         {!hide_subheadline && subheadline && (
-          <p className={`${subSize} mb-6 text-muted-foreground`}>{subheadline}</p>
+          <p
+            className={`${subSize} mb-6 ${
+              heroBackdrop ? 'text-zinc-100 drop-shadow-[0_1px_8px_rgba(0,0,0,0.75)]' : 'text-muted-foreground'
+            }`}
+          >
+            {subheadline}
+          </p>
         )}
         {CtaEl}
         <PhoneLine />

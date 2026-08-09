@@ -13,6 +13,9 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { loadCompetitionDirectoryByCampaignId } from '@/lib/outreach/restaurantCompetitionDirectory';
 import { buildCityMenuIndex } from '@/lib/menu/cityMenuIndex';
+import { selectUnclaimedForCity } from '@/lib/menu/unclaimedNearby';
+import { getHiddenTemplateIds } from '@/lib/outreach/directoryCuration';
+import { menuSiteUrl } from '@/lib/menu/deliveredMenu';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,9 +26,6 @@ export async function GET(req: Request) {
 
   const dir = await loadCompetitionDirectoryByCampaignId(campaign);
   if (!dir) return NextResponse.json({ error: 'not found' }, { status: 404 });
-  if (!dir.entries.length) {
-    return NextResponse.json({ city: dir.city, items: [], tags: [], restaurants: [] });
-  }
 
   const { data: templates } = await supabaseAdmin
     .from('templates')
@@ -33,15 +33,39 @@ export async function GET(req: Request) {
     .in('id', dir.entries.map((e) => e.templateId));
   const byId = new Map((templates ?? []).map((t: any) => [t.id, t]));
 
-  const index = buildCityMenuIndex(
-    dir.entries
-      .map((e) => {
-        const t: any = byId.get(e.templateId);
-        if (!t) return null;
-        return { slug: e.slug, name: e.businessName, url: e.url, data: t.data };
-      })
-      .filter(Boolean) as any[],
-  );
+  const listed = dir.entries
+    .map((e) => {
+      const t: any = byId.get(e.templateId);
+      if (!t) return null;
+      return { slug: e.slug, name: e.businessName, url: e.url, data: t.data };
+    })
+    .filter(Boolean) as any[];
 
+  // ⚠️ Unclaimed drafts are appended AFTER the listed cohort and FLAGGED, never merged into it.
+  // See lib/menu/unclaimedNearby.ts for why they belong here and why they must not look the same.
+  // Hidden ids are subtracted so this second data path cannot quietly undo operator curation —
+  // the standing rule at the top of this file is that search never shows what the directory hides.
+  const [{ data: drafts }, hidden] = await Promise.all([
+    supabaseAdmin
+      .from('templates')
+      .select('id, slug, data')
+      .eq('claim_source', 'listing_import')
+      .limit(500),
+    getHiddenTemplateIds(campaign),
+  ]);
+
+  const unclaimed = selectUnclaimedForCity((drafts ?? []) as any[], {
+    city: dir.city,
+    region: dir.region,
+    excludeTemplateIds: dir.entries.map((e) => e.templateId),
+    hiddenTemplateIds: hidden,
+    urlFor: (slug) => menuSiteUrl(slug),
+  });
+
+  if (!listed.length && !unclaimed.length) {
+    return NextResponse.json({ city: dir.city, region: dir.region, items: [], tags: [], restaurants: [] });
+  }
+
+  const index = buildCityMenuIndex([...listed, ...unclaimed]);
   return NextResponse.json({ city: dir.city, region: dir.region, ...index });
 }

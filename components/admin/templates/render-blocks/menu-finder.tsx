@@ -160,15 +160,38 @@ export default function MenuFinderBlock({
     } catch { /* the acknowledgement still shows; a lost log must never look like a failure */ }
   }, [previewOnly, campaignId, q, picked, openOnly]);
 
-  const byRestaurant = React.useMemo(() => {
-    const m = new Map<string, { url: string; openNow: boolean | null; items: Item[] }>();
+  type Group = {
+    url: string;
+    openNow: boolean | null;
+    items: Item[];
+    unclaimed: boolean;
+    phone: string | null;
+  };
+
+  /**
+   * ⚠️ CLAIMED AND UNCLAIMED ARE TWO LISTS, NOT ONE SORTED LIST. Merging them and relying on an
+   * ordering would make the distinction a visual convention that the next layout change silently
+   * drops. Splitting them means an unclaimed kitchen can never occupy a claimed one's position,
+   * and the section heading carries the caveat once instead of every row repeating it.
+   */
+  const [claimedGroups, unclaimedGroups] = React.useMemo<[Array<[string, Group]>, Array<[string, Group]>]>(() => {
+    const m = new Map<string, Group>();
     for (const i of results) {
-      const cur = m.get(i.restaurantName) ?? { url: i.restaurantUrl, openNow: i.openNow, items: [] };
+      const cur: Group = m.get(i.restaurantName) ?? {
+        url: i.restaurantUrl,
+        openNow: i.openNow,
+        items: [] as Item[],
+        unclaimed: !!(i as any).unclaimed,
+        phone: (i as any).restaurantPhone ?? null,
+      };
       cur.items.push(i);
       m.set(i.restaurantName, cur);
     }
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const all: Array<[string, Group]> = [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return [all.filter(([, r]) => !r.unclaimed), all.filter(([, r]) => r.unclaimed)];
   }, [results]);
+
+  const byRestaurant = claimedGroups;
 
   if (previewOnly || !campaignId) {
     return (
@@ -340,7 +363,8 @@ export default function MenuFinderBlock({
             )}
           </div>
         ) : (
-          byRestaurant.map(([name, r]) => (
+          <>
+          {byRestaurant.map(([name, r]) => (
             <div key={name}>
               <div className="flex items-baseline gap-2">
                 <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-base font-semibold text-zinc-100 hover:underline">
@@ -369,7 +393,73 @@ export default function MenuFinderBlock({
                 ))}
               </ul>
             </div>
-          ))
+          ))}
+
+          {/*
+            ⚠️ UNCLAIMED KITCHENS — a real menu, transcribed from the restaurant's own public
+            listing photos, on a page they have not claimed. They are shown because withholding a
+            real dinner option protects nobody, and shown SEPARATELY, BELOW, and WITHOUT an order
+            path because they have agreed to nothing and confirmed no price. The only action is
+            their own public phone number: the same thing a search engine offers, and exactly what
+            this site already tells diners to do ("call them direct").
+            The gap between these rows and the ones above IS the pitch to the owner.
+          */}
+          {unclaimedGroups.length > 0 && (
+            <div className="mt-8 border-t border-zinc-800 pt-6">
+              <h3 className="text-sm font-semibold text-zinc-300">
+                Also serving this nearby — call them direct
+              </h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                These kitchens haven&rsquo;t set up online ordering with us yet. We read their menu
+                off their public listing, so call to confirm what&rsquo;s available and what it costs.
+              </p>
+              <div className="mt-4 space-y-5">
+                {unclaimedGroups.map(([name, r]) => (
+                  <div key={name}>
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <a
+                        href={r.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-base font-semibold text-zinc-300 hover:underline"
+                      >
+                        {name}
+                      </a>
+                      {r.phone ? (
+                        <a
+                          href={`tel:${r.phone.replace(/[^\d+]/g, '')}`}
+                          className="text-sm font-medium text-sky-300 hover:underline"
+                        >
+                          {r.phone}
+                        </a>
+                      ) : (
+                        <span className="text-xs text-zinc-600">no phone listed</span>
+                      )}
+                      {r.openNow === true && (
+                        <span className="text-xs font-medium text-emerald-500/80">open now</span>
+                      )}
+                      {r.openNow === null && <span className="text-xs text-zinc-600">hours unknown</span>}
+                    </div>
+                    <ul className="mt-1.5 text-sm text-zinc-400">
+                      {r.items.slice(0, 4).map((i) => (
+                        <li key={i.id} className="py-0.5">
+                          {i.name}
+                          {/* ⚠️ No price at all here, not even a dimmed one. On a page nobody has
+                              claimed, a number beside a dish reads as a quote from the restaurant. */}
+                        </li>
+                      ))}
+                      {r.items.length > 4 && (
+                        <li className="py-0.5 text-xs text-zinc-600">
+                          +{r.items.length - 4} more on their menu
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
     </section>

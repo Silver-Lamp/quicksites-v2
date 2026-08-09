@@ -27,13 +27,35 @@ export type IndexedItem = {
   openNow: boolean | null;
   /** True when the price shown is "call to confirm" rather than a number we stand behind. */
   priceUnconfirmed: boolean;
+  /**
+   * This kitchen has NOT claimed its page.
+   *
+   * ⚠️ NEVER LET AN UNCLAIMED RESULT PASS FOR A CLAIMED ONE. The restaurant is real and the menu
+   * is transcribed from their own listing photos, so hiding it fails a hungry visitor for a
+   * reason that is about us, not them. But they have not agreed to anything, cannot take an
+   * order, and confirmed no price — so the only honest action on one of these is their own
+   * public phone number. Consumers must render them apart from, and below, claimed results:
+   * if an unclaimed row looks the same as a claimed one, claiming buys nothing and the owners
+   * who did claim are undercut by the ones who didn't.
+   */
+  unclaimed: boolean;
+  /** Their public listing phone — the only action offered on an unclaimed result. */
+  restaurantPhone: string | null;
 };
 
 export type CityMenuIndex = {
   items: IndexedItem[];
   /** Every tag present, most common first. */
   tags: Array<{ tag: string; count: number }>;
-  restaurants: Array<{ slug: string; name: string; url: string; itemCount: number; openNow: boolean | null }>;
+  restaurants: Array<{
+    slug: string;
+    name: string;
+    url: string;
+    itemCount: number;
+    openNow: boolean | null;
+    unclaimed: boolean;
+    phone: string | null;
+  }>;
 };
 
 type Period = { open?: string; close?: string };
@@ -123,7 +145,15 @@ export function normTag(t: string): string {
 }
 
 export function buildCityMenuIndex(
-  restaurants: Array<{ slug: string; name: string; url: string; data: any }>,
+  restaurants: Array<{
+    slug: string;
+    name: string;
+    url: string;
+    data: any;
+    /** See IndexedItem.unclaimed. Defaults false — a caller must opt IN to listing one. */
+    unclaimed?: boolean;
+    phone?: string | null;
+  }>,
   now: Date = new Date(),
 ): CityMenuIndex {
   const items: IndexedItem[] = [];
@@ -156,11 +186,21 @@ export function buildCityMenuIndex(
           restaurantUrl: r.url,
           section: s.name ? String(s.name) : undefined,
           openNow,
+          unclaimed: !!r.unclaimed,
+          restaurantPhone: r.phone ?? null,
         });
       }
     }
 
-    restaurantRows.push({ slug: r.slug, name: r.name, url: r.url, itemCount: count, openNow });
+    restaurantRows.push({
+      slug: r.slug,
+      name: r.name,
+      url: r.url,
+      itemCount: count,
+      openNow,
+      unclaimed: !!r.unclaimed,
+      phone: r.phone ?? null,
+    });
   }
 
   const counts = new Map<string, number>();
@@ -171,7 +211,11 @@ export function buildCityMenuIndex(
     tags: [...counts.entries()]
       .map(([tag, count]) => ({ tag, count }))
       .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag)),
-    restaurants: restaurantRows.sort((a, b) => a.name.localeCompare(b.name)),
+    // ⚠️ Claimed first, always. The ordering is the honesty guarantee, not a preference: a
+    // consumer that renders this list in order can never put an unclaimed page above a claimed one.
+    restaurants: restaurantRows.sort(
+      (a, b) => Number(a.unclaimed) - Number(b.unclaimed) || a.name.localeCompare(b.name),
+    ),
   };
 }
 

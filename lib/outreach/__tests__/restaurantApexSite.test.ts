@@ -38,14 +38,26 @@ describe('apexTemplateSeed', () => {
     expect(meta.apex_campaign_id).toBe('camp1');
     expect(meta.apex_domain).toBe('renton-restaurant.com');
 
-    // Portal, not a business site: hero + the live directory block — no menu/hours/contact.
+    // Portal, not a business site: hero + dish search + the live directory — no menu/hours/contact.
     const blocks = row.data?.pages?.[0]?.blocks ?? [];
-    expect(blocks).toHaveLength(2);
+    expect(blocks).toHaveLength(3);
     expect(blocks[0].type).toBe('hero');
     expect(blocks[0].content.headline).toBe('Order from local restaurants in Renton, WA');
-    expect(blocks[1].type).toBe('restaurants_directory');
-    expect(blocks[1].content.campaign_id).toBe('camp1'); // drives the live cohort fetch
-    expect(blocks[1].content.title).toBe('Restaurants in Renton, WA');
+
+    // ⚠️ The CTA must point at an id the page ACTUALLY renders. `site-renderer` gives the first
+    // block of each type `id=<type>`, and the seed shipped with text but no link — so it
+    // inherited the restaurant starter's and scrolled to a contact form this portal lacks.
+    expect(blocks[0].content.cta_text).toBe('Browse restaurants');
+    expect(blocks[0].content.cta_link).toBe('#restaurants_directory');
+    expect(blocks.some((b: any) => b.type === blocks[0].content.cta_link.slice(1))).toBe(true);
+
+    // The dish search is the apex's reason to exist, not a demo-only extra.
+    expect(blocks[1].type).toBe('menu_finder');
+    expect(blocks[1].content.campaign_id).toBe('camp1');
+
+    expect(blocks[2].type).toBe('restaurants_directory');
+    expect(blocks[2].content.campaign_id).toBe('camp1'); // drives the live cohort fetch
+    expect(blocks[2].content.title).toBe('Restaurants in Renton, WA');
 
     // Portal chrome trimmed: header/footer nav collapses to Home.
     for (const chrome of [row.header_block, row.footer_block]) {

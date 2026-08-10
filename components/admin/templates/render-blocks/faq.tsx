@@ -41,7 +41,7 @@ export default function FaqRender({
 
   if (!final.items?.length) {
     return (
-      <div className="text-red-500 italic text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">
+      <div className="text-red-500 italic text-sm p-2 bg-red-500/10 rounded">
         ⚠️ Missing FAQ block content.
       </div>
     );

@@ -133,7 +133,7 @@ export default function RenderComments({ block, content, template, previewOnly }
             aria-hidden="true"
             style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
           />
-          {msg && <p className={`text-sm ${msg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>{msg.text}</p>}
+          {msg && <p className={`text-sm ${msg.ok ? 'text-foreground' : 'text-red-500'}`}>{msg.text}</p>}
           <button type="button" onClick={submit} disabled={busy}
             className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
             {busy ? 'Posting…' : 'Post comment'}

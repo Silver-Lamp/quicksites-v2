@@ -189,10 +189,14 @@ describe('block renderers do not rely on dark: to fix contrast', () => {
       .map((f: string) => join(d, f)),
   );
 
-  // Frozen at what exists today. ⚠️ NOT an allowlist — the companion test below forbids it growing.
-  // ⚠️ Measured, not guessed. A baseline set above the real count is a ratchet that never
-  // ratchets — it would sit green while the number climbed to meet it.
-  const KNOWN_DARK_VARIANT_USERS = 10;
+  // ⚠️ ZERO, and it got here by being FIXED rather than by the baseline being generous. The
+  // frozen count was 10 — all of them light-first pairs like `text-emerald-600
+  // dark:text-emerald-300`, which is the documented-correct pattern everywhere EXCEPT a tenant
+  // site, where `app/providers.tsx` pins `.dark` on <html> and the dark shade therefore always
+  // wins. On a light tenant page each of those rendered its pale variant on a pale tint: the
+  // exact contrast bug the pairing exists to prevent. Now theme tokens, which follow the site's
+  // own `data-theme` scope.
+  const KNOWN_DARK_VARIANT_USERS = 0;
 
   const users = files.filter((f) =>
     /\bdark:(text|bg|border)-/.test(

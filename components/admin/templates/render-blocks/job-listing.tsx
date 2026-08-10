@@ -91,7 +91,7 @@ export default function RenderJobListing({ block, content, template, previewOnly
         )}
 
         {done ? (
-          <div className="mt-4 rounded-xl bg-emerald-500/10 p-4 text-sm text-emerald-600 dark:text-emerald-300">
+          <div className="mt-4 rounded-xl bg-emerald-500/10 p-4 text-sm text-foreground">
             Thanks — your {isCatalog ? 'walk order' : 'application'} was sent. The poster will reach out.
           </div>
         ) : (

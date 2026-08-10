@@ -20,7 +20,7 @@ export default function CtaRender({ block, content, compact = false }: Props) {
 
   if (!final || !final.label || !url) {
     return (
-      <div className="text-red-500 italic text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">
+      <div className="text-red-500 italic text-sm p-2 bg-red-500/10 rounded">
         ⚠️ Missing content for CTA block.
       </div>
     );

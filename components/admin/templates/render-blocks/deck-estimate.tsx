@@ -222,7 +222,7 @@ export default function RenderDeckEstimate({ block, content, template, previewOn
             {/* Lead capture — separate step, fires the QS submission rail to the builder */}
             <div className="mt-5 border-t border-border pt-4">
               {leadDone ? (
-                <div className="rounded-lg bg-emerald-500/10 p-4 text-sm text-emerald-600 dark:text-emerald-300">
+                <div className="rounded-lg bg-emerald-500/10 p-4 text-sm text-foreground">
                   Thanks — we’ll be in touch with a real quote.
                 </div>
               ) : (

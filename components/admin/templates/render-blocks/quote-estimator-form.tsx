@@ -176,7 +176,7 @@ export default function QuoteEstimatorForm({ trade, title, subtitle, ctaText, te
             )}
             <div className="mt-5 border-t border-border pt-4">
               {leadDone ? (
-                <div className="rounded-lg bg-emerald-500/10 p-4 text-sm text-emerald-600 dark:text-emerald-300">Thanks — we’ll be in touch with a real quote.</div>
+                <div className="rounded-lg bg-emerald-500/10 p-4 text-sm text-foreground">Thanks — we’ll be in touch with a real quote.</div>
               ) : (
                 <div className="space-y-3">
                   <div className="text-sm font-semibold">{ctaText}</div>

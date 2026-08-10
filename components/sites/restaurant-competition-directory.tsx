@@ -4,6 +4,7 @@
 // (<city>-restaurant.com). Lists the cohort restaurants, WINNER featured up top. No
 // "competition" framing is shown to diners — it reads as a clean local-restaurant
 // directory. Server component. See [[restaurant-domain-competition]].
+import RestaurantInitials from '@/components/sites/restaurant-initials';
 import Link from 'next/link';
 import type { CompetitionDirectory } from '@/lib/outreach/restaurantCompetitionDirectory';
 
@@ -32,7 +33,7 @@ function Card({
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-4xl">🍽️</div>
+          <RestaurantInitials name={entry.businessName} />
         )}
         {entry.isWinner && (
           <span className="absolute left-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-zinc-950 shadow">

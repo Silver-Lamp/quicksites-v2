@@ -275,7 +275,7 @@ export default function MenuFinderBlock({
             <button
               key={t}
               onClick={() => setPicked((p) => p.filter((x) => x !== t))}
-              className="rounded-full border border-amber-500/50 bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-800 dark:text-amber-200"
+              className="rounded-full border border-amber-500/50 bg-amber-500/15 px-3 py-1 text-xs font-medium text-foreground"
             >
               {t} ✕
             </button>
@@ -292,7 +292,7 @@ export default function MenuFinderBlock({
             <button
               key={tag}
               onClick={() => setPicked((p) => [...p, tag])}
-              className="rounded-full border border-border bg-muted px-3 py-1 text-xs text-foreground transition hover:border-amber-500/50 hover:text-amber-800 dark:text-amber-200"
+              className="rounded-full border border-border bg-muted px-3 py-1 text-xs text-foreground transition hover:border-amber-500/50 hover:text-foreground"
             >
               {tag} <span className="text-muted-foreground">{count}</span>
             </button>
@@ -330,7 +330,7 @@ export default function MenuFinderBlock({
               the same fact as "nobody SERVES it". Only the second is unmet demand.
             */}
             {near.kind === 'closed_now' && (
-              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-100">
+              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-foreground">
                 {near.items.length === 1 ? 'One place near you serves that' : `${near.items.length} dishes near you match`}
                 {' '}— just not open right now.{' '}
                 <button onClick={() => setOpenOnly(false)} className="font-medium underline">
@@ -367,7 +367,7 @@ export default function MenuFinderBlock({
             */}
             {near.kind === 'none' && !previewOnly && campaignId && (q.trim() || picked.length > 0) && (
               cookIntent ? (
-                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-200">
+                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-foreground">
                   Noted — thank you. We haven&rsquo;t built this yet; we&rsquo;re finding out
                   whether people want it first. All we recorded is that someone tapped, and what
                   they searched for.
@@ -391,7 +391,7 @@ export default function MenuFinderBlock({
                   <button
                     type="button"
                     onClick={() => { setCookIntent(true); logCookIntent(); }}
-                    className="mt-2.5 rounded-md border border-sky-500/40 px-3 py-1.5 text-sm font-medium text-sky-800 dark:text-sky-200 transition hover:bg-sky-500/10"
+                    className="mt-2.5 rounded-md border border-primary/40 px-3 py-1.5 text-sm font-medium text-primary transition hover:bg-primary/10"
                   >
                     Yes, I&rsquo;d cook it
                   </button>
@@ -425,7 +425,7 @@ export default function MenuFinderBlock({
                           {' · '}
                           <a
                             href={`tel:${m.phone.replace(/[^\d+]/g, '')}`}
-                            className="font-medium text-sky-700 dark:text-sky-300 hover:underline"
+                            className="font-medium text-primary hover:underline"
                           >
                             {m.phone}
                           </a>
@@ -456,7 +456,7 @@ export default function MenuFinderBlock({
                   {name}
                 </a>
                 {/* Three states, never two — unknown hours must not read as closed. */}
-                {r.openNow === true && <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">open now</span>}
+                {r.openNow === true && <span className="text-xs font-medium text-emerald-600">open now</span>}
                 {r.openNow === false && <span className="text-xs text-muted-foreground">closed</span>}
                 {r.openNow === null && <span className="text-xs text-muted-foreground">hours unknown</span>}
               </div>
@@ -513,7 +513,7 @@ export default function MenuFinderBlock({
                       {r.phone ? (
                         <a
                           href={`tel:${r.phone.replace(/[^\d+]/g, '')}`}
-                          className="text-sm font-medium text-sky-700 dark:text-sky-300 hover:underline"
+                          className="text-sm font-medium text-primary hover:underline"
                         >
                           {r.phone}
                         </a>
@@ -521,7 +521,7 @@ export default function MenuFinderBlock({
                         <span className="text-xs text-muted-foreground">no phone listed</span>
                       )}
                       {r.openNow === true && (
-                        <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">open now</span>
+                        <span className="text-xs font-medium text-emerald-600">open now</span>
                       )}
                       {r.openNow === null && <span className="text-xs text-muted-foreground">hours unknown</span>}
                     </div>

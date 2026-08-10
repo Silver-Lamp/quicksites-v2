@@ -44,10 +44,13 @@ export default function MenuFinderBlock({
   block,
   content,
   previewOnly,
+  serverData,
 }: {
   block: Block;
   content?: any;
   template?: any;
+  /** The city index, fetched server-side so the dishes are in the first render. */
+  serverData?: unknown;
   // ⚠️ NO `colorMode`. It was declared here and never read — so the file LOOKED theme-aware to
   // every reader while hard-coding the dark palette throughout, which is the same unused-prop
   // trap SectionShell fell into (see components/ui/__tests__/sectionShellColor.test.ts). The
@@ -58,7 +61,12 @@ export default function MenuFinderBlock({
   const campaignId = String(c?.campaign_id || '');
   const title = String(c?.title || 'What are you hungry for?');
 
-  const [feed, setFeed] = React.useState<Feed | null>(null);
+  // ⚠️ SEEDED FROM THE SERVER SO THE DISHES ARE IN THE SERVED HTML. Starting at null meant the
+  // first render — the one Next turns into the bytes we ship — contained no search and no dish
+  // names. A crawler asked "pad thai renton" cannot match a page whose dishes arrive after
+  // hydration. The client fetch below still runs and still wins, so an open/closed change or a
+  // newly claimed kitchen is never stale; this only decides what the FIRST paint contains.
+  const [feed, setFeed] = React.useState<Feed | null>((serverData as Feed | undefined) ?? null);
   const [picked, setPicked] = React.useState<string[]>([]);
   const [q, setQ] = React.useState('');
   const [openOnly, setOpenOnly] = React.useState(false);

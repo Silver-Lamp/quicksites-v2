@@ -13,6 +13,7 @@ import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import MenuNotFound from '@/components/site/menu-not-found';
+import { loadCityMenuFeed, menuFinderCampaignId } from '@/lib/menu/cityMenuIndexServer';
 import {
   PUBLIC_PATH_HEADER,
   absoluteUrl,
@@ -515,6 +516,15 @@ export default async function SitePreviewPage({
       ? await loadCompetitionDirectoryBySlug(siteRow.slug ?? slug)
       : null;
 
+  // ⚠️ THE CITY DISH INDEX, FETCHED HERE SO IT IS IN THE SERVED HTML. `menu_finder` fetched its
+  // own feed in an effect, so the search box and every dish name were absent from the bytes —
+  // invisible to a crawler and to a no-JS first paint, on the page whose entire product is that
+  // search. The block still refetches after hydration, so nothing here goes stale; this decides
+  // only what the first render contains. Null on any failure: the page must never 500 because a
+  // decoration could not load.
+  const menuFinderCampaign = menuFinderCampaignId(normalized.data);
+  const cityMenuFeed = menuFinderCampaign ? await loadCityMenuFeed(menuFinderCampaign) : null;
+
   // LocalBusiness JSON-LD (built live from identity so it stays fresh) — emitted when the
   // operator turned it on in the Readiness coach. Skipped on the pre-claim watermarked draft.
   const localBusinessSchema =
@@ -578,6 +588,7 @@ export default async function SitePreviewPage({
         id="site-renderer-page"
         colorMode={colorMode}
         className="bg-background text-foreground"
+        serverData={cityMenuFeed ? { menu_finder: cityMenuFeed } : undefined}
       />
       {apexDirectory && <RestaurantCompetitionDirectory dir={apexDirectory} compact />}
       {showWatermark && <PreviewWatermark />}

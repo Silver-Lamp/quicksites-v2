@@ -25,6 +25,12 @@ type SiteRendererProps = {
   colorMode?: 'light' | 'dark';
   enableThemeWrapper?: boolean;
   editorChrome?: boolean;        // ← NEW: allow editor chrome flag
+  /**
+   * Data the SERVER fetched for blocks that would otherwise fetch their own in an effect,
+   * keyed by block type. See RenderBlock's `serverData` for why this exists and why it is a
+   * per-request channel rather than something written into block content.
+   */
+  serverData?: Record<string, unknown>;
 };
 
 export default function SiteRenderer({
@@ -36,6 +42,7 @@ export default function SiteRenderer({
   enableThemeWrapper = true,
   baseUrl,                       // ← NEW (already typed)
   editorChrome,                  // ← NEW
+  serverData,
 }: SiteRendererProps) {
   const selectedPage = React.useMemo(
     () => getPageBySlug(site, pageSlug),
@@ -110,6 +117,7 @@ export default function SiteRenderer({
             style={banded ? { background: 'hsl(var(--muted))' } : undefined}
           >
             <RenderBlock
+              serverData={serverData}
               block={block}
               showDebug={false}
               colorMode={colorMode}

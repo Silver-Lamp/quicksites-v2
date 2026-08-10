@@ -165,3 +165,53 @@ describe('block renderers do not hard-code the dark palette either', () => {
     expect(isThemeAware(preFix)).toBe(false);
   });
 });
+
+// ⚠️ `dark:` DOES NOT WORK IN A TENANT BLOCK RENDERER, AND IT FAILS SILENTLY IN THE WRONG
+// DIRECTION. `app/providers.tsx` puts `.dark` on <html> for the whole app, so on a LIGHT tenant
+// site — measured on renton-restaurant.delivered.menu, `html.className === "dark"` while the
+// site's own scope is `data-theme="light"` — every `dark:` utility is pinned ON. A block pairing
+// `text-sky-800 dark:text-sky-200` therefore renders the pale shade on a white page, which is
+// exactly the contrast bug the pairing was supposed to prevent. CLAUDE.md §7 states this for a
+// page with its own toggle; it is true of every tenant renderer, because a tenant theme is set by
+// a `data-theme` wrapper and never by the `.dark` class.
+//
+// The fix is theme TOKENS (`text-foreground`, `text-primary`), which follow the scope. Alpha tints
+// still carry the accent colour; only the text needs a token.
+describe('block renderers do not rely on dark: to fix contrast', () => {
+  const dirs = [
+    join(process.cwd(), 'components/admin/templates/render-blocks'),
+    join(process.cwd(), 'components/sites/render-blocks'),
+  ];
+  const files: string[] = dirs.flatMap((d) =>
+    require('node:fs')
+      .readdirSync(d)
+      .filter((f: string) => f.endsWith('.tsx'))
+      .map((f: string) => join(d, f)),
+  );
+
+  // Frozen at what exists today. ⚠️ NOT an allowlist — the companion test below forbids it growing.
+  // ⚠️ Measured, not guessed. A baseline set above the real count is a ratchet that never
+  // ratchets — it would sit green while the number climbed to meet it.
+  const KNOWN_DARK_VARIANT_USERS = 10;
+
+  const users = files.filter((f) =>
+    /\bdark:(text|bg|border)-/.test(
+      readFileSync(String(f), 'utf8')
+        .split('\n')
+        .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+        .join('\n'),
+    ),
+  );
+
+  it('does not grow the number of renderers betting on dark:', () => {
+    expect(users.length).toBeLessThanOrEqual(KNOWN_DARK_VARIANT_USERS);
+  });
+
+  it('menu-finder in particular uses tokens, not dark: (the file this was found on)', () => {
+    const body = readFileSync(
+      join(process.cwd(), 'components/admin/templates/render-blocks/menu-finder.tsx'),
+      'utf8',
+    );
+    expect(body).not.toMatch(/\bdark:(text|bg|border)-/);
+  });
+});

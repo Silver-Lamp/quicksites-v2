@@ -48,7 +48,10 @@ export default function MenuFinderBlock({
   block: Block;
   content?: any;
   template?: any;
-  colorMode?: 'light' | 'dark';
+  // ⚠️ NO `colorMode`. It was declared here and never read — so the file LOOKED theme-aware to
+  // every reader while hard-coding the dark palette throughout, which is the same unused-prop
+  // trap SectionShell fell into (see components/ui/__tests__/sectionShellColor.test.ts). The
+  // block is theme-aware now because it uses semantic tokens, which need no prop at all.
   previewOnly?: boolean;
 }) {
   const c = pickContent(block, content);
@@ -160,21 +163,78 @@ export default function MenuFinderBlock({
     } catch { /* the acknowledgement still shows; a lost log must never look like a failure */ }
   }, [previewOnly, campaignId, q, picked, openOnly]);
 
-  const byRestaurant = React.useMemo(() => {
-    const m = new Map<string, { url: string; openNow: boolean | null; items: Item[] }>();
+  type Group = {
+    url: string;
+    openNow: boolean | null;
+    items: Item[];
+    unclaimed: boolean;
+    phone: string | null;
+  };
+
+  /**
+   * ⚠️ CLAIMED AND UNCLAIMED ARE TWO LISTS, NOT ONE SORTED LIST. Merging them and relying on an
+   * ordering would make the distinction a visual convention that the next layout change silently
+   * drops. Splitting them means an unclaimed kitchen can never occupy a claimed one's position,
+   * and the section heading carries the caveat once instead of every row repeating it.
+   */
+  const [claimedGroups, unclaimedGroups] = React.useMemo<[Array<[string, Group]>, Array<[string, Group]>]>(() => {
+    const m = new Map<string, Group>();
     for (const i of results) {
-      const cur = m.get(i.restaurantName) ?? { url: i.restaurantUrl, openNow: i.openNow, items: [] };
+      const cur: Group = m.get(i.restaurantName) ?? {
+        url: i.restaurantUrl,
+        openNow: i.openNow,
+        items: [] as Item[],
+        unclaimed: !!(i as any).unclaimed,
+        phone: (i as any).restaurantPhone ?? null,
+      };
       cur.items.push(i);
       m.set(i.restaurantName, cur);
     }
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const all: Array<[string, Group]> = [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return [all.filter(([, r]) => !r.unclaimed), all.filter(([, r]) => r.unclaimed)];
   }, [results]);
+
+  const byRestaurant = claimedGroups;
+
+  /**
+   * Real restaurants in this city that we do NOT host, fetched only on a genuine zero result.
+   *
+   * ⚠️ THE SWEEP KNOWS THE CITY; THE INDEX ONLY KNOWS OUR FOUR KITCHENS. Answering "nobody serves
+   * that" from a four-restaurant index was the bug fixed in #727; this is the other half — having
+   * softened the claim, actually help. Reads our own already-collected lead data, never a live
+   * third-party lookup on a public endpoint.
+   */
+  const [nearby, setNearby] = React.useState<Array<{
+    name: string; phone: string | null; address: string | null;
+    rating: number | null; reviewCount: number | null; matchReason: 'name' | 'category';
+  }>>([]);
+
+  React.useEffect(() => {
+    if (previewOnly || !campaignId || near.kind !== 'none' || !q.trim()) {
+      setNearby([]);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `/api/public/city-nearby?campaign=${encodeURIComponent(campaignId)}&q=${encodeURIComponent(q)}`,
+        );
+        if (!r.ok) return;
+        const j = await r.json();
+        if (!cancelled) setNearby(Array.isArray(j?.matches) ? j.matches : []);
+      } catch {
+        /* a missing suggestion is a quieter failure than a broken page */
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [previewOnly, campaignId, near.kind, q]);
 
   if (previewOnly || !campaignId) {
     return (
       <section className="mx-auto w-full max-w-5xl px-6 py-10">
         <h2 className="text-2xl font-bold">{title}</h2>
-        <p className="mt-2 text-sm text-zinc-400">
+        <p className="mt-2 text-sm text-muted-foreground">
           {campaignId
             ? 'Menu search — live on the published site.'
             : 'Link this block to a city campaign (campaign_id) to search its menus.'}
@@ -190,7 +250,7 @@ export default function MenuFinderBlock({
   return (
     <section className="mx-auto w-full max-w-5xl px-6 py-10">
       <h2 className="text-2xl font-bold">{title}</h2>
-      <p className="mt-1 text-sm text-zinc-400">
+      <p className="mt-1 text-sm text-muted-foreground">
         {total} dishes across {feed.restaurants.length} kitchens
         {feed.city ? ` in ${feed.city}` : ''}.
       </p>
@@ -201,9 +261,9 @@ export default function MenuFinderBlock({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Tacos, noodles, something vegan…"
-          className="w-full rounded-xl border border-zinc-700 bg-zinc-900/60 px-4 py-3 text-base text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-amber-400/60"
+          className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-base text-foreground placeholder:text-muted-foreground outline-none focus:border-amber-400/60"
         />
-        <label className="flex shrink-0 items-center gap-2 text-sm text-zinc-300">
+        <label className="flex shrink-0 items-center gap-2 text-sm text-foreground">
           <input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} className="h-4 w-4" />
           Open now
         </label>
@@ -215,12 +275,12 @@ export default function MenuFinderBlock({
             <button
               key={t}
               onClick={() => setPicked((p) => p.filter((x) => x !== t))}
-              className="rounded-full border border-amber-500/50 bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-200"
+              className="rounded-full border border-amber-500/50 bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-800 dark:text-amber-200"
             >
               {t} ✕
             </button>
           ))}
-          <button onClick={() => setPicked([])} className="text-xs text-zinc-400 underline">
+          <button onClick={() => setPicked([])} className="text-xs text-muted-foreground underline">
             clear
           </button>
         </div>
@@ -232,9 +292,9 @@ export default function MenuFinderBlock({
             <button
               key={tag}
               onClick={() => setPicked((p) => [...p, tag])}
-              className="rounded-full border border-zinc-700 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300 transition hover:border-amber-500/50 hover:text-amber-200"
+              className="rounded-full border border-border bg-muted px-3 py-1 text-xs text-foreground transition hover:border-amber-500/50 hover:text-amber-800 dark:text-amber-200"
             >
-              {tag} <span className="text-zinc-500">{count}</span>
+              {tag} <span className="text-muted-foreground">{count}</span>
             </button>
           ))}
         </div>
@@ -243,7 +303,7 @@ export default function MenuFinderBlock({
       <div className="mt-7 space-y-6">
         {byRestaurant.length === 0 ? (
           <div className="space-y-4">
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               Nothing matches that yet.{' '}
               <button onClick={() => { setPicked([]); setQ(''); setOpenOnly(false); }} className="underline">
                 Start over
@@ -270,7 +330,7 @@ export default function MenuFinderBlock({
               the same fact as "nobody SERVES it". Only the second is unmet demand.
             */}
             {near.kind === 'closed_now' && (
-              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-100">
                 {near.items.length === 1 ? 'One place near you serves that' : `${near.items.length} dishes near you match`}
                 {' '}— just not open right now.{' '}
                 <button onClick={() => setOpenOnly(false)} className="font-medium underline">
@@ -279,9 +339,9 @@ export default function MenuFinderBlock({
               </p>
             )}
             {near.kind === 'naming' && (
-              <p className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3 text-sm text-zinc-300">
+              <p className="rounded-lg border border-border bg-muted p-3 text-sm text-foreground">
                 Served nearby, spelled differently —{' '}
-                <span className="font-medium text-zinc-100">
+                <span className="font-medium text-foreground">
                   {near.items.slice(0, 3).map((i) => i.name).join(', ')}
                 </span>
                 {near.items.length > 3 ? ` and ${near.items.length - 3} more` : ''}.{' '}
@@ -291,7 +351,7 @@ export default function MenuFinderBlock({
               </p>
             )}
             {near.kind === 'relaxed_tags' && (
-              <p className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3 text-sm text-zinc-300">
+              <p className="rounded-lg border border-border bg-muted p-3 text-sm text-foreground">
                 No exact match, but {near.items.length} close{near.items.length === 1 ? ' one' : ' ones'} if you drop the filters.{' '}
                 <button onClick={() => setPicked([])} className="font-medium underline">
                   Show those
@@ -307,13 +367,13 @@ export default function MenuFinderBlock({
             */}
             {near.kind === 'none' && !previewOnly && campaignId && (q.trim() || picked.length > 0) && (
               cookIntent ? (
-                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-200">
                   Noted — thank you. We haven&rsquo;t built this yet; we&rsquo;re finding out
                   whether people want it first. All we recorded is that someone tapped, and what
                   they searched for.
                 </p>
               ) : (
-                <div className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3">
+                <div className="rounded-lg border border-border bg-muted p-3">
                   {/* ⚠️ "NOBODY NEAR YOU" WAS A CLAIM ABOUT THE WORLD MADE FROM OUR DATABASE.
                       This index covers the kitchens on THIS page — 4 of them in Renton. A visitor
                       searching "thai" got "nobody near you is serving that" while 20 Thai
@@ -324,44 +384,93 @@ export default function MenuFinderBlock({
                       cook-it probe only measures appetite honestly if the premise above it is
                       true, since a visitor who believes "nobody nearby" is answering a different
                       question than one who knows we simply don't list it yet. */}
-                  <p className="text-sm text-zinc-300">
+                  <p className="text-sm text-foreground">
                     No kitchen on this page has that yet — we&rsquo;re still adding them. Would you
                     cook it yourself if we showed you how?
                   </p>
                   <button
                     type="button"
                     onClick={() => { setCookIntent(true); logCookIntent(); }}
-                    className="mt-2.5 rounded-md border border-sky-500/40 px-3 py-1.5 text-sm font-medium text-sky-200 transition hover:bg-sky-500/10"
+                    className="mt-2.5 rounded-md border border-sky-500/40 px-3 py-1.5 text-sm font-medium text-sky-800 dark:text-sky-200 transition hover:bg-sky-500/10"
                   >
                     Yes, I&rsquo;d cook it
                   </button>
                 </div>
               )
             )}
+
+            {/*
+              ⚠️ THE HELPFUL ANSWER, AND THE LIMIT OF WHAT WE CAN HONESTLY SAY. These come from our
+              own city sweep, so we know the business and its CUISINE — we have never seen their
+              menu. So the heading says "restaurants", never "serving <dish>", and no dish or price
+              is shown: asserting that a kitchen serves something we never read is the same
+              invention as quoting a price we cannot date.
+
+              They are not on delivered.menu and get nothing that treats them as a lead — a name,
+              a phone number, an address. No claim bar, no attribution, no tracking link. The
+              visitor came here hungry; sending them somewhere real is the whole job, and doing it
+              without a catch is what makes the page worth returning to.
+            */}
+            {near.kind === 'none' && nearby.length > 0 && (
+              <div className="rounded-lg border border-border bg-muted p-3">
+                <p className="text-sm text-foreground">
+                  Not on delivered.menu, but nearby in {feed?.city ?? 'town'} — call them direct:
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {nearby.map((m) => (
+                    <li key={m.name} className="text-sm">
+                      <span className="font-medium text-foreground">{m.name}</span>
+                      {m.phone && (
+                        <>
+                          {' · '}
+                          <a
+                            href={`tel:${m.phone.replace(/[^\d+]/g, '')}`}
+                            className="font-medium text-sky-700 dark:text-sky-300 hover:underline"
+                          >
+                            {m.phone}
+                          </a>
+                        </>
+                      )}
+                      {typeof m.rating === 'number' && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {m.rating.toFixed(1)}★{m.reviewCount ? ` (${m.reviewCount})` : ''}
+                        </span>
+                      )}
+                      {m.address && <div className="text-xs text-muted-foreground">{m.address}</div>}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  We haven&rsquo;t seen their menu — this is a local restaurant of that kind, not a
+                  promise they serve what you searched for.
+                </p>
+              </div>
+            )}
           </div>
         ) : (
-          byRestaurant.map(([name, r]) => (
+          <>
+          {byRestaurant.map(([name, r]) => (
             <div key={name}>
               <div className="flex items-baseline gap-2">
-                <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-base font-semibold text-zinc-100 hover:underline">
+                <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-base font-semibold text-foreground hover:underline">
                   {name}
                 </a>
                 {/* Three states, never two — unknown hours must not read as closed. */}
-                {r.openNow === true && <span className="text-xs font-medium text-emerald-400">open now</span>}
-                {r.openNow === false && <span className="text-xs text-zinc-500">closed</span>}
-                {r.openNow === null && <span className="text-xs text-zinc-600">hours unknown</span>}
+                {r.openNow === true && <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">open now</span>}
+                {r.openNow === false && <span className="text-xs text-muted-foreground">closed</span>}
+                {r.openNow === null && <span className="text-xs text-muted-foreground">hours unknown</span>}
               </div>
-              <ul className="mt-2 divide-y divide-zinc-800/70">
+              <ul className="mt-2 divide-y divide-border">
                 {r.items.map((i) => (
                   <li key={i.id} className="flex items-start justify-between gap-4 py-2">
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-zinc-100">{i.name}</div>
-                      {i.description && <div className="text-xs text-zinc-400">{i.description}</div>}
+                      <div className="text-sm font-medium text-foreground">{i.name}</div>
+                      {i.description && <div className="text-xs text-muted-foreground">{i.description}</div>}
                     </div>
                     {i.price && (
                       // "call to confirm" is substituted upstream in cityMenuIndex; rendered
                       // dimmer so it reads as a caveat rather than a price.
-                      <div className={`shrink-0 text-sm ${i.priceUnconfirmed ? 'text-zinc-500 italic' : 'text-zinc-300'}`}>
+                      <div className={`shrink-0 text-sm ${i.priceUnconfirmed ? 'text-muted-foreground italic' : 'text-foreground'}`}>
                         {i.price}
                       </div>
                     )}
@@ -369,7 +478,73 @@ export default function MenuFinderBlock({
                 ))}
               </ul>
             </div>
-          ))
+          ))}
+
+          {/*
+            ⚠️ UNCLAIMED KITCHENS — a real menu, transcribed from the restaurant's own public
+            listing photos, on a page they have not claimed. They are shown because withholding a
+            real dinner option protects nobody, and shown SEPARATELY, BELOW, and WITHOUT an order
+            path because they have agreed to nothing and confirmed no price. The only action is
+            their own public phone number: the same thing a search engine offers, and exactly what
+            this site already tells diners to do ("call them direct").
+            The gap between these rows and the ones above IS the pitch to the owner.
+          */}
+          {unclaimedGroups.length > 0 && (
+            <div className="mt-8 border-t border-border pt-6">
+              <h3 className="text-sm font-semibold text-foreground">
+                Also serving this nearby — call them direct
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                These kitchens haven&rsquo;t set up online ordering with us yet. We read their menu
+                off their public listing, so call to confirm what&rsquo;s available and what it costs.
+              </p>
+              <div className="mt-4 space-y-5">
+                {unclaimedGroups.map(([name, r]) => (
+                  <div key={name}>
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <a
+                        href={r.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-base font-semibold text-foreground hover:underline"
+                      >
+                        {name}
+                      </a>
+                      {r.phone ? (
+                        <a
+                          href={`tel:${r.phone.replace(/[^\d+]/g, '')}`}
+                          className="text-sm font-medium text-sky-700 dark:text-sky-300 hover:underline"
+                        >
+                          {r.phone}
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">no phone listed</span>
+                      )}
+                      {r.openNow === true && (
+                        <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">open now</span>
+                      )}
+                      {r.openNow === null && <span className="text-xs text-muted-foreground">hours unknown</span>}
+                    </div>
+                    <ul className="mt-1.5 text-sm text-muted-foreground">
+                      {r.items.slice(0, 4).map((i) => (
+                        <li key={i.id} className="py-0.5">
+                          {i.name}
+                          {/* ⚠️ No price at all here, not even a dimmed one. On a page nobody has
+                              claimed, a number beside a dish reads as a quote from the restaurant. */}
+                        </li>
+                      ))}
+                      {r.items.length > 4 && (
+                        <li className="py-0.5 text-xs text-muted-foreground">
+                          +{r.items.length - 4} more on their menu
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
     </section>

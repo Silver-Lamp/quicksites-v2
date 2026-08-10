@@ -193,3 +193,46 @@ describe('buildCityMenuIndex — repeated dishes', () => {
     expect(new Set(idx.items.map((i) => i.id)).size).toBe(idx.items.length);
   });
 });
+
+describe('⚠️ a scaffold menu is an invented menu', () => {
+  const PLACEHOLDERS = [
+    { name: 'Two Eggs Any Style' }, { name: 'Buttermilk Pancakes' },
+    { name: 'House Burger' }, { name: 'Garden Salad' },
+  ];
+  const withMenu = (items: any[]) => ({
+    id: 'p', slug: 'king-buffet-x', base_slug: 'king-buffet',
+    data: {
+      meta: { business_name: 'King Buffet', contact: { city: 'Renton', state: 'WA', phone: '(425) 228-3666' } },
+      pages: [{ content_blocks: [menuBlock(items)] }],
+    },
+  });
+
+  // Live: King Buffet and Papaya Renton Landing both listed the same four scaffold dishes on a
+  // public directory of real Renton businesses. Neither serves them.
+  it('does not list a restaurant whose only menu is the scaffold default', () => {
+    expect(hasMenuItems(withMenu(PLACEHOLDERS).data)).toBe(false);
+    expect(selectUnclaimedForCity([withMenu(PLACEHOLDERS)], { city: 'Renton', urlFor })).toHaveLength(0);
+  });
+
+  it('still lists one that has any real dish alongside them', () => {
+    const mixed = withMenu([...PLACEHOLDERS, { name: 'Crab Rangoon' }]);
+    expect(hasMenuItems(mixed.data)).toBe(true);
+    expect(selectUnclaimedForCity([mixed], { city: 'Renton', urlFor })).toHaveLength(1);
+  });
+});
+
+describe('buildCityMenuIndex drops placeholder-only kitchens', () => {
+  const r = (name: string, items: any[]) => ({
+    slug: name.toLowerCase(), name, url: 'https://x',
+    data: { pages: [{ content_blocks: [{ type: 'menu', content: { sections: [{ name: 'Menu', items }] } }] }] },
+  });
+
+  it('indexes no dishes for a scaffold menu, from either the claimed or unclaimed path', () => {
+    const idx = buildCityMenuIndex([
+      r('King Buffet', [{ name: 'House Burger' }, { name: 'Garden Salad' }]),
+      r('Real Kitchen', [{ name: 'Pad See Ew' }]),
+    ]);
+    expect(idx.items.map((i) => i.restaurantName)).toEqual(['Real Kitchen']);
+    expect(idx.restaurants.map((x) => x.name)).toEqual(['Real Kitchen']);
+  });
+});

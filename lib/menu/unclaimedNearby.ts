@@ -20,6 +20,8 @@
 // how that guarantee gets quietly lost, so hidden ids are subtracted here too. A hide means hidden
 // everywhere, not hidden from the list it was typed into.
 
+import { isPlaceholderOnly } from './menuBlocks';
+
 export type UnclaimedCandidate = {
   id: string;
   slug: string | null;
@@ -57,7 +59,12 @@ export function draftPhone(data: any): string | null {
   return typeof p === 'string' && p.trim() ? p.trim() : null;
 }
 
-/** Does this draft carry at least one real dish? An empty menu adds a row and answers nothing. */
+/**
+ * Does this draft carry at least one real dish?
+ *
+ * ⚠️ "Real" EXCLUDES THE SCAFFOLD'S OWN PLACEHOLDERS. An empty menu adds a row and answers
+ * nothing; a placeholder menu is worse — it answers with dishes the restaurant does not serve.
+ */
 export function hasMenuItems(data: any): boolean {
   const blocks = [
     ...(data?.pages?.[0]?.content_blocks ?? []),
@@ -65,11 +72,11 @@ export function hasMenuItems(data: any): boolean {
   ];
   for (const b of blocks) {
     if (b?.type !== 'menu') continue;
-    for (const s of b?.content?.sections ?? []) {
-      if (Array.isArray(s?.items) && s.items.some((i: any) => String(i?.name ?? '').trim())) {
-        return true;
-      }
-    }
+    const sections = b?.content?.sections ?? [];
+    const named = sections.some(
+      (s: any) => Array.isArray(s?.items) && s.items.some((i: any) => String(i?.name ?? '').trim()),
+    );
+    if (named) return !isPlaceholderOnly(sections);
   }
   return false;
 }

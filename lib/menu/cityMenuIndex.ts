@@ -9,7 +9,7 @@
 // here rather than in the component.
 //
 // Pure and dependency-free so the narrowing can be unit-tested without a database or a DOM.
-import { readMenuSections, type MenuItem, type MenuSection } from '@/lib/menu/menuBlocks';
+import { isPlaceholderOnly, readMenuSections, type MenuItem, type MenuSection } from '@/lib/menu/menuBlocks';
 import { assessFreshness, priceOrConfirm } from '@/lib/menu/menuFreshness';
 import { looseMatch } from '@/lib/menu/looseMatch';
 
@@ -167,6 +167,20 @@ export function buildCityMenuIndex(
     // reached past this to the raw price would be re-introducing the exact risk.
     const freshness = assessFreshness(menuContentOf(r.data), now);
     const sections: MenuSection[] = readMenuSections(r.data);
+
+    // ⚠️ A SCAFFOLD MENU IS AN INVENTED MENU, AND IT WAS BEING SERVED UNDER REAL RESTAURANTS'
+    // NAMES. When the OCR finds nothing, the food scaffold's defaults stay in the draft — so
+    // King Buffet and Papaya Renton Landing both listed "Two Eggs Any Style / Buttermilk
+    // Pancakes / House Burger / Garden Salad" on a public directory of real Renton businesses.
+    // Two different kitchens with the same four dishes is what made it visible; neither serves
+    // them. `isPlaceholderOnly` was written to detect exactly this and nothing was calling it.
+    //
+    // This is worse than the price problem next door. An undated price is a real dish quoted
+    // stale; this is a dish the restaurant does not have, attributed to them by us. Dropping the
+    // restaurant entirely is right: a kitchen with no menu we can honestly show belongs in the
+    // directory (name, phone, address) and not in a DISH index.
+    if (isPlaceholderOnly(sections)) continue;
+
     let count = 0;
 
     for (const s of sections) {

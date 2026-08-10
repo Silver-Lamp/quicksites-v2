@@ -193,6 +193,40 @@ export default function MenuFinderBlock({
 
   const byRestaurant = claimedGroups;
 
+  /**
+   * Real restaurants in this city that we do NOT host, fetched only on a genuine zero result.
+   *
+   * ⚠️ THE SWEEP KNOWS THE CITY; THE INDEX ONLY KNOWS OUR FOUR KITCHENS. Answering "nobody serves
+   * that" from a four-restaurant index was the bug fixed in #727; this is the other half — having
+   * softened the claim, actually help. Reads our own already-collected lead data, never a live
+   * third-party lookup on a public endpoint.
+   */
+  const [nearby, setNearby] = React.useState<Array<{
+    name: string; phone: string | null; address: string | null;
+    rating: number | null; reviewCount: number | null; matchReason: 'name' | 'category';
+  }>>([]);
+
+  React.useEffect(() => {
+    if (previewOnly || !campaignId || near.kind !== 'none' || !q.trim()) {
+      setNearby([]);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `/api/public/city-nearby?campaign=${encodeURIComponent(campaignId)}&q=${encodeURIComponent(q)}`,
+        );
+        if (!r.ok) return;
+        const j = await r.json();
+        if (!cancelled) setNearby(Array.isArray(j?.matches) ? j.matches : []);
+      } catch {
+        /* a missing suggestion is a quieter failure than a broken page */
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [previewOnly, campaignId, near.kind, q]);
+
   if (previewOnly || !campaignId) {
     return (
       <section className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -360,6 +394,54 @@ export default function MenuFinderBlock({
                   </button>
                 </div>
               )
+            )}
+
+            {/*
+              ⚠️ THE HELPFUL ANSWER, AND THE LIMIT OF WHAT WE CAN HONESTLY SAY. These come from our
+              own city sweep, so we know the business and its CUISINE — we have never seen their
+              menu. So the heading says "restaurants", never "serving <dish>", and no dish or price
+              is shown: asserting that a kitchen serves something we never read is the same
+              invention as quoting a price we cannot date.
+
+              They are not on delivered.menu and get nothing that treats them as a lead — a name,
+              a phone number, an address. No claim bar, no attribution, no tracking link. The
+              visitor came here hungry; sending them somewhere real is the whole job, and doing it
+              without a catch is what makes the page worth returning to.
+            */}
+            {near.kind === 'none' && nearby.length > 0 && (
+              <div className="rounded-lg border border-zinc-700 bg-zinc-900/60 p-3">
+                <p className="text-sm text-zinc-300">
+                  Not on delivered.menu, but nearby in {feed?.city ?? 'town'} — call them direct:
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {nearby.map((m) => (
+                    <li key={m.name} className="text-sm">
+                      <span className="font-medium text-zinc-100">{m.name}</span>
+                      {m.phone && (
+                        <>
+                          {' · '}
+                          <a
+                            href={`tel:${m.phone.replace(/[^\d+]/g, '')}`}
+                            className="font-medium text-sky-300 hover:underline"
+                          >
+                            {m.phone}
+                          </a>
+                        </>
+                      )}
+                      {typeof m.rating === 'number' && (
+                        <span className="ml-2 text-xs text-zinc-500">
+                          {m.rating.toFixed(1)}★{m.reviewCount ? ` (${m.reviewCount})` : ''}
+                        </span>
+                      )}
+                      {m.address && <div className="text-xs text-zinc-500">{m.address}</div>}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-zinc-600">
+                  We haven&rsquo;t seen their menu — this is a local restaurant of that kind, not a
+                  promise they serve what you searched for.
+                </p>
+              </div>
             )}
           </div>
         ) : (

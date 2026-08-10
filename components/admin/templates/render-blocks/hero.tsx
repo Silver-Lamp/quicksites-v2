@@ -269,7 +269,13 @@ export default function HeroRender({
   const canShowCTA = !hide_cta && !!cta_text && (!!href || previewOnly);
 
   // layout + parallax
-  const hasImage = (image_url as string)?.trim() !== '';
+  // ⚠️ THIS WAS TRUE FOR EVERY HERO WITH A NULL IMAGE. Optional chaining on a null returns
+  // `undefined`, and `undefined !== ''` is TRUE — so a hero with no image reported having one,
+  // took the background/full-bleed layout, and painted `backgroundImage: url(undefined)`: a blank
+  // slab, no error, no warning. It also meant such a hero never reached the inline branch, which
+  // is where the painterly backdrop lives, so the apex hero silently opted out of its own theme.
+  // The empty-string case was handled; the null case is the one the fleet actually has.
+  const hasImage = typeof image_url === 'string' && image_url.trim() !== '';
   const blurPx = `${blur_amount}px`;
   const blurFilter = blur_amount > 0 ? `blur(${blurPx})` : 'none';
 

@@ -59,10 +59,17 @@ export function generatePageMetadata({
   // Every site in the fleet served <title>Home</title>. See lib/seo/pageTitle.ts.
   const meta = (site as any)?.data?.meta ?? {};
   const contact = meta.contact ?? {};
+  const heroHeadline = (() => {
+    const blocks = [...(currentPage?.content_blocks ?? []), ...(currentPage?.blocks ?? [])];
+    const v = blocks.find((b: any) => b?.type === 'hero')?.content?.headline;
+    return typeof v === 'string' && v.trim() ? v.trim() : null;
+  })();
+
   const title = buildPageTitle({
     seoTitle: currentPage?.meta?.title ?? meta.seo_title,
     pageTitle: currentPage?.title,
     siteName: meta.business_name ?? meta.siteTitle ?? (site as any)?.template_name,
+    heroHeadline,
     city: contact.city,
     region: contact.state,
     isHomePage: !!currentPage && pages.indexOf(currentPage) === 0,

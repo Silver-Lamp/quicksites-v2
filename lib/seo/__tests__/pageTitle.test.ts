@@ -1,4 +1,4 @@
-import { buildPageTitle, isGenericPageTitle } from '../pageTitle';
+import { buildPageTitle, isGenericPageTitle, looksLikeSlug } from '../pageTitle';
 
 describe('isGenericPageTitle', () => {
   it('recognises the names the builder assigns by default', () => {
@@ -61,5 +61,39 @@ describe('buildPageTitle', () => {
   it('falls back to the page name rather than fabricating one', () => {
     expect(buildPageTitle({ pageTitle: 'Home', isHomePage: true })).toBe('Home');
     expect(buildPageTitle({})).toBe('QuickSites');
+  });
+});
+
+describe('a slug is not a business name', () => {
+  it('recognises the slug shape without touching a real one-word name', () => {
+    expect(looksLikeSlug('graftontowing')).toBe(true);
+    expect(looksLikeSlug('renton-restaurant')).toBe(true);
+    expect(looksLikeSlug('Zapata')).toBe(false);   // capitalised: a name
+    expect(looksLikeSlug('Grafton Towing')).toBe(false);
+  });
+
+  // ⚠️ Live on a paying customer: <title>graftontowing — Grafton, WI</title>.
+  it('prefers the owner-written headline over a slug', () => {
+    expect(
+      buildPageTitle({
+        pageTitle: 'Home',
+        siteName: 'graftontowing',
+        heroHeadline: 'Fast Towing When You Need It',
+        city: 'Grafton',
+        region: 'WI',
+        isHomePage: true,
+      }),
+    ).toBe('Fast Towing When You Need It — Grafton, WI');
+  });
+
+  // ⚠️ Never prettified — splitting "graftontowing" means guessing where the words are.
+  it('keeps the slug rather than inventing a spelling when there is no headline', () => {
+    expect(buildPageTitle({ siteName: 'graftontowing', isHomePage: true })).toBe('graftontowing');
+  });
+
+  it('leaves a real name alone even when a headline exists', () => {
+    expect(
+      buildPageTitle({ siteName: 'Grafton Towing', heroHeadline: 'Fast Towing', isHomePage: true }),
+    ).toBe('Grafton Towing');
   });
 });

@@ -43,6 +43,22 @@ function firstNonEmpty(...vals: unknown[]): string | null {
   return null;
 }
 
+/**
+ * A slug wearing a business name's clothes — `graftontowing`, `renton-restaurant`.
+ *
+ * ⚠️ 17 PUBLISHED SITES HAVE NO `business_name`, so the name falls back to `siteTitle`, which the
+ * builder sets to the slug. `<title>graftontowing — Grafton, WI</title>` is better than "Home"
+ * and still not the business's name: lowercase, unspaced, machine-shaped. It is NOT prettified —
+ * splitting "graftontowing" into "Grafton Towing" requires guessing where the words are, and a
+ * guess about a business's own name is exactly the kind of invention this file avoids elsewhere.
+ * Instead the owner's own headline is preferred, since it is real text they wrote.
+ */
+export function looksLikeSlug(name: string): boolean {
+  const n = name.trim();
+  if (!n || /\s/.test(n)) return false;
+  return n === n.toLowerCase();
+}
+
 export type TitleParts = {
   /** An explicit SEO title the owner typed. Used verbatim when present. */
   seoTitle?: string | null;
@@ -52,6 +68,8 @@ export type TitleParts = {
   siteName?: string | null;
   city?: string | null;
   region?: string | null;
+  /** The hero headline — owner-written, used when the "name" turns out to be a slug. */
+  heroHeadline?: string | null;
   /** True for the site's front page — a subpage keeps its own name in the title. */
   isHomePage?: boolean;
 };
@@ -67,7 +85,10 @@ export function buildPageTitle(parts: TitleParts): string {
   const seo = firstNonEmpty(parts.seoTitle);
   if (seo) return seo;
 
-  const site = firstNonEmpty(parts.siteName);
+  const rawSite = firstNonEmpty(parts.siteName);
+  const headline = firstNonEmpty(parts.heroHeadline);
+  // A slug is a URL, not a name. Prefer real words the owner wrote.
+  const site = rawSite && looksLikeSlug(rawSite) ? (headline ?? rawSite) : rawSite;
   const page = isGenericPageTitle(parts.pageTitle) ? null : firstNonEmpty(parts.pageTitle);
   const place = [firstNonEmpty(parts.city), firstNonEmpty(parts.region)].filter(Boolean).join(', ');
 

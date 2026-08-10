@@ -243,16 +243,28 @@ export default function MenuFinderBlock({
     );
   }
 
-  if (!feed) return null; // no skeleton: the block simply isn't there until it has data
-
-  const total = feed.items.length;
+  // ⚠️ THIS USED TO `return null` UNTIL THE FEED ARRIVED, WHICH MEANT THE SEARCH DID NOT EXIST
+  // SERVER-SIDE AT ALL. The old comment called it "no skeleton: the block simply isn't there
+  // until it has data" — a reasonable-sounding choice with two costs nobody priced:
+  //   1. A crawler, a slow connection, or a no-JS first paint saw a 4-restaurant list where the
+  //      page's actual product is a city-wide dish search. The thing we want to rank for was
+  //      absent from the bytes we serve.
+  //   2. It cannot be "the first thing on the page" if it is not in the first RENDER. Any
+  //      argument about where to put the search was moot while it arrived late.
+  // Found by HiveJournal fetching the served HTML — the same instrument that keeps catching this
+  // class, and the one I had already run today without connecting what it showed.
+  //
+  // The heading and the input now render immediately; only the COUNT waits for data, because a
+  // count is a claim and an invented one would be worse than a late one.
+  const total = feed?.items.length ?? 0;
 
   return (
     <section className="mx-auto w-full max-w-5xl px-6 py-10">
       <h2 className="text-2xl font-bold">{title}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        {total} dishes across {feed.restaurants.length} kitchens
-        {feed.city ? ` in ${feed.city}` : ''}.
+        {feed
+          ? `${total} dishes across ${feed.restaurants.length} kitchens${feed.city ? ` in ${feed.city}` : ''}.`
+          : 'Search every dish on the menus we have.'}
       </p>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -491,12 +503,21 @@ export default function MenuFinderBlock({
           */}
           {unclaimedGroups.length > 0 && (
             <div className="mt-8 border-t border-border pt-6">
+              {/*
+                ⚠️ THE LABEL IS WHAT MAKES THE ORDERING HONEST, NOT THE ORDERING ITSELF (HJ's
+                challenge, 2026-08-10, and they were right). "Also serving nearby" reads as
+                position-implies-rank, and a cynical diner — or an owner — will assume the ones on
+                top paid us. Naming the axis as TRUST removes that reading: the sections are split
+                by what we can stand behind, and the sentence says so out loud. Same move as rule
+                9's lineage — name the absence rather than hoping the structure implies it.
+              */}
               <h3 className="text-sm font-semibold text-foreground">
-                Also serving this nearby — call them direct
+                Listed from public info — call to confirm
               </h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                These kitchens haven&rsquo;t set up online ordering with us yet. We read their menu
-                off their public listing, so call to confirm what&rsquo;s available and what it costs.
+                We haven&rsquo;t seen these menus ourselves — we read them off each restaurant&rsquo;s
+                public listing, so there are no prices here and nothing to order online. The
+                kitchens above confirmed theirs. Call these to check what&rsquo;s on today.
               </p>
               <div className="mt-4 space-y-5">
                 {unclaimedGroups.map(([name, r]) => (

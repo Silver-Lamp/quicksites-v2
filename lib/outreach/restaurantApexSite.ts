@@ -59,8 +59,14 @@ export function apexTemplateSeed(input: ApexSeedInput): Record<string, any> {
       // the H1/H2 of every <city>-restaurant.com reads as a doorway network to search
       // engines. The delivered.menu attribution renders as a small UNLINKED footer note
       // under the directory instead (components/sites/restaurant-competition-directory).
+      // ⚠️ NO CLAIM PITCH IN THE DINER'S HERO. This previously ended "Menus and online ordering
+      // appear as each restaurant claims their page" — us explaining our business model in the one
+      // sentence a hungry person definitely reads, and worse, telling them the thing they came for
+      // mostly is not here yet. The owner who DOES care about claiming reaches this page from an
+      // outreach link and needs the claim path on their own site, not in a city hero.
+      // (HJ persona walkthrough, 2026-08-10: "Claim? I don't want to claim anything, I want to eat.")
       hero.content.subheadline =
-        'Real local kitchens, direct online ordering — no middleman markup. Browse the spots below.';
+        'Search tonight’s dishes across every kitchen we have. Order online where you can, call the rest direct — no delivery-app markup either way.';
       if ('cta_text' in hero.content) hero.content.cta_text = 'Browse restaurants';
       // ⚠️ THE CTA HAD TEXT BUT NO DESTINATION, so it inherited the restaurant starter's link and
       // landed on a contact form this portal does not have. `site-renderer` gives the first block

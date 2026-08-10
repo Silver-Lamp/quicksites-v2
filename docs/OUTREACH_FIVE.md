@@ -58,16 +58,65 @@ All from the Renton sweep, all no-website, all with a real menu already transcri
 public listing photos. Ordered by how much material the draft has — a fuller menu means the page
 looks more like *theirs*, which is the variable under test.
 
-| # | Business | Draft | Phone | Menu items |
-|---|---|---|---|---|
-| 1 | Enjoy Teriyaki | `enjoy-teriyaki-s7709` | (425) 793-7333 | 56 |
-| 2 | Taqueria Los Potrillos #5 | `taqueria-los-potrillos-5-i3t57` | (206) 694-3872 | 40 |
-| 3 | Renton Deli | `renton-deli-4edah` | (425) 226-7572 | 18 |
-| 4 | Taqueria El 5 De Mayo | `taqueria-el-5-de-mayo-3cpt8` | (253) 408-3302 | 12 |
-| 5 | Los Antojitos del Barber | `los-antojitos-del-barber-c4ffg` | (253) 402-6828 | 12 |
+| # | Business | Phone | Menu items |
+|---|---|---|---|
+| 1 | **Enjoy Teriyaki** | (425) 793-7333 | 56 |
+| 2 | **Taqueria Los Potrillos #5** | (206) 694-3872 | 40 |
+| 3 | **Renton Deli** | (425) 226-7572 | 18 |
+| 4 | **Taqueria El 5 De Mayo** | (253) 408-3302 | 12 |
+| 5 | **Los Antojitos del Barber** | (253) 402-6828 | 12 |
 
-Each is live at `https://<slug>.delivered.menu` (watermarked + noindex until claimed) and has a
-QR + claim link in `leads-renton-qr/`.
+⚠️ All five verified **not placeholder-only** (see #738 — 11 drafts in the batch had the food
+scaffold's invented menu under a real restaurant's name; none of these five). All five return 200.
+
+### Links
+
+**1. Enjoy Teriyaki** — (425) 793-7333
+- see it: https://enjoy-teriyaki-s7709.delivered.menu
+- edit: https://www.quicksites.ai/admin/templates/27af7a44-8df5-402c-a4e7-b6671bf45b64
+
+**2. Taqueria Los Potrillos #5** — (206) 694-3872
+- see it: https://taqueria-los-potrillos-5-i3t57.delivered.menu
+- edit: https://www.quicksites.ai/admin/templates/f50b2599-c4a1-4bac-b9bf-afa82cc901f0
+
+**3. Renton Deli** — (425) 226-7572
+- see it: https://renton-deli-4edah.delivered.menu
+- edit: https://www.quicksites.ai/admin/templates/ac99b0b5-f173-4f37-ba5f-9a4e38437e22
+
+**4. Taqueria El 5 De Mayo** — (253) 408-3302
+- see it: https://taqueria-el-5-de-mayo-3cpt8.delivered.menu
+- edit: https://www.quicksites.ai/admin/templates/a6389d12-d759-4815-89e5-75dd176644d1
+
+**5. Los Antojitos del Barber** — (253) 402-6828
+- see it: https://los-antojitos-del-barber-c4ffg.delivered.menu
+- edit: https://www.quicksites.ai/admin/templates/9d77e35f-e9fc-4f20-8f99-3dc0332cd6b6
+
+### The claim links are deliberately NOT in this file
+
+⚠️ **A claim link is a bearer credential.** Whoever holds it takes ownership of that site — no
+login, no verification (the SMS check is still behind `CLAIM_VERIFICATION_ENABLED`). It is not a
+deep link, it is the key.
+
+The first draft of this doc had all five pasted in, and **gitleaks refused the commit.** It was
+right: five ownership-transfer tokens in a git repo, readable by anyone who ever clones it, is the
+thing that scanner exists to stop. Worth recording because the tokens *look* like URLs, which is
+how they would have gone in.
+
+**Mint one at the moment you send it**, so it is fresh and lives only in the message:
+
+```bash
+npx tsx --env-file=.env.local -e "
+import('./lib/auth/siteClaimToken').then(m =>
+  console.log('https://delivered.menu/claim-site/<TEMPLATE_ID>?token=' + m.mintSiteClaimToken('<TEMPLATE_ID>')))"
+```
+
+The template id is the last path segment of the editor link above. Tokens expire (~90 days); a
+refused link means minting a new one — never hand-edit the URL, the signature is bound to the id.
+
+Send it **one-to-one to the business** and nowhere else.
+
+Each page is watermarked and `noindex` until claimed. Printable QR codes are in `leads-renton-qr/`
+(`<slug>.png` = owner claim · `<slug>-order.png` = the diner-facing order sticker).
 
 ## Protocol — per business, in order
 

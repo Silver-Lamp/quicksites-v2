@@ -158,6 +158,7 @@ export function buildCityMenuIndex(
 ): CityMenuIndex {
   const items: IndexedItem[] = [];
   const restaurantRows: CityMenuIndex['restaurants'] = [];
+  const seenItems = new Set<string>();
 
   for (const r of restaurants) {
     const openNow = isOpenAt(hoursOf(r.data), now);
@@ -173,9 +174,22 @@ export function buildCityMenuIndex(
         const it = raw as MenuItem;
         const name = String(it?.name ?? '').trim();
         if (!name) continue;
+
+        // ⚠️ BELT AND BRACES, BECAUSE THE UI GROUPS BY RESTAURANT NAME, NOT BY ROW. Selection-time
+        // de-duplication (see unclaimedNearby) stops the same kitchen being listed twice, but a
+        // menu can also repeat a dish across sections, and two different rows can share a display
+        // name. Either way the diner sees "3rd St Tacos / 3rd St Tacos" and concludes the page is
+        // broken. Collapsed on name + price + description so a genuinely different offering — a
+        // lunch portion at a different price — survives.
+        const dedupeKey = [r.name, name, it.price ?? '', it.description ?? ''].join('\u0000');
+        if (seenItems.has(dedupeKey)) continue;
+        seenItems.add(dedupeKey);
+
         count += 1;
         items.push({
-          id: `${r.slug}:${name}`,
+          // Unique per ROW, not per name: two sections can carry the same dish at different
+          // prices, and a duplicate React key silently drops one of them.
+          id: `${r.slug}:${items.length}:${name}`,
           name,
           description: it.description ? String(it.description) : undefined,
           price: it.price ? priceOrConfirm(String(it.price), freshness) : undefined,

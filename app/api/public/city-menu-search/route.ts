@@ -48,7 +48,7 @@ export async function GET(req: Request) {
   const [{ data: drafts }, hidden] = await Promise.all([
     supabaseAdmin
       .from('templates')
-      .select('id, slug, data')
+      .select('id, slug, base_slug, data')
       .eq('claim_source', 'listing_import')
       .limit(500),
     getHiddenTemplateIds(campaign),

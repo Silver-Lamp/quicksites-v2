@@ -95,3 +95,73 @@ describe('block renderers do not hard-code a light surface', () => {
     expect(body).not.toMatch(/className="[^"]*\bbg-(zinc|slate|gray)-(50|100)(?![/\w-])/);
   });
 });
+
+// The MIRROR of the bug above, which bit on 2026-08-09: a renderer hard-coding the DARK palette.
+//
+// `menu_finder` used text-zinc-100/300/400 and bg-zinc-900/60 throughout. On the dark sites it was
+// written against it looked right; on `renton-restaurant`, a LIGHT tenant site, the search input
+// became a grey slab with dark text inside it and the confirmation message was pale green on
+// near-white. Same root cause as SectionShell's `text-white`, same invisibility to tsc — and the
+// same reason: a tenant site is not always dark, only the admin chrome is.
+//
+// ⚠️ THE CHECK IS FILE-LEVEL, ON PURPOSE, BECAUSE A PER-CLASS RULE WOULD CRY WOLF. Six renderers
+// legitimately use `text-neutral-300` and friends — every one of them pairs it with a `dark:`
+// variant or a `colorMode`/`dark ?` ternary, which is the documented correct pattern. Flagging the
+// utility itself would fail all six and train everyone to ignore the output, which the test above
+// already learned the hard way. What is actually diagnostic is a file that reaches for the dark
+// palette while showing NO awareness that a light theme exists.
+describe('block renderers do not hard-code the dark palette either', () => {
+  const dirs = [
+    join(process.cwd(), 'components/admin/templates/render-blocks'),
+    join(process.cwd(), 'components/sites/render-blocks'),
+  ];
+  const files: string[] = dirs.flatMap((d) =>
+    require('node:fs')
+      .readdirSync(d)
+      .filter((f: string) => f.endsWith('.tsx'))
+      .map((f: string) => join(d, f)),
+  );
+
+  /** Light-theme text on a dark-only neutral — invisible on a light tenant site. */
+  const DARK_ONLY_TEXT = /\btext-(zinc|slate|gray|neutral)-(100|200|300)\b/;
+  /**
+   * Any sign the file knows a light theme exists.
+   *
+   * ⚠️ A DECLARED-BUT-UNUSED `colorMode` DOES NOT COUNT, and finding that out is the reason this
+   * test is worth having. The first version of it passed on the very file that caused the bug:
+   * `menu-finder` declared `colorMode?: 'light' | 'dark'` in its props and never read it once, so
+   * a substring match for "colorMode" said theme-aware while every colour in the file was
+   * hard-coded dark. That is the same unused-prop trap SectionShell fell into — an unused prop
+   * that appears to control colour is worse than no prop, because it answers the question a
+   * reviewer was about to ask. So a mode name must appear at least TWICE (a declaration plus a
+   * use); `dark:` is real use by definition.
+   */
+  const MODE_NAMES = /\b(colorMode|isDark|effectiveMode)\b/g;
+  const REAL_DARK_VARIANT = /\bdark:|\bdark\s*\?/;
+
+  function isThemeAware(body: string): boolean {
+    if (REAL_DARK_VARIANT.test(body)) return true;
+    return (body.match(MODE_NAMES) ?? []).length >= 2;
+  }
+
+  it.each(files as string[])('%s pairs any dark-palette text with a light path', (f) => {
+    const body = readFileSync(String(f), 'utf8')
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+      .join('\n');
+    if (!DARK_ONLY_TEXT.test(body)) return; // nothing to check
+    expect(isThemeAware(body)).toBe(true);
+  });
+
+  // ⚠️ The guard must be able to go red. Asserting that live code passes proves nothing about
+  // whether the check works — this replays the actual pre-fix file shape and requires a failure.
+  it('fails the shape that caused the bug (a dark palette + an unused colorMode)', () => {
+    const preFix = `
+      type Props = { colorMode?: 'light' | 'dark' };
+      export default function Block() {
+        return <div className="bg-zinc-900/60 text-zinc-300"><p className="text-zinc-100">hi</p></div>;
+      }`;
+    expect(DARK_ONLY_TEXT.test(preFix)).toBe(true);
+    expect(isThemeAware(preFix)).toBe(false);
+  });
+});

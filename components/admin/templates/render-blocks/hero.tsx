@@ -176,7 +176,7 @@ export default function HeroRender({
   if (!block || !safeContent) {
     if (showDebug) console.warn('[⚠️ HeroRender] Missing block content; got:', { block, content });
     return (
-      <div className="text-red-500 text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded" key={renderKey}>
+      <div className="text-red-500 text-sm p-2 bg-red-500/10 rounded" key={renderKey}>
         Invalid hero block
       </div>
     );

@@ -9,7 +9,7 @@ export default function VideoBlock({ content }: { content: Block['content'] }) {
         <source src={content.url} />
       </video>
       {content.caption && (
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           {content.caption}
         </p>
       )}

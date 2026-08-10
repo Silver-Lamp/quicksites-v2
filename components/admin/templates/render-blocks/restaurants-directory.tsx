@@ -6,6 +6,7 @@
 // carries a `campaign_id` (drives a live fetch so winner changes show without a
 // republish) + an `entries` snapshot (instant paint / fallback when the API is
 // unreachable). Same renderer in the editor and on the public site.
+import RestaurantInitials from '@/components/sites/restaurant-initials';
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
 import DirectoryCurator from '@/components/sites/directory-curator';
@@ -35,11 +36,11 @@ function Card({ entry, featured }: { entry: Entry; featured?: boolean }) {
       href={entry.url || '#'}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group block overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 transition hover:border-amber-500/50 hover:bg-zinc-900 ${
+      className={`group block overflow-hidden rounded-2xl border border-border bg-card transition hover:border-amber-500/50 hover:bg-muted ${
         featured ? 'sm:col-span-2' : ''
       }`}
     >
-      <div className={`relative w-full overflow-hidden bg-zinc-800 ${featured ? 'aspect-[2/1]' : 'aspect-[3/2]'}`}>
+      <div className={`relative w-full overflow-hidden bg-muted ${featured ? 'aspect-[2/1]' : 'aspect-[3/2]'}`}>
         {entry.hero_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -48,7 +49,7 @@ function Card({ entry, featured }: { entry: Entry; featured?: boolean }) {
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-4xl">🍽️</div>
+          <RestaurantInitials name={entry.business_name} />
         )}
         {entry.is_winner && (
           <span className="absolute left-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-zinc-950 shadow">
@@ -58,7 +59,7 @@ function Card({ entry, featured }: { entry: Entry; featured?: boolean }) {
       </div>
       <div className="p-4">
         <div className="text-base font-semibold text-white group-hover:text-amber-300">{entry.business_name}</div>
-        <div className="mt-1 text-xs text-zinc-500">View menu &amp; order online →</div>
+        <div className="mt-1 text-xs text-muted-foreground">View menu &amp; order online →</div>
       </div>
     </a>
   );
@@ -106,7 +107,7 @@ export default function RestaurantsDirectoryBlock({
     return (
       <section className="mx-auto w-full max-w-5xl px-6 py-10">
         {title && <h2 className="mb-4 text-center text-2xl font-bold">{title}</h2>}
-        <div className="rounded-2xl border border-dashed border-zinc-700/70 px-6 py-14 text-center text-sm text-zinc-500">
+        <div className="rounded-2xl border border-dashed border-border px-6 py-14 text-center text-sm text-muted-foreground">
           {previewOnly || campaignId
             ? 'Restaurants appear here automatically — the live contest cohort, winner featured first.'
             : 'Link this block to a restaurant competition (campaign_id) to list its cohort here.'}
@@ -128,7 +129,7 @@ export default function RestaurantsDirectoryBlock({
           <Card key={e.template_id} entry={e} />
         ))}
       </div>
-      <div className="mt-10 border-t border-zinc-800/60 pt-4 text-center text-xs text-zinc-500">
+      <div className="mt-10 border-t border-border pt-4 text-center text-xs text-muted-foreground">
         Order online, direct from the kitchen · powered by {brand}
       </div>
       {/* Operator curation. Renders NOTHING for anyone whose session isn't an admin — it

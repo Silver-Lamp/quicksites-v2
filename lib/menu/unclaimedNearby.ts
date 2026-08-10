@@ -23,6 +23,8 @@
 export type UnclaimedCandidate = {
   id: string;
   slug: string | null;
+  /** Trigger-maintained family key: `the-local-907-ljdit` and `-tqgh2` share `the-local-907`. */
+  base_slug?: string | null;
   data: any;
 };
 
@@ -101,6 +103,13 @@ export function selectUnclaimedForCity(
     ...(opts.hiddenTemplateIds ?? []),
   ]);
 
+  // ⚠️ ONE ROW PER RESTAURANT, NOT PER TEMPLATE. The same business can exist as several drafts —
+  // a listing imported twice by two sweeps produces `the-local-907-ljdit` and `the-local-907-tqgh2`,
+  // different template ids, same kitchen. `excludeTemplateIds` cannot catch that (the ids differ),
+  // and the UI groups by NAME, so both rows merged into one heading and every dish appeared twice.
+  // A diner reading "3rd St Tacos / 3rd St Tacos" concludes the page is broken, and they are right.
+  // Keyed on base_slug where we have it, else the normalised name — never the id.
+  const seen = new Set<string>();
   const out: UnclaimedRestaurant[] = [];
   for (const c of candidates) {
     if (!c.slug || skip.has(c.id)) continue;
@@ -112,6 +121,13 @@ export function selectUnclaimedForCity(
       (typeof c.data?.meta?.business_name === 'string' && c.data.meta.business_name.trim()) ||
       (typeof c.data?.meta?.siteTitle === 'string' && c.data.meta.siteTitle.trim()) ||
       c.slug;
+
+    // First one wins. Candidates arrive newest-last from the query, so this keeps the earliest —
+    // deliberately, because a re-import can arrive with LESS data than the original (one of the
+    // real duplicates has a null business_name), and "most recent" is not the same as "best".
+    const key = (c.base_slug ?? '').trim().toLowerCase() || name.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
 
     out.push({
       slug: c.slug,

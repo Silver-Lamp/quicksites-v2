@@ -120,3 +120,76 @@ describe('buildCityMenuIndex — the unclaimed flag', () => {
     expect(idx.restaurants.map((r) => r.name)).toEqual(['Claimed Co', 'AAA Unclaimed']);
   });
 });
+
+describe('one row per restaurant, not per template', () => {
+  const twin = (id: string, slug: string, name: string | null) => ({
+    id,
+    slug,
+    base_slug: 'the-local-907',
+    data: {
+      meta: {
+        ...(name ? { business_name: name } : {}),
+        siteTitle: 'The Local 907',
+        contact: { city: 'Renton', state: 'WA', phone: '(425) 555-0000' },
+      },
+      pages: [{ content_blocks: [menuBlock([{ name: '3rd St Tacos' }])] }],
+    },
+  });
+
+  // ⚠️ The live bug: two sweeps imported the same kitchen, the ids differed so excludeTemplateIds
+  // could not catch it, and the UI groups by NAME — so every dish rendered twice.
+  it('collapses two drafts of the same restaurant', () => {
+    const out = selectUnclaimedForCity(
+      [twin('a', 'the-local-907-ljdit', 'The Local 907'), twin('b', 'the-local-907-tqgh2', null)],
+      { city: 'Renton', urlFor },
+    );
+    expect(out).toHaveLength(1);
+  });
+
+  it('keeps the first, since a re-import can carry LESS data than the original', () => {
+    const out = selectUnclaimedForCity(
+      [twin('a', 'the-local-907-ljdit', 'The Local 907'), twin('b', 'the-local-907-tqgh2', null)],
+      { city: 'Renton', urlFor },
+    );
+    expect(out[0].name).toBe('The Local 907');
+  });
+
+  it('falls back to the name when base_slug is missing', () => {
+    const a: any = twin('a', 'x-1', 'Ocha Thai'); delete a.base_slug;
+    const b: any = twin('b', 'x-2', 'Ocha Thai'); delete b.base_slug;
+    expect(selectUnclaimedForCity([a, b], { city: 'Renton', urlFor })).toHaveLength(1);
+  });
+
+  it('does not collapse two genuinely different restaurants', () => {
+    const a: any = twin('a', 'one', 'Ocha Thai'); a.base_slug = 'one';
+    const b: any = twin('b', 'two', 'Thai Kitchen'); b.base_slug = 'two';
+    expect(selectUnclaimedForCity([a, b], { city: 'Renton', urlFor })).toHaveLength(2);
+  });
+});
+
+describe('buildCityMenuIndex — repeated dishes', () => {
+  const twoSections = (items: any[][]) => ({
+    slug: 's', name: 'The Local 907', url: 'https://x',
+    data: { pages: [{ content_blocks: [{ type: 'menu', content: { sections: items.map((it, i) => ({ name: `S${i}`, items: it })) } }] }] },
+  });
+
+  it('shows a dish once when a menu repeats it across sections', () => {
+    const idx = buildCityMenuIndex([twoSections([[{ name: '3rd St Tacos' }], [{ name: '3rd St Tacos' }]])]);
+    expect(idx.items.filter((i) => i.name === '3rd St Tacos')).toHaveLength(1);
+  });
+
+  // ⚠️ A lunch portion at a different price is a different offering, not a duplicate.
+  it('keeps same-named dishes that differ in price', () => {
+    const idx = buildCityMenuIndex([
+      twoSections([[{ name: 'Tacos', price: '$9' }], [{ name: 'Tacos', price: '$14' }]]),
+    ]);
+    expect(idx.items).toHaveLength(2);
+  });
+
+  it('gives every item a unique id, so none is silently dropped by a key collision', () => {
+    const idx = buildCityMenuIndex([
+      twoSections([[{ name: 'Tacos', price: '$9' }], [{ name: 'Tacos', price: '$14' }]]),
+    ]);
+    expect(new Set(idx.items.map((i) => i.id)).size).toBe(idx.items.length);
+  });
+});

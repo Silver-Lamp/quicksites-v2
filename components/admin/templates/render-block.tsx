@@ -173,6 +173,21 @@ type RenderProps = {
   device?: 'mobile' | 'tablet' | 'desktop';
   onEdit?: (block: Block) => void;
   onDelete?: (block: Block) => void;
+  /**
+   * Data fetched on the SERVER for blocks that would otherwise fetch their own in an effect.
+   *
+   * ⚠️ THE POINT IS THE FIRST RENDER, NOT THE ROUND-TRIP. A client-only fetch means the block's
+   * content is absent from the served HTML — invisible to a crawler, to a no-JS first paint, and
+   * to any argument about what belongs above the fold. `menu_finder` shipped that way and the
+   * city dish search, which is the whole reason the apex exists, was missing from the bytes.
+   *
+   * ⚠️ AND IT IS A CHANNEL, NOT A CACHE. Nothing is persisted into block content: the alternative
+   * was snapshotting the index the way `restaurants_directory` snapshots its entries, which for a
+   * DIRECTORY of a few rows is fine and for MENUS is the staleness trap this codebase already
+   * fights (see menuFreshness — a dish list frozen at publish time starts lying quietly). This
+   * arrives fresh on every request and is never written down.
+   */
+  serverData?: Record<string, unknown>;
 };
 
 export default function RenderBlock({
@@ -189,6 +204,7 @@ export default function RenderBlock({
   device,
   onEdit,
   onDelete,
+  serverData,
 }: RenderProps) {
   const { enabled: fixEnabled, draftFixes } = useBlockFix();
 
@@ -602,6 +618,9 @@ ID: ${blockId || 'n/a'}`}
                     : {})}
                   {...((block as any).type === 'services'
                     ? { services: identity?.services ?? (template as any)?.services ?? [] }
+                    : {})}
+                  {...(serverData && serverData[(block as any).type] !== undefined
+                    ? { serverData: serverData[(block as any).type] }
                     : {})}
                 />
               </div>

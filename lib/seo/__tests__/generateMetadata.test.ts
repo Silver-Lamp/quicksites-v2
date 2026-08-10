@@ -38,7 +38,16 @@ describe('generatePageMetadata', () => {
   it('falls back gracefully when page meta is missing', () => {
     const bare: any = generatePageMetadata({ site: { slug: 's' } as any, pageSlug: 'x', baseUrl: 'https://s.quicksites.ai' });
     expect(bare.title).toBe('QuickSites');
-    expect(bare.description).toBeTruthy();
     expect(bare.twitter.card).toBe('summary_large_image');
+  });
+
+  // ⚠️ CHANGED DELIBERATELY 2026-08-09. This used to assert a description was always present, and
+  // the value satisfying it was the string "A site built with QuickSites." — served live on
+  // www.graftontowing.com, a paying customer, as the sentence Google may print under their
+  // business name. An ABSENT description lets a search engine pull a snippet from the page, which
+  // beats a sentence advertising their vendor. The old assertion was green the whole time.
+  it('emits no description rather than advertising us on a customer page', () => {
+    const bare: any = generatePageMetadata({ site: { slug: 's' } as any, pageSlug: 'x', baseUrl: 'https://s.quicksites.ai' });
+    expect(bare.description).toBeUndefined();
   });
 });

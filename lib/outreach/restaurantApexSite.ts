@@ -102,6 +102,10 @@ export function apexTemplateSeed(input: ApexSeedInput): Record<string, any> {
   tpl.data.meta = {
     ...(tpl.data.meta ?? {}),
     site_type: RESTAURANT_APEX_SITE_TYPE,
+    // ⚠️ Without this the tab (and the search result) read "Home" — the builder's default page
+    // name, which every site in the fleet was serving as its <title>. The headline is already the
+    // honest one-line description of the page, so it is the title too.
+    seo_title: `Order from local restaurants in ${place}`,
     apex_campaign_id: input.campaignId,
     apex_domain: input.domain,
     ...(input.menuBrand ? { menu_brand: input.menuBrand } : {}),

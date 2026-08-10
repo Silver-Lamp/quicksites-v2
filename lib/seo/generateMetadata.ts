@@ -1,6 +1,7 @@
 // lib/seo/generateMetadata.ts
 import type { Template } from '@/types/template';
 import type { Metadata } from 'next';
+import { buildPageTitle } from './pageTitle';
 
 function trimSlashStart(s: string) {
   return s.replace(/^\/+/, '');
@@ -53,16 +54,39 @@ export function generatePageMetadata({
   const currentPage =
     pages.find((p: any) => p?.slug === pageSlug) || null;
 
-  const title =
-    currentPage?.meta?.title ||
-    currentPage?.title ||
-    (site as any)?.template_name ||
-    'QuickSites';
+  // ⚠️ The old chain was `page.meta.title || page.title || template_name`, and the builder names
+  // the first page "Home" — so `page.title` always existed and the site name was never reached.
+  // Every site in the fleet served <title>Home</title>. See lib/seo/pageTitle.ts.
+  const meta = (site as any)?.data?.meta ?? {};
+  const contact = meta.contact ?? {};
+  const title = buildPageTitle({
+    seoTitle: currentPage?.meta?.title ?? meta.seo_title,
+    pageTitle: currentPage?.title,
+    siteName: meta.business_name ?? meta.siteTitle ?? (site as any)?.template_name,
+    city: contact.city,
+    region: contact.state,
+    isHomePage: !!currentPage && pages.indexOf(currentPage) === 0,
+  });
+
+  // ⚠️ "A site built with QuickSites." was the fallback DESCRIPTION on a customer's own page —
+  // the sentence Google may print under their business name, advertising their vendor. Same shape
+  // as the title bug: our product's identity standing in for theirs. Prefer what the owner
+  // actually wrote (the hero subheadline is a real sentence about their business), and if there
+  // is nothing, emit no description at all — an absent tag lets a search engine pull a snippet
+  // from the page, which beats a sentence about somebody else.
+  const heroSub = (() => {
+    const blocks = [...(currentPage?.content_blocks ?? []), ...(currentPage?.blocks ?? [])];
+    const hero = blocks.find((b: any) => b?.type === 'hero');
+    const v = hero?.content?.subheadline;
+    return typeof v === 'string' && v.trim() ? v.trim() : null;
+  })();
 
   const description =
     currentPage?.meta?.description ||
     (site as any)?.description ||
-    'A site built with QuickSites.';
+    meta.seo_description ||
+    heroSub ||
+    undefined;
 
   // Live themed OG route (lib/og/siteOgCard) — real hero or the site's curated
   // accent card. Always fresh + CDN-cached (s-maxage), so no separate og-cache

@@ -4,7 +4,7 @@ import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import PainterlyBackdrop from '@/components/site/painterly-backdrop';
-import { portfolioHeroBackdrop } from '@/lib/sites/portfolioTheme';
+import { heroBackdropFor } from '@/lib/sites/heroBackdrop';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
@@ -436,7 +436,7 @@ export default function HeroRender({
   // below renders exactly as it always did. Rule 7: the decoration can be absent and nothing about
   // the page depends on it. The backdrop only replaces the card surface when there IS a painting,
   // because a transparent hero over no image is just an unstyled hero.
-  const heroBackdrop = portfolioHeroBackdrop((template as any)?.data ?? template);
+  const heroBackdrop = heroBackdropFor((template as any)?.data ?? template);
 
   return (
     <SectionShell

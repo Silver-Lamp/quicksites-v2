@@ -85,12 +85,17 @@ async function main() {
     try {
       // 1) Resolve the listing.
       let listing: any;
+      // ⚠️ The Google place id is the only STABLE identity a listing has. Kept so a re-import can
+      // recognise a restaurant it already built — see the upsert below.
+      let sourcePlaceId: string | null = null;
       if (lead.listing?.name) {
         listing = lead.listing;
       } else if (lead.placeId) {
-        listing = await fetchGooglePlace(String(lead.placeId));
+        sourcePlaceId = String(lead.placeId);
+        listing = await fetchGooglePlace(sourcePlaceId);
       } else if (lead.query) {
         const { placeId } = await findPlace(String(lead.query));
+        sourcePlaceId = placeId;
         listing = await fetchGooglePlace(placeId);
       } else {
         throw new Error('lead needs one of: query, placeId, or listing.name');
@@ -117,6 +122,82 @@ async function main() {
       const baseSpec = buildSpecFromListing(listing, menu);
       const spec = await enrichListingCopy(baseSpec, { menu, operatorId: ownerId });
       const tpl = buildRebuildTemplate({ spec, heroImage: listing.photos?.[0] ?? null, sourceUrl: listing.website ?? null });
+
+      // ⚠️ STAMP THE PLACE ID INTO THE DRAFT. Without it a re-import has no way to tell "the same
+      // restaurant again" from "a different restaurant with a similar name", which is why the
+      // retry below used to manufacture a twin.
+      if (sourcePlaceId) {
+        tpl.data = { ...tpl.data, meta: { ...(tpl.data?.meta ?? {}), source_place_id: sourcePlaceId } };
+      }
+
+      // ⚠️ THE RETRY LOOP WAS THE DUPLICATION MECHANISM, AND IT LOOKED LIKE RESILIENCE. On a slug
+      // collision (23505) it appended a random suffix and inserted a NEW ROW — so re-importing a
+      // city reliably produced a second draft of every restaurant already in it. That is how
+      // `the-local-907-ljdit` and `the-local-907-tqgh2` came to exist: not a bug that fired, a
+      // fallback that worked exactly as written. The collision was the system telling us we
+      // already had this business, and we treated it as a naming inconvenience.
+      // Two ways to recognise a restaurant we already built:
+      //   1. the Google place id we now stamp — exact, and the right long-term key;
+      //   2. the base slug — because ⚠️ EVERY DRAFT THAT ALREADY EXISTS PREDATES (1). 127 of them
+      //      carry no place id, so a place-id-only check would have been correct and useless: it
+      //      would prevent the next duplicate while re-duplicating everything already imported,
+      //      which is the shape of fix that passes review and changes nothing.
+      const byPlace = sourcePlaceId
+        ? (await db
+            .from('templates')
+            .select('id, slug')
+            .eq('claim_source', 'listing_import')
+            .eq('data->meta->>source_place_id', sourcePlaceId)
+            .maybeSingle()).data
+        : null;
+
+      const bySlug = byPlace
+        ? null
+        : (await db
+            .from('templates')
+            .select('id, slug')
+            .eq('claim_source', 'listing_import')
+            .eq('base_slug', tpl.slug.replace(/-[a-z0-9]{4,5}$/, ''))
+            .limit(1)
+            .maybeSingle()).data;
+
+      const existing = byPlace ?? bySlug;
+
+      if (existing?.id) {
+        // ⚠️ UPDATE, NEVER A SECOND ROW — and never a blind overwrite either. An operator may have
+        // corrected this draft by hand, and a re-import must not silently discard that. Only the
+        // menu and the identity we just read are refreshed; everything else stands.
+        // ⚠️ THROUGH THE SANCTIONED RPC, NOT A DIRECT UPDATE. `app.guard_templates_update` blocks
+        // direct writes to `templates` (CLAUDE.md §8) — my first version hit exactly that, which
+        // is the guard working: it failed loudly instead of letting a script bypass the commit
+        // path every other writer goes through. Note it failed AFTER the de-dup decision, so no
+        // duplicate row was created either way.
+        const { data: cur } = await db.from('templates').select('rev').eq('id', existing.id).maybeSingle();
+        const { commitTemplatePatch } = await import('../lib/templates/commitTemplatePatch');
+        const upErr = await commitTemplatePatch(
+          existing.id,
+          Number((cur as any)?.rev ?? 0),
+          { data: tpl.data, business_name: tpl.business_name },
+          ownerId ?? null,
+        );
+        if (upErr) throw new Error(upErr);
+        const menuItemCount = (menu?.sections ?? []).reduce((n: number, sec: any) => n + sec.items.length, 0);
+        const source = explicit ? 'manual' : menuItemCount > 0 ? 'auto' : 'none';
+        results.push({
+          ok: true,
+          updated: true,
+          businessName: spec.businessName,
+          draftId: existing.id,
+          slug: existing.slug,
+          editorUrl: `${PUBLIC_BASE}/admin/templates/${existing.id}`,
+          phone: spec.contact?.phone ?? null,
+          menuSections: menu?.sections?.length ?? 0,
+          menuItems: menuItemCount,
+          menuSource: source,
+        });
+        console.log(`  ↻ ${spec.businessName} — updated the existing draft (same Google place)`);
+        continue;
+      }
 
       let insertedId: string | null = null;
       let slug = tpl.slug;
@@ -203,7 +284,16 @@ async function main() {
   const autoEligible = auto + none; // leads relying on auto-detection (no supplied photo)
   const hitRate = autoEligible ? Math.round((auto / autoEligible) * 100) : 0;
 
-  console.log(`\n✅ ${ok}/${leads.length} imported. Results → ${out}`);
+  // ⚠️ "imported" counted updates as new sites. A tally that cannot tell "I built 25 things" from
+  // "I refreshed 25 things I already had" is the same defect as a timestamp standing in for a
+  // record — it reads like progress either way, which is exactly when you stop checking.
+  const updated = okRecs.filter((r: any) => r.updated).length;
+  const created = ok - updated;
+  console.log(
+    `\n✅ ${ok}/${leads.length} processed — ${created} new draft(s)` +
+      (updated ? `, ${updated} existing refreshed (same Google place)` : '') +
+      `. Results → ${out}`,
+  );
   console.log(`🔳 Print-ready QR codes → ${qrDir}/  (<slug>.png = owner claim · <slug>-order.png = diner order sticker)`);
   console.log(`🍽  Menu: ${auto} auto-detected · ${manual} from a supplied photo · ${none} need a menu photo`);
   if (autoEligible) console.log(`   Auto-detect hit rate: ${hitRate}% (${auto}/${autoEligible} without a supplied photo)`);

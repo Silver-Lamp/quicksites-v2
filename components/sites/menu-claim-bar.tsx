@@ -35,7 +35,7 @@ export default function MenuClaimBar({
   // owner can still find the claim path without reloading.
   if (dismissed) {
     return (
-      <div ref={barRef} className="fixed inset-x-0 bottom-0 z-[2147483647] flex justify-end px-3 pb-3 print:hidden">
+      <div ref={barRef} data-qs-chrome="1" className="fixed inset-x-0 bottom-0 z-[2147483647] flex justify-end px-3 pb-3 print:hidden">
         <a
           href={claimHref}
           className="rounded-full border border-amber-400/40 bg-neutral-900/95 px-4 py-2 text-sm font-semibold text-amber-300 shadow-2xl backdrop-blur transition hover:bg-neutral-900"
@@ -47,7 +47,7 @@ export default function MenuClaimBar({
   }
 
   return (
-    <div ref={barRef} className="fixed inset-x-0 bottom-0 z-[2147483647] print:hidden">
+    <div ref={barRef} data-qs-chrome="1" className="fixed inset-x-0 bottom-0 z-[2147483647] print:hidden">
       <div className="mx-auto flex max-w-4xl items-center gap-3 px-3 pb-3">
         {/* ⚠️ STACKS ON MOBILE. As one flex row the copy squeezed the button into a sliver against
             the right edge — the primary action on the page, hardest to hit, on the device most of

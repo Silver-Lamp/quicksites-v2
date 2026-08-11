@@ -67,6 +67,7 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
   // inside the claim bar on every unclaimed draft — the two surfaces that always appear together.
   return (
     <div
+      data-qs-chrome="1"
       style={{ bottom: 'calc(1rem + var(--qs-claimbar-h, 0px) + var(--qs-orderbar-h, 0px))' }}
       className="fixed left-4 z-40 print:hidden"
     >

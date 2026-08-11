@@ -149,3 +149,29 @@ describe('the file actually works offline', () => {
     expect(route).toMatch(/link\[rel="preload"\]/);
   });
 });
+
+describe('our chrome does not survive into their file', () => {
+  // ⚠️ `?qs_export=1` reads `window.location`, and this route fetches SERVER-RENDERED HTML — so the
+  // opt-out never ran. The exported file carried the audio launcher and a full-screen `Loading…`
+  // splash at z-9999 that nothing could dismiss, because we strip the scripts that would have
+  // hidden it. The owner opened their site and got a dark overlay, permanently.
+  it('removes elements we marked as ours', () => {
+    expect(route).toMatch(/\[data-qs-chrome\]/);
+    expect(route).toMatch(/\$\('\[data-qs-chrome\]'\)\.remove\(\)/);
+  });
+
+  it('also removes the loading splash by its own long-standing attribute', () => {
+    expect(route).toMatch(/loading-splash/);
+  });
+
+  it('marks the overlays at their source rather than matching on class names', () => {
+    for (const f of [
+      'components/ui/LoadingSplash.tsx',
+      'components/hear-this-page.tsx',
+      'components/sites/menu-claim-bar.tsx',
+      'components/sites/preview-watermark.tsx',
+    ]) {
+      expect(readFileSync(join(process.cwd(), f), 'utf8')).toMatch(/data-qs-chrome/);
+    }
+  });
+});

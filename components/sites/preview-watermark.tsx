@@ -23,7 +23,7 @@ export default function PreviewWatermark({ hideCornerBadge = false }: { hideCorn
           are asking their owner to judge. It is an informational banner, not a control: it has no
           reason to follow the scroll, and pushing the page down costs one line of height and
           covers nothing. */}
-      <div className="relative z-[2147483646] flex justify-center px-3 pb-1 pt-2">
+      <div data-qs-chrome="1" className="relative z-[2147483646] flex justify-center px-3 pb-1 pt-2">
         <div className="rounded-full border border-yellow-400/40 bg-yellow-100/95 px-4 py-1.5 text-xs font-medium text-yellow-900 shadow-md backdrop-blur">
           ✨ Preview — not yet published.{' '}
           <Link href="/" className="font-semibold underline underline-offset-2">
@@ -51,6 +51,7 @@ export default function PreviewWatermark({ hideCornerBadge = false }: { hideCorn
       {!hideCornerBadge && (
       <Link
         href="/"
+        data-qs-chrome="1"
         className="fixed bottom-[4.25rem] left-3 z-[2147483646] rounded-md bg-zinc-900/85 px-2.5 py-1.5 text-[11px] font-medium text-white shadow-lg ring-1 ring-white/10 transition hover:bg-zinc-900"
       >
         Made with <span className="text-sky-300">QuickSites</span>

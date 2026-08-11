@@ -89,6 +89,7 @@ export default function LoadingSplash({
       aria-live="polite"
       aria-busy="true"
       data-qs="loading-splash"
+      data-qs-chrome="1"
     >
       <div className={['flex flex-col items-center gap-4', className].join(' ')}>
         {resolved ? (

@@ -193,6 +193,21 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // Preloads point at chunks this file no longer has.
   $('link[rel="preload"]').remove();
 
+  // ⚠️ OUR CHROME, REMOVED HERE BECAUSE THE PAGE CANNOT REMOVE IT FOR US. `?qs_export=1` was
+  // supposed to let each component opt out — but the check reads `window.location`, and this route
+  // fetches SERVER-RENDERED HTML, so it never ran. The exported file therefore carried the
+  // "Hear this page" launcher and, far worse, a full-screen `Loading…` splash at z-9999 that
+  // NOTHING COULD EVER DISMISS, because we strip the scripts that would have hidden it. The owner
+  // opened their site and got a dark overlay, forever.
+  //
+  // This is a selector over OUR OWN attribute, not a guess at their markup — the objection that
+  // sent me to the client-side check in the first place does not apply to a marker we put there.
+  // The client check stays as a belt for real browsers; this is the one that runs.
+  const chrome = $('[data-qs-chrome]').length;
+  $('[data-qs-chrome]').remove();
+  // Belt: the splash predates the marker on any page not yet redeployed.
+  $('[data-qs="loading-splash"]').remove();
+
   // ⚠️ AN EMBEDDED MAP CANNOT BE MADE SELF-CONTAINED, so it becomes a link rather than an empty
   // grey box. Left as an iframe it would be the one visibly broken thing on a page we handed
   // somebody as "yours, works anywhere" — and it would have quietly falsified the banner two lines

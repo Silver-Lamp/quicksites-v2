@@ -591,7 +591,7 @@ export default async function SitePreviewPage({
         serverData={cityMenuFeed ? { menu_finder: cityMenuFeed } : undefined}
       />
       {apexDirectory && <RestaurantCompetitionDirectory dir={apexDirectory} compact />}
-      {showWatermark && <PreviewWatermark />}
+      {showWatermark && <PreviewWatermark hideCornerBadge={showClaimBar} />}
       {demandEnabled && <DemandCapture templateId={siteRow.id} phone={demandPhone} />}
       {showClaimBar && claimToken && (
         <MenuClaimBar

@@ -4,7 +4,7 @@
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
-import { defaultContactHeading } from '@/lib/sites/personSite';
+import { defaultContactHeading, isPersonTemplate } from '@/lib/sites/personSite';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
@@ -137,6 +137,15 @@ export default function ContactFormRender({
   // ⚠️ Person sites get "Get in Touch". A one-person portfolio headed "Contact Us" is wrong about
   // who is on the page, not merely unfashionable. See lib/sites/personSite.ts.
   const title = titleRaw || defaultContactHeading((t as any)?.data ?? t, businessName);
+
+  // ⚠️ A "which service?" question only makes sense where the business sells services. On a
+  // restaurant the unit is a DISH, and the list we would offer is Places categories anyway.
+  // Person sites are the same shape — nobody picks a service from a résumé.
+  const industryKey = String(
+    (t as any)?.data?.meta?.industry ?? (t as any)?.industry ?? '',
+  ).toLowerCase();
+  const hideServicePicker =
+    industryKey === 'restaurant' || isPersonTemplate((t as any)?.data ?? t);
 
   // site slug for email subject/logs
   const siteSlug =
@@ -394,8 +403,17 @@ Service: ${formData.service || 'N/A'}
 
               {/* No services and not in the editor? Render nothing at all — label included.
                   The label used to sit outside this check, so a site with no service list showed
-                  a heading "I'm Interested In:" above empty space. */}
-              <div className={services.length === 0 && !isEditor ? 'hidden' : undefined}>
+                  a heading "I'm Interested In:" above empty space.
+
+                  ⚠️ AND ON A RESTAURANT IT WAS A REQUIRED FIELD FULL OF NONSENSE. The listing
+                  importer fills `services` from Google Places CATEGORY labels, so Torero's asked
+                  a hungry person what they were "interested in" and made them choose between
+                  "Mexican restaurant", "Burrito restaurant" and "Chicken wings restaurant" before
+                  the form would send. All 127 listing-import drafts are in that state.
+                  A category is not a service — nobody is interested in "Restaurant" — and a
+                  required question with no true answer does not just clutter the form, it BLOCKS
+                  the only way to contact the business. See `hideServicePicker`. */}
+              <div className={(services.length === 0 || hideServicePicker) && !isEditor ? 'hidden' : undefined}>
                 <label className="block font-semibold mb-1">
                   I&apos;m Interested In:
                 </label>
@@ -413,7 +431,8 @@ Service: ${formData.service || 'N/A'}
                     className={inputClass()}
                     value={formData.service}
                     onChange={handleChange}
-                    required
+                    /* ⚠️ NEVER required. A contact form that cannot be submitted is worse than one
+                       missing a field, and this one is the only way to reach the business. */
                   >
                     <option value="">Select a service</option>
                     {services.map((s) => (

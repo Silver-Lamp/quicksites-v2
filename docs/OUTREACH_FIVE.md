@@ -118,6 +118,132 @@ Send it **one-to-one to the business** and nowhere else.
 Each page is watermarked and `noindex` until claimed. Printable QR codes are in `leads-renton-qr/`
 (`<slug>.png` = owner claim · `<slug>-order.png` = the diner-facing order sticker).
 
+## The five messages
+
+⚠️ **These are drafts to re-read, not copy blocks to send.** Five pre-written messages in a file is
+a template set — the thing this test exists to be the opposite of. What keeps them honest is that
+each was built from a *different verified detail* (a Street View landmark, a menu quirk, a fact
+about the business's shape), and none of those details came from our database. Before you send one,
+open the draft and check the message is still true of it.
+
+Each follows the same order for a reason: **I found you → here's what I made → here's what might be
+wrong with it → here's why there's no catch.** The location line buys the credibility that makes
+the next sentence land as care rather than sloppiness.
+
+⚠️ **Before using the download line in any of these, press the button once yourself** (site
+settings → "Take it with you") and open the file with wifi off. It shipped in #748 and has not been
+run end-to-end against a live site. It is the one claim the whole message rests on.
+
+---
+
+### 1. Enjoy Teriyaki — (425) 793-7333
+
+> Hi — this is Sandon, I'm local in Renton. I made a simple ordering page for Enjoy Teriyaki from
+> your Google listing: **enjoy-teriyaki-s7709.delivered.menu**
+>
+> You're in the strip with Pizza Dudes and Pike Place Bakery — took me a minute to find the right
+> door. Your whole menu's on the page, but I pulled it off your listing photos, so the Chinese Wok
+> and udon items are worth a 30-second look in case I got something wrong.
+>
+> It's free and it's yours. You can download the whole site from your dashboard any time and host
+> it anywhere — if I get hit by a bus you keep it. And if you'd rather I take it down, say the word
+> and it's gone today.
+
+*Hook: 56 OCR'd items across 10 sections plausibly contain an error, and checking is useful to them.*
+
+---
+
+### 2. Taqueria Los Potrillos #5 — (206) 694-3872
+
+> Hi — this is Sandon, I'm local in Renton. I made a simple ordering page for Taqueria Los
+> Potrillos #5 from your Google listing: **taqueria-los-potrillos-5-i3t57.delivered.menu**
+>
+> You're the one over by the Safeway on Sunset. Your whole menu's on there — 40-odd items — but I
+> pulled it off your listing photos, so the combo plates are worth a quick look in case I got a
+> price or a name wrong.
+>
+> It's free and it's yours. You can download the whole site from your dashboard any time and host
+> it anywhere. If you'd rather I take it down, say the word and it's gone today.
+
+⚠️ **Landmark is the Safeway, not Renton Deli — deliberately.** They are across the street from each
+other and both are on this list. If two neighbours compare notes and each message names the other,
+the personal touch inverts into a sweep of the block. **Send these two days apart.**
+
+---
+
+### 3. Renton Deli — (425) 226-7572
+
+> Hi — this is Sandon, I'm local in Renton. I made a simple ordering page for Renton Deli from your
+> Google listing: **renton-deli-4edah.delivered.menu**
+>
+> You're the one between el Recreo and #1 Nail Pro — took me a minute to find the right unit. One
+> thing I noticed: your sandwiches are listed B1 through B6 and the page never says bánh mì
+> anywhere, so anyone searching that won't find you. Easy fix if you want it.
+>
+> It's free and it's yours. You can download the whole site from your dashboard any time and host
+> it anywhere. If you'd rather I take it down, say the word and it's gone today.
+
+*The strongest hook of the five: it offers something they are losing right now rather than
+apologising for a possible mistake. Verified — `bánh mì` appears nowhere in their page data, while
+"Vietnamese Sausage" does, so the observation is about our page rather than a guess about their
+food.*
+
+---
+
+### 4. Los Antojitos del Barber — (253) 402-6828
+
+> Hola — this is Sandon, I'm local in Renton. I made a simple page for Los Antojitos del Barber
+> from your Google listing: **los-antojitos-del-barber-c4ffg.delivered.menu**
+>
+> Took me a minute to find you — you're over by M & A Barber & Beauty on S 2nd. Fair warning, I
+> built the page like a restaurant and you're really a dessert counter, so the fresas con crema and
+> bubble waffles are on there but it may fit you a bit wrong. Tell me what's off and I'll fix it,
+> or I'll take it down.
+>
+> It's free either way and it's yours — you can download the whole thing from your dashboard and
+> host it anywhere. Not selling you anything.
+
+⚠️ **"over by"** — not "inside", not "next to". Street View showed *in or near* the salon, and this
+phrasing is true under both readings. Same discipline as holding HabitForge at 200,000+: pick the
+version that is true under every reading you cannot rule out.
+
+*Leads with what is wrong with our own work, which is the most unfakeable thing in any of these.*
+
+---
+
+### 5. Taqueria El 5 De Mayo — (253) 408-3302
+
+> Hola — this is Sandon, I'm local in Renton. I made a simple ordering page for Taqueria El 5 De
+> Mayo from your Google listing: **taqueria-el-5-de-mayo-3cpt8.delivered.menu**
+>
+> The page lists 19044 108th Ave SE like a storefront, but you're the truck at the 76 station —
+> nobody finds a truck from a street number. I can put "we're the truck at the 76 on 108th" right
+> at the top so people know what they're looking for. Want me to?
+>
+> It's free either way and it's yours — you can download the whole thing from your dashboard and
+> host it anywhere. Not selling you anything.
+
+⚠️ **An earlier draft of this was wrong** and is worth remembering: it opened *"you're a truck, so
+if you move around that page is telling people the wrong thing."* A truck parked at a fixed 76
+station does not move — the address is right. Confidently wrong about someone's business in the
+first line is worse than a generic message. The offer only became strong once the premise was
+correct: from *"I'll remove something"* to *"I'll add the thing that gets you found."*
+
+---
+
+### What is deliberately NOT in any of them
+
+- **No link to sandon.quicksites.ai.** It reads as a job-seeker's résumé, which to an owner
+  choosing who to trust with their web presence says *he may not be here in six months* — the exact
+  abandonment fear that makes "free" suspicious. The download line answers that fear instead, and
+  it survives being true.
+- **No "20+ years of experience."** They cannot check it and are not evaluating your seniority;
+  they are deciding whether you are a scammer.
+- **No claim link.** It is a bearer credential — whoever holds it takes the site. It goes in the
+  *reply*, after a human answers, never in a first cold text.
+- **No price for done-for-you work**, because there is not one yet. If someone asks, that is the
+  most useful thing the five could tell us.
+
 ## Protocol — per business, in order
 
 1. **Open the draft and read it as the owner would.** Fix anything that is not true of their
@@ -125,8 +251,11 @@ Each page is watermarked and `noindex` until claimed. Printable QR codes are in 
    hand — the menu came off photos and OCR is confident when it is wrong.
 2. **Rewrite at least one line in their voice**, from their own listing/reviews. Not our copy
    about them.
-3. **Send one short personal message** to the phone on their listing. Not a template. Name
-   something specific about their place so it is obviously not a blast.
+3. **Send one short personal message** to the phone on their listing. Drafts are above — ⚠️ read
+   the one you are about to send against the actual draft first. They are written from verified
+   details (a Street View landmark, a menu quirk), and a detail that has gone stale turns the whole
+   effect inside out: a message that is confidently wrong about someone's business is worse than a
+   generic one.
 4. **Say the no-catch part out loud.** ⚠️ *"How much?"* is a trust probe — the person is trying to
    locate the catch, and the catch they are hunting for is lock-in. Shipping the export does not
    answer it; **saying it does**. Something like: *"Nothing — it's yours. I can send you the whole

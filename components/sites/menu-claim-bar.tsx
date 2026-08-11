@@ -45,7 +45,12 @@ export default function MenuClaimBar({
   return (
     <div className="fixed inset-x-0 bottom-0 z-[2147483647] print:hidden">
       <div className="mx-auto flex max-w-4xl items-center gap-3 px-3 pb-3">
-        <div className="flex w-full items-center gap-3 rounded-2xl border border-amber-400/30 bg-neutral-900/95 px-4 py-3 text-sm text-neutral-100 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-neutral-900/80">
+        {/* ⚠️ STACKS ON MOBILE. As one flex row the copy squeezed the button into a sliver against
+            the right edge — the primary action on the page, hardest to hit, on the device most of
+            these owners will open it on (a text message on a phone is the whole delivery
+            mechanism). Column below `sm`, so the button is full-width under the sentence that
+            just explained it; row from `sm` up, where there is room. */}
+        <div className="flex w-full flex-col items-stretch gap-3 rounded-2xl border border-amber-400/30 bg-neutral-900/95 px-4 py-3 text-sm text-neutral-100 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-neutral-900/80 sm:flex-row sm:items-center">
           <span aria-hidden className="hidden text-lg sm:inline">{hasDemand ? '🔥' : '👋'}</span>
           <p className="min-w-0 flex-1 leading-snug">
             {hasDemand ? (
@@ -92,20 +97,22 @@ export default function MenuClaimBar({
               </>
             )}
           </p>
-          <a
-            href={claimHref}
-            className="shrink-0 rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300"
-          >
-            Claim this site →
-          </a>
-          <button
-            type="button"
-            onClick={() => setDismissed(true)}
-            aria-label="Minimize"
-            className="shrink-0 rounded-full p-1 text-neutral-500 transition hover:text-neutral-300"
-          >
-            ✕
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <a
+              href={claimHref}
+              className="flex-1 rounded-full bg-amber-400 px-4 py-2.5 text-center text-sm font-semibold text-neutral-950 transition hover:bg-amber-300 sm:flex-none sm:py-2"
+            >
+              Claim this site →
+            </a>
+            <button
+              type="button"
+              onClick={() => setDismissed(true)}
+              aria-label="Minimize"
+              className="shrink-0 rounded-full p-2 text-neutral-500 transition hover:text-neutral-300"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       </div>
     </div>

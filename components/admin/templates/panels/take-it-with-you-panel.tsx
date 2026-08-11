@@ -64,18 +64,21 @@ export default function TakeItWithYouPanel({
       <button
         type="button"
         onClick={download}
-        disabled={busy || !published}
+        disabled={busy}
         className="mt-3 w-full rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
       >
         {busy ? 'Building your file…' : 'Download my site'}
       </button>
 
-      {/* ⚠️ The export reads the PUBLISHED page, so an unpublished draft has nothing to read. Said
-          up front rather than discovered as a 502 — a confusing failure here undermines the exact
-          claim the button exists to make. */}
+      {/* ⚠️ NO LONGER GATED ON `published`, AND THE GATE WAS BACKWARDS. An unclaimed
+          listing-import draft is already publicly readable at its delivered.menu URL — that is the
+          whole design — so there is something to export. Worse, the gate asked an owner to PUBLISH
+          a page in order to test the feature that proves they can leave, which is an irreversible
+          public act traded for a safety check. Sandon refused to press it, correctly. */}
       {!published && (
         <p className="mt-2 text-xs text-muted-foreground">
-          Publish the site first — the download is a copy of the live page.
+          This copies the page as it is published today — a draft downloads whatever is currently
+          live at its address.
         </p>
       )}
       {error && <p className="mt-2 text-xs text-red-500">{error}</p>}

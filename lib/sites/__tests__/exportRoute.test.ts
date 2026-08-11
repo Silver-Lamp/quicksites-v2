@@ -59,3 +59,39 @@ describe('what leaves is theirs, not ours', () => {
     expect(route).toMatch(/\$\('link\[rel="stylesheet"\]'\)\.remove\(\)/);
   });
 });
+
+describe('it fetches the page that is actually theirs', () => {
+  // ⚠️ The first version built `<slug>.quicksites.ai` for every site. A listing-import draft lives
+  // on delivered.menu; on the quicksites subdomain it serves OUR 404 — which returns 200. The
+  // export would have wrapped that and handed a restaurant owner our error page as the artefact
+  // proving they own their site.
+  it('uses the menu host for listing-import drafts', () => {
+    expect(route).toMatch(/menuSiteUrl\(slug\)/);
+    expect(route).toMatch(/claimSource === 'listing_import'/);
+  });
+
+  it('prefers a custom domain over either', () => {
+    const at = route.indexOf('const pageUrl');
+    expect(route.slice(at, at + 260)).toMatch(/custom_domain[\s\S]*\?/);
+  });
+
+  // ⚠️ A 200 is not proof we fetched the right thing.
+  it('refuses to hand over a page that does not carry the business name', () => {
+    expect(route).toMatch(/does not look like your site/);
+    expect(route).toMatch(/Refusing to hand you a file that is not yours/);
+  });
+});
+
+describe('the button does not demand an irreversible act to test a safety feature', () => {
+  const panel = readFileSync(
+    join(process.cwd(), 'components/admin/templates/panels/take-it-with-you-panel.tsx'),
+    'utf8',
+  );
+
+  // Gating on `published` asked an owner to publish a real business's page in order to check that
+  // they could leave. Sandon declined, correctly.
+  it('is not disabled on an unpublished draft', () => {
+    expect(panel).toMatch(/disabled=\{busy\}/);
+    expect(panel).not.toMatch(/disabled=\{busy \|\| !published\}/);
+  });
+});

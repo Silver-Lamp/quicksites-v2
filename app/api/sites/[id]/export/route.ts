@@ -22,6 +22,7 @@ import * as cheerio from 'cheerio';
 import { requireUser } from '@/lib/auth/requireUser';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { exportBanner, injectStyle, inlineCssAssets, inlineImages } from '@/lib/sites/exportSite';
+import { menuSiteUrl, menuEnabled } from '@/lib/menu/deliveredMenu';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -50,7 +51,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const { data: tpl } = await supabaseAdmin
     .from('templates')
-    .select('id, slug, owner_id, published, custom_domain, data')
+    .select('id, slug, owner_id, published, custom_domain, claim_source, data')
     .eq('id', params.id)
     .maybeSingle();
 
@@ -61,8 +62,20 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ error: 'Not yours to export' }, { status: 403 });
   }
 
-  const host = (tpl as any).custom_domain || `${(tpl as any).slug}.quicksites.ai`;
-  const pageUrl = `https://${host}/`;
+  // ⚠️ THE PUBLIC URL IS NOT ALWAYS THE quicksites.ai SUBDOMAIN, and getting this wrong produced
+  // a clean 200 of the WRONG PAGE. A listing-import draft lives on delivered.menu; on
+  // `<slug>.quicksites.ai` it serves our 404 ("This page moved, or never existed"). The first
+  // version fetched that, wrapped it, and would have handed a restaurant owner our error page as
+  // the artefact proving they own their site — the download button's entire purpose, inverted,
+  // with no error anywhere.
+  const slug = String((tpl as any).slug ?? '');
+  const claimSource = String((tpl as any).claim_source ?? '');
+  const onMenuHost = menuEnabled() && (claimSource === 'listing_import' || claimSource === 'claimed');
+  const pageUrl = (tpl as any).custom_domain
+    ? `https://${(tpl as any).custom_domain}/`
+    : onMenuHost
+      ? `${menuSiteUrl(slug)}/`
+      : `https://${slug}.quicksites.ai/`;
 
   let html: string;
   try {
@@ -74,6 +87,24 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     // not holding their site hostage is the worst possible error message.
     return NextResponse.json(
       { error: `Could not read ${pageUrl}: ${e?.message ?? 'unreachable'}` },
+      { status: 502 },
+    );
+  }
+
+  // ⚠️ CHECK IT IS THEIR PAGE BEFORE HANDING IT OVER. A 200 is not proof we fetched the right
+  // thing — our 404 page and our marketing homepage both return 200 on the wrong host. The
+  // business's own name appearing in the document is the cheapest available evidence that this is
+  // the site and not something of ours wearing an HTTP success code.
+  const expectName = String(
+    (tpl as any)?.data?.meta?.business_name ?? (tpl as any)?.data?.meta?.siteTitle ?? '',
+  ).trim();
+  if (expectName && !html.toLowerCase().includes(expectName.toLowerCase())) {
+    return NextResponse.json(
+      {
+        error:
+          `Read ${pageUrl} but it does not look like your site — "${expectName}" is not on the page. ` +
+          `Refusing to hand you a file that is not yours.`,
+      },
       { status: 502 },
     );
   }

@@ -19,6 +19,11 @@ import { execSync } from 'node:child_process';
 
 const LIVE_SIDEBAR = 'components/admin/template-settings-panel/sidebar-settings.tsx';
 
+// ⚠️ Being imported by a corpse is not being reachable. The first version of this test counted the
+// dead settings file as "something", so `backdrop-panel` — wired only from there — passed while
+// being invisible in the editor for two weeks.
+const DEAD_FILES = ['template-settings-panel.DEAD.tsx'];
+
 function importedAnywhere(basename: string, excluding: string): boolean {
   // grep the tree rather than reasoning about it — the point is what the code says, not what the
   // layout implies.
@@ -29,7 +34,12 @@ function importedAnywhere(basename: string, excluding: string): boolean {
   return out
     .split('\n')
     .filter(Boolean)
-    .some((f) => !f.includes(excluding) && !f.includes('__tests__'));
+    .some(
+      (f) =>
+        !f.includes(excluding) &&
+        !f.includes('__tests__') &&
+        !DEAD_FILES.some((dead) => f.includes(dead)),
+    );
 }
 
 describe('the live settings sidebar', () => {
@@ -58,11 +68,14 @@ describe('every panel component is reachable', () => {
   // qualified path and reported `park-address-picker` orphaned — it is imported by a sibling as
   // `./park-address-picker`. A check that fires on correct code is the failure that teaches people
   // to ignore output, and this one nearly buried the single real finding below.
-  const KNOWN_ORPHANS = new Set([
-    // Genuinely imported by nothing. Left listed rather than deleted: removing UI is the owner's
-    // call, and a named orphan is more useful than a silent one.
-    'pages-panel.tsx',
-  ]);
+  // ⚠️ Reachable from NOTHING LIVE. Listed rather than deleted: removing UI is the owner's call,
+  // and a named orphan is more useful than a silent one. `backdrop-panel` was on this list until
+  // it was restored to the live sidebar — it had shipped as "an editor picker" and never rendered.
+  // ⚠️ Two entries came off this list after checking rather than assuming: `mascot-panel` and
+  // `screensaver-panel` ARE imported, by their own renderers (site-mascot / site-screensaver), so
+  // "only the dead file references it" was wrong about them. I had already written them into the
+  // dead file's header as stranded before running the check.
+  const KNOWN_ORPHANS = new Set(['pages-panel.tsx', 'slug-panel.tsx']);
 
   it.each(panels.filter((f) => !KNOWN_ORPHANS.has(f)))('%s is imported by something', (file) => {
     const base = file.replace(/\.tsx$/, '');
@@ -74,5 +87,21 @@ describe('every panel component is reachable', () => {
       (f) => !importedAnywhere(f.replace(/\.tsx$/, ''), `panels/${f}`),
     );
     expect(stillOrphaned.sort()).toEqual([...KNOWN_ORPHANS].sort());
+  });
+});
+
+describe('the dead settings file stays dead', () => {
+  it('is not imported by anything', () => {
+    expect(importedAnywhere('template-settings-panel.DEAD', 'template-settings-panel.DEAD.tsx')).toBe(
+      false,
+    );
+  });
+
+  it('says so in its own first line, where an autocomplete will show it', () => {
+    const src = readFileSync(
+      join(process.cwd(), 'components/admin/templates/template-settings-panel.DEAD.tsx'),
+      'utf8',
+    );
+    expect(src.split('\n')[0]).toMatch(/DEAD/);
   });
 });

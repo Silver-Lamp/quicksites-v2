@@ -15,6 +15,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTemplateEditor } from '@/context/template-editor-context';
+import { voiceSourcesFor } from '@/lib/outreach/voiceSources';
 
 const EXPANDED_KEY = 'qs:restaurant-coach:expanded';
 
@@ -82,6 +83,8 @@ export default function RestaurantEditorCoach({
 }) {
   const ctx = useTemplateEditor();
   const data = (ctx as any)?.template?.data ?? {};
+
+  const voiceSources = useMemo(() => voiceSourcesFor(data), [data]);
 
   const [expanded, setExpanded] = useState(false); // collapsed by default, like GrowthCoach
   useEffect(() => {
@@ -283,6 +286,38 @@ export default function RestaurantEditorCoach({
       </div>
 
       {msg && <div className={`mt-1 text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</div>}
+
+      {/*
+        ⚠️ ALWAYS VISIBLE, NOT BEHIND THE EXPANDER. The manual rewrite step fails on friction — if
+        finding the owner's own words takes five minutes of tab-juggling per business, it gets
+        skipped and the "personal" outreach becomes the automated version wearing a human's name.
+        One row of one-click sources is the difference between doing that step and intending to.
+      */}
+      {voiceSources.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-amber-500/15 pt-2">
+          <span className="text-xs text-amber-200/80" title="Read these before rewriting a line in their voice">
+            Hear their voice:
+          </span>
+          {voiceSources.map((v) => (
+            <a
+              key={v.label}
+              href={v.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={v.hint}
+              className="rounded-full border border-amber-500/30 px-2 py-0.5 text-xs text-amber-100 transition hover:bg-amber-500/15"
+            >
+              {v.label}
+              {/* ⚠️ A SEARCH IS LABELLED AS ONE. Only the Google listing can be exact (built from
+                  the place id we stored at import); everything else is a query the operator
+                  resolves by eye. Constructing `yelp.com/biz/<name>` would be trivial and about as
+                  likely to land on a different business — and reading a stranger's reviews to
+                  write "their voice" is a worse failure than an extra click. */}
+              {v.kind === 'search' && <span className="ml-1 text-amber-300/50">↗</span>}
+            </a>
+          ))}
+        </div>
+      )}
 
       {expanded && (
         <ol className="mt-2 space-y-1.5 border-t border-amber-500/15 pt-2">

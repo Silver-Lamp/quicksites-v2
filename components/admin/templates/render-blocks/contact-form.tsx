@@ -309,8 +309,13 @@ Service: ${formData.service || 'N/A'}
             )}
           </div>
 
+          {/* ⚠️ This strip was `text-yellow-200` on `bg-yellow-500/10` — yellow on yellow. Legible
+              on the dark sites it was written against, nearly invisible on a light one, which is
+              where it was reported. The tint carries the "warning" meaning; the text now uses a
+              theme token so it follows the site's own scope. `dark:` is not an option here — the
+              app chrome pins `.dark`, so the dark variant always wins (components/ui/__tests__). */}
           {showEmailNudge && isEditor && (
-            <div className="mx-4 mb-4 rounded border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-200">
+            <div className="mx-4 mb-4 rounded border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-foreground">
               No valid <code>contact_email</code> is configured on the site.{' '}
               <button
                 onClick={() => {

@@ -263,6 +263,14 @@ export default function FooterRender({
     (typeof meta.industry === 'string' && meta.industry === 'personal') ||
     (typeof meta.site_type === 'string' && meta.site_type === 'personal');
 
+  // A site WE built from a public listing, which the business has not claimed. `claimed` and
+  // `guest_build` are somebody's own; these two are ours until someone takes them.
+  const claimSource =
+    (typeof db.claim_source === 'string' && db.claim_source) ||
+    (typeof meta.claim_source === 'string' && meta.claim_source) ||
+    '';
+  const isUnclaimedDraft = claimSource === 'listing_import' || claimSource === 'operator_draft';
+
   // Optional, and deliberately never defaulted — see the note at the copyright line below.
   const tagline =
     (typeof final?.tagline === 'string' && final.tagline.trim()) ||
@@ -575,10 +583,28 @@ export default function FooterRender({
         Now it appears only where the site itself supplies it. No tagline is the safe default:
         a missing line reads as nothing, a wrong one reads as a promise.
       */}
-      <div className={`text-center mt-8 text-xs ${subText}`}>
-        © {new Date().getFullYear()} {businessName}
-        {tagline ? `. ${tagline}` : ''}
-      </div>
+      {/*
+        ⚠️ AND THE COPYRIGHT LINE IS THE SAME ERROR, ONE STEP FURTHER — IT IS A LEGAL CLAIM MADE IN
+        SOMEONE ELSE'S NAME. On a site we generated from a public listing, "© 2026 Enjoy Teriyaki"
+        asserts that Enjoy Teriyaki claims ownership of a page they have never seen, did not ask
+        for, and did not write. We wrote it. Putting their name on the assertion is not a courtesy;
+        it is us signing a document as them.
+
+        So an UNCLAIMED draft asserts nothing. Once a real owner claims the site the line returns,
+        because by then it is true — they took it, they can edit it, and publishing it is their
+        decision. Same rule the watermark and the noindex already follow: the page is honest about
+        whose it is at each stage, rather than dressed as finished from the moment it exists.
+
+        (The sibling case is above: a tagline nobody asked for. That one promises service; this one
+        claims property. Both are claims made on a business's behalf by a machine that met them
+        through a photo of their signboard.)
+      */}
+      {!isUnclaimedDraft && (
+        <div className={`text-center mt-8 text-xs ${subText}`}>
+          © {new Date().getFullYear()} {businessName}
+          {tagline ? `. ${tagline}` : ''}
+        </div>
+      )}
     </footer>
   );
 }

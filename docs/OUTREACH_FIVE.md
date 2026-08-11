@@ -2,7 +2,7 @@
 
 A pre-registered test of one question, by hand, with no tooling.
 
-**Status:** **all five sent 2026-08-11** · replies open until **2026-08-18** (the pre-registered
+**Status:** **all five sent 2026-08-11** · ⚠️ the link did not linkify — **correction follow-up owed to all five** · replies open until **2026-08-18** (the pre-registered
 7-day timebox) · **Owner:** Sandon · **Written:** 2026-08-10
 
 ---
@@ -129,6 +129,10 @@ each was built from a *different verified detail* (a Street View landmark, a men
 about the business's shape), and none of those details came from our database. Before you send one,
 open the draft and check the message is still true of it.
 
+⚠️ **The links below are the corrected `https://deliveredmenu.com/<slug>` form.** The versions
+actually sent on 2026-08-11 used the bare `<slug>.delivered.menu` hostname and **did not linkify** —
+see "The link did not come through as a link" below. Never send a bare hostname on a new gTLD.
+
 Each follows the same order for a reason: **I found you → here's what I made → here's what might be
 wrong with it → here's why there's no catch.** The location line buys the credibility that makes
 the next sentence land as care rather than sloppiness.
@@ -149,7 +153,7 @@ cannot be checked from a script — press it once per business before promising 
 ### 1. Enjoy Teriyaki — (425) 793-7333
 
 > Hi — this is Sandon, I'm local in Renton. I made a simple ordering page for Enjoy Teriyaki from
-> your Google listing: **enjoy-teriyaki-s7709.delivered.menu**
+> your Google listing: https://deliveredmenu.com/enjoy-teriyaki-s7709
 >
 > You're in the strip with Pizza Dudes and Pike Place Bakery — took me a minute to find the right
 > door. Your whole menu's on the page, but I pulled it off your listing photos, so the Chinese Wok
@@ -166,7 +170,7 @@ cannot be checked from a script — press it once per business before promising 
 ### 2. Taqueria Los Potrillos #5 — (206) 694-3872
 
 > Hi — this is Sandon, I'm local in Renton. I made a simple ordering page for Taqueria Los
-> Potrillos #5 from your Google listing: **taqueria-los-potrillos-5-i3t57.delivered.menu**
+> Potrillos #5 from your Google listing: https://deliveredmenu.com/taqueria-los-potrillos-5-i3t57
 >
 > You're the one over by the Safeway on Sunset. Your whole menu's on there — 40-odd items — but I
 > pulled it off your listing photos, so the combo plates are worth a quick look in case I got a
@@ -184,7 +188,7 @@ the personal touch inverts into a sweep of the block. **Send these two days apar
 ### 3. Renton Deli — (425) 226-7572
 
 > Hi — this is Sandon, I'm local in Renton. I made a simple ordering page for Renton Deli from your
-> Google listing: **renton-deli-4edah.delivered.menu**
+> Google listing: https://deliveredmenu.com/renton-deli-4edah
 >
 > You're the one between el Recreo and #1 Nail Pro — took me a minute to find the right unit. One
 > thing I noticed: your sandwiches are listed B1 through B6 and the page never says bánh mì
@@ -203,7 +207,7 @@ food.*
 ### 4. Los Antojitos del Barber — (253) 402-6828
 
 > Hola — this is Sandon, I'm local in Renton. I made a simple page for Los Antojitos del Barber
-> from your Google listing: **los-antojitos-del-barber-c4ffg.delivered.menu**
+> from your Google listing: https://deliveredmenu.com/los-antojitos-del-barber-c4ffg
 >
 > Took me a minute to find you — you're over by M & A Barber & Beauty on S 2nd. Fair warning, I
 > built the page like a restaurant and you're really a dessert counter, so the fresas con crema and
@@ -224,7 +228,7 @@ version that is true under every reading you cannot rule out.
 ### 5. Taqueria El 5 De Mayo — (253) 408-3302
 
 > Hola — this is Sandon, I'm local in Renton. I made a simple ordering page for Taqueria El 5 De
-> Mayo from your Google listing: **taqueria-el-5-de-mayo-3cpt8.delivered.menu**
+> Mayo from your Google listing: https://deliveredmenu.com/taqueria-el-5-de-mayo-3cpt8
 >
 > The page lists 19044 108th Ave SE like a storefront, but you're the truck at the 76 station —
 > nobody finds a truck from a street number. I can put "we're the truck at the 76 on 108th" right
@@ -273,6 +277,74 @@ The five bodies are now in `outreach_touches`, each linked to its template — v
 were minted on 2026-08-11 (expire 2026-09-10) and are held locally, out of the repo, for use in a
 reply. Verified against production before being relied on: a good token renders the claim page, a
 corrupted one returns "expired", so the locally-signed tokens really are accepted by prod.
+
+---
+
+## ⚠️ The link did not come through as a link — corrected 2026-08-11
+
+**The single most damaging thing in this test so far, and it was in the drafts above, not the code.**
+The messages carried the bare hostname `<slug>.delivered.menu`. Phones do not linkify `.menu` —
+autolinking is driven by a TLD list, and the new gTLDs are not on it. So the one thing the entire
+message exists to deliver arrived as plain text.
+
+A screenshot of the sent message (Taqueria El 5 De Mayo, RCS on Android) shows it is worse than
+untappable:
+
+| what it looked like | what it was |
+|---|---|
+| `taqueria-el-5-de-mayo-3cpt8.delivered.menu` — **bold, not a link** | the site. Not tappable. |
+| "5 De Mayo" — *underlined* | detected as a **date** |
+| "19044 108th Ave SE" — *underlined* | detected as an **address** → opens Maps |
+
+**Three tappable-looking things, none of them the site** — and the two that *were* tappable led to a
+calendar entry and to the street address the message was arguing is misleading. The likeliest action
+a recipient took was opening Maps to their own storefront.
+
+The domain also hyphen-wrapped across four lines (`…deliv-` / `ered.menu`), so retyping it correctly
+means noticing that two of the hyphens are real and one is not.
+
+### The fix: use the .com we already own
+
+`deliveredmenu.com` 301s to `delivered.menu` **preserving the path**, so every draft has a fully
+tappable equivalent. Verified 2026-08-11 — all five return 200 with the right business name:
+
+| business | tappable link |
+|---|---|
+| Enjoy Teriyaki | `https://deliveredmenu.com/enjoy-teriyaki-s7709` |
+| Taqueria Los Potrillos #5 | `https://deliveredmenu.com/taqueria-los-potrillos-5-i3t57` |
+| Renton Deli | `https://deliveredmenu.com/renton-deli-4edah` |
+| Taqueria El 5 De Mayo | `https://deliveredmenu.com/taqueria-el-5-de-mayo-3cpt8` |
+| Los Antojitos del Barber | `https://deliveredmenu.com/los-antojitos-del-barber-c4ffg` |
+
+⚠️ **Both halves are load-bearing.** The `.com` gets it linkified; the explicit `https://` is what
+makes linkification reliable *regardless* of TLD. Ship both, always.
+
+⚠️ **The code was never wrong** — `menuSiteUrl()` has always returned `https://…`, and the outreach
+SMS sender uses a full URL. This was a hand-written doc artifact that went out five times. A rule
+that lives only in a function does not protect the messages a human writes by hand.
+
+### The follow-up (send once, to all five)
+
+A correction is a legitimate second touch — it is not a nudge, and it is the reason to text again.
+Keep it to one line and do not re-pitch; they already have the pitch.
+
+> Sorry — that link came through as plain text on your end, not something you can tap. Here it is
+> properly: https://deliveredmenu.com/<slug>
+
+### What this does to the result
+
+**It is a confound that can only produce a false negative**, and it must be stated before the
+replies are counted:
+
+- A silent business may have found the offer uninteresting, **or may simply never have seen the page.**
+  Those are indistinguishable from the outside.
+- So a **0–1 of 5** outcome no longer cleanly triggers the "stop building outreach tooling" rule from
+  the decision rule above — it is contaminated.
+- A **4–5 of 5** outcome is *strengthened*, since it happened despite a broken link.
+- The reply window should run **7 days from the follow-up**, not from the original send.
+
+Recorded rather than absorbed, because the pre-registered rule only means something if the
+conditions it was registered under are the ones that actually held.
 
 ---
 

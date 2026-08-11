@@ -155,29 +155,72 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
   }
 
-  // Assets referenced from the CSS we just gathered.
-  const cssUrls = [...cssText.matchAll(/url\((["']?)(https?:[^"')]+)\1\)/g)].map((m) => m[2]);
-  const imgSrcs = $('img[src]')
+  // ⚠️ THE REFERENCE IN THE DOCUMENT IS WHAT GETS REPLACED, NOT THE URL WE FETCHED. The first
+  // version absolutised every src to fetch it and then substituted the ABSOLUTE string — which
+  // does not appear anywhere in the HTML, because the page writes relative paths
+  // (`/api/public/place-photo?ref=…`, `/_next/static/media/layers.png`). Every fetch succeeded,
+  // every replacement missed, and the file downloaded with zero inlined images and no errors:
+  // a clean success producing a page with the restaurant's photo missing.
+  //
+  // Relative URLs also had to be collected at all — the old regex required `https?:`, so the
+  // CSS backgrounds were never even attempted.
+  const cssRefs = [...cssText.matchAll(/url\((["']?)([^"')]+)\1\)/g)]
+    .map((m) => m[2])
+    .filter((u) => u && !u.startsWith('data:'));
+  const imgRefs = $('img[src]')
     .map((_, el) => $(el).attr('src'))
     .get()
-    .filter((s) => s && !s.startsWith('data:'))
-    .map((s) => new URL(String(s), pageUrl).toString());
+    .filter((v): v is string => !!v && !v.startsWith('data:'));
 
   const map: Record<string, string> = {};
-  for (const url of [...new Set([...cssUrls, ...imgSrcs])]) {
-    if (total > MAX_TOTAL_BYTES) { failed.push(`${url} (budget)`); continue; }
-    const got = await fetchAsDataUri(url);
-    if (got.uri) { map[url] = got.uri; total += got.bytes; } else { failed.push(`${url} (${got.error})`); }
+  for (const ref of [...new Set([...cssRefs, ...imgRefs])]) {
+    if (total > MAX_TOTAL_BYTES) { failed.push(`${ref} (budget)`); continue; }
+    let absolute: string;
+    try {
+      absolute = new URL(ref, pageUrl).toString();
+    } catch {
+      failed.push(`${ref} (unparseable)`);
+      continue;
+    }
+    const got = await fetchAsDataUri(absolute);
+    // Keyed on the reference AS WRITTEN, so the substitution can find it.
+    if (got.uri) { map[ref] = got.uri; total += got.bytes; } else { failed.push(`${ref} (${got.error})`); }
   }
 
   // Drop the now-inlined <link>s, then embed CSS and images.
   $('link[rel="stylesheet"]').remove();
   $('script').remove(); // their file needs no JS from us, and dead scripts point at our routes
+  // Preloads point at chunks this file no longer has.
+  $('link[rel="preload"]').remove();
+
+  // ⚠️ AN EMBEDDED MAP CANNOT BE MADE SELF-CONTAINED, so it becomes a link rather than an empty
+  // grey box. Left as an iframe it would be the one visibly broken thing on a page we handed
+  // somebody as "yours, works anywhere" — and it would have quietly falsified the banner two lines
+  // below, which promises no internet connection is needed.
+  let mapsReplaced = 0;
+  $('iframe[src*="maps."], iframe[src*="google.com/maps"]').each((_, el) => {
+    const src = $(el).attr('src') || '';
+    $(el).replaceWith(
+      `<p style="margin:1rem 0"><a href="${src.replace(/&output=embed/, '')}" target="_blank" rel="noopener">Open the map</a></p>`,
+    );
+    mapsReplaced += 1;
+  });
 
   let out = $.html();
   if (cssText) out = injectStyle(out, inlineCssAssets(cssText, map));
   out = inlineImages(out, map);
+  // ⚠️ The banner promises "needs no internet connection". That is only true once the map is gone
+  // and every image is embedded — so anything still outstanding is stated next to the promise
+  // rather than left for the owner to discover when they open it on a plane.
   out = exportBanner(pageUrl, new Date().toISOString()) + out;
+  if (mapsReplaced || failed.length) {
+    out = out.replace(
+      '-->',
+      `  ${mapsReplaced ? `The embedded map became a link — a live map cannot work offline.\n` : ''}` +
+        `${failed.length ? `  ${failed.length} asset(s) could not be embedded; they are listed at the end of this file.\n` : ''}` +
+        `-->`,
+    );
+  }
 
   // ⚠️ Anything we could not fetch is NAMED in the file rather than silently missing. A hole in a
   // page you were told is complete is worse than a hole you were told about — same rule as the

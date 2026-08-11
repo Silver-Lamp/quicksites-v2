@@ -114,3 +114,38 @@ describe('the button does not demand an irreversible act to test a safety featur
     expect(panel).not.toMatch(/disabled=\{busy \|\| !published\}/);
   });
 });
+
+describe('the file actually works offline', () => {
+  // ⚠️ Found by opening the downloaded file, not by any test: it had ZERO inlined images and
+  // reported no failures. Every fetch succeeded and every substitution missed, because the route
+  // absolutised each src to fetch it and then replaced the ABSOLUTE string — which appears nowhere
+  // in a document that writes `/api/public/place-photo?ref=…`. A clean success producing a page
+  // with the restaurant's photo missing.
+  it('substitutes the reference as written, not the URL it fetched', () => {
+    expect(route).toMatch(/map\[ref\] = got\.uri/);
+    expect(route).toMatch(/new URL\(ref, pageUrl\)/);
+  });
+
+  it('collects relative references too, not only absolute ones', () => {
+    // The old CSS regex required `https?:`, so every `/_next/static/media/…` background was
+    // never even attempted.
+    expect(route).toMatch(/url\\\(\(\["'\]\?\)\(\[\^"'\)\]\+\)/);
+    expect(route).not.toMatch(/https\?:\[\^"'\)\]\+/);
+  });
+
+  it('turns the embedded map into a link rather than leaving a dead grey box', () => {
+    expect(route).toMatch(/iframe\[src\*="maps\./);
+    expect(route).toMatch(/Open the map/);
+  });
+
+  // ⚠️ The banner promises "needs no internet connection". Anything still outstanding is said next
+  // to that promise rather than discovered by the owner on a plane.
+  it('amends the banner when something could not be embedded', () => {
+    expect(route).toMatch(/mapsReplaced \|\| failed\.length/);
+    expect(route).toMatch(/a live map cannot work offline/);
+  });
+
+  it('drops preloads, which point at chunks the file no longer has', () => {
+    expect(route).toMatch(/link\[rel="preload"\]/);
+  });
+});

@@ -119,10 +119,14 @@ export async function updatePosting(
 }
 
 /** Interview stages HiveJournal's rehearsal engine understands. */
+// ⚠️ These are HJ's values, not ours to choose. `exec` is canonical — I shipped `founder_exec`
+// from their prose and they corrected it (crosstalk 2026-08-11), then aliased it so our link kept
+// working. The alias is why nothing broke and also why this would have rotted silently: a wrong
+// value that still works is a wrong value nobody has a reason to fix. Corrected at the source.
 export const REHEARSAL_STAGES = [
   'recruiter_screen',
   'hiring_manager',
-  'founder_exec',
+  'exec',
   'technical',
   'onsite',
 ] as const;
@@ -131,7 +135,7 @@ export type RehearsalStage = (typeof REHEARSAL_STAGES)[number];
 export const STAGE_LABELS: Record<string, string> = {
   recruiter_screen: 'Recruiter screen',
   hiring_manager: 'Hiring manager',
-  founder_exec: 'Founder / exec',
+  exec: 'Founder / exec',
   technical: 'Technical',
   onsite: 'Onsite',
 };

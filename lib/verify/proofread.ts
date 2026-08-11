@@ -87,7 +87,7 @@ const CATEGORIES: ProofreadCategory[] = [
  *
  * `text` should be the RENDERED text — what a visitor actually reads — not the source or the block
  * JSON. Everything this repo has learned about verification points the same way: check the
- * artefact that reaches the person.
+ * artifact that reaches the person.
  */
 export async function proofreadPage(
   text: string,

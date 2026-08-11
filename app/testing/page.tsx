@@ -18,11 +18,11 @@ import { PERSONA_TESTING_URL } from '@/components/promo/persona-testing-promo';
 export const metadata = marketingOg({
   title: 'How we test — the green-check problem',
   description:
-    'Our repeated failure was never broken code. It was passing checks over a wrong artefact. The disciplines we adopted, and the specific bug behind each one.',
+    'Our repeated failure was never broken code. It was passing checks over a wrong artifact. The disciplines we adopted, and the specific bug behind each one.',
   path: '/testing',
   ogEyebrow: 'Engineering',
   ogTitle: 'How we test',
-  ogSubtitle: 'Types green, tests green, artefact wrong. What we do about it.',
+  ogSubtitle: 'Types green, tests green, artifact wrong. What we do about it.',
 });
 
 function Rule({
@@ -184,7 +184,7 @@ export default function TestingPage() {
             Engineering
           </p>
           <h1 className="mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl">
-            Types green. Tests green. Artefact wrong.
+            Types green. Tests green. Artifact wrong.
           </h1>
           <p className="mt-5 text-lg text-zinc-300">
             Across four products we have shipped almost no broken code. What we have shipped, over
@@ -201,7 +201,7 @@ export default function TestingPage() {
           <Pipeline />
 
           <div className="mt-14 space-y-12">
-            <Rule n="Rule 1" title="Verify the received artefact, not the inputs">
+            <Rule n="Rule 1" title="Verify the received artifact, not the inputs">
               <p>
                 Assertions about state, props and database rows are assertions about what we
                 intended. The visitor gets a rendered page. Our render gate loads the{' '}
@@ -356,7 +356,7 @@ Assumed:  that the shopping list consumes it — I did not check.`}
           <div className="mt-16 rounded-2xl border border-white/10 bg-black/30 p-6 backdrop-blur sm:p-8">
             <h2 className="text-2xl font-bold tracking-tight">A worked example, unflattering</h2>
             <p className="mt-3 text-[15px] leading-relaxed text-zinc-300">
-              We built a &ldquo;download your whole site as one file&rdquo; feature — the artefact a
+              We built a &ldquo;download your whole site as one file&rdquo; feature — the artifact a
               customer keeps if we disappear. It took <strong>seven rounds</strong> to work:
             </p>
             <ol className="mt-4 space-y-2 text-[15px] text-zinc-300">
@@ -392,7 +392,7 @@ Assumed:  that the shopping list consumes it — I did not check.`}
               have caught the seven failures above. That is not an argument against tests — it is
               an argument about{' '}
               <strong>what they are evidence of</strong>. A test asserts that the code does what its
-              author believed. The gap we keep falling into is between that belief and the artefact
+              author believed. The gap we keep falling into is between that belief and the artifact
               a person receives, and closing it needs a different instrument: load the real URL,
               read the real bytes, open the real file.
             </p>

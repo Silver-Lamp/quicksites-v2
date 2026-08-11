@@ -11,7 +11,7 @@
 //
 // ⚠️ THE SIGN MAKES A CLAIM ABOUT A SPECIFIC PROPERTY, AND THAT IS NOT DECORATION. "This driveway
 // was sealed by X" asserts that X did this work, at this address. Two consequences the generated
-// instructions state plainly, because a contractor putting our artefact in a stranger's lawn is
+// instructions state plainly, because a contractor putting our artifact in a stranger's lawn is
 // carrying the risk:
 //   1. It goes up only where the work was actually done by them.
 //   2. It needs the homeowner's permission — a sign in someone's yard is their yard, not ours,

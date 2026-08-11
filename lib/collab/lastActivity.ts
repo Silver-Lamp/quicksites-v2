@@ -11,7 +11,7 @@
 // and has no login. Opened three weeks later it looks current, because nothing on the page says
 // otherwise. The option screenshots are already dated for the same reason; this dates the page.
 //
-// So it is derived from the artefacts a visitor can actually see changing: the newest message, the
+// So it is derived from the artifacts a visitor can actually see changing: the newest message, the
 // newest option version, the newest preview capture. Never later than "now" — a future timestamp
 // from a clock-skewed row would render as a page updated tomorrow.
 

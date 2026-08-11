@@ -3,7 +3,7 @@
 // The signed copy, as ONE self-contained HTML file that both parties keep.
 //
 // ⚠️ THE SIGNER MUST NOT HAVE TO TRUST US TO KEEP THEIR OWN CONTRACT. This is the same rule the
-// Verbatim export is built on (lib/verbatim/exportProfile.ts): hand over an artefact, not a
+// Verbatim export is built on (lib/verbatim/exportProfile.ts): hand over an artifact, not a
 // dependency. If our database vanished tomorrow, the agreement should still exist — in their
 // inbox, complete, with the document text and the fingerprint that proves it is the text they
 // signed. A signing product whose evidence only lives on the vendor's server is asking the weaker

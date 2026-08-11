@@ -14,7 +14,7 @@
 // is well-formed, the page renders, `curl` is 200, and the only symptom is a search engine
 // quietly filing the page under an address no human will ever visit. Nothing in this repo could
 // have caught it except looking at the served HTML — which is the same reason the render gate
-// verifies the received artefact rather than the inputs that produced it.
+// verifies the received artifact rather than the inputs that produced it.
 //
 // ⚠️ THE CANONICAL IS SELF-REFERENCING, DELIBERATELY. A page reached on host H canonicalises to
 // host H. It does NOT try to nominate a "preferred" host when a site is reachable at both

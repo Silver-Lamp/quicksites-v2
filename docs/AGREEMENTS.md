@@ -29,7 +29,7 @@ The deciding factor was not price. The ask was a capability *inside* QuickSites,
 doesn't satisfy that at any price. We already owned every primitive: signed subject-bound tokens
 (`lib/auth/siteClaimToken.ts`, `lib/collab/collabToken.ts`), deny-default RLS, per-IP rate
 limiting, Resend, and — from the Verbatim work the day before — the pattern for a self-contained
-HTML artefact the person keeps.
+HTML artifact the person keeps.
 
 **What we are NOT claiming, and this is a hard line:** this is not identity verification, not
 notarisation, not eIDAS qualified. If a case genuinely needs a contested-identity-grade record, it
@@ -66,7 +66,7 @@ version boundary (`HASH_ALGO`), not a refactor.
 
 ## 3. The signer keeps their own copy
 
-Same rule as the Verbatim export: **hand over an artefact, not a dependency.** The certificate
+Same rule as the Verbatim export: **hand over an artifact, not a dependency.** The certificate
 (`lib/agreements/certificate.ts`) is one HTML file with no script, stylesheet, font, image,
 analytics or link back to us. It opens from a USB stick in ten years and prints on one sheet.
 
@@ -188,7 +188,7 @@ what QuickSites may build next, so they are repeated here deliberately:
 **A frozen signature must never imply consent is irrevocable.** *(HiveJournal.)* The record says
 what was agreed **on a date**. Where the underlying right is withdrawable, the certificate is
 **evidence, not a cage** — and that matters most where the person consenting is vulnerable, because
-a solemn-looking artefact can make someone feel more locked in than they are. That is coercion by
+a solemn-looking artifact can make someone feel more locked in than they are. That is coercion by
 production values, and it is a live risk the moment this is pointed at anything more emotive than
 an IP assignment.
 
@@ -214,5 +214,5 @@ anyone asking the harder question underneath. Any future use that turns on *who*
   makes the feature half-delivered from their side.
 - **No acceptance receipt for the visitor.** The signing product hands over a certificate; the
   block only shows a confirmation on screen. Someone who accepted a waiver has no copy of what
-  they accepted, which is the weaker half of the same artefact-not-dependency rule. The
+  they accepted, which is the weaker half of the same artifact-not-dependency rule. The
   certificate renderer already takes exactly the fields needed, so this is small.

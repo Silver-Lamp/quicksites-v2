@@ -90,7 +90,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // a clean 200 of the WRONG PAGE. A listing-import draft lives on delivered.menu; on
   // `<slug>.quicksites.ai` it serves our 404 ("This page moved, or never existed"). The first
   // version fetched that, wrapped it, and would have handed a restaurant owner our error page as
-  // the artefact proving they own their site — the download button's entire purpose, inverted,
+  // the artifact proving they own their site — the download button's entire purpose, inverted,
   // with no error anywhere.
   const slug = String((tpl as any).slug ?? '');
   const claimSource = String((tpl as any).claim_source ?? '');

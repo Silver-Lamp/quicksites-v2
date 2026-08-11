@@ -24,7 +24,7 @@ problem into someone else's expense."* A local business putting its web presence
 with three lifetime orders is that, exactly — and the poster poll had already found that
 abandonment is precisely what that buyer fears.
 
-**The distinction underneath all four: an artefact versus a dependency.** A page someone keeps is
+**The distinction underneath all four: an artifact versus a dependency.** A page someone keeps is
 useful whether or not we exist. A live site is a standing bet that we do.
 
 ⚠️ **That claim was false when it was first made.** Verbatim produced only a draft on our
@@ -69,9 +69,9 @@ thing a library should not be lending its name to.
 ### ⚠️ PDF and Word matter more than the webpage, and it took building them to see it
 
 The first version of this offered a single self-contained **HTML** file, and the reasoning was
-sound: it opens anywhere, forever, without us. It is still the right artefact for a *profile page*.
+sound: it opens anywhere, forever, without us. It is still the right artifact for a *profile page*.
 
-But it is the wrong artefact for a **job application.** Employers ask for a PDF. Recruiters and
+But it is the wrong artifact for a **job application.** Employers ask for a PDF. Recruiters and
 applicant-tracking systems parse `.docx` — and they parse it *structurally*, which is why the Word
 export uses real heading styles rather than bold body text; a document that merely looks like it
 has headings reads to a parser as one undifferentiated blob. Handing a job seeker an HTML file and

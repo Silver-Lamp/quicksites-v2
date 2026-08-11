@@ -18,7 +18,7 @@
 // markers, heading hashes, blockquote arrows, horizontal rules, link syntax around a visible
 // label. It must never drop a sentence, reorder anything, or resolve a reference. A contract is
 // the one document where "tidying" is indistinguishable from altering, so when in doubt, leave
-// the characters alone — an unconverted artefact reads slightly oddly; a converted one that lost
+// the characters alone — an unconverted artifact reads slightly oddly; a converted one that lost
 // a clause is a different agreement.
 
 /** True if the text contains markdown syntax we would strip. Used only to warn an author. */

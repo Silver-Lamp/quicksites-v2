@@ -4,7 +4,7 @@
 //
 //   npx tsx --env-file=.env.local scripts/proofread-page.ts https://example.quicksites.ai/
 //
-// ⚠️ IT READS THE RENDERED PAGE, NOT THE SOURCE. Same principle as the render gate: the artefact
+// ⚠️ IT READS THE RENDERED PAGE, NOT THE SOURCE. Same principle as the render gate: the artifact
 // that reaches the person is the only one worth checking. A proofreader pointed at block JSON
 // would have missed the corrupted words on a real published résumé, because the JSON contained
 // exactly the same corrupted words and looked entirely well-formed.

@@ -121,6 +121,23 @@ export default function VerbatimPage() {
 
         <div className="relative mx-auto max-w-3xl px-6 pb-20">
           <VerbatimIntake />
+
+          {/*
+            ⚠️ THE SAME DISCOVERY BUG, ONE LAYER DOWN. The workspace shipped with no route to it
+            either — a person who builds a résumé page here had no way to learn that the postings
+            board exists. A feature nobody can reach produces a usage number that measures our
+            navigation, not their interest.
+            Deliberately understated: it is a private board, not a pitch, and "keep track of where
+            you're applying" is the whole offer. No AI, no upsell — see the workspace page.
+          */}
+          <p className="mt-10 border-t border-white/10 pt-6 text-sm text-zinc-400">
+            Job hunting?{' '}
+            <a href="/verbatim/workspace" className="font-medium text-sky-300 underline">
+              Keep track of where you&rsquo;re applying
+            </a>{' '}
+            — a private list of the postings you&rsquo;re chasing, alongside your résumé pages.
+            Only you can see it.
+          </p>
         </div>
       </main>
       <SiteFooter />

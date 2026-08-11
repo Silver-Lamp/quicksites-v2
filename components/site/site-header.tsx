@@ -42,6 +42,15 @@ const DEFAULT_LINKS: LinkItem[] = [
   { label: 'Restaurants', href: '/restaurants' },
   { label: 'Realtors', href: '/realtors' },
   { label: 'Auto Shops', href: '/secondset' },
+  // ⚠️ Verbatim was reachable from NOWHERE on this site — zero links from the homepage or nav —
+  // while I was citing its usage (8 builds, one owner, one day) as evidence of weak demand. That
+  // number measured DISCOVERY, not demand: you cannot conclude nobody wants a feature that nobody
+  // can find. Adding the entry point is what turns it into a measurement.
+  //
+  // Sits with the verticals because that is what it is — the audience this product serves — even
+  // though a job seeker buys differently from a restaurant (see docs: no orders, so no take-rate;
+  // this is a wedge and a partner funnel, not a revenue line pretending to be one).
+  { label: 'Job Seekers', href: '/verbatim' },
   { label: 'Partners', href: '/partners' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Compare', href: '/compare' },

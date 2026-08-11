@@ -1,7 +1,6 @@
 // components/admin/templates/template-settings-panel.tsx
 'use client';
 
-import TakeItWithYouPanel from '@/components/admin/templates/panels/take-it-with-you-panel';
 import * as React from 'react';
 import type { Template, Page } from '@/types/template';
 
@@ -114,14 +113,6 @@ export default function TemplateSettingsPanel({ template, onChange }: Props) {
       <MascotPanel
         template={template}
         onChange={(patch: any) => applyPatch(patch)}
-      />
-
-      {/* Last, and deliberately present on every site: leaving is a first-class action, not a
-          support ticket. See the panel for why a button beats a promise here. */}
-      <TakeItWithYouPanel
-        templateId={(template as any)?.id}
-        slug={(template as any)?.slug}
-        published={!!(template as any)?.published}
       />
 
       <PaymentSettingsPanel

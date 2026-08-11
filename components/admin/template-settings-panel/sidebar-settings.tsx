@@ -1,6 +1,7 @@
 // app/admin/templates/sidebar-settings.tsx (Sidebar Settings)
 'use client';
 
+import TakeItWithYouPanel from '@/components/admin/templates/panels/take-it-with-you-panel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IdentityPanel from '../templates/panels/identity-panel';
 import ServicesPanel from '../templates/panels/services-panel';
@@ -361,6 +362,19 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
           template={template}
           isSite={Boolean((template as any)?.is_site)}
           variant={variant}
+        />
+      </PanelBoundary>
+
+      {/* ⚠️ Leaving is a first-class action, not a support ticket — the button IS the trust signal
+          (see the panel). Placed here rather than in
+          `components/admin/templates/template-settings-panel.tsx`, which has a nearly identical
+          name, renders the same panels, and is imported by NOTHING. I shipped this there first and
+          told Sandon to press a button that could not be reached. */}
+      <PanelBoundary name="TakeItWithYouPanel">
+        <TakeItWithYouPanel
+          templateId={(template as any)?.id}
+          slug={(template as any)?.slug}
+          published={!!(template as any)?.published}
         />
       </PanelBoundary>
 

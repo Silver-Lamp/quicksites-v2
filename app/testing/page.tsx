@@ -40,6 +40,99 @@ function Rule({
   );
 }
 
+// The four layers by cadence. Mesh-parallel with hivejournal.com/how-we-test, deliberately not
+// identical — ours differs at the third row, and that difference is the honest part.
+//
+// ⚠️ `cadence` states WHEN EACH ACTUALLY RUNS TODAY, not when it ought to. The render gate is a
+// script (`scripts/verify-rendered.ts`) whose own header says "wire it into CI or a pre-publish
+// step and the checks stop depending on discipline" — it is not wired. Drawing it as an automatic
+// post-deploy stage would be a diagram making a claim about a system nobody runs, on a page about
+// exactly that failure.
+const LAYERS: Array<{
+  cadence: string;
+  layer: string;
+  what: string;
+  blind: string;
+  manual?: boolean;
+}> = [
+  {
+    cadence: 'on save',
+    layer: 'Unit tests',
+    what: 'jest over pure functions in lib/ — parsers, pricing, matching',
+    blind: 'anything about whether the function is called, or what the page does with it',
+  },
+  {
+    cadence: 'every PR',
+    layer: 'CI gates',
+    what: 'typecheck · lint · verify:assets · config declarations · a real next build',
+    blind: 'anything true only of the deployed render — every failure on this page passed here',
+  },
+  {
+    cadence: 'on demand',
+    layer: 'Render gate',
+    what: 'headless Chromium on the published URL: visible copy, order, computed contrast',
+    blind: 'whatever nobody thought to point it at — it runs on the URLs you name',
+    manual: true,
+  },
+  {
+    cadence: 'on a sibling’s cron',
+    layer: 'Browsing personas',
+    what: 'agents visit public pages with a first-time-visitor goal and file triage claims',
+    blind: 'everything private, and anything a plausible-sounding wrong claim can bury',
+  },
+];
+
+function Pipeline() {
+  return (
+    <figure className="mt-12 rounded-2xl border border-white/10 bg-black/30 p-5 sm:p-6">
+      <figcaption className="text-sm font-semibold uppercase tracking-widest text-sky-300/70">
+        Four layers, by cadence
+      </figcaption>
+      <p className="mt-2 text-[14px] text-zinc-400">
+        write <span className="text-zinc-600">→</span> merge{' '}
+        <span className="text-zinc-600">→</span> deploy <span className="text-zinc-600">→</span> live.
+        Each layer catches what the one above it structurally cannot.
+      </p>
+
+      <div className="mt-5 space-y-2.5">
+        {LAYERS.map((l) => (
+          <div
+            key={l.layer}
+            className="grid grid-cols-1 gap-x-4 gap-y-1 rounded-lg border border-white/10 bg-white/[0.02] p-3.5 sm:grid-cols-[9.5rem_1fr]"
+          >
+            <div>
+              <span
+                className={
+                  l.manual
+                    ? 'inline-block rounded border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 font-mono text-[12px] text-amber-200'
+                    : 'inline-block rounded border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 font-mono text-[12px] text-sky-200'
+                }
+              >
+                {l.cadence}
+              </span>
+            </div>
+            <div>
+              <p className="font-semibold text-zinc-100">{l.layer}</p>
+              <p className="mt-0.5 text-[14px] leading-relaxed text-zinc-400">{l.what}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">
+                <span className="text-zinc-600">blind to:</span> {l.blind}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-4 rounded-lg border-l-2 border-amber-400/60 bg-amber-400/5 py-2 pl-4 pr-3 text-[14px] text-amber-100/90">
+        The amber row is the honest part. The layer that caught the most expensive bugs here is the
+        one still triggered by a person deciding to run it — so its real coverage is{' '}
+        <em>whatever we remembered to check</em>. Every other row runs whether anyone is paying
+        attention; that one does not, which makes it the least reliable and the most valuable at the
+        same time.
+      </p>
+    </figure>
+  );
+}
+
 function Incident({ children }: { children: React.ReactNode }) {
   return (
     <p className="rounded-lg border-l-2 border-amber-400/60 bg-amber-400/5 py-2 pl-4 pr-3 text-[14px] text-amber-100/90">
@@ -73,6 +166,8 @@ export default function TestingPage() {
             Every one passed CI. Every one was found by a human opening the thing. These are the
             disciplines we adopted in response, and the specific incident behind each.
           </p>
+
+          <Pipeline />
 
           <div className="mt-14 space-y-12">
             <Rule n="Rule 1" title="Verify the received artefact, not the inputs">

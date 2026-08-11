@@ -111,6 +111,32 @@ describe('/testing — reachability, which is rule 2 applied to itself', () => {
   });
 });
 
+describe('/testing — the pipeline diagram states real cadences', () => {
+  // ⚠️ A diagram is a claim too, and the easy lie is drawing the layer you WISH ran automatically
+  // as if it did. Ours marks the render gate "on demand" because it is a script nobody has wired.
+  // If it ever gets wired, this test fails and the diagram must be corrected upward — the pleasant
+  // direction, but still a correction.
+  it('the render gate is genuinely not wired to CI or a cron', () => {
+    const wired = execSync(
+      `grep -rl "verify-rendered\\|runRenderGate" .github vercel.json 2>/dev/null || true`,
+      { cwd: process.cwd(), encoding: 'utf8' },
+    ).trim();
+    expect(
+      wired.length === 0
+        ? 'not wired — "on demand" is accurate'
+        : `render gate IS wired (${wired.split('\n').join(', ')}) — the diagram now understates it`,
+    ).toBe('not wired — "on demand" is accurate');
+    expect(src).toMatch(/cadence: 'on demand'/);
+  });
+
+  it('every CI gate the diagram names actually runs in CI', () => {
+    const ci = readFileSync(join(process.cwd(), '.github/workflows/ci.yml'), 'utf8');
+    for (const step of ['typecheck', 'lint', 'verify:assets', 'build']) {
+      expect(ci).toContain(step);
+    }
+  });
+});
+
 describe('/testing — no figure that matches nothing', () => {
   // The invented-statistic case. Any "N.NN : 1" or "N published sites" style claim must be
   // greppable somewhere in the repo, or it is a number someone made up.

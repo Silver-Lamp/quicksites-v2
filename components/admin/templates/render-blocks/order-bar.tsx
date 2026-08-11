@@ -1,6 +1,7 @@
 // components/admin/templates/render-blocks/order-bar.tsx
 'use client';
 
+import { useFixedBottomVar } from '@/lib/ui/useFixedBottomVar';
 import * as React from 'react';
 
 // Mobile-only sticky bottom bar (the ChowNow/Toast pattern): a tap-to-call action
@@ -41,11 +42,25 @@ export default function RenderOrderBar(props: any) {
     if (target) (target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const orderBarRef = useFixedBottomVar<HTMLDivElement>('--qs-orderbar-h');
+
   return (
     <>
-      {/* spacer so fixed bar never hides the last bit of content on mobile */}
-      <div className="h-16 md:hidden" aria-hidden />
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 text-foreground p-3 backdrop-blur md:hidden">
+      {/* Spacer so the fixed bar never hides the last of the content. Grows with whatever else is
+          pinned down there — on an unclaimed draft the claim bar is below us. */}
+      <div
+        className="md:hidden"
+        style={{ height: 'calc(4rem + var(--qs-claimbar-h, 0px))' }}
+        aria-hidden
+      />
+      {/* ⚠️ Sits ABOVE the claim bar rather than under it. Both were `bottom-0`, so on every
+          unclaimed restaurant draft this bar was simply behind the claim bar — invisible, with its
+          Call and View Menu actions unreachable. See lib/ui/useFixedBottomVar. */}
+      <div
+        ref={orderBarRef}
+        style={{ bottom: 'var(--qs-claimbar-h, 0px)' }}
+        className="fixed inset-x-0 z-40 border-t border-border bg-background/95 text-foreground p-3 backdrop-blur md:hidden"
+      >
         <div className="mx-auto flex max-w-3xl gap-3">
           {tel && (
             <a

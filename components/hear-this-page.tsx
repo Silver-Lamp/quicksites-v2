@@ -56,8 +56,13 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
   if (ownerVoiceOnPage) return null;
   if (dismissed) return null;
 
+  // ⚠️ Clears whatever bars are pinned below it. Was a flat `bottom-4`, which put this launcher
+  // inside the claim bar on every unclaimed draft — the two surfaces that always appear together.
   return (
-    <div className="fixed bottom-4 left-4 z-40 print:hidden">
+    <div
+      style={{ bottom: 'calc(1rem + var(--qs-claimbar-h, 0px) + var(--qs-orderbar-h, 0px))' }}
+      className="fixed left-4 z-40 print:hidden"
+    >
       {open ? (
         <div className="w-[min(92vw,360px)] rounded-2xl border border-border bg-background/95 p-3 shadow-2xl backdrop-blur">
           <div className="mb-2 flex items-center justify-between">

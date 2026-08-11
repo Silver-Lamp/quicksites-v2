@@ -387,6 +387,19 @@ export const LocationBlockSchema = z.object({
   title: z.string().default('Find Us'),
   business_name: z.string().optional().default(''),
   address: z.string().optional().default(''),
+  /**
+   * ⚠️ AN ADDRESS IS NOT DIRECTIONS, and for the businesses that most need a website it is often
+   * useless on its own. A survey of one real cohort (5 no-website Renton restaurants, located on
+   * Street View 2026-08-11): FOUR of five are somewhere a street number does not find —
+   * `1222 Bronson Way N #135` is a unit in a strip, `2801 NE Sunset Blvd Ste b` is between a
+   * restaurant and a nail salon, one is a counter by a barber shop, and one is a truck parked at
+   * a 76 station. The address is correct in every case and sends you to a building, not to them.
+   *
+   * This is the line a human would actually say — "the strip with Pizza Dudes", "the truck at the
+   * 76 on 108th". Free text, never generated: we do not know where someone stands to find you,
+   * and a guessed landmark is a wrong direction printed as fact.
+   */
+  find_us_hint: z.string().optional().default(''),
   phone: z.string().optional().default(''),
   email: z.string().optional().default(''),
   map_query: z.string().optional().default(''),

@@ -200,6 +200,9 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
 
   events: wrapDynamic(() => import('./events-editor')),
 
+  // Was falling through to the raw JSON fallback — fine for an operator, useless to an owner.
+  location: wrapDynamic(() => import('./location-editor')),
+
   gallery: wrapDynamic(() => import('./gallery-editor')),
   before_after: wrapDynamic(() => import('./before-after-editor')),
 

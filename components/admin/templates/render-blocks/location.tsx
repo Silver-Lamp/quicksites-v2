@@ -28,6 +28,7 @@ export default function RenderLocation(props: any) {
   const title: string = content.title || 'Find Us';
   const name: string = content.business_name || '';
   const address: string = content.address || '';
+  const hint: string = content.find_us_hint || '';
   const phone: string = content.phone || '';
   const email: string = content.email || '';
   const showMap: boolean = content.show_map !== false;
@@ -53,6 +54,12 @@ export default function RenderLocation(props: any) {
 
           {address && (
             <p className="mt-3 whitespace-pre-line text-muted-foreground">{address}</p>
+          )}
+
+          {/* The human directions, under the address it corrects. Absent unless the owner wrote
+              one — see find_us_hint in the schema for why it is never generated. */}
+          {hint && (
+            <p className="mt-1 text-sm font-medium text-foreground">{hint}</p>
           )}
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">

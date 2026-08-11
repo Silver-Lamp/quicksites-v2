@@ -19,6 +19,13 @@ import { execSync } from 'node:child_process';
 const PAGE = join(process.cwd(), 'app/testing/page.tsx');
 const src = readFileSync(PAGE, 'utf8');
 
+/** The file with comments stripped — what the page actually SHIPS. Use this for any rule about
+ *  what the page says, so a comment explaining the rule can never trip it. */
+const shipped = src
+  .split('\n')
+  .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
+  .join('\n');
+
 /** The figure as the visitor reads it — not as JSX writes it. */
 function claims(n: number | string): boolean {
   return src.includes(String(n));
@@ -163,6 +170,41 @@ describe('/testing — the pipeline diagram states real cadences', () => {
     for (const step of ['typecheck', 'lint', 'verify:assets', 'build']) {
       expect(ci).toContain(step);
     }
+  });
+});
+
+describe('/testing — the persona row is attributed, not annexed', () => {
+  // ⚠️ AI Personas is HiveJournal's product. On a QuickSites page, "a product we ship" would be
+  // false — the exact small deception `components/promo/persona-testing-promo.tsx` was written to
+  // prevent, since a reader clicking through lands on a different product with its own billing.
+  it('names whose product it is', () => {
+    expect(src).toMatch(/brand: 'HiveJournal'/);
+  });
+
+  it('uses the canonical URL constant rather than a hand-written link', () => {
+    expect(src).toContain("import { PERSONA_TESTING_URL }");
+    expect(src).toMatch(/href: PERSONA_TESTING_URL/);
+    // The literal must appear nowhere else on the page — that is how the shared copy rots.
+    expect(src).not.toMatch(/hivejournal\.com\/persona-testing/);
+  });
+
+  // ⚠️ A ™ is a legal claim. I was asked to brand this row and declined the symbol: I have no
+  // evidence of a registered mark, and asserting one on a page about unverified claims would be
+  // the page contradicting itself in its own diagram.
+  //
+  // ⚠️ CHECKS `shipped`, NOT `src`. The first version failed on the comment ABOVE, which contains a
+  // ™ in the sentence explaining why the page has none — a test firing on correct code, and the
+  // third time that exact shape has bitten this repo (see components/ui/__tests__/sectionShellColor).
+  // A rule about what the page SAYS must read what the page ships.
+  it('claims no trademark it cannot evidence', () => {
+    expect(shipped).not.toContain('™');
+  });
+
+  // Rule 8's prose and the diagram row must agree about what these are. "AI personas" is the
+  // network-standard phrasing — never "real people", which asserts humans did the testing.
+  it('calls them AI personas in both places', () => {
+    expect(src).toMatch(/AI [Pp]ersonas/);
+    expect(src).not.toMatch(/with real people|by real people/);
   });
 });
 

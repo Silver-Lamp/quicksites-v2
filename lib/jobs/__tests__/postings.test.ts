@@ -1,4 +1,4 @@
-import { rehearsalLinkFor, validatePosting } from '../postings';
+import { REHEARSAL_STAGES, rehearsalLinkFor, validatePosting } from '../postings';
 
 describe('validatePosting', () => {
   it('accepts a link alone or pasted text alone', () => {
@@ -51,5 +51,17 @@ describe('rehearsalLinkFor', () => {
     const link = rehearsalLinkFor({ company: 'Ben & Jerry', title: null, stage: null });
     expect(link).toContain('%26');
     expect(link).not.toMatch(/company=Ben & Jerry/);
+  });
+});
+
+describe("HJ's stage vocabulary is theirs, not ours", () => {
+  // ⚠️ I shipped `founder_exec` read out of their prose; canonical is `exec`. They aliased it so
+  // our link kept working — which is exactly why it would have rotted: a wrong value that still
+  // works is one nobody has a reason to fix.
+  it('uses the canonical stage values HJ reads', () => {
+    expect([...REHEARSAL_STAGES]).toEqual([
+      'recruiter_screen', 'hiring_manager', 'exec', 'technical', 'onsite',
+    ]);
+    expect(REHEARSAL_STAGES).not.toContain('founder_exec' as never);
   });
 });

@@ -171,9 +171,16 @@ export default function WorkspaceClient({
       </section>
 
       <p className="mt-10 text-xs text-muted-foreground">
+        {/* ⚠️ VERIFIED WITH HJ BEFORE SAYING IT IN OUR VOICE (2026-08-11): their prep/feedback/
+            followup routes persist no content — the only write is a metadata-only call log with
+            token counts and cost, no text and no user id.
+            ⚠️ And deliberately NOT "never sent anywhere": text a person pastes there is processed
+            by a model in-flight. "Keeps nothing" is the true claim; "never leaves your browser"
+            would not be, and is the upgrade this sentence is one careless edit away from. */}
         &ldquo;Practice this interview&rdquo; opens HiveJournal&rsquo;s rehearsal room in a new tab.
-        It stores nothing — your posting stays here. Only the company, role and round are passed in
-        the link; paste the description there yourself if you want it.
+        It keeps nothing you paste — it is processed in the moment and never stored. Only the
+        company, role and round travel in the link; the description stays here unless you paste it
+        there yourself.
       </p>
     </main>
   );

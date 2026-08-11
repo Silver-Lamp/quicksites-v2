@@ -28,19 +28,15 @@
   font-display: swap;
   src: url('/fonts/Inter.ttf') format('truetype');
 }
-@font-face {
-  font-family: 'Roboto Slab';
-  font-style: normal;
-  font-weight: 400;
-  src: url('/fonts/RobotoSlab-Regular.woff2') format('woff2');
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Roboto Slab';
-  font-weight: 700;
-  src: url('/fonts/RobotoSlab-Bold.woff2') format('woff2');
-  font-display: swap;
-}
+/* ⚠️ REMOVED 2026-08-11: two @font-face rules pointing at /fonts/RobotoSlab-{Regular,Bold}.woff2,
+   files that have never existed in public/fonts (which holds only Arial and Inter).
+   They caused no 404s in a browser — nothing renders the 'Roboto Slab' family, so nothing fetched
+   them. The curated theme layer maps `serif` to Fraunces, and a live serif site
+   (starter-turf) computes `Fraunces, Georgia, …` with `document.fonts.check('12px "Roboto Slab"')`
+   returning false and zero font request failures.
+   The only thing that ever saw them was the site exporter, which fetches every url() in the CSS
+   whether or not it is used — which is how a piece of dead CSS got reported twice today as
+   "a real 404 on published sites". Deleting the declaration is the whole fix. */
 
 body { font-family: 'Inter', system-ui, sans-serif; -webkit-text-size-adjust: 100%; }
 

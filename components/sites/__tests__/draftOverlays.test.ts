@@ -59,3 +59,38 @@ describe("the \"I'm Interested In\" picker", () => {
     expect(attrs).not.toMatch(/\brequired\b/);
   });
 });
+
+describe('the bottom bars form one stack instead of sharing a pixel', () => {
+  const orderBar = readFileSync(
+    join(process.cwd(), 'components/admin/templates/render-blocks/order-bar.tsx'),
+    'utf8',
+  );
+  const hearThis = readFileSync(join(process.cwd(), 'components/hear-this-page.tsx'), 'utf8');
+
+  // ⚠️ All three were positioned against the viewport with no knowledge of each other: claim bar
+  // and order bar both `bottom-0`, launcher at `bottom-4`. Highest z-index won; the rest were
+  // underneath it, including the order bar's Call and View Menu actions.
+  it('the claim bar publishes its measured height', () => {
+    expect(claimBar).toMatch(/useFixedBottomVar<HTMLDivElement>\('--qs-claimbar-h'\)/);
+    expect(claimBar).toMatch(/ref=\{barRef\}/);
+  });
+
+  it('the order bar sits above the claim bar and publishes its own height', () => {
+    expect(orderBar).toMatch(/bottom: 'var\(--qs-claimbar-h, 0px\)'/);
+    expect(orderBar).toMatch(/useFixedBottomVar<HTMLDivElement>\('--qs-orderbar-h'\)/);
+    expect(orderBar).not.toMatch(/fixed inset-x-0 bottom-0/);
+  });
+
+  it('the audio launcher clears both', () => {
+    expect(hearThis).toMatch(/--qs-claimbar-h[\s\S]{0,40}--qs-orderbar-h/);
+    expect(hearThis).not.toMatch(/fixed bottom-4 left-4/);
+  });
+
+  // ⚠️ A hard-coded offset would be right for one combination of copy and wrong the moment it
+  // changes — correct in the screenshot that prompted it, broken silently everywhere else.
+  it('measures rather than assuming a height', () => {
+    const hook = readFileSync(join(process.cwd(), 'lib/ui/useFixedBottomVar.ts'), 'utf8');
+    expect(hook).toMatch(/ResizeObserver/);
+    expect(hook).toMatch(/removeProperty/); // a stale var leaves the stack floating over a gap
+  });
+});

@@ -5,6 +5,7 @@
 // entry point: "this is your site — take it over." Links to the token-gated claim
 // flow (`/claim-site/<id>?token=…`), which itself re-checks the draft is still
 // claimable. Dismissible for the session so it never blocks reading the menu.
+import { useFixedBottomVar } from '@/lib/ui/useFixedBottomVar';
 import * as React from 'react';
 
 export default function MenuClaimBar({
@@ -27,11 +28,14 @@ export default function MenuClaimBar({
   // Once real demand exists, lead with it — it's the strongest possible claim pitch.
   const hasDemand = demandCount > 0;
 
+  // Publishes --qs-claimbar-h so the order bar and the audio launcher can sit clear of it.
+  const barRef = useFixedBottomVar<HTMLDivElement>('--qs-claimbar-h');
+
   // Dismissed → collapse to a small persistent pill (never fully gone) so a returning
   // owner can still find the claim path without reloading.
   if (dismissed) {
     return (
-      <div className="fixed inset-x-0 bottom-0 z-[2147483647] flex justify-end px-3 pb-3 print:hidden">
+      <div ref={barRef} className="fixed inset-x-0 bottom-0 z-[2147483647] flex justify-end px-3 pb-3 print:hidden">
         <a
           href={claimHref}
           className="rounded-full border border-amber-400/40 bg-neutral-900/95 px-4 py-2 text-sm font-semibold text-amber-300 shadow-2xl backdrop-blur transition hover:bg-neutral-900"
@@ -43,7 +47,7 @@ export default function MenuClaimBar({
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[2147483647] print:hidden">
+    <div ref={barRef} className="fixed inset-x-0 bottom-0 z-[2147483647] print:hidden">
       <div className="mx-auto flex max-w-4xl items-center gap-3 px-3 pb-3">
         {/* ⚠️ STACKS ON MOBILE. As one flex row the copy squeezed the button into a sliver against
             the right edge — the primary action on the page, hardest to hit, on the device most of

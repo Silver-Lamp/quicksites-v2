@@ -13,13 +13,32 @@ const route = readFileSync(
 );
 const launcher = readFileSync(join(process.cwd(), 'components/hear-this-page.tsx'), 'utf8');
 
-describe('the export is owner-only', () => {
-  // ⚠️ It walks away with the whole rendered site. "It's yours" is exactly the sentence that makes
-  // checking whose it is non-negotiable.
-  it('requires a signed-in user and matches owner_id', () => {
+describe('who may export', () => {
+  // ⚠️ It walks away with the whole rendered site, so a real owner's site stays owner-only.
+  it('requires a signed-in user and checks ownership', () => {
     expect(route).toMatch(/requireUser\(\)/);
-    expect(route).toMatch(/owner_id !== gate\.user\.id/);
+    expect(route).toMatch(/isOwner/);
     expect(route).toMatch(/403/);
+  });
+
+  // ⚠️ Strict owner-only refused EVERYBODY on the 127 listing-import drafts: `owner_id` is null on
+  // all of them, so `null !== you` locked out even the admin who built the site — the only people
+  // who can use the feature before a business claims it.
+  it('lets an operator export an unclaimed draft that has no owner yet', () => {
+    expect(route).toMatch(/isUnclaimedOperatorDraft/);
+    expect(route).toMatch(/getAdminUser\(\)/);
+    expect(route).toMatch(/claimSrc === 'listing_import' \|\| claimSrc === 'operator_draft'/);
+  });
+
+  // A claimed site is somebody's. Admin access to it is a different act with a different
+  // justification, and this route is not where that gets decided.
+  it('does not extend the operator path to a site someone owns', () => {
+    expect(route).toMatch(/!ownerId && \(claimSrc/);
+    expect(route).toMatch(/isUnclaimedOperatorDraft \? await getAdminUser\(\) : null/);
+  });
+
+  it('says which of the two refusals it is', () => {
+    expect(route).toMatch(/This draft has no owner yet/);
   });
 });
 

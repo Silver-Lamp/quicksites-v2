@@ -20,6 +20,7 @@
 import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 import { requireUser } from '@/lib/auth/requireUser';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { exportBanner, injectStyle, inlineCssAssets, inlineImages } from '@/lib/sites/exportSite';
 import { menuSiteUrl, menuEnabled } from '@/lib/menu/deliveredMenu';
@@ -56,10 +57,33 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     .maybeSingle();
 
   if (!tpl) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  // ⚠️ Owner only. This walks away with the whole rendered site; "it is yours" is exactly the
-  // sentence that makes checking whose it is non-negotiable.
-  if ((tpl as any).owner_id !== gate.user.id) {
-    return NextResponse.json({ error: 'Not yours to export' }, { status: 403 });
+
+  // ⚠️ OWNER-ONLY WAS RIGHT AND ALSO LOCKED OUT THE ONLY PEOPLE WHO COULD USE IT. Every
+  // listing-import draft has `owner_id = null` — the importer sets it only when handed an
+  // operator id, and it never was — so `null !== you` refused everybody, including the admin who
+  // built the site. The check was correct about claimed sites and wrong about the 127 drafts that
+  // are the entire reason the feature exists.
+  //
+  // An unclaimed draft WE built is ours until somebody takes it: that is the same premise as the
+  // claim flow, the watermark and the suppressed copyright. A claimed site is not, and stays
+  // owner-only — an admin reading a customer's site out of the product is a different act with a
+  // different justification, and this route is not where that gets decided.
+  const ownerId = (tpl as any).owner_id as string | null;
+  const claimSrc = String((tpl as any).claim_source ?? '');
+  const isOwner = !!ownerId && ownerId === gate.user.id;
+  const isUnclaimedOperatorDraft =
+    !ownerId && (claimSrc === 'listing_import' || claimSrc === 'operator_draft');
+  const admin = isUnclaimedOperatorDraft ? await getAdminUser() : null;
+
+  if (!isOwner && !(isUnclaimedOperatorDraft && admin)) {
+    return NextResponse.json(
+      {
+        error: ownerId
+          ? 'Not yours to export'
+          : 'This draft has no owner yet — an operator can export it, or claim it first.',
+      },
+      { status: 403 },
+    );
   }
 
   // ⚠️ THE PUBLIC URL IS NOT ALWAYS THE quicksites.ai SUBDOMAIN, and getting this wrong produced

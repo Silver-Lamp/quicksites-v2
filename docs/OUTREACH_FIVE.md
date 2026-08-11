@@ -2,8 +2,9 @@
 
 A pre-registered test of one question, by hand, with no tooling.
 
-**Status:** **all five sent 2026-08-11** · ⚠️ the link did not linkify — **correction follow-up owed to all five** · replies open until **2026-08-18** (the pre-registered
-7-day timebox) · **Owner:** Sandon · **Written:** 2026-08-10
+**Status:** **all five sent 2026-08-11**, correction follow-up sent to all five the same day ·
+replies open until **2026-08-18** (the pre-registered 7-day timebox) ·
+**Owner:** Sandon · **Written:** 2026-08-10
 
 ---
 
@@ -340,8 +341,16 @@ replies are counted:
   Those are indistinguishable from the outside.
 - So a **0–1 of 5** outcome no longer cleanly triggers the "stop building outreach tooling" rule from
   the decision rule above — it is contaminated.
-- A **4–5 of 5** outcome is *strengthened*, since it happened despite a broken link.
-- The reply window should run **7 days from the follow-up**, not from the original send.
+- A **4–5 of 5** outcome is *strengthened*, since it happened despite a broken first link.
+- ✅ **The window did not have to move.** The correction went out the same day (2026-08-11), so the
+  pre-registered 7-day timebox still expires **2026-08-18**. Worth stating because "reset the clock"
+  was the recommendation an hour earlier and it stopped being true — a stale mitigation is its own
+  small version of the failure this doc is about.
+
+⚠️ **Every business now has two touches, not one.** That is a real change to what is being measured:
+the test was designed around *one* message, and a second one — even a one-line correction — is a
+second chance to be noticed. It is the right call (the alternative was measuring a broken delivery),
+but a reply cannot afterwards be credited purely to the first message's craft.
 
 Recorded rather than absorbed, because the pre-registered rule only means something if the
 conditions it was registered under are the ones that actually held.

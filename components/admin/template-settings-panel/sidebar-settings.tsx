@@ -1,6 +1,7 @@
 // app/admin/templates/sidebar-settings.tsx (Sidebar Settings)
 'use client';
 
+import BackdropPanel from '@/components/admin/templates/panels/backdrop-panel';
 import TakeItWithYouPanel from '@/components/admin/templates/panels/take-it-with-you-panel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IdentityPanel from '../templates/panels/identity-panel';
@@ -363,6 +364,15 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
           isSite={Boolean((template as any)?.is_site)}
           variant={variant}
         />
+      </PanelBoundary>
+
+      {/* ⚠️ RESTORED 2026-08-11. Added to the dead settings file by #613 and therefore never
+          rendered: the site-backdrop picker shipped as "an editor picker" and was invisible for
+          two weeks. `slug`, `mascot` and `screensaver` panels are stranded the same way and are
+          NOT restored here — that is a UI decision, and quietly adding four panels to somebody's
+          sidebar is not mine to make. They are listed in the dead file's header. */}
+      <PanelBoundary name="BackdropPanel">
+        <BackdropPanel template={template} onChange={(patch: any) => applyPatch(patch)} />
       </PanelBoundary>
 
       {/* ⚠️ Leaving is a first-class action, not a support ticket — the button IS the trust signal

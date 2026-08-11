@@ -1,3 +1,26 @@
+// ⚠️⚠️ DEAD. NOTHING IMPORTS THIS FILE. DO NOT ADD PANELS HERE. ⚠️⚠️
+//
+// The editor's settings sidebar is:
+//     components/admin/template-settings-panel/sidebar-settings.tsx
+//
+// This file went dead around 2026-06-26 (the delivered.menu vertical removal) and has been
+// collecting work ever since, because its name and contents look exactly like the live sidebar:
+//
+//   - 2026-07-26 (#613)  the site-backdrop PICKER was added here. It shipped as an editor feature
+//                        and has never been reachable — two weeks of a built, tested, invisible UI.
+//   - 2026-08-11 (#748)  the "Take it with you" download button was added here, and Sandon went
+//                        looking for a button that did not exist on any page.
+//
+// Renamed rather than deleted so the loss stays visible. `slug-panel` is ALSO reachable only from
+// here — stranded, and listed as a known orphan in the guard. (`mascot-panel` and
+// `screensaver-panel` looked stranded too and are NOT: their own renderers import them. I wrote
+// them into this header before checking, which is the same mistake in miniature as the one this
+// file caused.)
+//
+// ⚠️ The guard in components/admin/__tests__/settingsPanelsMounted.test.ts now treats "imported
+// only by this file" as orphaned — being referenced by a corpse is not being reachable, and the
+// first version of that test counted it as a pass.
+
 // components/admin/templates/template-settings-panel.tsx
 'use client';
 

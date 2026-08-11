@@ -1,9 +1,9 @@
 // lib/agreements/notify.ts
 //
-// Tell both parties that an agreement was signed, and give the signer the artefact.
+// Tell both parties that an agreement was signed, and give the signer the artifact.
 //
 // ⚠️ THE SIGNER'S EMAIL CARRIES THE CERTIFICATE AS AN ATTACHMENT, NOT A LINK. That is the whole
-// point of the artefact-not-dependency rule (crosstalk/contracts/agreements-record.md §2.6): the
+// point of the artifact-not-dependency rule (crosstalk/contracts/agreements-record.md §2.6): the
 // person who signed ends up holding the evidence in their own inbox, and does not have to come
 // back to us — or ask the other party — for a copy of what they agreed to. A link would put the
 // weaker party's evidence on the stronger party's server, which is the thing this product exists

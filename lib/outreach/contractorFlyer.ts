@@ -14,7 +14,7 @@
 //
 // ⚠️ NO OUR-BRANDING ON IT. It is a document they hand to their customers; a "made with" badge
 // would be us advertising through their business. Same rule as the Verbatim résumé export.
-// Attribution belongs in the message we send them, not on the artefact.
+// Attribution belongs in the message we send them, not on the artifact.
 //
 // ⚠️ NO PEOPLE AND NO PHOTOS WE DID NOT MAKE. Rule 9 (lib/images/noPeople.ts) plus the plain fact
 // that a flyer's stock before/after images are not ours to republish.

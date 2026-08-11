@@ -82,7 +82,7 @@ describe('what leaves is theirs, not ours', () => {
 describe('it fetches the page that is actually theirs', () => {
   // ⚠️ The first version built `<slug>.quicksites.ai` for every site. A listing-import draft lives
   // on delivered.menu; on the quicksites subdomain it serves OUR 404 — which returns 200. The
-  // export would have wrapped that and handed a restaurant owner our error page as the artefact
+  // export would have wrapped that and handed a restaurant owner our error page as the artifact
   // proving they own their site.
   it('uses the menu host for listing-import drafts', () => {
     expect(route).toMatch(/menuSiteUrl\(slug\)/);

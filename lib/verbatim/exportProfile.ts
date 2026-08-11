@@ -12,7 +12,7 @@
 // template on our platform: if QuickSites went away, the person had nothing. The claim was a true
 // observation (the parser is deterministic and invents nothing) welded to an unchecked inference
 // (therefore they leave with something), which is precisely the failure CLAUDE.md §9 is about.
-// So: build the artefact, then the claim is true.
+// So: build the artifact, then the claim is true.
 //
 // Three properties are load-bearing, not stylistic:
 //

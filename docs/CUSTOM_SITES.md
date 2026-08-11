@@ -356,7 +356,7 @@ Three details that are each a rule, not a preference:
   Enforced by a test, so re-adding it has to be a decision.
 - **Not `client_collabs.updated_at`.** Nothing maintains it, so a "last changed" stamp read from it
   would be the creation date wearing an update's clothes — a specific false claim rather than a
-  silence. It is derived from artefacts a visitor can watch change (`lib/collab/lastActivity.ts`).
+  silence. It is derived from artifacts a visitor can watch change (`lib/collab/lastActivity.ts`).
 
 ⚠️ **A mesh suggestion can describe mechanics you don't have.** The proposed copy for the pick line
 was *"the other two go away"* — true of the session that suggested it, false here: all three stay
@@ -389,8 +389,8 @@ npx tsx scripts/verify-rendered.ts https://<slug>.quicksites.ai/ \
 **The principle, which came out of a cold mesh poll that converged three ways:** every check that
 has ever lied to us on a client site inspected an **input** — DB blocks, the editor, `tsc`, a grep
 of the source, a grep of the served HTML, DOM index order. Six of nine recorded failures had a
-perfectly correct upstream artefact and a wrong rendered page. The only two instruments that told
-the truth operated on the **received** artefact: a screenshot, and rendered y-position.
+perfectly correct upstream artifact and a wrong rendered page. The only two instruments that told
+the truth operated on the **received** artifact: a screenshot, and rendered y-position.
 
 So the gate renders the published URL and asserts on what is visible, where it is, and what it
 looks like. `lib/verify/`: one browser-side extractor as a string (so the Playwright and serverless
@@ -423,7 +423,7 @@ sites render that footer; the one light-themed variant passed, which is why nobo
 
 **What it deliberately does not do:** judge whether anything is *true*. Trap-9-class failures —
 a headline claiming more than the page evidences — are **reviewable, never checkable**, because
-the artefact is correct and the problem lives between the claim and a stranger's world-knowledge.
+the artifact is correct and the problem lives between the claim and a stranger's world-knowledge.
 The gate's job is to make the cold stranger read *affordable* by taking "is it even rendering" off
 that reader's plate — not to replace it.
 

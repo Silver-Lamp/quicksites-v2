@@ -5,8 +5,8 @@
 // ⚠️ THIS IS THE WHOLE POINT OF THE MODULE, SO IT IS WORTH BEING BLUNT: every check that has ever
 // lied to us on a client site inspected an INPUT — the DB blocks, the editor, `tsc`, a grep of the
 // source, a grep of the served HTML, DOM index order. Six of nine recorded failures had a
-// perfectly correct upstream artefact and a wrong rendered page. The only two instruments that
-// ever told the truth operated on the RECEIVED artefact: a screenshot, and rendered y-position.
+// perfectly correct upstream artifact and a wrong rendered page. The only two instruments that
+// ever told the truth operated on the RECEIVED artifact: a screenshot, and rendered y-position.
 //
 // So the primitive here is not "inspect the page's source". It is "render the published URL and
 // report what is visible, where it is, and what it looks like".

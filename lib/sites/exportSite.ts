@@ -6,13 +6,13 @@
 // person walks away with. A signed agreement is a certificate both parties hold. A site was
 // neither: if QuickSites went away, the owner had their words only in the sense that they could
 // re-read them off a page that no longer loaded. "It's yours" was a claim about an account, not
-// about an artefact — and we could not honestly tell a business "you can leave and take it with
+// about an artifact — and we could not honestly tell a business "you can leave and take it with
 // you", which is exactly the sentence that makes the offer trustworthy rather than a hook.
 //
 // ⚠️ IT EXPORTS THE RENDERED PAGE, NOT THE TEMPLATE JSON. Block JSON is ours — it needs our
 // renderer, our registries and our React to mean anything, so handing it over is handing over a
 // puzzle. The rendered page is theirs: it opens in any browser, forever, with no software from us.
-// Same reasoning as the render gate — the received artefact is the real one.
+// Same reasoning as the render gate — the received artifact is the real one.
 //
 // ⚠️ AND IT STRIPS OUR FURNITURE. The edit link, the settings gear and the "Hear this page"
 // launcher are OUR controls on THEIR page; a file they keep or hand to another developer should

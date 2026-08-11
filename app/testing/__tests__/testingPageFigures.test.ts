@@ -28,21 +28,50 @@ describe('/testing — the counts it states', () => {
   // ⚠️ THIS TEST BROKE THE PAGE BY EXISTING. The page said "507 test files"; adding this file made
   // it 508. An exact count would have gone red on every new test forever — a check that fires on
   // correct code, which is the failure rule 4 on the page itself warns about. So the page states a
-  // FLOOR ("more than 500"), and the assertion is that the floor is still true and not so stale
-  // that the page is badly understating itself.
-  it('states a test-file floor that is true and not badly out of date', () => {
-    const out = execSync(
-      `find . -path ./node_modules -prune -o \\( -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" -o -name "*.spec.tsx" \\) -print | wc -l`,
-      { cwd: process.cwd(), encoding: 'utf8' },
-    );
+  // FLOOR, and the assertion is that the floor is still true and not so stale that the page is
+  // badly understating itself.
+  //
+  // ⚠️ AND THEN IT CAUGHT A REAL ONE, WHICH IS THE ONLY REASON THE PAGE'S FIGURE IS HONEST. The
+  // original command was `find . -path ./node_modules -prune -o -name '*.test.ts' …`, which prunes
+  // ONE node_modules — the top-level one. `admin/node_modules` was not pruned, so the count included
+  // zod's, react-day-picker's and msw's own test suites: 309 of the 507 were other people's tests.
+  // It read as 507 locally and 198 in CI, where a fresh checkout has a different tree, and the page
+  // went out claiming "more than 500". CI went red twenty minutes after it shipped.
+  //
+  // The fix is not a better prune. It is counting the right population: `git ls-files` is what "our
+  // test files" MEANS, it is identical on every machine, and it cannot be polluted by anything a
+  // dependency ships. A count that differs between two environments was never measuring the thing
+  // the sentence claimed.
+  it('states a test-file floor that is true, and counts only OUR tests', () => {
+    const out = execSync(`git ls-files | grep -cE '\\.(test|spec)\\.(ts|tsx)$'`, {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      shell: '/bin/bash',
+    });
     const actual = Number(out.trim());
     expect(actual).toBeGreaterThan(0); // a count of zero would pass vacuously against a typo
 
-    const stated = Number(src.match(/More than (\d+) test files/)?.[1]);
+    // Nothing outside the repo may contribute to the number on the page.
+    expect(
+      execSync(`git ls-files | grep -E '\\.(test|spec)\\.(ts|tsx)$' | grep -c node_modules || true`, {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        shell: '/bin/bash',
+      }).trim(),
+    ).toBe('0');
+
+    const stated = Number(src.match(/More than (\d+) test files of our own/)?.[1]);
     expect(Number.isFinite(stated)).toBe(true);
     expect(actual).toBeGreaterThan(stated);
     // Understating by more than half means the sentence has stopped describing the codebase.
     expect(actual).toBeLessThan(stated * 2);
+  });
+
+  // The page now tells this story as an incident. If the story stops matching the code, the page is
+  // recounting a bug it no longer has — which is its own §8 failure mode.
+  it('the incident it now describes matches the figures it now states', () => {
+    expect(src).toContain('309 of those 507 files');
+    expect(src).toContain('The real figure is 198');
   });
 
   it('states the real number of config gates', () => {

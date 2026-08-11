@@ -282,6 +282,19 @@ Assumed:  that the shopping list consumes it — I did not check.`}
                 about — the customer sites were serving an empty shell to every crawler. A verified
                 check pointed at the wrong instance reads exactly like an answer.
               </Incident>
+              <p>
+                The scope failure is the same shape whether the population is pages or files, and it
+                is very hard to feel from the inside, because the measurement genuinely ran.
+              </p>
+              <Incident>
+                <strong>This page shipped with that bug in it.</strong> The sentence below said
+                &ldquo;more than 500 test files&rdquo;. The command behind it excluded the top-level{' '}
+                <code>node_modules</code> and missed a second one nested deeper — so{' '}
+                <strong>309 of those 507 files were our dependencies&rsquo; tests</strong>. We were
+                counting zod&rsquo;s test suite and calling it ours. The real figure is 198. It was
+                caught by the test on this page&rsquo;s own numbers, going red in CI about twenty
+                minutes after the page went live.
+              </Incident>
             </Rule>
 
             <Rule n="Rule 8" title="Exploratory agents produce claims, not findings">
@@ -344,9 +357,9 @@ Assumed:  that the shopping list consumes it — I did not check.`}
           <div className="mt-14 border-t border-white/10 pt-8">
             <h2 className="text-xl font-bold tracking-tight">Where this leaves us</h2>
             <p className="mt-3 text-[15px] leading-relaxed text-zinc-300">
-              More than 500 test files across the codebase, and not one of them existed in a form
-              that would have caught the seven failures above. That is not an argument against
-              tests — it is an argument about{' '}
+              More than 190 test files of our own, and not one of them existed in a form that would
+              have caught the seven failures above. That is not an argument against tests — it is
+              an argument about{' '}
               <strong>what they are evidence of</strong>. A test asserts that the code does what its
               author believed. The gap we keep falling into is between that belief and the artefact
               a person receives, and closing it needs a different instrument: load the real URL,

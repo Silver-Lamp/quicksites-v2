@@ -11,6 +11,9 @@ import SiteHeader from '@/components/site/site-header';
 import SiteFooter from '@/components/site/site-footer';
 import PageBackdrop from '@/components/site/page-backdrop';
 import { marketingOg } from '@/lib/marketingOg';
+// ⚠️ Canonical URL, not a hand-written link. persona-testing-promo.tsx owns this string and says
+// why: three surfaces render it, and duplicating it is how the honesty wording rots.
+import { PERSONA_TESTING_URL } from '@/components/promo/persona-testing-promo';
 
 export const metadata = marketingOg({
   title: 'How we test — the green-check problem',
@@ -54,6 +57,8 @@ const LAYERS: Array<{
   what: string;
   blind: string;
   manual?: boolean;
+  brand?: string;
+  href?: string;
 }> = [
   {
     cadence: 'on save',
@@ -76,8 +81,16 @@ const LAYERS: Array<{
   },
   {
     cadence: 'on a sibling’s cron',
-    layer: 'Browsing personas',
-    what: 'agents visit public pages with a first-time-visitor goal and file triage claims',
+    // ⚠️ Named for what it IS, and whose it is. This is HiveJournal's shipped product, pointed at
+    // our surfaces — not a QuickSites feature and not an internal script. Both halves of that
+    // matter: claiming it as ours would be the small deception `persona-testing-promo.tsx` exists
+    // to prevent, and calling it "scripts" would undersell that we test with something a customer
+    // can buy. No ™ — I have no evidence of a registered mark, and inventing one on a page about
+    // unverified claims would be a poor way to spend the afternoon.
+    layer: 'AI Personas',
+    brand: 'HiveJournal',
+    href: PERSONA_TESTING_URL,
+    what: 'AI personas visit public pages with a first-time-visitor goal and file triage claims',
     blind: 'everything private, and anything a plausible-sounding wrong claim can bury',
   },
 ];
@@ -112,7 +125,25 @@ function Pipeline() {
               </span>
             </div>
             <div>
-              <p className="font-semibold text-zinc-100">{l.layer}</p>
+              <p className="font-semibold text-zinc-100">
+                {l.href ? (
+                  <a
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-200 underline decoration-sky-400/40 underline-offset-4 hover:text-sky-100"
+                  >
+                    {l.layer}
+                  </a>
+                ) : (
+                  l.layer
+                )}
+                {l.brand ? (
+                  <span className="ml-2 rounded border border-white/15 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+                    by {l.brand}
+                  </span>
+                ) : null}
+              </p>
               <p className="mt-0.5 text-[14px] leading-relaxed text-zinc-400">{l.what}</p>
               <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">
                 <span className="text-zinc-600">blind to:</span> {l.blind}

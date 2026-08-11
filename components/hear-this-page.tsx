@@ -53,6 +53,13 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
 
   if (!HEAR_THIS_PAGE_ENABLED || !HEAR_THIS_PAGE_EMBED_ID) return null;
   if (!hearThisPageVisibleFor(pathname, settings)) return null;
+  // ⚠️ EXPORT MODE: the page removes our chrome itself, rather than an exporter stripping it back
+  // out afterwards. A regex over someone else's markup is a guess about what belongs to us; the
+  // component knows. See app/api/sites/[id]/export.
+  if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('qs_export')) {
+    return null;
+  }
+
   if (ownerVoiceOnPage) return null;
   if (dismissed) return null;
 

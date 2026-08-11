@@ -2,7 +2,8 @@
 
 A pre-registered test of one question, by hand, with no tooling.
 
-**Status:** not started · **Owner:** Sandon · **Written:** 2026-08-10
+**Status:** **all five sent 2026-08-11** · replies open until **2026-08-18** (the pre-registered
+7-day timebox) · **Owner:** Sandon · **Written:** 2026-08-10
 
 ---
 
@@ -110,7 +111,9 @@ import('./lib/auth/siteClaimToken').then(m =>
   console.log('https://delivered.menu/claim-site/<TEMPLATE_ID>?token=' + m.mintSiteClaimToken('<TEMPLATE_ID>')))"
 ```
 
-The template id is the last path segment of the editor link above. Tokens expire (~90 days); a
+The template id is the last path segment of the editor link above. Tokens expire after **30 days**
+(`SITE_CLAIM_TTL_MS` in `lib/auth/siteClaimToken.ts` — this doc said ~90 for weeks, which would have
+had someone reassuring an owner that a dead link was still good); a
 refused link means minting a new one — never hand-edit the URL, the signature is bound to the id.
 
 Send it **one-to-one to the business** and nowhere else.
@@ -130,9 +133,16 @@ Each follows the same order for a reason: **I found you → here's what I made �
 wrong with it → here's why there's no catch.** The location line buys the credibility that makes
 the next sentence land as care rather than sloppiness.
 
-⚠️ **Before using the download line in any of these, press the button once yourself** (site
-settings → "Take it with you") and open the file with wifi off. It shipped in #748 and has not been
-run end-to-end against a live site. It is the one claim the whole message rests on.
+✅ **The download line is backed.** It was run end-to-end before these went out and took **seven
+rounds** to actually work (#748–#754) — the early versions handed over our own 404, then a file with
+zero embedded images and no error, then one that opened to an undismissable "Loading…" overlay.
+
+**Verified (full):** the downloaded file opens offline with its images — **Enjoy Teriyaki only**.
+**Verified (preconditions, all five):** each site serves its own business name on the menu host and
+carries image references to inline — the two things the route 502s and silently no-ops on, and
+where two of the seven failures lived. Checked 2026-08-11 against the live `?qs_export=1` render.
+**Still unexercised:** the actual download for the other four. The route needs a session, so it
+cannot be checked from a script — press it once per business before promising it to that owner.
 
 ---
 
@@ -243,6 +253,28 @@ correct: from *"I'll remove something"* to *"I'll add the thing that gets you fo
   *reply*, after a human answers, never in a first cold text.
 - **No price for done-for-you work**, because there is not one yet. If someone asks, that is the
   most useful thing the five could tell us.
+
+## What actually happened — sent 2026-08-11
+
+⚠️ **All five went out the same day**, and the log was written afterwards from this file rather than
+at the time. Both are deviations from the protocol below. Recorded here rather than quietly fixed,
+because a pre-registered test whose deviations are only in someone's memory is no longer
+pre-registered.
+
+| what the protocol said | what happened | does it threaten the result |
+|---|---|---|
+| send Potrillos and Renton Deli **two days apart** | same day | **yes, for those two.** They are across the street from each other. If they compare notes, the personal approach reads as a sweep of the block — which is the *opposite* of the thing under test. Their replies are now entangled; a non-reply from either is weak evidence. |
+| log verbatim **at the time of sending** | logged later, extracted from this file | mildly. The bodies are exact (pulled from this doc programmatically, not retyped), but the send *times* are recorded as a single approximate stamp. Day-level accuracy is what the reply-window measure needs, so this is survivable. |
+
+The five bodies are now in `outreach_touches`, each linked to its template — visible at
+`/admin/outreach-log`. Verified: 5 rows, 5/5 resolving to the right site.
+
+**Claim links were correctly NOT sent** — see "What is deliberately NOT in any of them" below. Five
+were minted on 2026-08-11 (expire 2026-09-10) and are held locally, out of the repo, for use in a
+reply. Verified against production before being relied on: a good token renders the claim page, a
+corrupted one returns "expired", so the locally-signed tokens really are accepted by prod.
+
+---
 
 ## Protocol — per business, in order
 

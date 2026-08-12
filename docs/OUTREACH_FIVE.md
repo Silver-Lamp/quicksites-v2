@@ -385,8 +385,14 @@ batch 1 got two touches.
 | **usable** | **7** | |
 
 **Never send one of the 11.** A page showing food a real restaurant does not serve, presented as
-that restaurant's own page, is the worst thing this pipeline can produce. Batch 3 needs a new city
-sweep, which spends Places budget — an owner call, not a session call.
+that restaurant's own page, is the worst thing this pipeline can produce.
+
+✅ **Resolved 2026-08-12 (PR #766).** A Kent sweep made 17 more of these, which forced the question
+of why they existed at all: `assembleDraft` only *replaced* the scaffold's menu when a real one was
+recovered. #738 had stopped them being **listed** in the city index — but their own pages still
+served the invented dishes to anyone given the URL, which is exactly what outreach does. The
+generator is fixed and all 28 were cleared. A filter downstream of a generator is not a fix for the
+generator.
 
 Also note only **one** usable draft is in Renton, so "I'm local in Renton" stops being a locality
 claim about *them* and becomes one about *me*. Phrasing below reflects that; do not upgrade it.

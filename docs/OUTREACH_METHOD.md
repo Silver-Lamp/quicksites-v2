@@ -5,6 +5,7 @@ decision rule, what actually happened). This one is the *procedure*, so a later 
 another batch without rediscovering it.
 
 **Last run:** batch 2, 2026-08-12 · 10 businesses contacted, 15 touches logged.
+**Last sweep:** Kent, WA, 2026-08-12 · 241 scanned → 43 no-website → 33 built ($0.46 AI) → **13 eligible**.
 
 ---
 
@@ -46,7 +47,8 @@ Disqualifiers, in the order they are reported (`lib/outreach/candidates.ts`):
 
 | reason | why it disqualifies |
 |---|---|
-| **`placeholder-menu`** | **The #738 class: the food scaffold's invented dishes under a real restaurant's name. NEVER SEND ONE.** Telling a business "I built you a page" where the page lists food they don't serve is the worst artifact this pipeline can produce. |
+| **`placeholder-menu`** | **The food scaffold's invented dishes under a real restaurant's name. NEVER SEND ONE.** ✅ **The generator no longer produces these** (PR #766) and the 28 that existed were cleared — they now report as `no-menu`. The disqualifier stays because a rule removed once its instances are gone is a rule that will be relearned the expensive way. |
+| `no-menu` | No menu recovered from the listing photos. ~50% of any sweep. Nothing to pitch yet. |
 | `already-contacted` | Derived from `outreach_touches` at run time, never a pasted list of ids — a hardcoded array is correct exactly once. |
 | `no-phone` | Nothing to text. |
 | `menu-too-thin` | Under 8 items there isn't enough of their own material for the page to look like *theirs*, which is the variable under test. |

@@ -53,6 +53,37 @@ export function isPlaceholderOnly(sections: MenuSection[]): boolean {
   return names.every((n) => PLACEHOLDER_ITEM_NAMES.has(n));
 }
 
+/**
+ * Strip the food scaffold's invented dishes from a set of blocks, in place.
+ *
+ * ⚠️ WHY THIS EXISTS. `assembleDraft` used to only REPLACE the scaffold's placeholder menu when a
+ * real one was recovered from listing photos. The recovery rate is ~50%, so the other half kept
+ * "Two Eggs Any Style", "Buttermilk Pancakes" and "House Burger" under a real business's real name
+ * and address, on a page publicly reachable at its own URL. 28 of 59 drafts across two cities.
+ *
+ * We render NO menu rather than a different menu — the same rule as an ungenerated backdrop
+ * painting no layer at all. An empty menu block says "no menu here yet", which is true and is also
+ * the thing we want the owner to fix. Invented dishes are a false claim about someone's business
+ * that they never asked us to make.
+ *
+ * ⚠️ Only clears menus that are placeholder-ONLY. A real menu is never touched, and a mixed menu
+ * (a real dish beside a scaffold leftover) is left alone deliberately: dropping a real dish to
+ * remove a fake one is the wrong trade, and the mixed case wants a human, not a sweep.
+ * Operates on BOTH block shapes — see this file's header for why that is not optional.
+ */
+export function clearInventedMenu(blocks: any[]): boolean {
+  let cleared = false;
+  for (const b of blocks ?? []) {
+    if (b?.type !== 'menu') continue;
+    const bag = b.content ?? b.props;
+    if (!bag || !Array.isArray(bag.sections)) continue;
+    if (!isPlaceholderOnly(bag.sections)) continue;
+    bag.sections = [];
+    cleared = true;
+  }
+  return cleared;
+}
+
 /** True when this site has a menu we can honestly show a diner. */
 export function hasRealMenu(data: any): boolean {
   const sections = readMenuSections(data);

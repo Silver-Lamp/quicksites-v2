@@ -6,6 +6,7 @@
 // rebuilt draft opens in the editor as a working, on-brand site, not empty blocks.
 
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
+import { clearInventedMenu } from '@/lib/menu/menuBlocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import type { RebuildSpec } from '@/lib/rebuild/inferSiteSpec';
 import { formatContactAddress } from '@/lib/rebuild/parseAddress';
@@ -110,6 +111,19 @@ export function buildRebuildTemplate(opts: {
 
   // If the AI reconstructed a real menu (restaurant conversion), replace the
   // scaffold's placeholder menu with it.
+  //
+  // ⚠️ AND IF IT DID NOT, THE PLACEHOLDER MUST GO. This branch used to only REPLACE, so a listing
+  // whose photos yielded no menu kept the food scaffold's invented dishes — "Two Eggs Any Style",
+  // "Buttermilk Pancakes", "House Burger" — under a real business's real name and address, on a
+  // page publicly reachable at its URL. A Kent bakery was live that way.
+  //
+  // The menu hit rate is ~50%, so every sweep manufactured poisoned drafts at roughly the rate it
+  // manufactured good ones: 28 of 59 drafts across two cities. They are `noindex`, which limits the
+  // blast radius to anyone we hand the URL to — which is the entire point of building them.
+  //
+  // The fix is to render NO menu rather than a different menu, the same rule as an ungenerated
+  // backdrop painting no layer (CLAUDE.md §7). An empty menu block invites "add your real menu";
+  // an invented one is a false claim about someone's business that they never asked us to make.
   if (spec.menu?.sections?.length) {
     const menuBlock = blocks.find((b) => b?.type === 'menu');
     if (menuBlock?.content) {
@@ -125,6 +139,8 @@ export function buildRebuildTemplate(opts: {
         })),
       }));
     }
+  } else {
+    clearInventedMenu(blocks);
   }
 
   // Real contact info → the location block (address + tap-to-call + map).

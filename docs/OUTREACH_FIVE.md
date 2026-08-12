@@ -2,6 +2,10 @@
 
 A pre-registered test of one question, by hand, with no tooling.
 
+> **Running another batch?** The reproducible procedure — who is eligible, how a hook is found, the
+> rules that are not style preferences — lives in **[`OUTREACH_METHOD.md`](OUTREACH_METHOD.md)**.
+> This doc is the experiment and its results; that one is how to do it again.
+
 **Status:** **all five sent 2026-08-11**, correction follow-up sent to all five the same day ·
 replies open until **2026-08-18** (the pre-registered 7-day timebox) ·
 **Owner:** Sandon · **Written:** 2026-08-10

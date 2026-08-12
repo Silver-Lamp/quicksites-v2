@@ -357,6 +357,154 @@ conditions it was registered under are the ones that actually held.
 
 ---
 
+## Batch 2 — the clean-link arm (2026-08-12)
+
+⚠️ **This is a DEVIATION from the decision rule, run deliberately and for a stated reason.** The rule
+said send five more only after seeing 2–3 replies. Batch 1's window has not closed. But batch 1's
+link did not linkify, so it now measures *"a broken link plus a same-day correction"* rather than
+*"one good message"* — a question it can no longer answer. Batch 2 sends the working link from the
+first word, which is the only way to get a clean read. Recorded here so a later reader does not
+mistake it for the pre-registered follow-up it is not.
+
+Batch 2 is **one touch, tappable `.com` link, no correction owed.** Compare against batch 1 knowing
+batch 1 got two touches.
+
+### ⚠️ The inventory is nearly gone, and it looks bigger than it is
+
+26 unclaimed listing_import drafts remain. **Only 7 are usable:**
+
+| excluded | n | why |
+|---|---|---|
+| **placeholder menu** | **11** | the #738 class — an *invented* menu under a real business's name |
+| no phone | 2 | nothing to text |
+| menu too thin | 1 | 3 items |
+| **usable** | **7** | |
+
+**Never send one of the 11.** A page showing food a real restaurant does not serve, presented as
+that restaurant's own page, is the worst thing this pipeline can produce. Batch 3 needs a new city
+sweep, which spends Places budget — an owner call, not a session call.
+
+Also note only **one** usable draft is in Renton, so "I'm local in Renton" stops being a locality
+claim about *them* and becomes one about *me*. Phrasing below reflects that; do not upgrade it.
+
+### The five
+
+| # | Business | Phone | Items | Verified hook |
+|---|---|---|---|---|
+| 1 | **My's Vietnamese Sandwiches and Deli** | (206) 772-1231 | 32 | 7 chè + a drinks list (pennywort, sugar cane, durian) nobody knows about |
+| 2 | **Georgetown Shell Chicken & Deli** | (206) 767-6200 | 29 | chicken meals are `#1`–`#5` with no descriptions |
+| 3 | **Teriyaki Avenue** | (206) 723-2489 | 34 | hours list every day **except Monday** |
+| 4 | **Taqueria Jalisco** | (206) 771-9497 | 24 | **our parser priced all 24 items at $14** |
+| 5 | **The Local 907** | (425) 255-2511 | 11 | only the **happy hour** menu came through |
+
+Every hook was read off the draft or the live render on 2026-08-12, not remembered. Two of the five
+lead with a flaw in *our* work, which was the strongest shape in batch 1.
+
+---
+
+### 1. My's Vietnamese Sandwiches and Deli — (206) 772-1231
+
+> Hi — this is Sandon, I'm local, over in Renton on the same road as you. I made a simple ordering
+> page for My's from your Google listing: https://deliveredmenu.com/my-s-vietnamese-sandwiches-and-deli-6hoik
+>
+> Your name says sandwiches, so what surprised me was the rest of it — seven chè and a drinks list
+> with pennywort, sugar cane and durian. None of that shows up anywhere online, so nobody knows to
+> come to you for it. It's all on the page now.
+>
+> I pulled it off your listing photos, so the spellings are worth a look in case I got one wrong.
+> It's free and it's yours — you can download the whole site from your dashboard and host it
+> anywhere. If you'd rather I take it down, say the word and it's gone today.
+
+*12619 Renton Ave S — Renton Ave runs from Renton into Seattle, so "same road" is literal and
+checkable. 15 bánh mì all at one price; the chè and drinks are the part no listing shows.*
+
+---
+
+### 2. Georgetown Shell Chicken & Deli — (206) 767-6200
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for the deli at the
+> Georgetown Shell from your Google listing: https://deliveredmenu.com/georgetown-shell-chicken-deli-nvlzr
+>
+> One thing I noticed: your chicken meals come through as #1 through #5 with no description, so
+> anyone who hasn't been in has no idea what #3 is. Tell me what's in them and I'll write them out —
+> that's the difference between a regular ordering and a stranger not ordering.
+>
+> The rest came off your listing photos, so it's worth a quick look. It's free and it's yours —
+> download the whole site from your dashboard any time and host it anywhere. If you'd rather I take
+> it down, say the word.
+
+*The batch-1 Renton Deli shape: offers something they are losing right now rather than apologising
+for a possible mistake. Verified — the seven-section menu really does list `#1`…`#5` bare.*
+
+---
+
+### 3. Teriyaki Avenue — (206) 723-2489
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Teriyaki Avenue
+> from your Google listing: https://deliveredmenu.com/teriyaki-avenue-li2tb
+>
+> All 34 items are on there. One thing to fix: your hours list Sunday and Tuesday through Saturday,
+> and Monday just isn't there — so it reads like I made a mistake rather than like you're closed.
+> Tell me which it is and I'll set it right.
+>
+> I left the prices off on purpose, since I couldn't confirm them off a photo — they say "call to
+> confirm" until you tell me otherwise. It's free and it's yours; you can download the whole site
+> from your dashboard and host it anywhere. If you'd rather I take it down, say the word.
+
+*⚠️ Says "tell me which it is" rather than asserting they are closed Mondays. The page omits the
+day; that is all we know. Same discipline as "over by" in batch 1.*
+
+---
+
+### 4. Taqueria Jalisco — (206) 771-9497
+
+> Hola — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Taqueria
+> Jalisco from your Google listing: https://deliveredmenu.com/taqueria-jalisco-ys8g2
+>
+> Fair warning, I got something wrong. Reading your menu off photos, every single item came out at
+> $14 — tacos, the ceviche, the burritos, all of it. That's obviously not right, so the page shows
+> no prices at all right now, just "call to confirm." Send me the real ones and I'll put them in.
+>
+> The dishes and descriptions did come through properly, all 24 of them. It's free and it's yours —
+> download the whole site from your dashboard any time and host it anywhere. Not selling you
+> anything.
+
+*Leads with our own error, the most unfakeable thing available. The claim is safe to make because
+the freshness rule already suppresses the bad prices — the page a visitor sees says "call to
+confirm", so the message describes the page accurately.*
+
+---
+
+### 5. The Local 907 — (425) 255-2511
+
+> Hi — this is Sandon, I'm local in Renton. I made a simple page for The Local 907 from your Google
+> listing: https://deliveredmenu.com/the-local-907-ljdit
+>
+> Fair warning on this one: the only menu I could pull off your listing photos was the happy hour,
+> so the page currently makes it look like fried pickles and the pub burger are all you do. Send me
+> a photo of the regular menu and I'll put it up properly.
+>
+> It's free either way and it's yours — you can download the whole thing from your dashboard and
+> host it anywhere. If you'd rather I take it down, say the word and it's gone today.
+
+*The only Renton business left in the inventory, so it carries the one unqualified locality line.
+Verified: the live page renders a single section titled "Happy Hour" and nothing else.*
+
+---
+
+### ⚠️ A latent bug found while writing these — not visible, do not "fix" it in a panic
+
+Every parsed price is stored with a doubled dollar sign (`"price": "$$8.95"`), on batch 1's sites too
+(112 occurrences on Enjoy Teriyaki alone). **It reaches no visitor**: `menuFreshness` suppresses
+undated prices, so the rendered page says "call to confirm" and the `$$` never renders. Confirmed by
+reading `document.body.innerText` on the live pages — the raw HTML payload showed 112, the rendered
+text showed **0**.
+
+Worth fixing before any owner confirms prices, because that is the moment it becomes visible. Worth
+recording because the payload and the render disagreed, and only one of them is the artifact.
+
+---
+
 ## Protocol — per business, in order
 
 1. **Open the draft and read it as the owner would.** Fix anything that is not true of their

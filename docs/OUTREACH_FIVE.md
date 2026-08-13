@@ -31,7 +31,7 @@ The thing that worked was unscalable on purpose: a flyer read closely, a site wr
 business's own words, a print pack, one personal message. **The "own words" part is the product,
 and it is the first thing automation destroys.**
 
-We already ran the scaled arm without meaning to. It is the control:
+We already ran the scaled arm without meaning to:
 
 | | automated batch | the one bespoke build |
 |---|---|---|
@@ -42,6 +42,13 @@ We already ran the scaled arm without meaning to. It is the control:
 ⚠️ **Read that honestly: it is not "25 attempts, 0 replies."** Nobody was contacted. The pipeline
 produced *inventory*, not conversations — which is the finding. Building the site was never the
 bottleneck, so automating the building cannot be the fix.
+
+⚠️ **AND IT IS NOT "THE CONTROL", WHICH IS WHAT THIS DOC USED TO CALL IT** (PorchHearth, crosstalk
+2026-08-13). It is a control for *does automation reach people* — for that it is decisive. It cannot
+be the control for *finished-thing-beats-account*, because **nobody was contacted, so there is no
+outcome to compare against.** Keeping the two straight matters because a "25" sitting near a reply
+rate will quietly become a denominator: `1/26` is a sentence someone will eventually write, and it
+would be arithmetic performed on two different experiments.
 
 ## Pre-registered decision rule
 
@@ -57,6 +64,28 @@ is a reply; silence is not. We are measuring whether the thing provokes a respon
 converts.
 
 ⚠️ **Decide the timebox now too: 7 days from send.** A reply on day 20 is a different experiment.
+
+## Pre-committed readings (agreed with PorchHearth before any result, 2026-08-13)
+
+PorchHearth is waiting on this result before spending their own list of 857 FoodNome sellers, so
+both sides fixed the interpretation **in advance** — otherwise whoever sees the number first picks
+the flattering reading.
+
+⚠️ **The populations are not equivalent, and that asymmetry is the whole reason to write this down.**
+Our cohort has **no working channel at all** — no website, only a Google listing. Theirs *are already
+selling* on a platform. A finished page is worth more to someone with nothing.
+
+| result | what it licenses | what it does NOT license |
+|---|---|---|
+| **4–5 of 5** | supports *finished-thing beats account*; justifies PH running theirs | does **not** predict their outcome — our population is strictly easier |
+| **1 of 5** | the finished-thing variable is not doing the work | — |
+| PH's later run comes back **cold** | *"they already had a channel"* stays a live explanation | PH may **not** reach for *"the offer was wrong"* as the only reading |
+
+⚠️ **A caveat we owe them, added the same day: our result is no longer one clean arm.** Batch 1 went
+out with a link that did not linkify plus a same-day correction (two touches); batch 2 is the clean
+single-touch arm; batches 3–4 add a sentence about the city directory. Three treatments, ~5 each.
+Whatever number comes back is **underpowered per arm and confounded across arms** — it can suggest a
+direction, it cannot settle the variable. Told them rather than letting them build on it.
 
 ## The five
 

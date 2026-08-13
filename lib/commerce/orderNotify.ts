@@ -18,6 +18,7 @@
 // back a captured payment or make Stripe retry a webhook that already did its real work. It records
 // the failure instead, so a silent non-delivery is still visible afterwards.
 import { sendEmail } from '@/lib/email';
+import { sendSms } from '@/lib/sms/sendSms';
 
 export type OrderAlertLine = { title: string; quantity: number; totalCents: number };
 
@@ -132,6 +133,53 @@ export async function resolveAlertRecipient(
   }
 }
 
+/**
+ * The text a kitchen gets. Deliberately tiny.
+ *
+ * ⚠️ ONE SEGMENT (160 chars) OR IT COSTS DOUBLE AND WRAPS BADLY. This is read on a lockscreen
+ * between orders — the total and the shop are the whole message, and the link exists only because
+ * someone will want the detail. Same linkification rule as outreach: a full https:// URL, never a
+ * bare host (see lib/outreach/__tests__/messageLinks.test.ts).
+ */
+export function alertSms(input: OrderAlertInput): string {
+  const where = input.siteSlug ? ` for ${input.siteSlug}` : '';
+  const n = input.lines.reduce((t, l) => t + (Number(l.quantity) || 0), 0);
+  const items = n ? `${n} item${n === 1 ? '' : 's'}, ` : '';
+  return `New order${where}: ${items}${money(input.totalCents, input.currency ?? 'usd')}. ${input.ordersUrl}`;
+}
+
+/**
+ * Text the kitchen, if we can.
+ *
+ * ⚠️ THREE OUTCOMES, NOT TWO. Not-attempted (no number, or Twilio unconfigured) is a different
+ * fact from failed, and collapsing them into `sms_error` would make an unconfigured deploy look
+ * like a broken one — the alert equivalent of a soft 404.
+ */
+async function trySms(
+  supabase: any,
+  input: OrderAlertInput,
+  merchantId: string | null,
+): Promise<void> {
+  if (!merchantId) return;
+  const { data: m } = await supabase
+    .from('merchants')
+    .select('order_notify_sms')
+    .eq('id', merchantId)
+    .maybeSingle();
+  const to = String(m?.order_notify_sms ?? '').trim();
+  if (!to) return; // not attempted — leave both columns null
+
+  const res = await sendSms(to, alertSms(input));
+  await supabase
+    .from('order_alerts')
+    .update(
+      res.ok
+        ? { sms_sent_at: new Date().toISOString(), sms_recipient: to }
+        : { sms_error: String(res.error ?? 'send_failed').slice(0, 300), sms_recipient: to },
+    )
+    .eq('order_id', input.orderId);
+}
+
 export type AlertResult =
   | { sent: true; recipient: string }
   | { sent: false; reason: 'already_alerted' | 'no_recipient' | 'send_failed'; detail?: string };
@@ -172,6 +220,13 @@ export async function sendOrderAlert(
       subject: alertSubject(input),
       html: alertHtml(input),
     });
+    // Best-effort second channel. The email already succeeded, so a failing text must not turn
+    // this into a failure — a kitchen that got the email is not un-alerted.
+    try {
+      await trySms(supabase, input, input.merchantId);
+    } catch {
+      /* recorded in sms_error by trySms where possible; never escalates */
+    }
     return { sent: true, recipient };
   } catch (e: any) {
     const detail = e?.message || String(e);

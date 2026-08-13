@@ -12,7 +12,6 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
-import MenuNotFound from '@/components/site/menu-not-found';
 import { loadCityMenuFeed, menuFinderCampaignId } from '@/lib/menu/cityMenuIndexServer';
 import {
   PUBLIC_PATH_HEADER,
@@ -441,9 +440,11 @@ export default async function SitePreviewPage({
     if (dir) return <RestaurantCompetitionDirectory dir={dir} />;
     const autoDir = await loadAutoShopDirectoryBySlug(slug);
     if (autoDir) return <AutoShopCompetitionDirectory dir={autoDir} />;
-    // On delivered.menu the visitor is looking for dinner, not for us. The platform 404 hands
-    // them a site-builder sitemap; this one hands them the restaurant directory.
-    if (menuHost) return <MenuNotFound attempted={slug} />;
+    // On delivered.menu the visitor is looking for dinner, not for us — they get the restaurant
+    // directory rather than the site-builder sitemap. That branch now lives in
+    // app/sites/not-found.tsx, because RETURNING a component is a 200: every missing restaurant
+    // used to answer HTTP 200 with a body reading "NOT FOUND". notFound() sends a real 404 and
+    // still renders the diner-facing page.
     return notFound();
   }
 
@@ -475,7 +476,7 @@ export default async function SitePreviewPage({
     }
   }
 
-  if (!normalized) return menuHost ? <MenuNotFound attempted={slug} /> : notFound();
+  if (!normalized) return notFound();
 
   const pageSlug = rest?.[0] ?? firstPageSlug(normalized);
   const colorMode = (normalized.color_mode ?? 'light') as 'light' | 'dark';

@@ -34,6 +34,7 @@ import OwnerThemeTools from '@/components/sites/owner-theme-tools';
 import { getSiteCompetition } from '@/lib/outreach/competitionForSite';
 import { MENU_DEMAND_CAPTURE_ENABLED, MENU_DRAFT_INDEXABLE } from '@/lib/flags/menuDemand';
 import { getDemandCount } from '@/lib/menu/demand';
+import { needsMenu } from '@/lib/outreach/candidates';
 import { resolveListingPhone } from '@/lib/claim/resolveListingPhone';
 import { loadCompetitionDirectoryBySlug } from '@/lib/outreach/restaurantCompetitionDirectory';
 import RestaurantCompetitionDirectory from '@/components/sites/restaurant-competition-directory';
@@ -499,7 +500,14 @@ export default async function SitePreviewPage({
 
   // Demand capture: on a claimable draft (flag-gated), count the order-intents we've logged
   // and resolve the listing phone for the "call to order" fallback. Drives the claim pitch.
-  const demandEnabled = showClaimBar && MENU_DEMAND_CAPTURE_ENABLED;
+  // ⚠️ THE ORDER-AHEAD CHROME IS FOOD-ONLY, AND IT USED TO BE HOST-ONLY.
+  // `showClaimBar` gates on the menu HOST plus claim_source, which was a fine proxy while every
+  // listing-import draft was a restaurant. It stopped being one the moment auto shops were built:
+  // a mechanic's page rendered a "🍽 Order online?" pill and a claim bar reading "Is this your
+  // restaurant?" over correct auto-repair copy. An owner sees that in the first second.
+  const siteIndustry = (normalized as any).industry ?? (siteRow as any)?.industry ?? null;
+  const isFoodSite = needsMenu(siteIndustry);
+  const demandEnabled = showClaimBar && isFoodSite && MENU_DEMAND_CAPTURE_ENABLED;
   const demandCount = demandEnabled ? await getDemandCount(siteRow.id) : 0;
   const demandPhone = demandEnabled
     ? resolveListingPhone({ data: (normalized as any).data })
@@ -542,10 +550,7 @@ export default async function SitePreviewPage({
   // impossible one.
   const personIdentity =
     !showWatermark &&
-    personSchemaEnabled(
-      normalized.data,
-      (normalized as any).industry ?? (siteRow as any)?.industry ?? null,
-    )
+    personSchemaEnabled(normalized.data, siteIndustry)
       ? personIdentityFromTemplate(normalized.data, { url: pageUrl })
       : null;
   const personSchema = personIdentity ? buildPersonSchema(personIdentity) : null;
@@ -600,6 +605,7 @@ export default async function SitePreviewPage({
           token={claimToken}
           businessName={claimBusinessName}
           demandCount={demandCount}
+          isFood={isFoodSite}
         />
       )}
       {/* Operator jump-to-editor. `admin` only ever fires on the canonical host (auth

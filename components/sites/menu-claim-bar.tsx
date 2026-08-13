@@ -13,13 +13,23 @@ export default function MenuClaimBar({
   token,
   businessName,
   demandCount = 0,
+  isFood = true,
 }: {
   templateId: string;
   token: string;
-  /** The restaurant's name, so the bar reads "Is this {name}?" instead of the generic prompt. */
+  /** The business's name, so the bar reads "Is this {name}?" instead of the generic prompt. */
   businessName?: string | null;
   /** Order-intents logged on this draft — escalates the pitch to "N people tried to order". */
   demandCount?: number;
+  /**
+   * Is this a food business?
+   *
+   * ⚠️ DEFAULTS TRUE so every existing caller keeps today's copy. It exists because this bar is
+   * mounted on the menu host, which stopped meaning "restaurant" the moment auto shops were built:
+   * a mechanic's page asked "Is this your restaurant?" and offered to "take online orders", over
+   * correct auto-repair copy. An owner sees that in the first second and stops reading.
+   */
+  isFood?: boolean;
 }) {
   const [dismissed, setDismissed] = React.useState(false);
 
@@ -76,11 +86,14 @@ export default function MenuClaimBar({
             ) : (
               <>
                 <span className="font-semibold text-amber-300">
-                  {name ? `Is this ${name}?` : 'Is this your restaurant?'}
+                  {name ? `Is this ${name}?` : isFood ? 'Is this your restaurant?' : 'Is this your business?'}
                 </span>{' '}
                 <span className="text-neutral-300">
+                  {/* ⚠️ "take online orders" is a FOOD promise. On an auto shop it offers something
+                      the page cannot do and the owner does not want — the same wrongness as the
+                      "Is this your restaurant?" heading above it. */}
                   We built it from your public listing so customers could find you. Claim it to
-                  edit, take online orders, and go live —
+                  edit{isFood ? ', take online orders' : ''}, and go live —
                 </span>{' '}
                 {/* ⚠️ ANSWERS "AND THEN WHAT DOES IT COST?", which is the first thing an owner
                     asks and the page did not address. A persona given the goal "work out what

@@ -6,8 +6,11 @@
 // listed. No "competition" framing shown to drivers. Server component.
 
 import type { AutoShopDirectory } from '@/lib/outreach/autoShopCompetitionDirectory';
+import { SECONDSET_ENABLED } from '@/lib/flags/secondset';
 
 export default function AutoShopCompetitionDirectory({ dir }: { dir: AutoShopDirectory }) {
+  // Server component — the flag is read server-side, so this never ships an unfulfilled promise.
+  const secondsetLive = SECONDSET_ENABLED;
   const place = dir.region ? `${dir.city}, ${dir.region}` : dir.city;
   const entries = dir.entries;
 
@@ -17,8 +20,25 @@ export default function AutoShopCompetitionDirectory({ dir }: { dir: AutoShopDir
         <p className="text-xs uppercase tracking-widest text-zinc-500">Auto repair · {place}</p>
         <h1 className="mt-2 text-3xl font-bold md:text-4xl">Trusted auto shops in {place}</h1>
         <p className="mx-auto mt-3 max-w-xl text-zinc-500">
-          Shops that <span className="font-semibold text-zinc-700">show you the work</span> — a photo of
-          the actual problem and the tech&apos;s note, so you approve the repair before it happens.
+          {/* ⚠️ TWO SUBHEADS, AND WHICH ONE SHOWS IS NOT A STYLE CHOICE.
+              The SecondSet line describes a capability behind SECONDSET_ENABLED, which is OFF. On a
+              domain we have bought and are actively sending mechanics to, promising a photo-of-the-
+              actual-problem flow that does not exist is the same failure as the scaffold FAQ that
+              asserted a stranger's business was "fully licensed and insured" (#787) — a claim the
+              reader can rely on and we cannot honour.
+              The default line says only what the page verifiably does: these shops are real, local,
+              and have no website of their own. */}
+          {secondsetLive ? (
+            <>
+              Shops that <span className="font-semibold text-zinc-700">show you the work</span> — a photo
+              of the actual problem and the tech&apos;s note, so you approve the repair before it happens.
+            </>
+          ) : (
+            <>
+              Independent shops in {place}, each with their own page — hours, directions and a phone
+              number that rings the shop. No booking fees, no middleman.
+            </>
+          )}
         </p>
       </header>
 
@@ -53,7 +73,8 @@ export default function AutoShopCompetitionDirectory({ dir }: { dir: AutoShopDir
       )}
 
       <footer className="mt-12 text-center text-xs text-zinc-400">
-        {dir.domain} · shops on this page show their work with SecondSet.
+        {dir.domain}
+        {secondsetLive ? ' · shops on this page show their work with SecondSet.' : ''}
       </footer>
     </main>
   );

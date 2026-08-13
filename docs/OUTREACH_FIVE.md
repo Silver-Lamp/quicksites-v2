@@ -6,8 +6,8 @@ A pre-registered test of one question, by hand, with no tooling.
 > rules that are not style preferences — lives in **[`OUTREACH_METHOD.md`](OUTREACH_METHOD.md)**.
 > This doc is the experiment and its results; that one is how to do it again.
 
-**Status:** **all five sent 2026-08-11**, correction follow-up sent to all five the same day ·
-replies open until **2026-08-18** (the pre-registered 7-day timebox) ·
+**Status:** batch 1 + 2 sent 2026-08-11/12 · **batch 3 (Kent) sent 2026-08-13** ·
+**15 businesses contacted, 20 touches, 0 replies** · batch 1's window closes **2026-08-18** ·
 **Owner:** Sandon · **Written:** 2026-08-10
 
 ---
@@ -450,7 +450,7 @@ generator.
 Also note only **one** usable draft is in Renton, so "I'm local in Renton" stops being a locality
 claim about *them* and becomes one about *me*. Phrasing below reflects that; do not upgrade it.
 
-### The five
+### The five — ✅ SENT 2026-08-13
 
 | # | Business | Phone | Items | Verified hook |
 |---|---|---|---|---|

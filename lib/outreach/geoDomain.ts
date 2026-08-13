@@ -61,3 +61,35 @@ export function geoDomainFor(
   const slug = slugify(`${city}-${industryDomainWord(industryKey)}`);
   return { domain: `${slug}.${tld}`, slug };
 }
+
+/**
+ * The apex label for a domain — `kent-restaurants.com` → `kent-restaurants`.
+ *
+ * ⚠️ THE SLUG MUST BE DERIVED FROM THE DOMAIN WE ACTUALLY BOUGHT, never re-derived from the city.
+ * The host→`/sites/<slug>` rewrite has no mapping table: the apex label IS the lookup. A campaign
+ * launched on `kent-restaurants.com` while carrying the slug `kent-restaurant` points a real,
+ * paid-for domain at a site that does not exist.
+ */
+export function apexSlugForDomain(domain: string): string {
+  return slugify((domain || '').trim().toLowerCase().replace(/\.[a-z.]+$/, ''));
+}
+
+/**
+ * Restaurant apex candidates for a city, **best first**.
+ *
+ * ⚠️ PLURAL LEADS DELIBERATELY. The domain's whole job is to match what a hungry person types, and
+ * that is "kent restaurants" — the plural is the exact match, the singular is a near-miss we happen
+ * to have standardised on internally. Both are still checked, because an existing contest may sit
+ * on either form and a city we already own must never look buyable.
+ */
+export function restaurantApexCandidates(
+  city: string,
+  tld = 'com',
+): Array<{ domain: string; slug: string }> {
+  const singular = geoDomainFor(city, 'restaurant' as IndustryKey, tld);
+  const pluralSlug = `${singular.slug}s`;
+  return [
+    { domain: `${pluralSlug}.${tld}`, slug: pluralSlug },
+    singular,
+  ];
+}

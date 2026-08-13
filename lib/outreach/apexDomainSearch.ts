@@ -11,7 +11,7 @@
 // a fallback candidate. Read-only — buying happens in the buy-apex route.
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { geoDomainFor } from '@/lib/outreach/geoDomain';
+import { geoDomainFor, restaurantApexCandidates, apexSlugForDomain } from '@/lib/outreach/geoDomain';
 import { normalizeDomain } from '@/lib/prospects/ownedDomains';
 import { checkAvailability, readRegistrantContact } from '@/lib/domains/registrar';
 
@@ -61,13 +61,20 @@ export async function searchRestaurantApex(input: {
   domain?: string | null;
 }): Promise<ApexDomainSearchResult> {
   const city = input.city.trim();
-  const derived = geoDomainFor(city, 'restaurant');
-  const domain = normalizeDomain(input.domain || derived.domain) || derived.domain;
+  // ⚠️ Plural first — see restaurantApexCandidates(). An explicit override (an area card passing
+  // its own domain) is honoured as the only candidate rather than being reordered underneath the
+  // operator.
+  const override = normalizeDomain(input.domain || '') || null;
+  const candidates = override
+    ? [{ domain: override, slug: apexSlugForDomain(override) }]
+    : restaurantApexCandidates(city);
+  const primary = candidates[0];
+  const domain = primary.domain;
   const purchase = domainPurchaseFlags();
 
   const base: ApexDomainSearchResult = {
     domain,
-    slug: derived.slug,
+    slug: primary.slug,
     city,
     region: input.region?.trim() || null,
     status: 'unknown',
@@ -79,15 +86,30 @@ export async function searchRestaurantApex(input: {
     purchase,
   };
 
-  // 1) A campaign already runs on it — ours, whatever the ledger says.
+  // 1) A campaign already runs on one of them — ours, whatever the ledger says.
+  //
+  // ⚠️ Checks EVERY candidate, not just the preferred one. Renton's contest sits on the singular;
+  // if a plural-first search only asked about `renton-restaurants.com` it would come back
+  // "available" for a city we already run a contest in, and the obvious next click buys a second
+  // domain for it. Which form we prefer must not change which cities we can see we already own.
+  const all = candidates.map((c) => c.domain);
   try {
     const { data: campaign } = await supabaseAdmin
       .from('geo_industry_campaigns')
-      .select('id, kind')
-      .eq('domain', domain)
+      .select('id, kind, domain')
+      .in('domain', all)
+      .limit(1)
       .maybeSingle();
     if (campaign) {
-      return { ...base, status: 'contest', campaignId: campaign.id, campaignKind: campaign.kind ?? null };
+      const hit = candidates.find((c) => c.domain === (campaign as any).domain) ?? primary;
+      return {
+        ...base,
+        domain: hit.domain,
+        slug: hit.slug,
+        status: 'contest',
+        campaignId: campaign.id,
+        campaignKind: (campaign as any).kind ?? null,
+      };
     }
   } catch {
     /* fall through to the ledger/registrar */
@@ -98,9 +120,13 @@ export async function searchRestaurantApex(input: {
     const { data: owned } = await supabaseAdmin
       .from('owned_domains')
       .select('domain')
-      .eq('domain', domain)
+      .in('domain', all)
+      .limit(1)
       .maybeSingle();
-    if (owned) return { ...base, status: 'owned' };
+    if (owned) {
+      const hit = candidates.find((c) => c.domain === (owned as any).domain) ?? primary;
+      return { ...base, domain: hit.domain, slug: hit.slug, status: 'owned' };
+    }
   } catch {
     /* fall through to the registrar */
   }
@@ -109,20 +135,32 @@ export async function searchRestaurantApex(input: {
   if (!process.env.VERCEL_TOKEN) {
     return { ...base, error: 'missing_vercel_token' };
   }
-  const avail = await checkAvailability(domain);
-  if (avail.error) return { ...base, error: avail.error };
-  if (avail.available) {
-    return { ...base, status: 'available', priceUsd: avail.priceUsd, premium: avail.premium };
-  }
-
-  // Canonical taken → probe the plural fallback so the operator still gets a candidate.
-  let alt: ApexAltResult | null = null;
-  const plural = `${derived.slug}s.com`;
-  if (plural !== domain) {
-    const altAvail = await checkAvailability(plural);
-    if (!altAvail.error) {
-      alt = { domain: plural, available: altAvail.available, priceUsd: altAvail.priceUsd, premium: altAvail.premium };
+  // 3) Registrar, in preference order. The first available candidate becomes the answer; the
+  // others are reported as `alt` so the operator can see the whole picture rather than one verdict.
+  let firstError: string | null = null;
+  const probed: ApexAltResult[] = [];
+  for (const c of candidates) {
+    const a = await checkAvailability(c.domain);
+    if (a.error) {
+      firstError = firstError ?? a.error;
+      continue;
+    }
+    probed.push({ domain: c.domain, available: a.available, priceUsd: a.priceUsd, premium: a.premium });
+    if (a.available) {
+      const others = probed.filter((p) => p.domain !== c.domain);
+      return {
+        ...base,
+        domain: c.domain,
+        slug: c.slug,
+        status: 'available',
+        priceUsd: a.priceUsd,
+        premium: a.premium,
+        alt: others[0] ?? null,
+      };
     }
   }
-  return { ...base, status: 'taken', alt };
+  if (!probed.length) return { ...base, error: firstError ?? 'registrar_unavailable' };
+  // Everything we could check is taken. Report the preferred one as the subject, and any other
+  // probed form as the alt (it is taken too, but the operator asked about this city, not this word).
+  return { ...base, status: 'taken', alt: probed.find((p) => p.domain !== base.domain) ?? null };
 }

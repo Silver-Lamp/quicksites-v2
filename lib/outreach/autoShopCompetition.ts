@@ -11,7 +11,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { provisionGeoDomain, linkProspectsToCampaign } from '@/lib/outreach/geoCampaigns';
-import { geoDomainFor } from '@/lib/outreach/geoDomain';
+import { geoDomainFor, apexSlugForDomain } from '@/lib/outreach/geoDomain';
 import { getProspect } from '@/lib/outreach/prospects';
 import { AUTO_SHOP_COMPETITION_KIND } from '@/lib/outreach/competitionKinds';
 
@@ -67,7 +67,11 @@ export async function createAutoShopCompetition(
 
   const derived = geoDomainFor(city, AUTO_SHOP_INDUSTRY_KEY);
   const domain = input.domain?.trim().toLowerCase() || derived.domain;
-  const slug = derived.slug;
+  // ⚠️ Same fix as the restaurant path: derive the apex label from the domain we actually bought.
+  // `derived.slug` ignores the override, so any campaign launched on a non-canonical domain pointed
+  // at a slug nothing creates. Found while fixing the restaurant side — this one has no
+  // plural-preferring search in front of it yet, so it was latent rather than live.
+  const slug = apexSlugForDomain(domain);
 
   const { data: existing } = await supabaseAdmin
     .from('geo_industry_campaigns')

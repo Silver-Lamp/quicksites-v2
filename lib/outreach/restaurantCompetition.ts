@@ -13,7 +13,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { provisionGeoDomain, linkProspectsToCampaign } from '@/lib/outreach/geoCampaigns';
-import { geoDomainFor } from '@/lib/outreach/geoDomain';
+import { geoDomainFor, apexSlugForDomain } from '@/lib/outreach/geoDomain';
 import { getProspect } from '@/lib/outreach/prospects';
 import { RESTAURANT_COMPETITION_KIND, COMPETITION_KINDS } from '@/lib/outreach/competitionKinds';
 
@@ -68,7 +68,12 @@ export async function createRestaurantCompetition(
 
   const derived = geoDomainFor(city, 'restaurant');
   const domain = (input.domain?.trim().toLowerCase() || derived.domain);
-  const slug = derived.slug;
+  // ⚠️ THE SLUG COMES FROM THE DOMAIN, NOT THE CITY. It used to be `derived.slug`, which is always
+  // the SINGULAR form — so launching on an override (now the common case, since the apex search
+  // prefers the plural `<city>-restaurants.com`) bought a real domain and pointed it at
+  // `/sites/<city>-restaurant`, a slug nothing would ever create. The host→/sites/<slug> rewrite
+  // has no mapping table; the apex label IS the lookup.
+  const slug = apexSlugForDomain(domain);
 
   // Guard against a duplicate competition for the same domain.
   const { data: existing } = await supabaseAdmin

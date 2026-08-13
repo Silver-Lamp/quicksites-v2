@@ -129,6 +129,16 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   Two traps it exists to stop: **11 of 26 drafts carry an INVENTED menu under a real business's name**
   (#738 — never send one), and a bare `<slug>.delivered.menu` **does not linkify on a phone** (new gTLD),
   so messages use `https://deliveredmenu.com/<slug>`, guarded by a test over the prose.
+- **Auto shops — the vertical the data picked (2026-08-13)**: sweeping 9 industries for *no website*
+  found the cohort is defined by **how customers find you, not by trade**: roofing 3% / fencing 0–6% (they
+  are found by search, so they all have sites) vs **auto repair 66%** in Paterson, 57–64% across urban NJ,
+  17–29% suburban WA/FL — **204 independents over 6 cities**, and unusually clean (2 chains in 206).
+  Machinery already exists and has NEVER run (`lib/outreach/autoShopCompetition.ts`, `<city>-auto-repair.com`,
+  PRs #600–#603). ⚠️ **Two blockers before any send**, both in `docs/AUTO_SHOP_VERTICAL.md`: there is **no
+  menu** — the load-bearing ingredient of the restaurant pitch does not exist for a mechanic — and the
+  scaffold's FAQ **invents service promises** ("we respond within the hour", "free no-obligation quote")
+  under a real shop's name, which is the invented-menu class with liability attached. `MIN_MENU_ITEMS`
+  eligibility also disqualifies every auto shop.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

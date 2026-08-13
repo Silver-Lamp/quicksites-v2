@@ -698,6 +698,129 @@ and being confidently wrong about someone's own prices is the batch-1 food-truck
 
 ---
 
+## Batch 4 — the rest of the Kent cohort (2026-08-13)
+
+Same arm as batch 3 (Kent, one directory sentence). These are the remaining five of the ten linked
+to `kent-restaurant.com`.
+
+### ⚠️ SCHEDULING: two of the ten are in the SAME BUILDING
+
+**Pho Bac Cafe is 18119 E Valley Hwy #102. Happy At the Bay Teriyaki is #101.** Next door, same strip,
+both in the same ten. Pho Bac is in batch 3.
+
+This is the batch-1 mistake with the serial numbers filed off — there, two businesses across the
+street from each other got "personal" notes the same day. Neither message names the other, so it is
+milder than naming a neighbour as a landmark. But two neighbouring owners comparing two same-day
+texts learn they are a list, not a person's afternoon.
+
+**Recommendation: send nine today, hold Happy At the Bay for tomorrow.** The cost is one day. The
+thing being protected is the only thing the whole experiment is testing.
+
+### The five
+
+| # | Business | Phone | Verified hook |
+|---|---|---|---|
+| 1 | **Taqueria Del Sol** | (253) 278-2905 | **our error** — all 28 items came through with no price at all |
+| 2 | **#1 Hawaiian BBQ** | (253) 243-7680 | **our error** — "Mini 10.75 Reg. 13.95" mashed into one price |
+| 3 | **Kim's Teriyaki** | (253) 854-0667 | name says teriyaki; the biggest section is a Chinese wok menu |
+| 4 | **Joe's Deli** | (425) 251-9847 | weekday-only counter in an industrial park, doing Eggs Benedict |
+| 5 | **Happy At the Bay** | (425) 251-6667 | ⏸ **hold to tomorrow** — neighbour of Pho Bac (batch 3) |
+
+---
+
+### 1. Taqueria Del Sol — (253) 278-2905
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Taqueria Del Sol
+> from your Google listing: https://deliveredmenu.com/taqueria-del-sol-mk7hq
+>
+> Straight up, I got one thing wrong: none of your prices came through. All 28 dishes are on there —
+> quesabirria, the birria ramen, the birria pizza — and every one of them just says "call to
+> confirm." Send me a photo of the menu and I'll put the real prices in.
+>
+> The birria range is the reason I built yours, honestly. Half the taquerias around here do tacos;
+> you've got birria five different ways and nothing online says so. It's free and it's yours — you
+> can download the whole site from your dashboard and host it anywhere, and it's listed on
+> kent-restaurant.com with the other Kent kitchens. Say the word and I'll take it down.
+
+*Two true things: a defect that is ours, and a genuine reason they stood out. Verified: 28 items,
+zero prices, and the birria variants are in the page data.*
+
+---
+
+### 2. #1 Hawaiian BBQ — (253) 243-7680
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for #1 Hawaiian BBQ
+> from your Google listing: https://deliveredmenu.com/1-hawaiian-bbq-app3m
+>
+> Fair warning on one thing I got wrong: your mini and regular prices got mashed together. The
+> kalua pork shows as "Mini 10.45 Reg. 12.95" all in one line, where it should be two choices
+> someone can actually pick. That's my parsing, not your menu — I can split them properly.
+>
+> Everything else came through, all 18 plates, and you're open seven days on there. Free either way
+> and it's yours; download the whole thing from your dashboard and host it anywhere. It's also
+> listed on kent-restaurant.com with the other Kent kitchens. Not selling you anything.
+
+*The defect is specific enough to prove someone read the actual page. Verified by the packed_price
+signal.*
+
+---
+
+### 3. Kim's Teriyaki — (253) 854-0667
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Kim's Teriyaki
+> from your Google listing: https://deliveredmenu.com/kim-s-teriyaki-napr3
+>
+> Here's what struck me: your sign says teriyaki, but the biggest part of your menu is the wok —
+> mongolian beef, orange chicken, kung pao, general tao's. Nobody searching for orange chicken in
+> Kent is going to look at a place called Kim's Teriyaki, and that's a shame. It's all on the page
+> now, so those searches can land somewhere.
+>
+> Your hours don't list Saturday or Sunday, so tell me if you're open and I'll fix it. Free and
+> yours — download the whole site from your dashboard any time, and it's listed on
+> kent-restaurant.com with the other Kent kitchens. If you'd rather I take it down, just say.
+
+*Something they're losing right now — the batch-1 bánh mì shape, which produced the strongest
+message of that batch. Verified: "Chinese Wok" is the largest section, 10 of 21 items.*
+
+---
+
+### 4. Joe's Deli — (425) 251-9847
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Joe's Deli from
+> your Google listing: https://deliveredmenu.com/joe-s-deli-m768c
+>
+> You're tucked back on S 211th where nobody finds you by accident — it's all warehouses out there,
+> so I'm guessing you live off the people who already work nearby. What surprised me is you're doing
+> eggs benedict and real espresso, not just sandwiches. That's on the page now with the whole menu.
+>
+> Your hours show Monday to Friday only, which fits the area, but tell me if that's wrong. It's free
+> and it's yours — download the whole site from your dashboard and host it anywhere, and it's listed
+> on kent-restaurant.com with the other Kent kitchens. Say the word and it's gone.
+
+*⚠️ "I'm guessing" is doing real work — the weekday-only hours and the industrial address support
+that read, but neither proves it. The batch-1 food-truck error was asserting exactly this kind of
+inference as fact.*
+
+---
+
+### 5. Happy At the Bay Teriyaki — (425) 251-6667 · ⏸ HOLD TO TOMORROW
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Happy At the Bay
+> Teriyaki from your Google listing: https://deliveredmenu.com/happy-at-the-bay-teriyaki-8qirf
+>
+> Your whole menu's on there — 33 items, and every plate correctly says it comes with rice and
+> salad, which is the sort of detail that usually gets lost. The combination list is deeper than
+> anywhere else I've looked at in Kent: chicken and katsu, chicken and gyoza, chicken and tempura,
+> nine of them.
+>
+> One gap: your hours don't list Sunday at all, so it reads like I made a mistake rather than like
+> you're closed. Tell me which and I'll set it right. Free and yours — download the whole site from
+> your dashboard any time, and it's listed on kent-restaurant.com with the other Kent kitchens.
+
+*⏸ Hold until 2026-08-14 — see the same-building note above.*
+
+---
+
 ## Protocol — per business, in order
 
 1. **Open the draft and read it as the owner would.** Fix anything that is not true of their

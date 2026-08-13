@@ -5,6 +5,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getDemandDetails } from '@/lib/menu/demand';
+import { detectSignals, sortSignals } from '@/lib/outreach/draftSignals';
 import { resolveListingPhone } from '@/lib/claim/resolveListingPhone';
 import { listProspects, type Prospect } from '@/lib/outreach/prospects';
 import { listGeoCampaigns, type GeoCampaign } from '@/lib/outreach/geoCampaigns';
@@ -70,6 +71,10 @@ export async function loadOutreachDrafts(): Promise<OutreachDraft[]> {
         demandNotified: d?.notified ?? false,
         // Only resolve the restaurant phone when there's demand worth acting on.
         restaurantPhone: d?.count ? resolveListingPhone({ data: r.data }) : null,
+        // What is notable/wrong about this draft. Computed here rather than in the client so the
+        // operator sees it in the list, before anyone writes a message about a page they have not
+        // read — which is exactly how a false claim about a menu reached a real business.
+        signals: sortSignals(detectSignals(r.data)),
       };
     });
   } catch {

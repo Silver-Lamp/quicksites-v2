@@ -22,6 +22,7 @@ import {
   type Candidate,
 } from '../lib/outreach/candidates';
 import { readMenuSections } from '../lib/menu/menuBlocks';
+import { detectSignals, sortSignals } from '../lib/outreach/draftSignals';
 
 function db() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -73,13 +74,16 @@ async function detail(slug: string) {
       console.log(`       ${it.name ?? '?'}${it.price ? `  ${it.price}` : ''}${it.description ? `  — ${String(it.description).slice(0, 64)}` : ''}`);
     }
   }
-  // Every item at one price is a parse failure, and it is the strongest possible message hook
-  // ("here is what I got wrong") — but only if you notice it.
-  if (prices.size === 1 && sections.reduce((n, s2) => n + (s2.items?.length ?? 0), 0) > 3) {
-    console.log(`\n  ⚠️ EVERY ITEM HAS THE SAME PRICE (${[...prices][0]}) — almost certainly a parse failure.`);
-  }
-  if ([...prices].some((p) => p.startsWith('$$'))) {
-    console.log('  ⚠️ prices stored with a doubled "$" (latent; menuFreshness hides it until confirmed).');
+  // ⚠️ The ad-hoc checks that used to live here are now lib/outreach/draftSignals.ts, so the CLI and
+  // the operator screen cannot drift into disagreeing about what is wrong with a draft.
+  const signals = sortSignals(detectSignals(d));
+  if (signals.length) {
+    console.log('\n  notable:');
+    for (const sig of signals) {
+      console.log(`   ${sig.severity === 'defect' ? '🔴' : '🔵'} ${sig.label}`);
+      console.log(`      ${sig.detail}`);
+    }
+    console.log('\n  ⚠️ These are OBSERVATIONS, not copy. Read the page before writing anything.');
   }
 }
 

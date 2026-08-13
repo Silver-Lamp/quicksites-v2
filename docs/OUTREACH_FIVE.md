@@ -515,6 +515,136 @@ recording because the payload and the render disagreed, and only one of them is 
 
 ---
 
+## Batch 3 — Kent, and the first one with a domain behind it (2026-08-13)
+
+⚠️ **This is a DIFFERENT ARM, not a third replication.** Batches 1 and 2 measured *"a finished thing,
+no pitch."* These messages add one sentence — the page is already listed on `kent-restaurant.com`,
+a domain we now own and point at a live 10-restaurant directory. That is a real change to the
+treatment, so a reply here is not directly comparable to a reply there. Naming it now so a better
+response cannot later be credited to the wrong cause.
+
+The competition mechanic stays OUT of the message. First-to-claim-wins-the-domain is our business
+model, and batch 1 already learned that a diner-facing hero explaining our model reads as noise. The
+sentence below is a *fact about their page* ("it's already listed"), not an invitation to race.
+
+### What is live behind these
+
+- `kent-restaurant.com` — bought, attached, serving the apex directory + dish search
+- 10 Kent restaurants linked to the campaign, every one with a real transcribed menu and a phone
+- ⚠️ It shipped broken first: the apex served the food scaffold's invented menu ("Two Eggs Any
+  Style", "House Burger") under the heading "Kent Restaurants" for several hours, because
+  `seedRestaurantApexSite` wrote the portal blocks to `page0.blocks` while the renderer reads
+  `content_blocks`. Fixed in PR #772 + repaired + republished. **Verified after republish:** invented
+  dishes gone, search box present, 10/10 restaurants listed.
+
+### The five
+
+| # | Business | Phone | Items | Verified hook |
+|---|---|---|---|---|
+| 1 | **Khmer Style** | (253) 905-4634 | 23 | Khmer dish names (`Kuy Teav`, `Bok Lahong`, `Pak Luv`) appear nowhere searchable |
+| 2 | **Himitsu Teriyaki** | (253) 520-6601 | 44 | a **day-by-day** special menu you can only learn by walking in |
+| 3 | **Pho Bac Cafe** | (425) 251-5008 | 30 | **our error** — pho sizes came through as if they were dishes |
+| 4 | **Little Deli Mart** | (253) 395-4566 | 31 | called a *mart*, runs a 31-item kitchen nobody driving past would guess |
+| 5 | **Taqueria El Cinco de Mayo** | (253) 334-0905 | 35 | **our error** — prices read $12.16, $11.11; almost certainly tax-inclusive or misread |
+
+---
+
+### 1. Khmer Style — (253) 905-4634
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Khmer Style from
+> your Google listing: https://deliveredmenu.com/khmer-style-oouw3
+>
+> The thing I noticed: nothing online spells your dishes the way your menu does. Someone searching
+> kuy teav, or bok lahong, or pak luv gets everything except you. They're all on the page now, so
+> those searches can land somewhere. Your page is also listed on kent-restaurant.com with the other
+> Kent kitchens.
+>
+> I pulled the menu off your listing photos, so the spellings are worth a look — and most items came
+> through without a price, so those just say "call to confirm" for now. It's free and it's yours; you
+> can download the whole site from your dashboard and host it anywhere. If you'd rather I take it
+> down, say the word and it's gone today.
+
+*Same shape as Renton Deli's bánh mì line — the strongest of batch 1. Offers something they are
+losing right now rather than apologising for a possible mistake. Verified: 17 of 23 items carry no
+price, and the Khmer names are in the page data.*
+
+---
+
+### 2. Himitsu Teriyaki — (253) 520-6601
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Himitsu Teriyaki
+> from your Google listing: https://deliveredmenu.com/himitsu-teriyaki-expzb
+>
+> Your whole menu's on there — 44 items. The part I'd never have known without reading it properly is
+> the daily specials: Tuesday combo, Wednesday katsu, Thursday chicken and gyoza, Friday stir-fried.
+> Nobody can find that online anywhere, and it's the reason to come on a Wednesday. It's on the page
+> now, and your page is listed on kent-restaurant.com with the other Kent kitchens.
+>
+> One thing to fix: the hours don't list Sunday or Monday at all, so it reads like I made a mistake
+> rather than like you're closed — tell me which and I'll set it right. It's free and it's yours; you
+> can download the whole site from your dashboard any time. Say the word and I'll take it down.
+
+*Leads with something only a person who actually read their menu would know. The hours line asks
+rather than asserts — the page omits those days, which is all we know.*
+
+---
+
+### 3. Pho Bac Cafe — (425) 251-5008
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Pho Bac Cafe from
+> your Google listing: https://deliveredmenu.com/pho-bac-cafe-gvjx8
+>
+> Fair warning, I got one thing wrong: reading your menu off photos, the pho sizes came through as if
+> they were their own dishes — "Small", "Large", "X-Large" sitting in the list next to Phở Tái and
+> Phở Chín. That's my mistake, not your menu, and I'll fix it if you want it fixed. I also noticed
+> Bún Bò Huế is listed as a new item with no price yet.
+>
+> Everything else came through properly, accents and all. It's free and it's yours — you can download
+> the whole site from your dashboard and host it anywhere, and it's listed on kent-restaurant.com with
+> the other Kent kitchens. Not selling you anything.
+
+*Leads with our own error — the most unfakeable thing available, and the shape that got the one reply
+in the driveway-contractor test.*
+
+---
+
+### 4. Little Deli Mart — (253) 395-4566
+
+> Hi — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Little Deli Mart
+> from your Google listing: https://deliveredmenu.com/little-deli-mart-n96u7
+>
+> Honestly the reason I built yours: the name says mart, and then the menu is a full kitchen — twelve
+> fried rices, the teriyaki, all of it. Anyone driving past on 84th has no idea. It's all on the page
+> now, and the page is listed on kent-restaurant.com with the other Kent kitchens.
+>
+> I pulled it off your listing photos, so it's worth a quick look — and your hours don't list Sunday,
+> so tell me if you're open and I'll add it. It's free and it's yours; download the whole site from
+> your dashboard any time and host it anywhere. If you'd rather I take it down, say the word.
+
+*A surprising true fact about their own business — the version of "I looked" that cannot be faked by
+a template.*
+
+---
+
+### 5. Taqueria El Cinco de Mayo — (253) 334-0905
+
+> Hola — this is Sandon, I'm local, over in Renton. I made a simple ordering page for Taqueria El
+> Cinco de Mayo from your Google listing:
+> https://deliveredmenu.com/taqueria-el-cinco-de-mayo-food-truck-b5orp
+>
+> Fair warning, I think I got the prices wrong. They came out as $12.16, $11.11, $13.80 — which looks
+> like I read them with tax already in, or misread them off the photo. Send me the real ones and I'll
+> put them in; until then the page just says "call to confirm."
+>
+> The dishes came through fine, all 35, and you're open seven days on there. It's free either way and
+> it's yours — download the whole thing from your dashboard and host it anywhere, and it's listed on
+> kent-restaurant.com with the other Kent kitchens. Not selling you anything.
+
+*⚠️ Says "I think I got the prices wrong", not "your prices are wrong". We do not know which it is,
+and being confidently wrong about someone's own prices is the batch-1 food-truck mistake.*
+
+---
+
 ## Protocol — per business, in order
 
 1. **Open the draft and read it as the owner would.** Fix anything that is not true of their

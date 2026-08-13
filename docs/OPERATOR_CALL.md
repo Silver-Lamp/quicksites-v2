@@ -75,6 +75,41 @@ tempting to read it as a positive one, because he was friendly.
 
 ---
 
+## ⚠️ Do not demo. Or if you must, demo AFTER all five questions — never before
+
+We shipped order alerts (#777) and order completion (#778) last week. They're new, they work, and
+this is a family friend who agreed to a call. **The pull toward opening a laptop will be enormous,
+and it will feel like generosity rather than a pitch.**
+
+The moment he sees the product the interview is over. Every answer after that is shaped by what he
+now thinks you're hoping to hear — and a warm-intro respondent is *already* inclined to encourage.
+That stacks the two biases that most reliably manufacture a false positive.
+
+It is also the exact error that cost us the React developer. The Custom Sites demo — a paragraph in,
+three finished variants out — was genuinely impressive, and what it demonstrated to him was **"you
+are not needed."** A demo aimed at an operator who has not yet said what is broken is aimed at the
+wrong half *by construction*, because you do not yet know which half.
+
+If he asks to see it, that is different — that is him pulling. Answer the question he asked and
+nothing more.
+
+## ⚠️ Record verbatim, not summarised
+
+The failure this mesh has repeated all week is *a true observation and an inference reported as one
+thing*. Phone notes are where that happens fastest and least visibly.
+
+> ❌ `"he's frustrated with dispatch"` — already a conclusion. Once written, what he actually said is
+> unrecoverable.
+>
+> ✅ `"Tony'll be out an hour on a bad night and I've got no idea where he is"` — stays checkable
+> forever, and it is the sentence to test against operator two.
+
+Quotes, in his words, **including the boring parts and the bits that support building nothing.**
+Especially those: they are the only ones that can come back negative, and the five questions were
+designed specifically to allow that.
+
+*(Both risks: PorchHearth, crosstalk 2026-08-13.)*
+
 ## What we know vs what we were told
 
 **Verified:** we have no dispatch/driver/courier code (grepped `lib/app/docs`); PorchHearth has none

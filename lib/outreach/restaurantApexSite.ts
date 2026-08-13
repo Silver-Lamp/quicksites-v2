@@ -93,7 +93,19 @@ export function apexTemplateSeed(input: ApexSeedInput): Record<string, any> {
       title: 'What are you hungry for?',
       campaign_id: input.campaignId,
     };
-    page0.blocks = [hero, finder, directory];
+    // ⚠️ WRITE BOTH ARRAYS. This wrote only `page0.blocks`, and `buildIndustryStarter` also emits
+    // `page0.content_blocks` carrying the FULL restaurant scaffold. The renderer prefers
+    // `content_blocks`, so the portal framing above was invisible: kent-restaurant.com went live on
+    // a domain we had just bought serving the scaffold's invented menu — "Two Eggs Any Style",
+    // "House Burger", "Signature Entrée" — under the heading "Kent Restaurants".
+    //
+    // The two arrays are the trap documented at the top of lib/menu/menuBlocks.ts, and this is the
+    // second time it has cost something: a menu backfill once read the wrong one and reported real
+    // menus as empty. Anything that REPLACES a page's blocks has to set both, or it has only
+    // rewritten the copy nobody renders.
+    const portal = [hero, finder, directory];
+    page0.blocks = portal;
+    page0.content_blocks = portal;
   }
 
   // Portal chrome: the starter's business nav (Services/Contact) points at pages a

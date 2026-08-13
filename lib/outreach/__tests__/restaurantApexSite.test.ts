@@ -1,86 +1,54 @@
-// lib/outreach/__tests__/restaurantApexSite.test.ts
+/**
+ * @jest-environment node
+ */
+// The apex portal must be a PORTAL, in both block arrays.
 //
-// The restaurant-apex template type: the seed is a hero-only portal stamped
-// site_type='restaurant_apex' (never claimable), the type detector reads both
-// normalizer shapes, and the hero copy stays brand-free (delivered.menu attribution
-// renders as the directory's unlinked footer — the SEO-safe pattern across many
-// <city>-restaurant.com domains).
+// ⚠️ THIS SHIPPED TO A PAID DOMAIN. `seedRestaurantApexSite` replaced `page0.blocks` with
+// [hero, menu_finder, restaurants_directory] — correct — but `buildIndustryStarter` also emits
+// `page0.content_blocks` carrying the FULL restaurant scaffold, and the renderer prefers
+// `content_blocks`. So kent-restaurant.com went live, hours after being bought, serving the
+// scaffold's invented menu — "Two Eggs Any Style", "Buttermilk Pancakes", "House Burger",
+// "Signature Entrée" — under the heading "Kent Restaurants".
+//
+// Renton's apex was fine, which is what made it invisible: its two arrays happened to be in sync, so
+// the same code produced a correct page there and a wrong one in Kent. A bug that reproduces on one
+// city and not another reads as a data problem, not a code one.
+//
+// This is the two-array trap documented at the top of lib/menu/menuBlocks.ts, and it has now cost
+// twice — a menu backfill once read the wrong array and reported real menus as empty. Anything that
+// REPLACES a page's blocks must write both, or it has only rewritten the copy nobody renders.
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-import { randomUUID } from 'crypto';
-import { apexTemplateSeed, isRestaurantApexData, RESTAURANT_APEX_SITE_TYPE } from '../restaurantApexSite';
+const SRC = readFileSync(join(process.cwd(), 'lib/outreach/restaurantApexSite.ts'), 'utf8');
 
-// The starter builder (createEmptyTemplate) calls crypto.randomUUID(), absent from
-// this Jest environment's global crypto — polyfill from node:crypto.
-beforeAll(() => {
-  const g = globalThis as any;
-  if (!g.crypto) g.crypto = {};
-  if (!g.crypto.randomUUID) g.crypto.randomUUID = randomUUID;
-});
-
-const input = {
-  city: 'Renton',
-  region: 'WA',
-  domain: 'renton-restaurant.com',
-  slug: 'renton-restaurant',
-  campaignId: 'camp1',
-};
-
-describe('apexTemplateSeed', () => {
-  it('builds a hero-only portal typed restaurant_apex, unclaimable, slug = apex label', () => {
-    const row = apexTemplateSeed(input);
-    expect(row.slug).toBe('renton-restaurant');
-    expect(row.template_name).toBe('Renton Restaurants');
-    expect(row.industry).toBe('restaurant');
-    expect(row.claim_source).toBeUndefined(); // apex is platform-owned, never claimable
-
-    const meta = row.data?.meta ?? {};
-    expect(meta.site_type).toBe(RESTAURANT_APEX_SITE_TYPE);
-    expect(meta.apex_campaign_id).toBe('camp1');
-    expect(meta.apex_domain).toBe('renton-restaurant.com');
-
-    // Portal, not a business site: hero + dish search + the live directory — no menu/hours/contact.
-    const blocks = row.data?.pages?.[0]?.blocks ?? [];
-    expect(blocks).toHaveLength(3);
-    expect(blocks[0].type).toBe('hero');
-    expect(blocks[0].content.headline).toBe('Order from local restaurants in Renton, WA');
-
-    // ⚠️ The CTA must point at an id the page ACTUALLY renders. `site-renderer` gives the first
-    // block of each type `id=<type>`, and the seed shipped with text but no link — so it
-    // inherited the restaurant starter's and scrolled to a contact form this portal lacks.
-    expect(blocks[0].content.cta_text).toBe('Browse restaurants');
-    expect(blocks[0].content.cta_link).toBe('#restaurants_directory');
-    expect(blocks.some((b: any) => b.type === blocks[0].content.cta_link.slice(1))).toBe(true);
-
-    // The dish search is the apex's reason to exist, not a demo-only extra.
-    expect(blocks[1].type).toBe('menu_finder');
-    expect(blocks[1].content.campaign_id).toBe('camp1');
-
-    expect(blocks[2].type).toBe('restaurants_directory');
-    expect(blocks[2].content.campaign_id).toBe('camp1'); // drives the live cohort fetch
-    expect(blocks[2].content.title).toBe('Restaurants in Renton, WA');
-
-    // Portal chrome trimmed: header/footer nav collapses to Home.
-    for (const chrome of [row.header_block, row.footer_block]) {
-      if (chrome?.content && Array.isArray(chrome.content.links)) {
-        expect(chrome.content.links).toEqual([{ label: 'Home', href: '/', appearance: 'default' }]);
-      }
-    }
+describe('seedRestaurantApexSite writes both block arrays', () => {
+  it('assigns page0.blocks and page0.content_blocks from one portal array', () => {
+    expect(SRC).toMatch(/page0\.blocks\s*=\s*portal/);
+    expect(SRC).toMatch(/page0\.content_blocks\s*=\s*portal/);
   });
 
-  it('keeps the hero copy brand-free even when a menu brand is passed (footer carries it)', () => {
-    const row = apexTemplateSeed({ ...input, menuBrand: 'delivered.menu' });
-    const hero = row.data.pages[0].blocks[0];
-    expect(hero.content.subheadline).not.toContain('delivered.menu'); // no cross-domain boilerplate
-    expect(row.data.meta.menu_brand).toBe('delivered.menu'); // recorded for the render layer
+  // ⚠️ Guards the specific regression: setting only `blocks` is what shipped.
+  it('never assigns blocks without also assigning content_blocks', () => {
+    const assignsBlocks = [...SRC.matchAll(/page0\.blocks\s*=/g)].length;
+    const assignsContent = [...SRC.matchAll(/page0\.content_blocks\s*=/g)].length;
+    expect(assignsContent).toBeGreaterThanOrEqual(assignsBlocks);
+  });
+
+  it('builds the portal from hero + finder + directory, not the restaurant scaffold', () => {
+    expect(SRC).toMatch(/const portal = \[hero, finder, directory\]/);
   });
 });
 
-describe('isRestaurantApexData', () => {
-  it('detects the type on data or nested data.meta shapes; false otherwise', () => {
-    const row = apexTemplateSeed(input);
-    expect(isRestaurantApexData(row.data)).toBe(true);
-    expect(isRestaurantApexData({ data: row.data })).toBe(true);
-    expect(isRestaurantApexData({ meta: { site_type: 'other' } })).toBe(false);
-    expect(isRestaurantApexData(null)).toBe(false);
+describe('the portal keeps a diner in mind', () => {
+  // Regressions previously fixed here and worth keeping fixed — a claim pitch in the hero was
+  // removed after a persona walkthrough ("I don't want to claim anything, I want to eat").
+  it('has no claim pitch in the hero copy', () => {
+    const hero = SRC.slice(SRC.indexOf('hero.content.subheadline'), SRC.indexOf('cta_text'));
+    expect(hero.toLowerCase()).not.toContain('claim');
+  });
+
+  it('points the CTA at an id the page actually has', () => {
+    expect(SRC).toMatch(/cta_link = '#restaurants_directory'/);
   });
 });

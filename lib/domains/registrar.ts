@@ -228,10 +228,28 @@ async function vercelBuy(
 export function readRegistrantContact():
   | { ok: true; contact: RegistrantContact }
   | { ok: false; missing: string[] } {
-  const pick = (base: string): string =>
-    (process.env[`DOMAIN_REGISTRANT_${base}`] ||
-      process.env[`NAMECHEAP_REGISTRANT_${base}`] ||
-      '').trim();
+  // ⚠️ READ LITERALLY, NOT VIA A TEMPLATE KEY. This used to be
+  // `process.env[`DOMAIN_REGISTRANT_${base}`]`, which works at runtime but is invisible to every
+  // static tool — including our own config-health scan (rule 7a), which flags a declared gate key
+  // that nothing appears to read. Declaring these in CONFIG_GATES therefore failed the build until
+  // the reads became literal. The scanner was right to complain: a config surface nobody can
+  // enumerate is one nobody can check, and the whole point of the gate is answering "will the buy
+  // actually work?" before an operator clicks a priced button.
+  //
+  // Both spellings are kept — NAMECHEAP_* predates the Vercel registrar path.
+  const ENV: Record<string, Array<string | undefined>> = {
+    FIRST: [process.env.DOMAIN_REGISTRANT_FIRST, process.env.NAMECHEAP_REGISTRANT_FIRST],
+    LAST: [process.env.DOMAIN_REGISTRANT_LAST, process.env.NAMECHEAP_REGISTRANT_LAST],
+    EMAIL: [process.env.DOMAIN_REGISTRANT_EMAIL, process.env.NAMECHEAP_REGISTRANT_EMAIL],
+    PHONE: [process.env.DOMAIN_REGISTRANT_PHONE, process.env.NAMECHEAP_REGISTRANT_PHONE],
+    ADDRESS: [process.env.DOMAIN_REGISTRANT_ADDRESS, process.env.NAMECHEAP_REGISTRANT_ADDRESS],
+    CITY: [process.env.DOMAIN_REGISTRANT_CITY, process.env.NAMECHEAP_REGISTRANT_CITY],
+    STATE: [process.env.DOMAIN_REGISTRANT_STATE, process.env.NAMECHEAP_REGISTRANT_STATE],
+    ZIP: [process.env.DOMAIN_REGISTRANT_ZIP, process.env.NAMECHEAP_REGISTRANT_ZIP],
+    COUNTRY: [process.env.DOMAIN_REGISTRANT_COUNTRY, process.env.NAMECHEAP_REGISTRANT_COUNTRY],
+    ORG: [process.env.DOMAIN_REGISTRANT_ORG, process.env.NAMECHEAP_REGISTRANT_ORG],
+  };
+  const pick = (base: string): string => (ENV[base]?.find((v) => v && v.trim()) ?? '').trim();
 
   const contact: RegistrantContact = {
     firstName: pick('FIRST'),

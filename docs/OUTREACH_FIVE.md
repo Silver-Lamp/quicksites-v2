@@ -6,9 +6,9 @@ A pre-registered test of one question, by hand, with no tooling.
 > rules that are not style preferences — lives in **[`OUTREACH_METHOD.md`](OUTREACH_METHOD.md)**.
 > This doc is the experiment and its results; that one is how to do it again.
 
-**Status:** batch 1 + 2 sent 2026-08-11/12 · **batch 3 (Kent) sent 2026-08-13** ·
-**15 businesses contacted, 20 touches, 0 replies** · batch 1's window closes **2026-08-18** ·
-**Owner:** Sandon · **Written:** 2026-08-10
+**Status:** batches 1–4 sent 2026-08-11 → 08-13 · **19 businesses contacted, 24 touches, 0 replies** ·
+⏸ Happy At the Bay held to **2026-08-14** (shares a building with Pho Bac) ·
+batch 1's window closes **2026-08-18** · **Owner:** Sandon · **Written:** 2026-08-10
 
 ---
 
@@ -716,7 +716,7 @@ texts learn they are a list, not a person's afternoon.
 **Recommendation: send nine today, hold Happy At the Bay for tomorrow.** The cost is one day. The
 thing being protected is the only thing the whole experiment is testing.
 
-### The five
+### The five — ✅ four SENT 2026-08-13, one held
 
 | # | Business | Phone | Verified hook |
 |---|---|---|---|
@@ -724,7 +724,7 @@ thing being protected is the only thing the whole experiment is testing.
 | 2 | **#1 Hawaiian BBQ** | (253) 243-7680 | **our error** — "Mini 10.75 Reg. 13.95" mashed into one price |
 | 3 | **Kim's Teriyaki** | (253) 854-0667 | name says teriyaki; the biggest section is a Chinese wok menu |
 | 4 | **Joe's Deli** | (425) 251-9847 | weekday-only counter in an industrial park, doing Eggs Benedict |
-| 5 | **Happy At the Bay** | (425) 251-6667 | ⏸ **hold to tomorrow** — neighbour of Pho Bac (batch 3) |
+| 5 | **Happy At the Bay** | (425) 251-6667 | ⏸ **HELD to 2026-08-14** — neighbour of Pho Bac (sent 08-13) |
 
 ---
 

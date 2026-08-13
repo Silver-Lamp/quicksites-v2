@@ -15,6 +15,7 @@ import {
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
 import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, computePhysicalShippingCents, parseStripeTaxTotals } from './fees';
 import { recordAdjustment } from './inventoryLedger';
+import { sendOrderAlert } from '@/lib/commerce/orderNotify';
 import { recordCustomerForPaidOrder } from './customers';
 
 /** Create a pending order and its line items. Returns order id and totals. */
@@ -283,6 +284,44 @@ export async function markOrderPaid(
       raw,
       occurredAtIso: new Date().toISOString(),
     });
+  }
+
+  // 3c) TELL THE MERCHANT. Best-effort and idempotent (see lib/commerce/orderNotify.ts).
+  //
+  // ⚠️ This step is the reason the rest of them are worth anything. Everything above serves us —
+  // tax records, the CRM spine, the commission ledger. None of it tells the restaurant that food
+  // needs cooking. Until this existed, a merchant's only route to an order was to open
+  // /merchant/orders and look, which is not a thing a kitchen does mid-rush.
+  //
+  // Wrapped like every other step: a failed alert must never roll back a captured payment or make
+  // Stripe retry a webhook whose real work already succeeded.
+  try {
+    const { data: full } = await supabase
+      .from('orders')
+      .select('site_slug, currency, subtotal_cents, amount_cents, customer_email')
+      .eq('id', orderId)
+      .maybeSingle();
+    const { data: items } = await supabase
+      .from('order_items')
+      .select('title, quantity, total_cents')
+      .eq('order_id', orderId);
+
+    const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.quicksites.ai').replace(/\/+$/, '');
+    await sendOrderAlert(supabase, {
+      orderId,
+      merchantId: orderRow.merchant_id ?? null,
+      siteSlug: (full as any)?.site_slug ?? null,
+      totalCents: amountCents,
+      currency: (full as any)?.currency ?? orderRow.currency ?? 'usd',
+      lines: (items ?? []).map((i: any) => ({
+        title: i.title ?? 'Item',
+        quantity: Number(i.quantity ?? 1),
+        totalCents: Number(i.total_cents ?? 0),
+      })),
+      ordersUrl: `${base}/merchant/orders`,
+    });
+  } catch (e: any) {
+    console.warn('Order alert step failed:', e?.message || e);
   }
 
   // 4) Lock attribution on first revenue

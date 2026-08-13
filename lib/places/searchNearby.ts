@@ -15,6 +15,17 @@
 
 const SEARCH_NEARBY_URL = 'https://places.googleapis.com/v1/places:searchNearby';
 /** Shared response field mask — reused by the Text Search primitive. */
+// ⚠️ EVERY FIELD HERE COSTS. Places bills by SKU: id/name/address/location are Essentials, but
+// rating and userRatingCount push the call into a pricier tier. They are included deliberately —
+// see below — not because "more data is better".
+//
+// ⚠️ WHY rating + userRatingCount ARE WORTH THE SKU. The no-website cohorts we build sites for have
+// almost nothing we can honestly say about them: a name, a phone, an address. For restaurants we
+// recovered a MENU from listing photos, and that menu — specific, theirs, usually with a flaw we
+// could own — is the only reason the outreach messages read as written by a person. Auto shops (66%
+// no-website, the largest cohort found) have no menu. Their public reviews are the closest thing to
+// "their own words" available, and `outreach_prospects` has carried unused `rating` /
+// `review_count` columns the whole time.
 export const PLACES_FIELD_MASK = [
   'places.id',
   'places.displayName',
@@ -24,6 +35,8 @@ export const PLACES_FIELD_MASK = [
   'places.location',
   'places.types',
   'places.primaryType',
+  'places.rating',
+  'places.userRatingCount',
 ].join(',');
 
 export class PlacesError extends Error {
@@ -43,6 +56,10 @@ export type NearbyBusiness = {
   address: string | null;
   lat: number | null;
   lon: number | null;
+  /** Google star rating, or null when the place has none. Never 0 — see mapPlace. */
+  rating?: number | null;
+  /** How many reviews that rating is built on. A 5.0 from 2 people is not a 5.0 from 200. */
+  reviewCount?: number | null;
   types: string[];
 };
 
@@ -70,6 +87,10 @@ export function mapPlace(p: any): NearbyBusiness | null {
     lat: Number.isFinite(p?.location?.latitude) ? p.location.latitude : null,
     lon: Number.isFinite(p?.location?.longitude) ? p.location.longitude : null,
     types: Array.isArray(p?.types) ? p.types.map((t: unknown) => String(t)) : [],
+    // ⚠️ null, never 0. A shop with no rating and a shop rated 0.0 are different facts, and a 0
+    // would sort to the bottom of any "worst reviews first" list as though it were measured.
+    rating: Number.isFinite(p?.rating) ? Number(p.rating) : null,
+    reviewCount: Number.isFinite(p?.userRatingCount) ? Number(p.userRatingCount) : null,
   };
 }
 

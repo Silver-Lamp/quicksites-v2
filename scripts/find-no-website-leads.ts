@@ -111,6 +111,10 @@ async function main() {
     placeId: b.placeId,
     // Kept so a later step can re-check distance without re-querying Places.
     _km: b.lat != null && b.lon != null ? Math.round(haversineKm(lat, lon, b.lat, b.lon) * 10) / 10 : null,
+    // Carried for the hook-finding step. For a vertical with no menu (auto shops), a shop's own
+    // reviews are the closest thing to "their own words" we can honestly reference.
+    _rating: b.rating ?? null,
+    _reviews: b.reviewCount ?? null,
     // Kept for the human reading the file; the importer uses placeId.
     _name: b.name,
     _address: b.address ?? null,
@@ -118,7 +122,10 @@ async function main() {
 
   fs.writeFileSync(out, JSON.stringify(leads, null, 2));
   console.log(`\nWrote ${out} with ${leads.length} no-website leads.`);
-  for (const l of leads) console.log(`  · ${l._name}${l._km != null ? ` [${l._km}km]` : ''}${l._address ? ` — ${l._address}` : ''}`);
+  for (const l of leads) {
+    const stars = l._rating != null ? ` ${l._rating}★${l._reviews != null ? `/${l._reviews}` : ''}` : ' (unrated)';
+    console.log(`  · ${l._name}${l._km != null ? ` [${l._km}km]` : ''}${stars}${l._address ? ` — ${l._address}` : ''}`);
+  }
 }
 
 main().catch((e) => {

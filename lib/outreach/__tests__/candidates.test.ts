@@ -138,3 +138,63 @@ describe('ranking and reporting', () => {
     expect(countItems([{ items: [{}, {}] }, { items: [{}] }, {}])).toBe(3);
   });
 });
+
+// ── industry-aware eligibility ─────────────────────────────────────────────────────────────────
+// ⚠️ THE BUG: MIN_MENU_ITEMS encodes "enough of their own material", which for a restaurant is the
+// menu and for an auto shop is nothing of the sort. Running the qualifier over 204 real auto shops
+// returned ZERO — a rule written for food had silently become the definition of eligible.
+import { needsMenu } from '../candidates';
+
+function serviceDraft(opts: { phone?: string | null; name?: string | null; items?: any[] } = {}) {
+  return {
+    id: 'svc-1',
+    slug: 'carlos-auto-abc12',
+    template_name: opts.name === undefined ? 'Carlos Auto Repair' : opts.name,
+    industry: 'auto_repair',
+    data: {
+      meta: { contact: { phone: opts.phone === undefined ? '(973) 555-0100' : opts.phone } },
+      pages: [{ content_blocks: opts.items ? [{ type: 'menu', content: { sections: [{ name: 'M', items: opts.items }] } }] : [] }],
+    },
+  };
+}
+
+describe('which industries are judged on a menu', () => {
+  it('treats food as menu-based and everything else as not', () => {
+    expect(needsMenu('restaurant')).toBe(true);
+    expect(needsMenu('bakery')).toBe(true);
+    expect(needsMenu('auto_repair')).toBe(false);
+    expect(needsMenu('roofing')).toBe(false);
+  });
+
+  // Old callers pass no industry at all; they must keep the restaurant rule.
+  it('defaults to the menu rule when industry is absent', () => {
+    expect(needsMenu(undefined)).toBe(true);
+    expect(needsMenu(null)).toBe(true);
+  });
+});
+
+describe('a service business qualifies on reachability', () => {
+  it('is eligible with just a name and a phone', () => {
+    expect(disqualify(serviceDraft())).toBeNull();
+  });
+
+  it('is still rejected with nobody to call', () => {
+    expect(disqualify(serviceDraft({ phone: null }))).toBe('no-phone');
+  });
+
+  it('is rejected with no name — there is nothing to address', () => {
+    expect(disqualify(serviceDraft({ name: '' }))).toBe('no-name');
+  });
+
+  // ⚠️ The one rule that must NOT become industry-specific. A mis-inferred industry can put the food
+  // scaffold's invented dishes on an auto shop, and shipping that is the worst artifact regardless
+  // of what the business sells.
+  it('still rejects a placeholder menu on a NON-food draft', () => {
+    const placeholders = [...PLACEHOLDER_ITEM_NAMES].map((name) => ({ name }));
+    expect(disqualify(serviceDraft({ items: placeholders }))).toBe('placeholder-menu');
+  });
+
+  it('does not demand 8 items from a business that has no menu', () => {
+    expect(disqualify(serviceDraft({ items: [{ name: 'Oil Change' }] }))).toBeNull();
+  });
+});

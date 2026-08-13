@@ -179,6 +179,110 @@ export default function ForDanielPage() {
           </div>
         </section>
 
+        {/* Paterson — the specific, timely ask. Added 2026-08-13.
+            ⚠️ HONESTY RULES FOR THIS SECTION, same standard as the rest of the page:
+            the reply count is stated as ZERO because it is zero. Recruiting someone into an
+            unproven experiment without saying so poisons it if it fails — and he would find out
+            from the silence anyway. The one thing asked of him (write the messages himself) is
+            stated as a rule rather than a preference, because a person's name on words they did
+            not write is the failure the whole approach is built to avoid. */}
+        <section className="mx-auto max-w-3xl px-6 pt-10 pb-4">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+            The Paterson thing — if you want it
+          </h2>
+          <div className="mt-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.05] p-6">
+            <p className="text-sm leading-relaxed text-zinc-300">
+              You mentioned liking delivered.menu, and that helping small restaurant owners appeals
+              to you. There are <span className="font-semibold text-white">12 restaurants in
+              Paterson</span> that have no website at all — just a Google listing — and each one now
+              has a working ordering page built from their own menu photos.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-300">
+              They&apos;re already live on a domain with your city&apos;s name on it:
+            </p>
+            <a
+              href="https://paterson-restaurants.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 block rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-sm text-emerald-300 hover:border-emerald-500/40"
+            >
+              paterson-restaurants.com
+            </a>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              Search every dish across all twelve kitchens, order where you can, call the rest
+              direct. Nothing is claimed yet — first owner to claim their page wins the domain
+              featuring.
+            </p>
+
+            <h3 className="mt-6 text-sm font-semibold text-white">What I&apos;d actually be asking</h3>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+              Pick five. Open each page and read it like the owner would. Find one true thing —
+              their hours are missing a day, the prices came through wrong, they serve something
+              nobody could find online — and text them about that one thing. Five, by hand, in an
+              afternoon lull.
+            </p>
+
+            <div className="mt-4 rounded-lg border border-amber-500/25 bg-amber-500/[0.05] p-4">
+              <p className="text-sm font-semibold text-amber-200">Two rules, and they matter</p>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                <span className="text-white">You write the messages, not me.</span> The only reason
+                any of this works — if it works — is that a real person looked at their page and
+                noticed something true. The moment they&apos;re written for you and sent under your
+                name, it&apos;s a mail merge with extra steps, and an owner can smell that.
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                <span className="text-white">Five, not fifty.</span> Blasting the list measures
+                something different and burns it.
+              </p>
+            </div>
+
+            <More label="Straight answer: does this work yet?">
+              <p>
+                <span className="text-zinc-200">No idea, and I want to be honest about that.</span>{' '}
+                I&apos;ve sent 15 of these myself and gotten <span className="text-zinc-200">zero
+                replies</span> so far. Ten more are queued. The windows are still open, so it&apos;s
+                genuinely undecided rather than quietly failing.
+              </p>
+              <p>
+                So this isn&apos;t &ldquo;come help with the thing that&apos;s working.&rdquo;
+                It&apos;s &ldquo;come help find out.&rdquo; If it&apos;s a dud, that&apos;s worth
+                knowing in an afternoon rather than after a month of building.
+              </p>
+              <p>
+                There&apos;s also a question only you can answer: whether this works when it
+                isn&apos;t me writing it. If it only lands because of how I write a text, it never
+                scales — and that&apos;s the most useful thing your five would tell us.
+              </p>
+            </More>
+
+            <More label="What you'd get, concretely">
+              <p>
+                Your code above already exists and is unclaimed. Any of these restaurants that
+                signs up under it is tied to you for the life of their account — you earn a share of
+                what QuickSites earns on their orders, not a one-off.
+              </p>
+              <p>
+                The restaurants pay nothing to keep the page. The money only ever comes from a
+                percentage of orders that actually happen, so nobody is being sold anything up
+                front. That&apos;s the whole pitch to them, and it happens to be true.
+              </p>
+            </More>
+
+            <More label="What you'd need from me">
+              <p>
+                An admin login so you can see the drafts and what&apos;s notable about each one —
+                there&apos;s a tool that flags things like &ldquo;prices came through blank&rdquo;
+                or &ldquo;hours are missing Tuesday&rdquo; so you&apos;re not reading raw menus.
+              </p>
+              <p>
+                Worth saying: admin access is broad — it sees more than the Paterson list. If
+                you&apos;d rather not have that, I can just send you the five pages and their
+                numbers.
+              </p>
+            </More>
+          </div>
+        </section>
+
         {/* The core seam */}
         <section className="mx-auto max-w-3xl px-6 pb-4">
           <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">

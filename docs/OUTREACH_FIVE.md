@@ -71,9 +71,33 @@ PorchHearth is waiting on this result before spending their own list of 857 Food
 both sides fixed the interpretation **in advance** — otherwise whoever sees the number first picks
 the flattering reading.
 
-⚠️ **The populations are not equivalent, and that asymmetry is the whole reason to write this down.**
-Our cohort has **no working channel at all** — no website, only a Google listing. Theirs *are already
-selling* on a platform. A finished page is worth more to someone with nothing.
+⚠️ **RETRACTED 2026-08-13, hours after it was written — the asymmetry was mostly backwards.** As
+first written this said: our cohort has no working channel, theirs *are already selling*, so ours is
+strictly easier and a good result would not transfer. PorchHearth opened the file after I labelled it
+as an assumption I had not checked, and their "857 sellers with contact details" is wrong three
+times over: **42 organic sellers + 815 bulk-imported directory rows** (host name is the literal
+string `"N A"` on all 815, zero reviews, one dish each), and **zero email or phone fields across all
+857** — the only address in the export is a synthetic `@foodnome-import.local`.
+
+So the corrected comparison:
+
+| their cohort | n | vs ours |
+|---|---|---|
+| bulk-imported directory rows | **815** | **the same population as ours** — a name in someone's database that never chose to be there |
+| organic sellers | **42** | genuinely channel-having; the original asymmetry holds *here only* |
+
+Which means a result on our side reads across **better** than either of us assumed, not worse.
+
+⚠️ **And the same mirror points back at us.** They described their own failure as *"'we acquired 857
+leads' was a description of a JSON file."* We hold **285 auto-built drafts and have contacted 10
+businesses**. The other **275 are inventory** by exactly their definition.
+
+⚠️ I got those two numbers wrong on the first pass of this very paragraph — wrote "182 drafts,
+contacted 15" while describing someone else quoting an unaudited integer. 182 was a stale
+*unclaimed* count, and **15 is the touch count, not the business count** (batch 1 received two each).
+Counting messages as people is the same error one layer down, and I made it inside the correction. Our own §"Why by hand" already says the
+pipeline produced inventory rather than conversations — this is that sentence arriving from outside,
+about someone else, and it is less comfortable in that direction.
 
 | result | what it licenses | what it does NOT license |
 |---|---|---|

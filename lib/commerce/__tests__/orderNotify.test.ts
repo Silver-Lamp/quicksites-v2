@@ -9,7 +9,9 @@
 import { alertSubject, alertHtml, money, resolveAlertRecipient, sendOrderAlert } from '../orderNotify';
 
 jest.mock('@/lib/email', () => ({ sendEmail: jest.fn(async () => ({ id: 'e1' })) }));
+jest.mock('@/lib/sms/sendSms', () => ({ sendSms: jest.fn(async () => ({ ok: true })) }));
 const { sendEmail } = jest.requireMock('@/lib/email');
+const { sendSms } = jest.requireMock('@/lib/sms/sendSms');
 
 const input = {
   orderId: 'o1',
@@ -53,7 +55,7 @@ function db(opts: { merchant?: any; email?: string | null; insertError?: any } =
   } as any;
 }
 
-beforeEach(() => sendEmail.mockClear());
+beforeEach(() => { sendEmail.mockClear(); sendSms.mockClear(); sendSms.mockResolvedValue({ ok: true }); });
 
 describe('the subject line', () => {
   // A phone lockscreen shows ~40 characters. An alert whose useful content is in the body is a
@@ -164,5 +166,62 @@ describe('exactly once', () => {
     const res = await sendOrderAlert(s, input as any);
     expect(res).toMatchObject({ sent: false, reason: 'send_failed' });
     expect(s.updated.some((u: any) => /resend down/.test(u.patch.error ?? ''))).toBe(true);
+  });
+});
+
+
+// ── SMS: the second channel ────────────────────────────────────────────────────────────────────
+import { alertSms } from '../orderNotify';
+
+describe('the text message', () => {
+  // ⚠️ One segment (160 chars) or it costs double and wraps badly on a lockscreen.
+  it('fits in a single SMS segment', () => {
+    expect(alertSms(input as any).length).toBeLessThanOrEqual(160);
+  });
+
+  it('leads with the money and carries a tappable full URL', () => {
+    const t = alertSms(input as any);
+    expect(t).toContain('$42.85');
+    expect(t).toContain('rays-real-pizza');
+    // Same rule as outreach: a bare host does not linkify on a phone.
+    expect(t).toMatch(/https:\/\//);
+  });
+
+  it('counts items rather than listing them', () => {
+    expect(alertSms(input as any)).toContain('3 items');
+  });
+});
+
+describe('when SMS is or is not possible', () => {
+  it('texts the number on file after the email succeeds', async () => {
+    const s = db({ merchant: { order_notify_email: 'k@r.com', order_notify_sms: '+15551234567' } });
+    await sendOrderAlert(s, input as any);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(sendSms).toHaveBeenCalledTimes(1);
+    expect(sendSms.mock.calls[0][0]).toBe('+15551234567');
+  });
+
+  // ⚠️ Three outcomes, not two. No number on file is NOT a failure — leaving both columns null
+  // keeps "not attempted" distinguishable from "tried and broke".
+  it('does not attempt SMS when no number is on file', async () => {
+    const s = db({ merchant: { order_notify_email: 'k@r.com' } });
+    await sendOrderAlert(s, input as any);
+    expect(sendSms).not.toHaveBeenCalled();
+    expect(s.updated.some((u: any) => 'sms_error' in u.patch)).toBe(false);
+  });
+
+  // The email already landed. A kitchen that got the email is not un-alerted.
+  it('still reports success when the text fails', async () => {
+    sendSms.mockResolvedValueOnce({ ok: false, error: 'sms_not_configured' });
+    const s = db({ merchant: { order_notify_email: 'k@r.com', order_notify_sms: '+15551234567' } });
+    const res = await sendOrderAlert(s, input as any);
+    expect(res).toEqual({ sent: true, recipient: 'k@r.com' });
+    expect(s.updated.some((u: any) => u.patch.sms_error === 'sms_not_configured')).toBe(true);
+  });
+
+  it('never lets an SMS throw break the paid transition', async () => {
+    sendSms.mockRejectedValueOnce(new Error('twilio exploded'));
+    const s = db({ merchant: { order_notify_email: 'k@r.com', order_notify_sms: '+15551234567' } });
+    await expect(sendOrderAlert(s, input as any)).resolves.toMatchObject({ sent: true });
   });
 });

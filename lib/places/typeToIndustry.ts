@@ -75,10 +75,22 @@ export function typeToIndustryKey(
   if (!Array.isArray(types) || types.length === 0) return fallback;
 
   // 1) Exact alias match on a non-generic type wins (scan in order for specificity).
+  //
+  // ⚠️ NORMALISE SPACES TO UNDERSCORES FIRST. The alias table is keyed on Google's raw type
+  // vocabulary (`car_repair`), but the Places DETAILS response returns DISPLAY LABELS — "Car
+  // Repair". Lowercasing alone leaves "car repair", which matches no alias; the loose resolver
+  // below doesn't know that phrase either; and the whole function then falls through to its
+  // `restaurant` default.
+  //
+  // That is how five real auto shops were built with the RESTAURANT scaffold — menu block, order
+  // bar and all — while their copy correctly said "Your Trusted Mechanics". Silent, because
+  // defaulting to `restaurant` is indistinguishable from correctly detecting a restaurant.
   for (const raw of types) {
     const t = String(raw).toLowerCase().trim();
-    if (!t || GENERIC_PLACE_TYPES.has(t)) continue;
+    const underscored = t.replace(/\s+/g, '_');
+    if (!t || GENERIC_PLACE_TYPES.has(underscored)) continue;
     if (PLACES_TYPE_ALIASES[t]) return PLACES_TYPE_ALIASES[t];
+    if (PLACES_TYPE_ALIASES[underscored]) return PLACES_TYPE_ALIASES[underscored];
   }
 
   // 2) Loose text resolution against each type/label (handles our titlecased

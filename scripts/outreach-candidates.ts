@@ -93,7 +93,7 @@ async function main() {
 
   const s = db();
   const [{ data: drafts }, { data: touches }] = await Promise.all([
-    s.from('templates').select('id,slug,template_name,data').eq('claim_source', 'listing_import').is('owner_id', null).limit(1000),
+    s.from('templates').select('id,slug,template_name,data,industry').eq('claim_source', 'listing_import').is('owner_id', null).limit(1000),
     s.from('outreach_touches').select('template_id'),
   ]);
   const contactedIds = new Set((touches ?? []).map((t: any) => t.template_id).filter(Boolean));
@@ -116,7 +116,8 @@ async function main() {
   }
 
   for (const c of rankCandidates(candidates)) {
-    console.log(`  ${String(c.items).padStart(3)} items /${String(c.sections).padStart(2)} sec  ${(c.city ?? '?').padEnd(12)} ${(c.phone ?? '').padEnd(16)} ${c.name}`);
+    const material = c.items ? `${String(c.items).padStart(3)} items /${String(c.sections).padStart(2)} sec` : `${String(c.industry ?? 'service').slice(0, 14).padEnd(14)}`;
+    console.log(`  ${material}  ${(c.city ?? '?').padEnd(12)} ${(c.phone ?? '').padEnd(16)} ${c.name}`);
     console.log(`       https://deliveredmenu.com/${c.slug}`);
   }
   if (!sum.eligible) {

@@ -30,13 +30,31 @@ export type CandidateInput = {
   slug: string | null;
   template_name: string | null;
   data: any;
+  /** Absent is treated as `restaurant` — the historical default, so old callers keep their rule. */
+  industry?: string | null;
 };
+
+/**
+ * Industries whose draft is worth nothing without a transcribed menu.
+ *
+ * ⚠️ THE MENU RULE IS NOT UNIVERSAL, AND TREATING IT AS ONE MADE EVERY NON-FOOD DRAFT INELIGIBLE.
+ * `MIN_MENU_ITEMS` encodes "is there enough of their own material for the page to look like theirs?"
+ * — which for a restaurant is the menu, and for an auto shop is nothing of the sort. Running
+ * `outreach:candidates` over 204 real auto shops returned ZERO, because a rule written for food
+ * silently became the definition of eligible.
+ */
+const MENU_INDUSTRIES = new Set(['restaurant', 'food', 'bakery', 'cafe', 'bar', 'food_truck']);
+
+export function needsMenu(industry?: string | null): boolean {
+  return MENU_INDUSTRIES.has(String(industry ?? 'restaurant'));
+}
 
 export type DisqualifyReason =
   | 'placeholder-menu'
   | 'no-phone'
   | 'menu-too-thin'
   | 'no-menu'
+  | 'no-name'
   | 'already-contacted';
 
 export type Candidate = {
@@ -50,6 +68,8 @@ export type Candidate = {
   sections: number;
   /** null = eligible. */
   disqualified: DisqualifyReason | null;
+  /** What the industry is judged as — menu-based or not. Surfaced so a zero list is explicable. */
+  industry: string | null;
 };
 
 function contactOf(data: any): any {
@@ -73,12 +93,36 @@ export function disqualify(
   opts: { contactedIds?: Set<string> } = {},
 ): DisqualifyReason | null {
   if (opts.contactedIds?.has(input.id)) return 'already-contacted';
+
   const sections = readMenuSections(input.data);
-  if (!sections.length) return 'no-menu';
-  if (isPlaceholderOnly(sections)) return 'placeholder-menu';
+  // ⚠️ Placeholder detection runs for EVERY industry, menu or not. The food scaffold's invented
+  // dishes can end up on a non-food draft through a mis-inferred industry, and shipping those is
+  // the worst artifact this pipeline produces regardless of what the business sells.
+  if (sections.length && isPlaceholderOnly(sections)) return 'placeholder-menu';
+
+  // ⚠️ ORDER PRESERVED FROM THE MENU-ONLY VERSION: no-menu is reported BEFORE no-phone for a food
+  // draft. Reordering these while adding the service path flipped an existing case from 'no-menu'
+  // to 'no-phone' and the test caught it. The reason it matters is the same reason placeholder goes
+  // first — the reason you report is the next action someone takes, and "find a phone number" is
+  // wrong advice for a draft whose menu never came through.
+  const menuBased = needsMenu(input.industry);
+  if (menuBased && !sections.length) return 'no-menu';
+
   const phone = contactOf(input.data).phone;
   if (!phone || !String(phone).trim()) return 'no-phone';
-  if (countItems(sections) < MIN_MENU_ITEMS) return 'menu-too-thin';
+
+  if (menuBased) {
+    if (countItems(sections) < MIN_MENU_ITEMS) return 'menu-too-thin';
+    return null;
+  }
+
+  // ⚠️ A SERVICE BUSINESS QUALIFIES ON REACHABILITY, NOT ON CONTENT VOLUME.
+  // We cannot recover an auto shop's price list, and there is nothing to transcribe. What makes the
+  // draft worth sending is that it is THEIRS and reachable: a name and a phone. The hook then comes
+  // from outside the template — their public reviews, their hours, the searchability gap — which is
+  // why the sweep now carries rating/reviewCount.
+  const name = String(input.template_name ?? '').trim();
+  if (!name) return 'no-name';
   return null;
 }
 
@@ -98,6 +142,7 @@ export function toCandidate(
     items: countItems(sections),
     sections: sections.length,
     disqualified: disqualify(input, opts),
+    industry: input.industry ?? null,
   };
 }
 

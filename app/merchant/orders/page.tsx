@@ -1,6 +1,8 @@
 // app/merchant/orders/page.tsx
 import { getServerSupabase } from '@/lib/supabase/server';
 import RefundButton from './refund-button';
+import FulfillmentButtons from './fulfillment-buttons';
+import { DEFAULT_FULFILLMENT, minutesBetween, type FulfillmentStatus } from '@/lib/commerce/fulfillment';
 
 function fmtCents(c: number, cur = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur }).format((c || 0) / 100);
@@ -23,11 +25,19 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
   // Forward-safe: customer_note / customer_email may not exist yet (migration not
   // applied) — fall back to the base columns so the page never 500s over an
   // optional column.
-  let { data: orders, error: ordErr } = await q(`${BASE_COLS}, customer_note, customer_email`);
-  if (ordErr && (ordErr.code === '42703' || /customer_note|customer_email/i.test(ordErr.message || ''))) {
-    const retry = await q(BASE_COLS);
+  // ⚠️ Same forward-safe pattern as customer_note above: fulfillment columns land in migration
+  // 20260825, and a merchant screen must never 500 because an optional column is not there yet.
+  const FULL = `${BASE_COLS}, customer_note, customer_email, fulfillment_status, accepted_at, ready_at, completed_at`;
+  let { data: orders, error: ordErr } = await q(FULL);
+  if (ordErr && (ordErr.code === '42703' || /customer_note|customer_email|fulfillment_status|accepted_at|ready_at|completed_at/i.test(ordErr.message || ''))) {
+    const retry = await q(`${BASE_COLS}, customer_note, customer_email`);
     orders = retry.data;
     ordErr = retry.error;
+    if (ordErr && (ordErr.code === '42703' || /customer_note|customer_email/i.test(ordErr.message || ''))) {
+      const bare = await q(BASE_COLS);
+      orders = bare.data;
+      ordErr = bare.error;
+    }
   }
   // Distinguish a genuine "no orders" from a query failure, so we don't mislead
   // a merchant into thinking they have none when the load actually errored.
@@ -47,7 +57,7 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
         <table className="min-w-full text-sm">
           <thead className="bg-neutral-900">
             <tr className="[&>th]:px-4 [&>th]:py-3 text-left">
-              <th>When</th><th>Order</th><th>Customer</th><th>Site</th><th>Status</th><th>Provider</th><th>Total</th><th></th>
+              <th>When</th><th>Order</th><th>Customer</th><th>Site</th><th>Payment</th><th>Total</th><th className="text-right">Kitchen</th><th></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-800">
@@ -77,8 +87,26 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
                     </div>
                   )}
                 </td>
-                <td className="uppercase text-xs text-neutral-400">{o.provider || '-'}</td>
                 <td>{fmtCents(o.total_cents, o.currency)}</td>
+                <td className="text-right">
+                  {o.status === 'paid' ? (
+                    <>
+                      <FulfillmentButtons
+                        orderId={o.id}
+                        initial={((o as any).fulfillment_status ?? DEFAULT_FULFILLMENT) as FulfillmentStatus}
+                      />
+                      {/* Ticket time, only when both stamps exist. `null` means "we cannot say",
+                          which must never render as "0 min". */}
+                      {minutesBetween((o as any).accepted_at, (o as any).ready_at) !== null && (
+                        <div className="mt-1 text-[11px] text-neutral-500">
+                          {minutesBetween((o as any).accepted_at, (o as any).ready_at)} min to ready
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-xs text-neutral-600">—</span>
+                  )}
+                </td>
                 <td className="text-right">{o.status === 'paid' && <RefundButton orderId={o.id} />}</td>
               </tr>
             ))}

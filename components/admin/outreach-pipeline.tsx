@@ -9,6 +9,8 @@ import { menuSiteUrl } from '@/lib/menu/deliveredMenu';
 import type { DemandLead } from '@/lib/menu/demand';
 import OutreachActions from '@/components/admin/outreach-actions';
 import DemandLeadsCell from '@/components/admin/demand-leads-cell';
+import DraftSignalsCell from '@/components/admin/draft-signals-cell';
+import type { Signal } from '@/lib/outreach/draftSignals';
 
 export type OutreachDraft = {
   id: string;
@@ -24,6 +26,8 @@ export type OutreachDraft = {
   demandCalls?: number;
   /** Order-ahead leads that left a name/phone/items — newest first. */
   demandLeads?: DemandLead[];
+  /** What's notable/wrong about this draft (lib/outreach/draftSignals.ts). */
+  signals?: Signal[];
   /** Phase 2: have we already texted the restaurant about the demand? */
   demandNotified?: boolean;
   /** The restaurant's own phone (for a one-tap manual follow-up). */
@@ -82,7 +86,7 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
         <table className="min-w-full text-sm">
           <thead className="bg-neutral-900">
             <tr className="text-left [&>th]:px-4 [&>th]:py-3 [&>th]:font-medium [&>th]:text-neutral-400">
-              <th>Business</th><th>Built</th><th>Menu</th><th>Demand</th><th>Status</th><th>Preview</th><th></th>
+              <th>Business</th><th>Built</th><th>Menu</th><th>Notable</th><th>Demand</th><th>Status</th><th>Preview</th><th></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-800">
@@ -106,6 +110,9 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
                     ) : (
                       <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-500">no menu</span>
                     )}
+                  </td>
+                  <td className="align-top">
+                    <DraftSignalsCell signals={r.signals} />
                   </td>
                   <td>
                     <DemandLeadsCell

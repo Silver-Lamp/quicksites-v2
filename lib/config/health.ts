@@ -138,6 +138,38 @@ export const CONFIG_GATES: ConfigGate[] = [
     breaks: 'Buying/attaching customer domains fails with a 500. Existing domains are unaffected.',
   },
   {
+    // ⚠️ SEPARATE FROM `domains` ON PURPOSE. Attaching a domain needs only the token, and that is
+    // the common case — folding these keys into `domains` would report `incomplete` on every deploy
+    // that never intends to buy, which is the false-CRITICAL this file's own comment warns about.
+    //
+    // But `domains: ready` was ALSO misleading on its own: it answered "can we call Vercel?" while
+    // the operator was reading it as "can we buy?". Registration additionally needs a full
+    // registrant contact — ICANN requires it — and without it the one-click buy fails at submit,
+    // after the price has been shown and the button clicked. Found while pricing
+    // <city>-restaurants.com: the gate said ready and nothing in /status could tell me whether a
+    // purchase would actually go through.
+    key: 'domain_purchase',
+    label: 'One-click domain purchase (Vercel registrar)',
+    enabledBy: 'VERCEL_DOMAIN_REGISTER_ENABLED',
+    requires: ['VERCEL_TOKEN'],
+    // Either spelling satisfies each field — NAMECHEAP_* predates the Vercel registrar path and
+    // readRegistrantContact() still honours it, so requiring only DOMAIN_* would cry wolf on a
+    // working Namecheap-configured deploy.
+    requiresAnyOf: [
+      ['DOMAIN_REGISTRANT_FIRST', 'NAMECHEAP_REGISTRANT_FIRST'],
+      ['DOMAIN_REGISTRANT_LAST', 'NAMECHEAP_REGISTRANT_LAST'],
+      ['DOMAIN_REGISTRANT_EMAIL', 'NAMECHEAP_REGISTRANT_EMAIL'],
+      ['DOMAIN_REGISTRANT_PHONE', 'NAMECHEAP_REGISTRANT_PHONE'],
+      ['DOMAIN_REGISTRANT_ADDRESS', 'NAMECHEAP_REGISTRANT_ADDRESS'],
+      ['DOMAIN_REGISTRANT_CITY', 'NAMECHEAP_REGISTRANT_CITY'],
+      ['DOMAIN_REGISTRANT_STATE', 'NAMECHEAP_REGISTRANT_STATE'],
+      ['DOMAIN_REGISTRANT_ZIP', 'NAMECHEAP_REGISTRANT_ZIP'],
+    ],
+    degradeOnly: true,
+    breaks:
+      'The Buy button is shown with a price but the purchase fails at submit — ICANN requires a complete registrant contact. The operator sees a price, clicks, and gets an error.',
+  },
+  {
     key: 'captcha',
     label: 'Signup/subscribe captcha',
     requires: ['RECAPTCHA_SECRET_KEY'],

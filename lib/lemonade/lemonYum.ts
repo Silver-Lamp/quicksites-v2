@@ -55,6 +55,31 @@ export function isLemonYumHost(host: string): boolean {
  * forgetting to update this list is a 404 on a stand that does not exist, not our pricing page
  * showing up on a child's lemonade stand domain.
  */
+/**
+ * ⚠️ APP ENTRY POINTS THAT MUST ESCAPE THE BRAND HOST.
+ *
+ * The rule above ("an unknown first segment is a stand slug") protects a customer's domain from
+ * leaking our marketing — but I wrote that it "rots in the safe direction" without naming what it
+ * breaks, and this is what: a slug-shaped APP route gets swallowed too. `/admin/templates/new` —
+ * the target of the first CTA on the page I shipped — rewrote to `/sites/admin/templates/new`
+ * and 404'd on lemonyum.com.
+ *
+ * Both failure directions are real. The reserved list stops marketing leaking ONTO the brand
+ * host; this list stops the app disappearing FROM it. Neither is the "safe" default on its own,
+ * and claiming one of them was is what let a broken CTA ship.
+ *
+ * These redirect to the app rather than rendering here: the builder wants a logged-in session on
+ * the app's own domain, and serving /admin under a lemonade brand is confusing even when it works.
+ */
+const APP_SEGMENTS = new Set(['admin', 'login', 'signup', 'build', 'merchant', 'dashboard', 'account']);
+
+export function lemonYumAppRedirect(pathname: string, search: string): string | null {
+  const seg = (pathname || '/').split('/').filter(Boolean)[0]?.toLowerCase();
+  if (!seg || !APP_SEGMENTS.has(seg)) return null;
+  const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.quicksites.ai').replace(/\/+$/, '');
+  return `${base}${pathname}${search || ''}`;
+}
+
 const RESERVED_SEGMENTS = new Set([
   'api',
   '_next',

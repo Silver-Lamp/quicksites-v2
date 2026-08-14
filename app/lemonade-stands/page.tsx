@@ -45,6 +45,21 @@ export const metadata = {
   },
 };
 
+/**
+ * ⚠️ ABSOLUTE, NOT A ROOT-RELATIVE PATH.
+ *
+ * This page is served on lemonyum.com as well as quicksites.ai, and the builder lives on the
+ * app. As a relative `/admin/...` it was rewritten by the brand host's own routing into a stand
+ * lookup and 404'd — the first CTA on the page, broken the moment the domain went live.
+ *
+ * Middleware now also redirects app segments off the brand hosts, which fixes any such link.
+ * This is belt-and-braces on the one that matters most: a CTA that depends on a reserved-path
+ * list staying complete is a CTA that breaks the next time someone adds a route.
+ */
+const BUILDER_URL =
+  `${(process.env.NEXT_PUBLIC_APP_URL || 'https://www.quicksites.ai').replace(/\/+$/, '')}` +
+  '/admin/templates/new?industry=lemonade_stand';
+
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-zinc-200 bg-white/70 shadow-sm p-5 text-left">
@@ -147,7 +162,7 @@ export default function LemonadeStandsPage() {
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/admin/templates/new?industry=lemonade_stand"
+              href={BUILDER_URL}
               className="inline-block rounded-lg bg-yellow-400 px-6 py-3 text-base font-semibold text-zinc-950 shadow-lg transition hover:bg-yellow-300"
             >
               Set up a stand
@@ -254,7 +269,7 @@ export default function LemonadeStandsPage() {
               anyway.
             </p>
             <Link
-              href="/admin/templates/new?industry=lemonade_stand"
+              href={BUILDER_URL}
               className="mt-7 inline-block rounded-lg bg-yellow-400 px-6 py-3 text-base font-semibold text-zinc-950 shadow-lg transition hover:bg-yellow-300"
             >
               Set up a stand

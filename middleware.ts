@@ -16,6 +16,7 @@ import {
   yardSaleSubdomainCode,
   yardSaleCodeFromPath,
   isYardSaleApexPage,
+  yardSaleAppRedirect,
 } from '@/lib/garageSales/yardSaleSites';
 import {
   lemonYumEnabled,
@@ -23,6 +24,7 @@ import {
   isLemonYumApexHost,
   lemonYumSubdomainSlug,
   lemonYumPathSlug,
+  lemonYumAppRedirect,
 } from '@/lib/lemonade/lemonYum';
 import { PUBLIC_PATH_HEADER } from '@/lib/seo/canonicalUrl';
 
@@ -305,6 +307,9 @@ export async function middleware(req: NextRequest) {
     if (subCode) return toSticker(subCode);
 
     if (isYardSaleApexHost(host)) {
+      const appAway = yardSaleAppRedirect(pathname, url.search);
+      if (appAway) return withCookies(NextResponse.redirect(appAway, 307));
+
       const code = yardSaleCodeFromPath(pathname);
       if (code) return toSticker(code);
 
@@ -347,6 +352,10 @@ export async function middleware(req: NextRequest) {
     if (subSlug) return toStand(subSlug, pathname === '/' ? '' : pathname);
 
     if (isLemonYumApexHost(host)) {
+      // App routes leave for the app before anything can mistake them for a stand.
+      const appAway = lemonYumAppRedirect(pathname, url.search);
+      if (appAway) return withCookies(NextResponse.redirect(appAway, 307));
+
       const slug = lemonYumPathSlug(pathname);
       if (slug) return toStand(slug, pathname.replace(/^\/[^/]+/, ''));
 

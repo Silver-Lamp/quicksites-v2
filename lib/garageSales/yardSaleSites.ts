@@ -80,6 +80,20 @@ export function isYardSaleApexPage(pathname: string): boolean {
   return APEX_PAGES.has(seg.toLowerCase());
 }
 
+/**
+ * App entry points that must escape the brand host — same reasoning as lemonYum's, and needed
+ * here too: a code-shaped fence sends `/admin/...` to the directory instead of the builder,
+ * which is a friendlier wrong answer but still a wrong one.
+ */
+const APP_SEGMENTS = new Set(['admin', 'login', 'signup', 'build', 'merchant', 'dashboard', 'account']);
+
+export function yardSaleAppRedirect(pathname: string, search: string): string | null {
+  const seg = (pathname || '/').split('/').filter(Boolean)[0]?.toLowerCase();
+  if (!seg || !APP_SEGMENTS.has(seg)) return null;
+  const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.quicksites.ai').replace(/\/+$/, '');
+  return `${base}${pathname}${search || ''}`;
+}
+
 /** The URL to print on a sticker, or null when the branded host isn't configured. */
 export function yardSaleStickerUrl(code: string): string | null {
   if (!YARDSALE_BASE_DOMAIN || !code) return null;

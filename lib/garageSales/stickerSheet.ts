@@ -17,6 +17,7 @@
 // by hand, which is what v1 is: printed on paper, cut out, and stuck on with tape.
 import QRCode from 'qrcode';
 import { formatCode } from './codes';
+import { yardSaleStickerUrl } from './yardSaleSites';
 
 export type StickerSheetModel = {
   codes: string[];
@@ -30,7 +31,10 @@ const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export function scanUrlFor(baseUrl: string, code: string): string {
-  return `${(baseUrl || '').replace(/\/+$/, '')}/s/${code}`;
+  // Prefer the branded host once yardsalesites.com is configured — it is shorter on a sticker,
+  // self-explaining to a stranger reading it at 20mph, and a `.com` so it linkifies when texted.
+  // Falls back to the platform path while inert, so sheets printed today keep resolving.
+  return yardSaleStickerUrl(code) ?? `${(baseUrl || '').replace(/\/+$/, '')}/s/${code}`;
 }
 
 export async function renderStickerSheetHtml(m: StickerSheetModel): Promise<string> {

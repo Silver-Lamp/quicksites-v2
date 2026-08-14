@@ -409,6 +409,18 @@ export async function generateMetadata({
   });
 
   const pageSlug = rest?.[0] ?? firstPageSlug(normalized);
+  // ⚠️ THE TAB IS PART OF THE SITE. Every published site used to serve /favicon.ico — the
+  // QuickSites logo — so a towing company's customers saw OUR brand in the tab of a page that is
+  // supposed to be the towing company's. Same category of wrongness as our wordmark showing on a
+  // reseller's dashboard, just smaller and on far more pages.
+  //
+  // The mark is drawn per industry and tinted with the site's own accent (lib/brand/
+  // industryMarks.ts). Sites whose industry we don't have a mark for get a storefront, which is
+  // a reasonable thing to be rather than a wrong guess.
+  const siteIcons = {
+    icon: [{ url: `/api/site-icon/${encodeURIComponent(slug)}`, type: 'image/svg+xml' }],
+  };
+
   const md = generatePageMetadata({
     site: normalized as any,
     pageSlug,
@@ -422,13 +434,13 @@ export async function generateMetadata({
   // is real. Only a thin 0–1-entry directory stays noindex (same rule as the fallback).
   if (isRestaurantApexData(normalized)) {
     const dir = await loadCompetitionDirectoryBySlug(siteRow.slug ?? slug);
-    if (dir && dir.entries.length < 2) return { ...md, robots: { index: false, follow: false } };
+    if (dir && dir.entries.length < 2) return { ...md, icons: siteIcons, robots: { index: false, follow: false } };
   }
   // A no-website `listing_import` draft on the menu surface IS the restaurant's web
   // presence — index it (flag-gated) so it ranks for their name and can actually feed
   // the demand signal. Admin previews + every other draft stay noindex.
   const indexableDraft = isDraft && menuHost && claimSource === 'listing_import' && MENU_DRAFT_INDEXABLE;
-  if (isDraft && !indexableDraft) return { ...md, robots: { index: false, follow: false } };
+  if (isDraft && !indexableDraft) return { ...md, icons: siteIcons, robots: { index: false, follow: false } };
 
   // ⚠️ PUBLISHED IS NOT THE SAME AS READY TO BE FOUND. A custom site under client review is
   // published so the client can open it on a phone from an email — that is the only way to show
@@ -437,9 +449,9 @@ export async function generateMetadata({
   // in a search index, competing with the one they chose, is a liability nobody asked us to create.
   // `meta.noindex` lets a site be publicly reachable without being publicly discoverable.
   const meta = (normalized as any)?.meta ?? (normalized as any)?.data?.meta;
-  if (meta?.noindex === true) return { ...md, robots: { index: false, follow: false } };
+  if (meta?.noindex === true) return { ...md, icons: siteIcons, robots: { index: false, follow: false } };
 
-  return md;
+  return { ...md, icons: siteIcons };
 }
 
 /* ---------------------- Page ---------------------- */

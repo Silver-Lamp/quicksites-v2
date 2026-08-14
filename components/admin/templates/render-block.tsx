@@ -483,8 +483,14 @@ ID: ${blockId || 'n/a'}`}
   function resolveContainerClass(block: any) {
     const type = String(block?.type || '');
 
-    // Header / footer are usually full width
-    if (type === 'header' || type === 'footer') return 'w-full';
+    // Header / footer are usually full width.
+    //
+    // ⚠️ A HERO IS TOO. It was being clamped to the 1100px column like a paragraph, so a
+    // photographic hero rendered as a floating rectangle with hard corners and page background
+    // showing down both sides — the "stack of boxes" look, at the one place a visitor forms
+    // their first impression. A hero paints its own inner container (max-w-6xl) and its own
+    // padding, so full width here changes the BLEED, not the text measure.
+    if (type === 'header' || type === 'footer' || type === 'hero') return 'w-full';
 
     const props = block?.props || {};
     const content = block?.content || {};
@@ -515,8 +521,19 @@ ID: ${blockId || 'n/a'}`}
     if (preset === 'narrow') return 'mx-auto w-full max-w-3xl px-4 sm:px-6';
     if (preset === 'wide') return 'mx-auto w-full max-w-[1280px] px-4 sm:px-8';
 
-    // Default
-    return 'mx-auto w-full max-w-[1100px] px-4 sm:px-6 pt-8';
+    // Default.
+    //
+    // ⚠️ NO VERTICAL PADDING HERE. This container is the OUTER wrapper; almost every block then
+    // renders a `SectionShell` inside it, which already applies `py-16`. The `pt-8` this used to
+    // add was therefore doubled spacing on every section — ~96px of dead air above a heading —
+    // which is most of why the page read as a stack of over-tall slabs.
+    //
+    // It also gave an EMPTY block a visible body. A block that renders nothing (an `about_that`
+    // seeded with no embed, say) still emitted a 32px-tall div, and on a banded site the
+    // renderer painted `--muted` behind it → a mystery stripe under the hero with nothing in it.
+    // With no padding here, a block that renders nothing occupies nothing, and its band
+    // collapses on its own. Blocks that paint their own surface still own their own padding.
+    return 'mx-auto w-full max-w-[1100px] px-4 sm:px-6';
   }
 
   return (

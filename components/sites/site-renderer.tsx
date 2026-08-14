@@ -8,6 +8,7 @@ import SiteScreensaver from '@/components/sites/site-screensaver';
 import SiteMascot from '@/components/sites/site-mascot';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { resolveSiteLayout } from '@/lib/theme/resolveSiteLayout';
+import { blockMass } from '@/lib/theme/blockMass';
 import type { Template } from '@/types/template';
 import {
   getPageBySlug,
@@ -76,9 +77,22 @@ export default function SiteRenderer({
       // dark-mode site while transparent sections show the unpainted page →
       // a light/dark mix. bg-background/text-foreground resolve from the
       // data-theme scope (this element or the theme wrapper above it).
-      className={clsx('w-full min-h-screen bg-background text-foreground', className)}
+      // ⚠️ `bg-background` ONLY WHEN NOTHING ABOVE US PAINTS IT. When the theme wrapper is on it
+      // now paints the surface itself (see the note there) — repeating an opaque fill here would
+      // put it back on top of the backdrop layers and hide them again, which is the bug that note
+      // describes. The original reason for the fill is unchanged and still satisfied: exactly one
+      // element paints --background so card blocks never sit on an unpainted page.
+      className={clsx(
+        'w-full min-h-screen text-foreground',
+        !enableThemeWrapper && 'bg-background',
+        className
+      )}
       data-editor-chrome={editorChrome ? '1' : undefined} // ← NEW
       data-base-url={baseUrl || undefined}                // ← NEW
+      // The curated theme has carried a `density` for as long as `rhythm` has, and nothing ever
+      // read it — every site got identical spacing whichever personality it was stamped with.
+      // Surfacing it here makes the field mean something without touching a single block.
+      data-density={layout && layout.density !== 'normal' ? layout.density : undefined}
       // When the theme wrapper is disabled, still establish the light/dark
       // baseline here so semantic-token blocks resolve correctly. When the
       // wrapper IS used, it owns data-theme (+ palette) — don't double-set it,
@@ -114,7 +128,18 @@ export default function SiteRenderer({
             id={anchor}
             className={anchor ? 'scroll-mt-20' : undefined}
             data-band={banded ? '1' : undefined}
-            style={banded ? { background: 'hsl(var(--muted))' } : undefined}
+            // Vertical space in proportion to content (lib/theme/blockMass.ts). A block holding
+            // one service or one link was getting the same full-height band as a forty-row menu,
+            // and a mostly-empty band is precisely what reads as a box. Emitted as an attribute
+            // rather than a class so the rule lives in one place in globals.css and no block
+            // renderer has to learn about it.
+            data-mass={blockMass(block, site) === 'thin' ? 'thin' : undefined}
+            // A band is a TINT, not a fill. At full opacity each band was an opaque slab that
+            // cut the page into hard-edged stripes and — now that the backdrop below is actually
+            // visible — would have been the only place the texture stopped, making the banding
+            // read louder rather than quieter. Semi-transparent, the backdrop runs continuously
+            // through every section and the band reads as a shift in depth instead of a seam.
+            style={banded ? { background: 'hsl(var(--muted) / 0.55)' } : undefined}
           >
             <RenderBlock
               serverData={serverData}

@@ -62,7 +62,18 @@ export function TemplateThemeWrapper({
 
   return (
     <div
-      style={{ ...(wrapperStyle ?? {}), ...(backdropStyle ? { position: 'relative' } : null) }}
+      style={{
+        // ⚠️ THE PAGE SURFACE IS PAINTED HERE, NOT BY THE RENDERER INSIDE.
+        // `SiteRenderer`'s root used to carry `bg-background`, and it sits at z-index 1 —
+        // directly on top of the backdrop layers below. An opaque fill over the decoration
+        // meant every site with a backdrop shipped one that never reached a pixel: the layer
+        // rendered, cost its CSS, and was hidden by the element immediately above it.
+        // Painting the same token one level UP keeps the surface opaque (which is what that
+        // rule was for) while leaving the backdrop in front of it.
+        background: 'hsl(var(--background))',
+        ...(wrapperStyle ?? {}),
+        ...(backdropStyle ? { position: 'relative' } : null),
+      }}
       data-theme={colorMode}
       data-qs-themed={resolved ? '1' : undefined}
       data-qs-backdrop={backdropStyle ? backdrop?.style : undefined}

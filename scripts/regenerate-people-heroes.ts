@@ -24,6 +24,7 @@ dotenv.config({ path: '../../../.env.local' }); // when run from a worktree
 dotenv.config();
 
 import { createClient } from '@supabase/supabase-js';
+import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 
 const APPLY = process.argv.includes('--apply');
 const SLUGS = process.argv.slice(2).filter((a) => !a.startsWith('--'));
@@ -75,7 +76,7 @@ async function main() {
   for (const slug of SLUGS) {
     const { data, error } = await db
       .from('templates')
-      .select('id, slug, data, rev, published, claim_source, template_name')
+      .select('id, slug, data, rev, published, claim_source, template_name, industry')
       .eq('slug', slug)
       .maybeSingle();
     if (error) throw error;
@@ -102,10 +103,23 @@ async function main() {
     // on the first dry run it produced businessName "Revitalize Your Carpets Today" — which
     // would have been fed to an image model as the name of the business and rendered onto
     // signage. `templates.template_name` is the actual name; the slug is the last resort.
+    // ⚠️ READ THE `industry` COLUMN, NOT JUST THE JSON. The first version of this chain checked
+    // only data/meta, and on the sites that matter those are null while the COLUMN is populated
+    // — so a law firm ("Legal") and a plumber ("General") both fell through to "local business"
+    // and got a generic truck-and-equipment scene, one of them with a lawn mower. The image was
+    // people-free and correctly lettered and still wrong about the business.
+    const industryLabel =
+      meta?.industry_label ||
+      data?.industry ||
+      meta?.industry ||
+      (row.industry ? KEY_TO_LABEL[row.industry as IndustryKey] ?? String(row.industry) : '') ||
+      'local business';
     const spec = {
+      // The name is no longer used in the image prompt (see generateHero) — kept for the log
+      // line so the operator can see which site is being regenerated.
       businessName:
         data?.business_name || meta?.business_name || row.template_name || row.slug,
-      industryLabel: meta?.industry_label || data?.industry || meta?.industry || 'local business',
+      industryLabel,
       city: data?.contact?.city || meta?.city || '',
       state: data?.contact?.state || meta?.state || '',
     } as any;

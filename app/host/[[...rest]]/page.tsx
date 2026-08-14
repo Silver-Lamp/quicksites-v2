@@ -306,7 +306,10 @@ export default async function HostSitePage({
           baseUrl={baseUrl}
           id="site-renderer-page"
           colorMode={colorMode}
-          className="bg-background text-foreground"
+          // No surface class here — the theme wrapper paints it, and a second opaque fill on
+          // this element covers the site's backdrop layers. Same reason as the /sites/[slug]
+          // render; this is the custom-domain path, which is how most live sites are served,
+          // so fixing only the other one would have left the majority of the fleet unchanged.
         />
       </TemplateEditorProvider>
     </>

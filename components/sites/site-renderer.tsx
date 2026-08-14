@@ -76,7 +76,16 @@ export default function SiteRenderer({
       // dark-mode site while transparent sections show the unpainted page →
       // a light/dark mix. bg-background/text-foreground resolve from the
       // data-theme scope (this element or the theme wrapper above it).
-      className={clsx('w-full min-h-screen bg-background text-foreground', className)}
+      // ⚠️ `bg-background` ONLY WHEN NOTHING ABOVE US PAINTS IT. When the theme wrapper is on it
+      // now paints the surface itself (see the note there) — repeating an opaque fill here would
+      // put it back on top of the backdrop layers and hide them again, which is the bug that note
+      // describes. The original reason for the fill is unchanged and still satisfied: exactly one
+      // element paints --background so card blocks never sit on an unpainted page.
+      className={clsx(
+        'w-full min-h-screen text-foreground',
+        !enableThemeWrapper && 'bg-background',
+        className
+      )}
       data-editor-chrome={editorChrome ? '1' : undefined} // ← NEW
       data-base-url={baseUrl || undefined}                // ← NEW
       // When the theme wrapper is disabled, still establish the light/dark
@@ -114,7 +123,12 @@ export default function SiteRenderer({
             id={anchor}
             className={anchor ? 'scroll-mt-20' : undefined}
             data-band={banded ? '1' : undefined}
-            style={banded ? { background: 'hsl(var(--muted))' } : undefined}
+            // A band is a TINT, not a fill. At full opacity each band was an opaque slab that
+            // cut the page into hard-edged stripes and — now that the backdrop below is actually
+            // visible — would have been the only place the texture stopped, making the banding
+            // read louder rather than quieter. Semi-transparent, the backdrop runs continuously
+            // through every section and the band reads as a shift in depth instead of a seam.
+            style={banded ? { background: 'hsl(var(--muted) / 0.55)' } : undefined}
           >
             <RenderBlock
               serverData={serverData}

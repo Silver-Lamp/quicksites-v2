@@ -639,7 +639,12 @@ export default async function SitePreviewPage({
         baseUrl={baseUrl}
         id="site-renderer-page"
         colorMode={colorMode}
-        className="bg-background text-foreground"
+        // ⚠️ DO NOT PAINT THE SURFACE HERE. This duplicated what SiteRenderer already applied
+        // (the served markup read `bg-background text-foreground bg-background text-foreground`),
+        // and an opaque fill on this element sits above the theme wrapper's backdrop layers and
+        // hides them. The wrapper owns the surface now; removing the class here is what makes the
+        // site's backdrop actually reach a pixel. A second opaque paint is how it stayed hidden
+        // even after the renderer stopped painting one.
         serverData={cityMenuFeed ? { menu_finder: cityMenuFeed } : undefined}
       />
       {apexDirectory && <RestaurantCompetitionDirectory dir={apexDirectory} compact />}

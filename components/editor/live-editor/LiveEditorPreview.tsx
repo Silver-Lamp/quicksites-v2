@@ -294,8 +294,10 @@ export default async function HostSitePage({
         id="site-renderer-page"
         colorMode={colorMode}
         // Don't force bg-white here — it pins the page light while data-theme
-        // driven bg-card blocks go dark (a light/dark mix). SiteRenderer paints
-        // the themed bg-background/text-foreground itself.
+        // driven bg-card blocks go dark (a light/dark mix). The themed surface is
+        // painted for us: TemplateThemeWrapper paints --background (so it sits
+        // BELOW the site's backdrop layers rather than over them), and SiteRenderer
+        // paints it itself only when that wrapper is disabled.
       />
     </TemplateEditorProvider>
   );

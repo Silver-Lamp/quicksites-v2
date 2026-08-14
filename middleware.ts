@@ -9,6 +9,13 @@ import {
   menuPathSlug,
   apexRedirectTarget,
 } from '@/lib/menu/deliveredMenu';
+import {
+  lemonYumEnabled,
+  isLemonYumHost,
+  isLemonYumApexHost,
+  lemonYumSubdomainSlug,
+  lemonYumPathSlug,
+} from '@/lib/lemonade/lemonYum';
 import { PUBLIC_PATH_HEADER } from '@/lib/seo/canonicalUrl';
 
 /**
@@ -273,6 +280,42 @@ export async function middleware(req: NextRequest) {
   // Both `<slug>.delivered.menu` and `delivered.menu/<slug>` resolve to /sites/<slug>;
   // an `x-qsites-menu-host` request header lets the renderer serve an unclaimed draft
   // (watermarked, noindex) to the public and drop the watermark once published.
+  // --- lemonyum.com lemonade-stand surface ---
+  // Same shape as the delivered.menu branch below, for the same reason: a branded consumer host
+  // in front of an ordinary QuickSites site. `<slug>.lemonyum.com` and `lemonyum.com/<slug>` both
+  // resolve to /sites/<slug>.
+  //
+  // ⚠️ There is NO directory here, and that is a decision rather than an omission — the apex is a
+  // setup guide for parents. A searchable map of where children are selling lemonade on Saturday
+  // morning is a different object from a sign on a corner. See docs/LEMONYUM_PLAN.md §2b.
+  if (lemonYumEnabled() && isLemonYumHost(host)) {
+    const toStand = (slug: string, restPath: string) => {
+      const rewriteUrl = req.nextUrl.clone();
+      rewriteUrl.pathname = `/sites/${slug}${restPath}`;
+      const res = NextResponse.rewrite(rewriteUrl, { request: { headers: withPublicPath(req) } });
+      res.headers.set('x-qsites-lemonyum-slug', slug);
+      res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
+      return withCookies(res);
+    };
+
+    const subSlug = lemonYumSubdomainSlug(host);
+    if (subSlug) return toStand(subSlug, pathname === '/' ? '' : pathname);
+
+    if (isLemonYumApexHost(host)) {
+      const slug = lemonYumPathSlug(pathname);
+      if (slug) return toStand(slug, pathname.replace(/^\/[^/]+/, ''));
+
+      // Apex root → the parent-facing setup guide.
+      if (pathname === '/') {
+        const rewriteUrl = req.nextUrl.clone();
+        rewriteUrl.pathname = '/lemonade-stands';
+        return withCookies(NextResponse.rewrite(rewriteUrl, { request: { headers: withPublicPath(req) } }));
+      }
+      // Reserved paths (api/_next/setup/privacy/terms) pass through untouched.
+      return withCookies(NextResponse.next());
+    }
+  }
+
   if (menuEnabled() && isMenuHost(host)) {
     const menuHeaders = () => {
       const h = withPublicPath(req);

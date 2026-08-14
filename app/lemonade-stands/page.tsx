@@ -3,11 +3,17 @@
 // Public landing for the lemonade-stand vertical. Same shape as /restaurants, but the audience
 // is different in a way that decides most of the copy:
 //
-// ⚠️ THIS PAGE TALKS TO THE GROWN-UP, NOT THE KID. Stripe requires an account holder to be 18+
-// and verifies their identity, so the merchant account cannot be the child's — the parent signs
-// up, the money lands in the parent's bank, and the kid runs the stand. Writing this page at
-// kids would be both a lie about who can complete the flow and an invitation for a nine-year-old
-// to try to open a payments account. Every CTA here is addressed to whoever owns the driveway.
+// ⚠️ THIS PAGE TALKS TO THE GROWN-UP, NOT THE KID. Every consumer payment app requires an account
+// holder who is 18+, so the account can never be the child's — the parent's handle takes the
+// money and the kid runs the stand. Writing this page at kids would be both a lie about who can
+// complete the flow and an invitation for a nine-year-old to try to open a payments account.
+// Every CTA here is addressed to whoever owns the driveway.
+//
+// Payments are a HAND-OFF to the parent's own Venmo / Cash App / PayPal, not a Stripe Connect
+// account (owner decision 2026-08-14, docs/LEMONYUM_PLAN.md §2a). The earlier draft of this page
+// described connecting a bank through Stripe: real card acceptance, but an SSN-and-bank
+// onboarding and a multi-day first payout, for someone selling $2 cups on a Saturday. Handles
+// cost nothing, take a minute, and mean no fee is deducted from a $2 cup at all.
 //
 // The other deliberate omission: nothing on this page or in the scaffold asks for a child's full
 // name, photo or address. A stand page is already a public note that a particular kid is at a
@@ -87,7 +93,7 @@ export default function LemonadeStandsPage() {
             </Link>
           </div>
           <p className="mt-3 text-xs text-zinc-500">
-            Free to set up and free to host. Takes about five minutes.
+            Free to set up, free to host, and we take no cut. About five minutes.
           </p>
         </section>
 
@@ -100,18 +106,18 @@ export default function LemonadeStandsPage() {
                 Pick “Lemonade Stand” and you get a page with a menu already on it — lemonade,
                 the big cup, cookies. Change the prices to whatever they’re charging today.
               </Step>
-              <Step n="2" title="Connect where the money goes">
-                You (the grown-up) connect a bank account through Stripe, our payments provider.
-                This part is legally yours: Stripe requires the account holder to be 18 or over
-                and checks their ID. The stand is theirs; the account is yours.
+              <Step n="2" title="Add where the money should go">
+                Your own Venmo, Cash App or PayPal — whichever you already use. Payments go
+                straight to you and never pass through us, so there’s no account to open, no ID
+                check, and nothing to wait for. The stand is theirs; the money is yours.
               </Step>
               <Step n="3" title="Print the sign">
                 One button prints a table sign with a big QR code, plus six little cards to hand
                 over with the drink — so someone can still pay after they’ve walked off.
               </Step>
               <Step n="4" title="They scan and pay">
-                The customer’s camera opens the menu, they tap what they want, and pay with Apple
-                Pay, Google Pay or a card. No app to download, and nothing for the kid to operate.
+                The customer’s camera opens the menu, they tap the total, and their own payment
+                app opens with the amount already filled in. Nothing for the kid to operate.
               </Step>
             </div>
           </div>
@@ -131,9 +137,10 @@ export default function LemonadeStandsPage() {
                 splashed or half in shadow. The web address is printed underneath for anyone
                 whose camera won’t cooperate.
               </Card>
-              <Card title="Money in your account">
-                Card payments settle to the bank account you connected, on Stripe’s normal
-                schedule. You can see every order in your dashboard.
+              <Card title="Money straight to you">
+                Payments land in your own Venmo, Cash App or PayPal — the same place your money
+                already goes. We never hold it, so there’s nothing to pay out and nothing to wait
+                for.
               </Card>
             </div>
           </div>
@@ -146,14 +153,13 @@ export default function LemonadeStandsPage() {
 
             <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
               <h3 className="text-base font-semibold text-white">
-                Card fees are big when the price is small
+                The buyer needs the same app you do
               </h3>
               <p className="mt-2 text-sm text-zinc-400">
-                Stripe charges about 2.9% plus 30¢ on each payment. On a $2 cup that’s roughly
-                36¢ — near a fifth of the sale. It’s worth it because the alternative is a
-                customer who buys nothing, but it’s a bad deal per-cup, so it’s better if people
-                buy a couple of cups at once or round up. We don’t add a fee of our own to a
-                lemonade stand.
+                Because payments go straight to your own account, a customer pays with whichever
+                of Venmo, Cash App or PayPal you’ve listed — so add every one you use. Someone
+                with none of them still pays cash, exactly as they do today. Nothing is deducted:
+                a $2 cup is $2, and we take no fee.
               </p>
             </div>
 
@@ -162,8 +168,8 @@ export default function LemonadeStandsPage() {
                 The account has to be an adult’s
               </h3>
               <p className="mt-2 text-sm text-zinc-400">
-                Taking card payments means someone’s identity is on file with a payments company,
-                and that someone must be 18 or over. So the setup is yours and the stand is
+                The payment account is yours, not your child’s — every one of these apps requires
+                an account holder who is 18 or over. So the setup is yours and the stand is
                 theirs. We don’t ask for the child’s last name, address or photo, and we’d
                 suggest you don’t put them on the page either — it ends up on a sign in a front
                 yard.

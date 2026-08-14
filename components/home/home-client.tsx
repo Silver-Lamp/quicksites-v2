@@ -247,7 +247,8 @@ export default function HomeClient({
               </Card>
               <Card title="Lemonade stands">
                 A menu, a QR code, and a printable table sign. The customer with no cash pays by
-                phone; a grown-up holds the Stripe account and the money lands in their bank.
+                phone, straight into a grown-up’s own Venmo or Cash App — no account to open, and
+                nothing deducted.
               </Card>
             </div>
           </div>

@@ -471,6 +471,27 @@ export default function HeroRender({
             alt={headline || 'Hero image'}
             className="mx-auto mb-6 rounded-xl shadow w-full object-cover"
             style={{ objectPosition: backgroundPosition, maxHeight: isNarrow ? '16rem' : '24rem' }}
+            /**
+             * ⚠️ A HERO THAT FAILS TO LOAD MUST VANISH, NOT SIT THERE BROKEN.
+             *
+             * These sites are auto-built from a business's public listing, and the hero is
+             * usually a Google Places photo proxied through /api/public/place-photo. A Places
+             * `photo_reference` is NOT permanent — it goes dead when the business changes its
+             * photos, and the proxy then 404s. Measured 2026-08-14: 4 of the 11 restaurants
+             * linked from renton-restaurant.com were serving a dead ref.
+             *
+             * Left alone, the browser paints its broken-image chrome plus the alt text — on a
+             * page that presents as that restaurant's own site, to a diner, above their menu.
+             * A missing image is survivable; a visibly broken one reads as an abandoned
+             * business. Same rule as a missing backdrop rendering no layer at all.
+             *
+             * The 404 is deliberately NOT papered over server-side (the proxy could return a
+             * transparent pixel and make this invisible) — a dead ref should stay detectable so
+             * the refresh job can find it.
+             */
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
           />
         )}
         {!hide_headline && headline && (

@@ -262,10 +262,21 @@ async function loadSnapshotDataById(id: string): Promise<any | null> {
  */
 const loadDraftTemplate = cache(async (
   templateId: string,
-): Promise<{ data: any; siteFields: any; claimSource: string | null; ownerId: string | null } | null> => {
+): Promise<{
+  data: any;
+  siteFields: any;
+  claimSource: string | null;
+  ownerId: string | null;
+  industry: string | null;
+  businessName: string | null;
+} | null> => {
   const { data, error } = await supabaseAdmin
     .from('templates')
-    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain, claim_source, owner_id')
+    // ⚠️ industry + business_name ARE LOAD-BEARING, not metadata. Without them the renderer treats
+    // every draft as a restaurant (needsMenu(null) defaults to food) and the claim bar loses the
+    // business's name — which is how an auto shop's page asked "Is this your restaurant?" and
+    // offered to take online orders, twice, after a fix that read fields nobody populated.
+    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain, claim_source, owner_id, industry, business_name')
     .eq('id', templateId)
     .maybeSingle();
   if (error) {
@@ -287,6 +298,8 @@ const loadDraftTemplate = cache(async (
     },
     claimSource: (data as any)?.claim_source ?? null,
     ownerId: (data as any)?.owner_id ?? null,
+    industry: (data as any)?.industry ?? null,
+    businessName: (data as any)?.business_name ?? null,
   };
 });
 
@@ -474,6 +487,9 @@ export default async function SitePreviewPage({
   let normalized: RenderSite | null = null;
   let isDraft = false;
   let claimSource: string | null = null;
+  // Carried off the template row — `normalized`/`siteRow` do not have them on the draft path.
+  let draftIndustry: string | null = null;
+  let draftBusinessName: string | null = null;
 
   if (siteRow.published_snapshot_id) {
     const snapData = await loadSnapshotDataById(siteRow.published_snapshot_id);
@@ -496,6 +512,8 @@ export default async function SitePreviewPage({
       normalized = normalizeForRenderer(draft.data, draft.siteFields);
       isDraft = true;
       claimSource = draft.claimSource;
+      draftIndustry = draft.industry;
+      draftBusinessName = draft.businessName;
     }
   }
 
@@ -518,7 +536,10 @@ export default async function SitePreviewPage({
   const showClaimBar = isDraft && (claimSource === 'listing_import' || claimSource === 'operator_draft');
   const claimToken = showClaimBar ? mintSiteClaimToken(siteRow.id) : null;
   const claimBusinessName =
-    (normalized as any).business_name ?? (normalized as any).meta?.business_name ?? null;
+    draftBusinessName ??
+    (normalized as any).business_name ??
+    (normalized as any).meta?.business_name ??
+    null;
   // "Who will control this domain?" — competitor race context (only when a live campaign exists).
   const competition = showClaimBar ? await getSiteCompetition(siteRow.id) : null;
 
@@ -529,7 +550,8 @@ export default async function SitePreviewPage({
   // listing-import draft was a restaurant. It stopped being one the moment auto shops were built:
   // a mechanic's page rendered a "🍽 Order online?" pill and a claim bar reading "Is this your
   // restaurant?" over correct auto-repair copy. An owner sees that in the first second.
-  const siteIndustry = (normalized as any).industry ?? (siteRow as any)?.industry ?? null;
+  const siteIndustry =
+    draftIndustry ?? (normalized as any).industry ?? (siteRow as any)?.industry ?? null;
   const isFoodSite = needsMenu(siteIndustry);
   const demandEnabled = showClaimBar && isFoodSite && MENU_DEMAND_CAPTURE_ENABLED;
   const demandCount = demandEnabled ? await getDemandCount(siteRow.id) : 0;

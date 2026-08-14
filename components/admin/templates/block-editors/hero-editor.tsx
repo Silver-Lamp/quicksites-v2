@@ -865,7 +865,16 @@ export default function HeroEditor({
       const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'image/png' });
       const file = new File([blob], `hero-${Date.now()}.png`, { type: 'image/png' });
 
-      const uploaded = (await uploadToStorage(file, `template-${template?.id}/hero`)) as any;
+      // ⚠️ FAIL RATHER THAN WRITE "undefined" INTO THE PATH.
+      // This used to be `template-${template?.id}/hero`, and the optional chain turned a missing
+      // id into the literal string "undefined" — so uploads landed in a single shared folder
+      // instead of failing. `templates/template-undefined/hero/` currently holds one image that
+      // 36 templates reference, 10 of them published, which is why ten different towing sites
+      // show the same photo. The upload "succeeded" every time; only the grouping was lost.
+      const templateId = (template as any)?.id;
+      if (!templateId) throw new Error('No template id — cannot store the hero image');
+
+      const uploaded = (await uploadToStorage(file, `template-${templateId}/hero`)) as any;
       const publicUrl =
         typeof uploaded === 'string'
           ? uploaded

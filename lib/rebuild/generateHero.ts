@@ -12,7 +12,7 @@
 import { getOpenAI } from '@/lib/ai/openaiClient';
 import { createClient } from '@supabase/supabase-js';
 import { meterLLMCall } from '@/lib/ai/meter';
-import { NO_PEOPLE_CLAUSE } from '@/lib/images/noPeople';
+import { NO_PEOPLE_NO_TEXT_CLAUSE } from '@/lib/images/noPeople';
 import type { RebuildSpec } from '@/lib/rebuild/inferSiteSpec';
 
 const ROUTE = '/api/rebuild';
@@ -50,7 +50,12 @@ export function heroPrompt(spec: RebuildSpec): string {
   return (
     `Professional website hero photo for a ${spec.industryLabel} business named "${spec.businessName}". ` +
     `Real-world, high quality, on-brand, bright and inviting. ` +
-    NO_PEOPLE_CLAUSE
+    // ⚠️ NO_TEXT matters MORE here than anywhere else, and this was the last call site without
+    // it. The negative "no text" inside NO_PEOPLE_CLAUSE is not enough — noPeople.ts records the
+    // model stencilling "VB FERAONT SMLPEE" onto a tanker despite it. On this path the misspelt
+    // signage lands on a REAL, NAMED business's own page, which is the same wrong as inventing
+    // their staff: they did not write it, and it reads as their sign.
+    NO_PEOPLE_NO_TEXT_CLAUSE
   );
 }
 

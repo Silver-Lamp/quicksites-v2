@@ -67,6 +67,19 @@ select count(*) from templates
    and <thrift cohort predicate>;
 ```
 
+⚠️ **THIS MEASURABLE RESTS ON A FACT ABOUT ANOTHER PRODUCT'S SYSTEM.** It is safe from HiveJournal's
+persona accounts only because their persona browser **cannot submit a form** — its action union is
+`navigate | scroll | click | go_back | extract_form | extract_text | llm_thought | done`. It can
+*read* a claim form and report friction; there is no `fill`, no `type`, no `submit`, and it runs
+unauthenticated. Their service-to-service persona path has zero claim/template/RPC references.
+(Verified by HiveJournal against their source, 2026-08-14.)
+
+**If the persona browser ever gains a submit action, a persona can complete a claim and score
+here** — correctly by the letter of this measurable, wrongly by its intent. HJ has recorded a guard
+on their side that trips on such a change. This note is the reciprocal: **do not let the guarantee
+live only in the other product's memory of a conversation.** If this probe is ever re-run, re-ask
+whether the action union still lacks `submit` rather than assuming someone would have said.
+
 **Baseline: 0**, queried 2026-08-14 — there are zero `listing_claimed` rows in the entire database.
 Meanwhile `listing_import` shows **39 owned** rows, which is what the denylist version has to
 explain away one account at a time.

@@ -22,12 +22,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
   const city = typeof body.city === 'string' ? body.city.trim() : '';
+  // Optional: which vertical's apex to check. Absent => restaurant (every existing caller).
+  const industryKey = typeof body.industryKey === 'string' && body.industryKey.trim()
+    ? (body.industryKey.trim() as any)
+    : null;
   if (!city) return NextResponse.json({ error: 'city is required.' }, { status: 400 });
 
   const result = await searchRestaurantApex({
     city,
     region: typeof body.region === 'string' ? body.region : null,
-    domain: typeof body.domain === 'string' ? body.domain : null,
-  });
+    domain: typeof body.domain === 'string' ? body.domain : null, industryKey });
   return NextResponse.json({ ok: true, result });
 }

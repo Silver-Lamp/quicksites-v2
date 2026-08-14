@@ -11,7 +11,8 @@
 // a fallback candidate. Read-only — buying happens in the buy-apex route.
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { geoDomainFor, restaurantApexCandidates, apexSlugForDomain } from '@/lib/outreach/geoDomain';
+import { geoDomainFor, apexCandidatesFor, apexSlugForDomain } from '@/lib/outreach/geoDomain';
+import type { IndustryKey } from '@/lib/industries';
 import { normalizeDomain } from '@/lib/prospects/ownedDomains';
 import { checkAvailability, readRegistrantContact } from '@/lib/domains/registrar';
 
@@ -59,6 +60,16 @@ export async function searchRestaurantApex(input: {
   region?: string | null;
   /** Check this exact domain instead of the derived canonical (area cards pass theirs). */
   domain?: string | null;
+  /**
+   * Which vertical's apex to derive. Defaults to `restaurant` so every existing caller is
+   * unchanged.
+   *
+   * ⚠️ WITHOUT THIS THE AUTO VERTICAL COULD CREATE A CAMPAIGN AND NEVER BUY ITS DOMAIN. Candidates
+   * were hardcoded to <city>-restaurant.com, so the Buy button could not offer
+   * paterson-auto-repair.com — while the buy-list planner correctly refused it (a campaign already
+   * backed it). Campaign creatable, domain unbuyable: a dead end reached by doing everything right.
+   */
+  industryKey?: IndustryKey | null;
 }): Promise<ApexDomainSearchResult> {
   const city = input.city.trim();
   // ⚠️ Plural first — see restaurantApexCandidates(). An explicit override (an area card passing
@@ -67,7 +78,7 @@ export async function searchRestaurantApex(input: {
   const override = normalizeDomain(input.domain || '') || null;
   const candidates = override
     ? [{ domain: override, slug: apexSlugForDomain(override) }]
-    : restaurantApexCandidates(city);
+    : apexCandidatesFor(city, (input.industryKey ?? 'restaurant') as IndustryKey);
   const primary = candidates[0];
   const domain = primary.domain;
   const purchase = domainPurchaseFlags();

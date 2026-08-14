@@ -21,9 +21,21 @@ import { listSales } from '@/lib/garageSales/sales';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Targets the query the keyword planner shows demand for ("garage sales near me" /
+// "yard sales near me", 10k–100k/mo, low competition), without claiming a coverage we do not
+// have. Note what the copy does NOT say: not "every sale in your area", not "the biggest
+// listing" — an empty week has to be able to say so (see the empty state below).
 export const metadata: Metadata = {
-  title: 'Garage sales near you | QuickSites',
-  description: 'Garage sales happening this week — what’s for sale, when, and where.',
+  title: 'Garage sales near me — yard sales this weekend | YardSaleSites',
+  description:
+    'Find garage sales and yard sales happening near you this weekend. See what each sale has, when it starts, and where — updated as sellers list them.',
+  alternates: { canonical: 'https://yardsalesites.com/' },
+  openGraph: {
+    title: 'Garage sales near me — yard sales this weekend',
+    description: 'What’s for sale, when it starts, and where. Updated as sellers list them.',
+    url: 'https://yardsalesites.com/',
+    type: 'website',
+  },
 };
 
 function when(startsAt: string, endsAt: string) {
@@ -34,6 +46,48 @@ function when(startsAt: string, endsAt: string) {
   return `${day}, ${t(s)}–${t(e)}`;
 }
 
+/**
+ * ⚠️ A GARAGE SALE IS LITERALLY AN `Event`, AND THAT IS THE WHOLE SEO PLAY.
+ *
+ * Not `LocalBusiness` (it is not a business and does not persist) and not `Product` (the items
+ * are incidental). Event is the schema Google renders date-and-place rich results from, which is
+ * exactly the shape of a "garage sales near me" query — a person asking what is on, near them,
+ * this weekend.
+ *
+ * Two things are deliberately absent. There is no `offers` block: a garage sale does not have a
+ * price, and inventing one to fill a recommended field is the same dishonesty as the invented
+ * menus. And `location` carries only what `publicAddress()` released — before the sale starts
+ * that is the block, never the house number, so the structured data cannot leak what the page
+ * itself withholds. Schema is a second surface for the same fact, not a bypass around the rule.
+ */
+function eventJsonLd(rows: Array<{ sale: any }>) {
+  const items = rows.map(({ sale }, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    item: {
+      '@type': 'Event',
+      name: sale.title,
+      description: sale.description || undefined,
+      startDate: sale.startsAt,
+      endDate: sale.endsAt,
+      eventStatus: 'https://schema.org/EventScheduled',
+      eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+      location: {
+        '@type': 'Place',
+        name: sale.address.line || sale.address.city || 'Address given at start time',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: sale.address.line || undefined,
+          addressLocality: sale.address.city || undefined,
+          addressRegion: sale.address.state || undefined,
+        },
+      },
+      url: sale.stickerCode ? `https://yardsalesites.com/${sale.stickerCode}` : undefined,
+    },
+  }));
+  return { '@context': 'https://schema.org', '@type': 'ItemList', itemListElement: items };
+}
+
 export default async function GarageSalesPage() {
   // Server-rendered without a position: the browser's geolocation prompt belongs to a client
   // interaction, not a page load. Chronological is the honest default — see listSales().
@@ -42,11 +96,23 @@ export default async function GarageSalesPage() {
   return (
     <>
       <SiteHeader sticky />
+      {/* Emitted only when there is something to describe. Structured data for an empty list is
+          a claim about nothing, and Google treats a rich-result markup that renders no result as
+          worse than no markup. */}
+      {sales.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd(sales)) }}
+        />
+      )}
       <div className="min-h-screen bg-zinc-950 text-white">
         <section className="mx-auto max-w-3xl px-6 pt-14 pb-10">
-          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Garage sales this week</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
+            Garage sales near you this weekend
+          </h1>
           <p className="mt-3 text-zinc-400">
-            Sales running in the next seven days. Exact addresses appear when each sale starts.
+            Yard and garage sales running in the next seven days — what each one has, when it
+            starts, and where. Exact addresses appear when a sale begins.
           </p>
         </section>
 

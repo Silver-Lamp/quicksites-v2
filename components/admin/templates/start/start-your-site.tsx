@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Layers, Sparkles, FilePlus2, Search, Check, Globe, Link2, Facebook } from 'lucide-react';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
@@ -32,7 +32,19 @@ function toEditor(id: string) {
 
 export default function StartYourSite() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>('choose');
+  const params = useSearchParams();
+
+  // ?industry=<key> deep-links straight into the industry step with that trade preselected,
+  // so a vertical landing page's CTA lands on a half-filled form instead of the generic
+  // chooser. Validated against the registry: an unknown or hand-typed key falls back to the
+  // normal flow rather than selecting nothing and silently ignoring the URL.
+  const presetIndustry = (() => {
+    const raw = params?.get('industry')?.trim();
+    if (!raw) return null;
+    return INDUSTRY_OPTIONS.some((o) => o.key === raw) ? (raw as IndustryKey) : null;
+  })();
+
+  const [step, setStep] = useState<Step>(presetIndustry ? 'industry' : 'choose');
 
   return (
     <div className="min-h-screen w-full bg-zinc-950 text-white">
@@ -47,7 +59,7 @@ export default function StartYourSite() {
         )}
 
         {step === 'choose' && <ChooseStep onPick={setStep} router={router} />}
-        {step === 'industry' && <IndustryStep router={router} />}
+        {step === 'industry' && <IndustryStep router={router} preset={presetIndustry} />}
         {step === 'template' && <TemplateStep router={router} />}
         {step === 'convert' && <ConvertStep router={router} />}
       </div>
@@ -152,10 +164,16 @@ function ChooseStep({
 
 /* ---------------------------- Step 2: industry ---------------------------- */
 
-function IndustryStep({ router }: { router: ReturnType<typeof useRouter> }) {
+function IndustryStep({
+  router,
+  preset = null,
+}: {
+  router: ReturnType<typeof useRouter>;
+  preset?: IndustryKey | null;
+}) {
   const [businessName, setBusinessName] = useState('');
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<IndustryKey | null>(null);
+  const [selected, setSelected] = useState<IndustryKey | null>(preset);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

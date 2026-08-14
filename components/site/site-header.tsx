@@ -51,6 +51,11 @@ const DEFAULT_LINKS: LinkItem[] = [
   // though a job seeker buys differently from a restaurant (see docs: no orders, so no take-rate;
   // this is a wedge and a partner funnel, not a revenue line pretending to be one).
   { label: 'Job Seekers', href: '/verbatim' },
+  // The smallest merchant we serve, and the only one who is not the account holder: a kid runs
+  // the stand, a grown-up holds the Stripe account (Stripe requires 18+ and verifies identity).
+  // Sits with the verticals because it is one — the product is the same menu-and-checkout spine
+  // the restaurants use, aimed at a customer standing in a driveway with no cash.
+  { label: 'Lemonade Stands', href: '/lemonade-stands' },
   { label: 'Partners', href: '/partners' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Compare', href: '/compare' },

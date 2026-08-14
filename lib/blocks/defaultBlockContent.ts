@@ -287,9 +287,15 @@ export const DEFAULT_BLOCK_CONTENT = {
   restaurants_directory: { title: 'Order from local restaurants', campaign_id: '', entries: [] },
   menu_finder: { title: 'What are you hungry for?', campaign_id: '' },
   auto_shops_directory: { title: 'Trusted auto shops near you', campaign_id: '', entries: [] },
+  // ⚠️ NO DEFAULT BLURB, AND enrolled:false ON PURPOSE. The old default was first person present
+  // tense ("Our techs document the actual problem … before we start") and shipped on every
+  // auto-shop draft — shops that have never heard of SecondSet and cannot use it (the pilot is
+  // behind SECONDSET_ENABLED). Leaving `blurb` empty lets the renderer choose the voice from
+  // `enrolled`; a stored default would freeze the claim into the row and outlive this fix.
   service_transparency: {
     headline: 'See the work before you pay for it',
-    blurb: 'Our techs document the actual problem — a photo and a quick note — so you see it and approve the repair before we start. No surprises, no “trust us.”',
+    blurb: '',
+    enrolled: false,
     cta_label: '',
     cta_link: '',
   },

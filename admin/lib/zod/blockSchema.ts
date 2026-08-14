@@ -946,6 +946,10 @@ export const blockContentSchemaMap = {
     schema: z.object({
       headline: z.string().optional().default('See the work before you pay for it'),
       blurb: z.string().optional().default(''),
+      // ⚠️ The shop has opted into the SecondSet pilot. FALSE is the safe default: the block then
+      // speaks in the third person ("eligible to join", "how it WOULD work") instead of claiming a
+      // practice the shop does not have. Only set true once an owner actually enrols.
+      enrolled: z.boolean().optional().default(false),
       cta_label: z.string().optional().default(''),
       cta_link: z.string().optional().default(''),
     }),

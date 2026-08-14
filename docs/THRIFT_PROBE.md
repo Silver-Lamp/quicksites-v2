@@ -37,7 +37,45 @@ returns **103**, and every one of those 103 is owned by an operator account from
 testing. A count that reads triumph while meaning nothing is the exact failure this repo spent a
 week cataloguing.
 
-**Use this, with the exclusion baked in:**
+### ⚠️ Use the fails-closed version — it already exists
+
+A denylist of internal accounts **fails open**: every account nobody remembered to list scores as a
+real claim, which is a *false positive* in the direction that flatters the probe and ends it early
+with "it worked." `admin_users` grows, but only over admins — a test user or a **seeded persona**
+(HJ's persona-testing drives accounts at QS surfaces) is not an admin, so it is invisible to the
+exclusion and would read as a genuine external claim.
+
+**The positive signal exists and nobody was using it.** `public.claim_operator_draft` — the only
+sanctioned claim path — does two things:
+
+```sql
+update public.templates
+   set owner_id = p_to_owner,
+       claim_source = 'listing_claimed'     -- ← written ONLY here
+ where id = p_template_id
+   and claim_source = 'listing_import';
+```
+
+So **`claim_source = 'listing_claimed'` is a positive claim event.** Nothing else writes it. An
+operator setting `owner_id` directly, a seeded persona, a test account, a draft built pre-owned —
+none of them produce it, because none of them went through the RPC.
+
+```sql
+-- FAILS CLOSED. Prefer this.
+select count(*) from templates
+ where claim_source = 'listing_claimed'
+   and <thrift cohort predicate>;
+```
+
+**Baseline: 0**, queried 2026-08-14 — there are zero `listing_claimed` rows in the entire database.
+Meanwhile `listing_import` shows **39 owned** rows, which is what the denylist version has to
+explain away one account at a time.
+
+⚠️ Keep the denylist query below as a **cross-check**, not the primary. If the two ever disagree,
+the difference is either a claim that bypassed the RPC or an internal account nobody listed — and
+both are worth knowing before the number decides anything.
+
+**The cross-check (fails open — do not use alone):**
 
 ```sql
 select count(*)

@@ -8,6 +8,7 @@ import SiteScreensaver from '@/components/sites/site-screensaver';
 import SiteMascot from '@/components/sites/site-mascot';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { resolveSiteLayout } from '@/lib/theme/resolveSiteLayout';
+import { blockMass } from '@/lib/theme/blockMass';
 import type { Template } from '@/types/template';
 import {
   getPageBySlug,
@@ -88,6 +89,10 @@ export default function SiteRenderer({
       )}
       data-editor-chrome={editorChrome ? '1' : undefined} // ← NEW
       data-base-url={baseUrl || undefined}                // ← NEW
+      // The curated theme has carried a `density` for as long as `rhythm` has, and nothing ever
+      // read it — every site got identical spacing whichever personality it was stamped with.
+      // Surfacing it here makes the field mean something without touching a single block.
+      data-density={layout && layout.density !== 'normal' ? layout.density : undefined}
       // When the theme wrapper is disabled, still establish the light/dark
       // baseline here so semantic-token blocks resolve correctly. When the
       // wrapper IS used, it owns data-theme (+ palette) — don't double-set it,
@@ -123,6 +128,12 @@ export default function SiteRenderer({
             id={anchor}
             className={anchor ? 'scroll-mt-20' : undefined}
             data-band={banded ? '1' : undefined}
+            // Vertical space in proportion to content (lib/theme/blockMass.ts). A block holding
+            // one service or one link was getting the same full-height band as a forty-row menu,
+            // and a mostly-empty band is precisely what reads as a box. Emitted as an attribute
+            // rather than a class so the rule lives in one place in globals.css and no block
+            // renderer has to learn about it.
+            data-mass={blockMass(block, site) === 'thin' ? 'thin' : undefined}
             // A band is a TINT, not a fill. At full opacity each band was an opaque slab that
             // cut the page into hard-edged stripes and — now that the backdrop below is actually
             // visible — would have been the only place the texture stopped, making the banding

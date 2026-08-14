@@ -52,7 +52,19 @@ export default function SectionShell({
 }: Props) {
   return (
     <section
+      // A caller that asked for `compact` has already made the spacing decision. The theme's
+      // density scale must not overrule it — doing so quietly re-inflated compact sections
+      // nested inside other blocks (+32px on the contact block) while the section it was
+      // aimed at was somewhere else entirely.
+      data-compact={compact ? '' : undefined}
       className={clsx(
+        // Stable hook for the spacing rules in globals.css (content-mass + theme density).
+        // ⚠️ THEY MUST TARGET THIS CLASS, NOT `section`. The first version of those rules matched
+        // any descendant <section>, which also caught sections NESTED inside blocks that manage
+        // their own spacing — it silently added 128px to the contact block, whose inner section
+        // is deliberately padding-free. A rule that means "the standard section wrapper" has to
+        // say so; "any section on the page" is a different claim that happens to be mostly true.
+        'qs-section',
         'w-full',
         bg,
         compact ? 'py-8' : 'py-16',

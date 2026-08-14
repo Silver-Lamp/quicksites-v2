@@ -285,3 +285,42 @@ html, body, #__next { width: 100%; max-width: 100%; }
 [data-qs-themed] :is(h1, h2, h3, h4) {
   font-family: var(--font-heading, inherit);
 }
+
+/* ── Vertical space in proportion to content ─────────────────────────────────
+
+   Every section used to be the same height regardless of what it held, so a
+   block containing one service ("Our Services / Car Repair" — the shape a Google
+   listing with a single category produces) got the same ~350px band as a full
+   restaurant menu. A mostly-empty band is what reads as a BOX: the eye lands on
+   the container instead of the content, and a page of them reads as a stack.
+
+   SiteRenderer marks a block `data-mass="thin"` when lib/theme/blockMass.ts says
+   it renders a single short unit. The rule lives here, once, so no block renderer
+   has to know about it.
+
+   ⚠️ Target `.qs-section` — SectionShell's own element — never a bare `section`. The first
+   version of this rule matched any descendant <section> and caught the ones NESTED inside blocks
+   that manage their own spacing, silently adding 128px to the contact block.
+
+   The attribute+class selector (0,2,0) deliberately outranks SectionShell's
+   `py-16` utility class (0,1,0). Specificity is doing the work, NOT stylesheet
+   order — matching on order is what made `text-white` beat `text-card-foreground`
+   in the vanishing-résumé bug (#665), because the winner was decided by Tailwind's
+   compiled output rather than by anything visible at the call site. */
+[data-mass='thin'] .qs-section {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+
+/* The curated theme's layout personality, which until now was stamped onto sites
+   and never read. `airy` and `tight` scale the standard section only — a thinned
+   section above is already at its floor, and a `compact` one had its spacing chosen
+   explicitly by its caller, so neither is touched. */
+[data-density='airy'] .qs-section:not([data-compact]):not([data-mass='thin'] .qs-section) {
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+}
+[data-density='tight'] .qs-section:not([data-compact]):not([data-mass='thin'] .qs-section) {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}

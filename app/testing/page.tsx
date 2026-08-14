@@ -280,7 +280,7 @@ export default function TestingPage() {
               <p>
                 A feature flag turned on with two of its three variables set is not off and not on
                 — it is silently broken. <code>CONFIG_GATES</code> declares{' '}
-                <strong>14 features</strong> with their required env, evaluated at startup, and a
+                <strong>15 features</strong> with their required env, evaluated at startup, and a
                 public <code>/status</code> endpoint answers &ldquo;is this actually live?&rdquo;
                 from the running process rather than from a config file.
               </p>

@@ -35,6 +35,25 @@ function isGuestAllowedAdminPath(pathname: string): boolean {
   );
 }
 
+/**
+ * Is this a bare local dev host on ANY port — i.e. the app itself, running locally?
+ *
+ * ⚠️ THE PORT USED TO BE HARD-CODED TO 3000, AND THE FAILURE LOOKED LIKE A BROKEN PAGE.
+ * A dev server on any other port is not in APP_HOSTS, so every request falls through to the
+ * custom-domain branch and gets rewritten to `/sites/<path>` — a brand-new marketing route
+ * returns 404 with no hint that routing, not the route, is the problem. That has now cost
+ * two debugging detours (and is written down in a memory as "local verify needs port 3000",
+ * which is the kind of standing workaround this fixes rather than documents).
+ *
+ * Bare host only: `foo.localhost:3001` must still reach the dev-subdomain branch below, which
+ * is how tenant sites are tested locally. And dev-only — in production this returns false, so
+ * the explicit host list stays the whole story where it matters.
+ */
+function isLocalDevHost(host: string): boolean {
+  if (process.env.NODE_ENV === 'production') return false;
+  return /^(localhost|127\.0\.0\.1|\[::1\]|::1)(:\d+)?$/.test(host);
+}
+
 /** Hosts that should NOT be rewritten (your app itself). */
 const APP_HOSTS = new Set<string>([
   'localhost:3000',
@@ -221,7 +240,7 @@ export async function middleware(req: NextRequest) {
   // If this is our app host, don't rewrite. Forward the current pathname as a
   // request header so server components (e.g. the admin layout) can see which
   // route is rendering.
-  if (APP_HOSTS.has(host) || host.endsWith('.vercel.app')) {
+  if (APP_HOSTS.has(host) || isLocalDevHost(host) || host.endsWith('.vercel.app')) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-pathname', pathname);
     const res = NextResponse.next({ request: { headers: requestHeaders } });

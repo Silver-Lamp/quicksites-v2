@@ -102,6 +102,9 @@ const INDUSTRY_DEFAULTS: Record<string, BackdropStyle> = {
   auto_repair: 'grid',
   // Hospitality + retail — warmth and depth.
   restaurant: 'mesh',
+  // A stand should look sunny and hand-made, not like a chain. Aurora is the warmest of the
+  // CSS backdrops and costs nothing, which matters for a site that might exist for one Saturday.
+  lemonade_stand: 'aurora',
   bakery: 'mesh',
   cafe: 'mesh',
   salon: 'aurora',

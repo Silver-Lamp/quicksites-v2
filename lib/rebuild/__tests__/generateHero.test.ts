@@ -51,12 +51,24 @@ describe('rebuildHeroEnabled', () => {
 });
 
 describe('heroPrompt', () => {
-  it('names the business + industry and forbids text/logos', () => {
+  it('states the industry and forbids text/logos', () => {
     const p = heroPrompt(spec);
-    expect(p).toContain('Sunrise Bakery');
     expect(p).toContain('Restaurant');
     expect(p).toMatch(/no text/i);
     expect(p).toMatch(/no logos/i);
+  });
+
+  // ⚠️ THIS ASSERTION IS THE REVERSE OF THE ONE IT REPLACED, AND THE EVIDENCE IS WHY.
+  // It used to require the business NAME in the prompt. On 2026-08-14 a sweep regenerated 21
+  // heroes with the name included and got a large painted sign on 21 of 21 — spelling whatever
+  // string the caller had, which for geo pitch sites was the slug ("ARAB-TOWING",
+  // "desmoines-towing", "PLUMBING-1"). Same clause and model with the name removed: blank sign.
+  // Naming a business and then asking for unmarked surfaces is a contradiction the name wins,
+  // so the name is not a nice-to-have that got dropped — its absence is the mechanism.
+  it('does NOT name the business — the name is what summons the signage', () => {
+    const p = heroPrompt(spec);
+    expect(p).not.toContain('Sunrise Bakery');
+    expect(p).not.toMatch(/named\s*"/i);
   });
 
   // Rule 9 of the mesh painterly-backdrop standard, pinned on the path where it matters

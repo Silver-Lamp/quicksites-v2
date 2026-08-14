@@ -10,7 +10,7 @@
 import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { createClient } from '@supabase/supabase-js';
 import { meterLLMCall } from '@/lib/ai/meter';
-import { NO_PEOPLE_CLAUSE } from '@/lib/images/noPeople';
+import { NO_PEOPLE_NO_TEXT_CLAUSE } from '@/lib/images/noPeople';
 import { randomDemoSpec, type DemoSpec } from '@/lib/builder/randomDemoSpec';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import { LABEL_TO_KEY, KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
@@ -229,10 +229,16 @@ export async function ideateCopy(spec: DemoSpec, userId: string | null): Promise
 
 export async function generateHero(spec: DemoSpec, userId: string | null): Promise<string | null> {
   // No-people is mandatory network-wide — see lib/images/noPeople.ts.
+  //
+  // ⚠️ NO BUSINESS NAME IN AN IMAGE PROMPT. See the long note on heroPrompt in
+  // lib/rebuild/generateHero.ts: naming the business is what summons a painted sign (21 of 21
+  // on a 2026-08-14 sweep), and the model then spells the string it was given — "EUGENE
+  // PRÈSSURE WASHING", "desmoines-towing". With the name removed the sign comes back blank.
+  // The city/state stay: they steer the setting, and no model renders them as lettering.
   const prompt =
-    `Professional hero photo for a ${spec.industryLabel} business named "${spec.businessName}" in ${spec.city}, ${spec.state}. ` +
+    `Professional hero photo for a ${spec.industryLabel} business in ${spec.city}, ${spec.state}. ` +
     `Real-world, high quality, on-brand. ` +
-    NO_PEOPLE_CLAUSE;
+    NO_PEOPLE_NO_TEXT_CLAUSE;
 
   const dataUrl = await meterLLMCall<string | null>(
     { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: userId, route: ROUTE },

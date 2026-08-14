@@ -39,6 +39,7 @@ const INDUSTRY_PILLS = [
   'Auto Repair',
   'Fitness',
   'Landscaping',
+  'Lemonade Stand',
 ] as const;
 
 // White-label-overridable brand shape (orgs can theme the homepage).
@@ -150,6 +151,7 @@ export default function HomeClient({
             <span className="text-2xl font-bold tracking-tight">{productName}</span>
           </div>
 
+
           <motion.h1
             className="mt-8 max-w-3xl text-4xl md:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent"
             // Accent-driven so the homepage color lab recolors the title live;
@@ -226,7 +228,7 @@ export default function HomeClient({
               Some go further than a starter — a few trades get tools built for how they
               actually sell:
             </p>
-            <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               <Card title="Restaurants">
                 A menu-forward ordering site, not a brochure. Diners order from the menu and you
                 take payment — no delivery app in the middle.
@@ -242,6 +244,10 @@ export default function HomeClient({
               <Card title="Authors & makers">
                 Sell books, posters and apparel that are printed and shipped when ordered — no
                 inventory, no boxes in your garage.
+              </Card>
+              <Card title="Lemonade stands">
+                A menu, a QR code, and a printable table sign. The customer with no cash pays by
+                phone; a grown-up holds the Stripe account and the money lands in their bank.
               </Card>
             </div>
           </div>

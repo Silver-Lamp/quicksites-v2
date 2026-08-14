@@ -29,6 +29,7 @@ export type IndustryKey =
   | 'real_estate'
   | 'real_estate_agency'
   | 'restaurant'
+  | 'lemonade_stand'
   | 'salon_spa'
   | 'fitness'
   | 'photography'
@@ -89,6 +90,7 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'real_estate',          label: 'Real Estate' },
   { key: 'real_estate_agency',   label: 'Real Estate Agency' },
   { key: 'restaurant',           label: 'Restaurant' },
+  { key: 'lemonade_stand',       label: 'Lemonade Stand' },
   { key: 'salon_spa',            label: 'Salon & Spa' },
   { key: 'fitness',              label: 'Fitness' },
   { key: 'photography',          label: 'Photography' },
@@ -240,6 +242,10 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   // Multi-agent firms → the agency scaffold; single agents fall through to real_estate.
   if (x.includes('brokerage') || x.includes('real estate agency') || x.includes('realty group') || x.includes('realty team') || x.includes('real estate team')) return 'real_estate_agency';
   if (x.includes('real estate') || x.includes('realtor')) return 'real_estate';
+  // Before 'restaurant' and before any food match: a lemonade stand is a driveway, not a
+  // dining room, and the restaurant scaffold would give it hours, a location map and a
+  // catering enquiry form it has no use for.
+  if (x.includes('lemonade')) return 'lemonade_stand';
   if (x.includes('restaurant')) return 'restaurant';
   if (x.includes('salon') || x.includes('spa')) return 'salon_spa';
   if (x.includes('fitness') || x.includes('gym')) return 'fitness';

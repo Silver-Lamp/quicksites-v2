@@ -200,6 +200,13 @@ export function buildIndustryStarter(opts: {
   // list — this is what makes a restaurant site read like an ordering site.
   const FOOD_INDUSTRIES = new Set<IndustryKey>(['restaurant']);
 
+  // ⚠️ A LEMONADE STAND IS NOT A SMALL RESTAURANT, and putting it in FOOD_INDUSTRIES was the
+  // tempting shortcut. It would inherit a location map, opening hours and a catering-enquiry
+  // contact form — for something that exists in a driveway on a Saturday, run by a nine-year-old.
+  // What it shares with the restaurant vertical is the part worth reusing: a menu people order
+  // from and a payment. So it gets its own short branch below rather than a flag on that one.
+  const isLemonadeStand = industryKey === 'lemonade_stand';
+
   // Hero shape follows the theme's layout personality (all paths).
   applyHeroLayout(hero, theme.stamped.layout);
 
@@ -211,7 +218,88 @@ export function buildIndustryStarter(opts: {
   const voice: any = createDefaultBlock('about_that');
 
   let blocks: any[];
-  if (FOOD_INDUSTRIES.has(industryKey)) {
+  if (isLemonadeStand) {
+    // The whole product in one page: what's for sale, and a way to pay without cash.
+    //
+    // Copy is written for the GROWN-UP who sets this up, because Stripe requires the account
+    // holder to be 18+ and verifies their identity — the money lands in a parent's bank
+    // account. The stand is the kid's; the merchant account cannot be.
+    //
+    // No last name, no address, no photo of the child anywhere in this scaffold, and nothing
+    // asks for one. A stand page is a sign saying a named child is at a specific house at a
+    // specific time, which is a thing worth being deliberate about — first name only, and the
+    // location block that the restaurant scaffold would have added is absent on purpose.
+    const stand = businessName || 'The Lemonade Stand';
+    setIfPresent(hero.content, 'headline', stand);
+    setIfPresent(hero.content, 'subheadline', 'No cash? No problem — scan, tap, and it’s yours.');
+    setIfPresent(hero.content, 'cta_text', 'See what’s for sale');
+    setIfPresent(hero.content, 'cta_link', '#menu');
+
+    const menu: any = createDefaultBlock('menu');
+    menu.content = {
+      ...menu.content,
+      title: 'Today’s stand',
+      sections: [
+        {
+          name: 'Drinks',
+          description: '',
+          items: [
+            { name: 'Lemonade', description: 'Fresh squeezed, plenty of ice.', price: '$2', tags: [] },
+            { name: 'Large lemonade', description: 'The big cup.', price: '$3', tags: ['Popular'] },
+            { name: 'Pink lemonade', description: 'Same, but pink.', price: '$2', tags: [] },
+          ],
+        },
+        {
+          name: 'Snacks',
+          description: '',
+          items: [
+            { name: 'Cookie', description: 'Homemade, usually still warm.', price: '$1', tags: [] },
+          ],
+        },
+      ],
+    };
+
+    // A stand's "story" is the reason people stop and pay more than it's worth. It is also
+    // the honest place for what the money is FOR, which is what turns $2 into $5.
+    const story: any = createDefaultBlock('story');
+    story.content = {
+      ...story.content,
+      title: 'About the stand',
+      sections: [
+        {
+          heading: 'What we’re saving up for',
+          body:
+            'Tell people what the money is going toward — a bike, a game, a class trip, the ' +
+            'animal shelter. This is the part customers actually read, and it is why some of ' +
+            'them round up.',
+          image_url: '',
+          cta_text: '',
+          cta_link: '',
+        },
+      ],
+    };
+
+    const orderBar: any = createDefaultBlock('order_bar');
+
+    // Same-page nav only: there are no other pages, and a dead "Home / Services / Contact"
+    // nav on a one-page stand is the first thing that makes it look fake.
+    const standNav = [
+      { label: 'What’s for sale', href: '#menu', appearance: 'default' },
+      { label: 'About', href: '#story', appearance: 'default' },
+    ];
+    const headerBlk: any = (base as any)?.data?.headerBlock ?? (base as any)?.headerBlock;
+    if (headerBlk?.content && Array.isArray(headerBlk.content.nav_items)) {
+      headerBlk.content.nav_items = standNav.map((l) => ({ ...l }));
+    }
+    const footerBlk: any = (base as any)?.data?.footerBlock ?? (base as any)?.footerBlock;
+    if (footerBlk?.content && Array.isArray(footerBlk.content.links)) {
+      footerBlk.content.links = standNav.map((l) => ({ ...l }));
+    }
+
+    // No contact form. A stand does not need an inbox, and a form on a child's page inviting
+    // strangers to send messages is a feature with no upside here.
+    blocks = [hero, menu, story, orderBar];
+  } else if (FOOD_INDUSTRIES.has(industryKey)) {
     // Restaurant: menu + hours; the hero points at the menu rather than a quote.
     setIfPresent(hero.content, 'headline', businessName || label);
     setIfPresent(hero.content, 'subheadline', 'Fresh food, made daily — order online or stop by.');
@@ -667,6 +755,7 @@ export function buildIndustryStarter(opts: {
     theme.stamped.layout?.heroLayout === 'split' &&
     blocks.length > 1 &&
     !FOOD_INDUSTRIES.has(industryKey) &&
+    !isLemonadeStand &&
     industryKey !== 'personal' &&
     industryKey !== 'faith'
   ) {

@@ -10,6 +10,14 @@ import {
   apexRedirectTarget,
 } from '@/lib/menu/deliveredMenu';
 import {
+  yardSaleEnabled,
+  isYardSaleHost,
+  isYardSaleApexHost,
+  yardSaleSubdomainCode,
+  yardSaleCodeFromPath,
+  isYardSaleApexPage,
+} from '@/lib/garageSales/yardSaleSites';
+import {
   lemonYumEnabled,
   isLemonYumHost,
   isLemonYumApexHost,
@@ -280,6 +288,43 @@ export async function middleware(req: NextRequest) {
   // Both `<slug>.delivered.menu` and `delivered.menu/<slug>` resolve to /sites/<slug>;
   // an `x-qsites-menu-host` request header lets the renderer serve an unclaimed draft
   // (watermarked, noindex) to the public and drop the watermark once published.
+  // --- yardsalesites.com garage-sale surface ---
+  // The branded front door for the printed stickers: yardsalesites.com/5BC-GP8 → /s/5BCGP8.
+  // Both the path form (what the sticker prints) and a subdomain form resolve.
+  if (yardSaleEnabled() && isYardSaleHost(host)) {
+    const toSticker = (code: string) => {
+      const rewriteUrl = req.nextUrl.clone();
+      rewriteUrl.pathname = `/s/${code}`;
+      const res = NextResponse.rewrite(rewriteUrl, { request: { headers: withPublicPath(req) } });
+      res.headers.set('x-qsites-yardsale-code', code);
+      res.headers.set('x-qsites-rewrite', rewriteUrl.pathname);
+      return withCookies(res);
+    };
+
+    const subCode = yardSaleSubdomainCode(host);
+    if (subCode) return toSticker(subCode);
+
+    if (isYardSaleApexHost(host)) {
+      const code = yardSaleCodeFromPath(pathname);
+      if (code) return toSticker(code);
+
+      // Apex root → the directory of sales.
+      if (pathname === '/') {
+        const rewriteUrl = req.nextUrl.clone();
+        rewriteUrl.pathname = '/garage-sales';
+        return withCookies(NextResponse.rewrite(rewriteUrl, { request: { headers: withPublicPath(req) } }));
+      }
+
+      // A few pages belong here; everything else is neither a code nor ours to show on a
+      // stranger's yard-sale sign, so it goes to the directory rather than serving QuickSites'
+      // marketing. See the note on APEX_PAGES for why this fence is inverted vs lemonyum's.
+      if (!isYardSaleApexPage(pathname)) {
+        return withCookies(NextResponse.redirect(`https://${host}/`, 307));
+      }
+      return withCookies(NextResponse.next());
+    }
+  }
+
   // --- lemonyum.com lemonade-stand surface ---
   // Same shape as the delivered.menu branch below, for the same reason: a branded consumer host
   // in front of an ordinary QuickSites site. `<slug>.lemonyum.com` and `lemonyum.com/<slug>` both

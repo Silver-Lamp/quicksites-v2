@@ -205,6 +205,16 @@ export const CONFIG_GATES: ConfigGate[] = [
       'delivered.menu traffic is ignored — <slug>.delivered.menu and delivered.menu/<slug> stop resolving to restaurant sites. NOTE: this is a NEXT_PUBLIC_ var, so changing it requires a REBUILD, not just a redeploy of the same build.',
   },
   {
+    key: 'yardsale_host',
+    label: 'yardsalesites.com garage-sale surface',
+    enabledBy: 'NEXT_PUBLIC_YARDSALE_BASE_DOMAIN',
+    enabledWhen: (raw) => !!(raw && raw.trim()),
+    requires: [],
+    degradeOnly: true,
+    breaks:
+      'yardsalesites.com traffic is ignored — the printed sticker URL falls back to quicksites.ai/s/<code>, which still works. Stickers already handed out keep resolving either way. NOTE: NEXT_PUBLIC_ var, so changing it needs a REBUILD, not just a redeploy.',
+  },
+  {
     key: 'lemonyum_host',
     label: 'lemonyum.com lemonade-stand surface',
     enabledBy: 'NEXT_PUBLIC_LEMONYUM_BASE_DOMAIN',

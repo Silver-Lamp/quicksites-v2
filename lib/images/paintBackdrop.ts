@@ -22,7 +22,7 @@ import { getOpenAI } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
-import { NO_PEOPLE_CLAUSE } from '@/lib/images/noPeople';
+import { NO_PEOPLE_NO_TEXT_CLAUSE } from '@/lib/images/noPeople';
 import { readBackdrop, type SiteBackdrop } from '@/lib/theme/backdrops';
 import { republishIfPublished } from '@/lib/templates/republishIfPublished';
 
@@ -41,7 +41,14 @@ export function backdropPrompt(opts: { industryLabel?: string | null; subject?: 
     `negative space in the middle where text will sit. It must read as a distant backdrop, ` +
     `not a photograph and not a focal illustration: low contrast, nothing sharp or busy, ` +
     `no central subject competing with foreground text. ` +
-    NO_PEOPLE_CLAUSE
+    // ⚠️ NO_TEXT IS LOAD-BEARING HERE, and the version without it shipped painted signage.
+    // A 2026-08-14 pool run produced a pest_control backdrop with "PEST CONTROL" lettered on a
+    // signboard — the INDUSTRY LABEL in the prompt summons a sign exactly the way a business
+    // name does on the hero paths (see lib/rebuild/generateHero.ts). Lettering is worse on a
+    // backdrop than on a hero: it sits behind a real business's copy, so the page appears to be
+    // making a claim in signage the owner never wrote, and it is the one thing in an
+    // "atmospheric, low contrast" image that the eye goes straight to.
+    NO_PEOPLE_NO_TEXT_CLAUSE
   );
 }
 

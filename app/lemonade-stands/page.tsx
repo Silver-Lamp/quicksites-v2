@@ -34,9 +34,9 @@ export const metadata = marketingOg({
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 text-left">
-      <h4 className="text-base font-semibold text-white">{title}</h4>
-      <p className="mt-2 text-sm text-zinc-400">{children}</p>
+    <div className="rounded-xl border border-zinc-200 bg-white/70 shadow-sm p-5 text-left">
+      <h4 className="text-base font-semibold text-zinc-900">{title}</h4>
+      <p className="mt-2 text-sm text-zinc-600">{children}</p>
     </div>
   );
 }
@@ -44,12 +44,12 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 function Step({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-4 text-left">
-      <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-yellow-500/40 bg-yellow-500/10 text-sm font-bold tabular-nums text-yellow-300">
+      <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-yellow-500/50 bg-yellow-400/25 text-sm font-bold tabular-nums text-yellow-900">
         {n}
       </div>
       <div>
-        <h4 className="text-base font-semibold text-white">{title}</h4>
-        <p className="mt-1 text-sm text-zinc-400">{children}</p>
+        <h4 className="text-base font-semibold text-zinc-900">{title}</h4>
+        <p className="mt-1 text-sm text-zinc-600">{children}</p>
       </div>
     </div>
   );
@@ -59,20 +59,66 @@ export default function LemonadeStandsPage() {
   return (
     <>
       <SiteHeader sticky />
-      <div className="relative min-h-screen bg-zinc-950 text-white">
+      {/* ⚠️ THIS PAGE IS DELIBERATELY LIGHT, WHICH IS AN EXCEPTION TO CLAUDE.md §7.
+          The app chrome is dark everywhere else, and a page that hard-codes light utilities is
+          usually a BUG there — dark-on-dark text nobody notices until a screenshot. Here it is
+          the brand: LemonYum is lemonade, and a near-black page for a kids' stand reads wrong no
+          matter how good the copy is.
+
+          Because it opts out, it cannot use the semantic tokens (`text-foreground`, `bg-card`):
+          those resolve against `data-theme="dark"` from the global ThemeScope and would paint
+          this page's text white on cream. Every colour here is therefore a CONCRETE light class,
+          on purpose, and `dark:` variants must never be added — the global `.dark` on <html>
+          would pin them on. Same reasoning as the route-planner's toggle comment. */}
+      <div className="relative min-h-screen bg-[#fdfaf0] text-zinc-900">
         {/* Hero — lemonade yellow rather than the sky accent the partner pages use. */}
-        <section className="relative mx-auto max-w-5xl px-6 pt-16 pb-12 text-center">
-          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-            <div className="absolute -top-20 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-yellow-400/15 blur-3xl" />
+        <section className="relative w-full overflow-hidden">
+          {/* Painterly hero backdrop (gpt-image-1, no people + no lettering — the same prompt
+              path the site backdrops use). A pale painting on a cream page can carry far more
+              opacity than it could on the near-black version, so the picture actually reads.
+              The scrim still runs bottom-to-top: contrast for the dark heading text is
+              guaranteed by the wash, not assumed — checked in a screenshot, which is the only
+              thing that finds this class of bug (CLAUDE.md §7). */}
+          {/* ⚠️ z-0, NOT -z-10. A negative z-index child paints BEHIND its ancestor's
+              background, and the page shell above is an opaque cream fill — so the image
+              rendered, downloaded, and was covered, exactly like the site backdrops that were
+              hidden under `bg-background` (fixed in #792 the same day). The hero content below
+              is lifted to z-10 so it still sits above this. */}
+          <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <div
+              className="absolute inset-0 bg-cover"
+              style={{
+                backgroundImage: 'url(/backgrounds/lemonyum/hero.jpg)',
+                // ⚠️ NOT `bg-center`, and this is the second screenshot-only bug on one image.
+                // backdropPrompt asks for "plenty of open negative space in the MIDDLE where text
+                // will sit" — the painting obliged, so its content (pitcher, table, tree, house)
+                // sits around the edges. `bg-cover bg-center` on a wide, short hero then crops to
+                // precisely the empty middle, and the page renders as flat cream with a 148KB
+                // image loaded behind it. Anchoring low shows the part worth seeing.
+                backgroundPosition: '50% 82%',
+                opacity: 1,
+              }}
+            />
+            {/* ⚠️ SCRIM TUNED DOWN AFTER A SCREENSHOT, not before. The first pass used opacity
+                0.75 behind a /40 → /70 → solid wash and the painting VANISHED — the image is
+                deliberately high-key and pale, so a cream scrim at those values erases it while
+                every number in the code still looks sensible. Near-black heading on pale yellow
+                means legibility was never the risk here; visibility of the thing we paid to
+                generate was. */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#fdfaf0]/10 via-[#fdfaf0]/35 to-[#fdfaf0]" />
           </div>
 
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-yellow-300/80">
+          {/* Full-bleed backdrop, constrained content. The max-width used to sit on the
+              <section>, which meant the painting was clipped to a 1024px band with hard vertical
+              edges against the cream page — it read as a mistake rather than a hero. */}
+          <div className="relative z-10 mx-auto max-w-5xl px-6 pt-24 pb-20 text-center">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-yellow-800">
             For lemonade stands
           </p>
           <h1 className="mt-4 text-4xl font-extrabold tracking-tight md:text-5xl">
             “Sorry, I don’t have any cash.”
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-lg text-zinc-400">
+          <p className="mx-auto mt-5 max-w-2xl text-lg text-zinc-700">
             It’s the most common thing said at a lemonade stand, and it’s the only reason a
             customer who wanted to buy something walks away. Give the stand a QR code and they
             can pay with the phone already in their hand.
@@ -87,18 +133,19 @@ export default function LemonadeStandsPage() {
             </Link>
             <Link
               href="#how"
-              className="inline-block rounded-lg border border-yellow-400/50 px-6 py-3 text-base font-medium text-yellow-200 transition hover:bg-yellow-400/10"
+              className="inline-block rounded-lg border border-yellow-600/50 px-6 py-3 text-base font-medium text-yellow-900 transition hover:bg-yellow-400/20"
             >
               How it works
             </Link>
           </div>
-          <p className="mt-3 text-xs text-zinc-500">
+          <p className="mt-3 text-xs text-zinc-600">
             Free to set up, free to host, and we take no cut. About five minutes.
           </p>
+          </div>
         </section>
 
         {/* How it works */}
-        <section id="how" className="w-full border-t border-zinc-800/70">
+        <section id="how" className="w-full border-t border-zinc-200">
           <div className="mx-auto max-w-5xl px-6 py-14">
             <h2 className="text-2xl font-semibold md:text-3xl">How it works</h2>
             <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2">
@@ -124,7 +171,7 @@ export default function LemonadeStandsPage() {
         </section>
 
         {/* What you get */}
-        <section className="w-full border-t border-zinc-800/70 bg-zinc-950/60">
+        <section className="w-full border-t border-zinc-200 bg-white/60">
           <div className="mx-auto max-w-5xl px-6 py-14">
             <h2 className="text-2xl font-semibold md:text-3xl">What the stand gets</h2>
             <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
@@ -147,15 +194,15 @@ export default function LemonadeStandsPage() {
         </section>
 
         {/* The honest section. */}
-        <section className="w-full border-t border-zinc-800/70">
+        <section className="w-full border-t border-zinc-200">
           <div className="mx-auto max-w-3xl px-6 py-14">
             <h2 className="text-2xl font-semibold md:text-3xl">Two things worth knowing first</h2>
 
-            <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
-              <h3 className="text-base font-semibold text-white">
+            <div className="mt-6 rounded-xl border border-zinc-200 bg-white/70 shadow-sm p-6">
+              <h3 className="text-base font-semibold text-zinc-900">
                 The buyer needs the same app you do
               </h3>
-              <p className="mt-2 text-sm text-zinc-400">
+              <p className="mt-2 text-sm text-zinc-600">
                 Because payments go straight to your own account, a customer pays with whichever
                 of Venmo, Cash App or PayPal you’ve listed — so add every one you use. Someone
                 with none of them still pays cash, exactly as they do today. Nothing is deducted:
@@ -163,11 +210,11 @@ export default function LemonadeStandsPage() {
               </p>
             </div>
 
-            <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
-              <h3 className="text-base font-semibold text-white">
+            <div className="mt-4 rounded-xl border border-zinc-200 bg-white/70 shadow-sm p-6">
+              <h3 className="text-base font-semibold text-zinc-900">
                 The account has to be an adult’s
               </h3>
-              <p className="mt-2 text-sm text-zinc-400">
+              <p className="mt-2 text-sm text-zinc-600">
                 The payment account is yours, not your child’s — every one of these apps requires
                 an account holder who is 18 or over. So the setup is yours and the stand is
                 theirs. We don’t ask for the child’s last name, address or photo, and we’d
@@ -178,10 +225,10 @@ export default function LemonadeStandsPage() {
           </div>
         </section>
 
-        <section className="w-full border-t border-zinc-800/70 bg-zinc-950/60">
+        <section className="w-full border-t border-zinc-200 bg-white/60">
           <div className="mx-auto max-w-3xl px-6 py-14 text-center">
             <h2 className="text-2xl font-semibold md:text-3xl">Set one up before Saturday</h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-400">
+            <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-600">
               Five minutes now, and the next person who says they have no cash buys a lemonade
               anyway.
             </p>

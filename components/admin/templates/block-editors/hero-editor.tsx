@@ -917,7 +917,7 @@ export default function HeroEditor({
 
   return (
     <div
-      // ⚠️ ABOVE THE FLOATING EDITOR TOOLBAR, WHICH SITS AT z-[2147483646].
+      // ⚠️ AT THE Z-INDEX CEILING — WHICH IS WHY THE FOOTER BELOW USES SPACING, NOT STACKING.
       // At z-[100] this modal rendered UNDER it, and the thing the toolbar covered was the
       // modal's own sticky footer — Cancel and Save. So an operator could pick a hero image,
       // see it in the preview, and have no reachable way to commit it: closing the modal was
@@ -1635,7 +1635,27 @@ export default function HeroEditor({
         </div>
 
         {/* sticky footer */}
-        <div className="sticky bottom-0 z-10 border-t border-white/10 bg-neutral-950/90 backdrop-blur px-4 py-3 flex justify-end gap-2">
+        {/*
+          ⚠️ CLEARANCE, NOT Z-INDEX. THIS BUG CAME BACK, AND IT CAME BACK BECAUSE THE FIRST FIX
+          WAS A RACE THAT CANNOT BE WON TWICE.
+
+          The original "hero image won't save" was this footer hiding behind the floating editor
+          toolbar: the operator picks an image, sees it in the preview, and the Save button is
+          underneath a toolbar. It was fixed by raising the modal to z-[2147483647] while the
+          toolbar sat one below.
+
+          That value is INT32_MAX. There is no higher number. When TemplateActionToolbar was
+          later given the same 2147483647, the tie broke on DOM order — the toolbar renders after
+          the modal — and the footer was covered again. Reported from real use a second time, with
+          the same database fingerprint: a hero block still carrying scaffold content, no
+          `image_url` key at all, because handleSave never ran.
+
+          So the fix is spatial instead of ordinal. `mb-24` lifts the footer clear of the toolbar
+          strip, which means Save stays reachable no matter which component wins the paint. A
+          z-index ceiling is a shared resource and every component believes it is the frontmost
+          thing on screen; not needing to be frontmost is the only stable position.
+        */}
+        <div className="sticky bottom-0 z-10 mb-24 border-t border-white/10 bg-neutral-950/90 backdrop-blur px-4 py-3 flex justify-end gap-2">
           <button
             onClick={() => onClose?.()}
             className="text-sm px-3 py-1.5 border border-white/10 rounded bg-neutral-900 hover:bg-neutral-800"

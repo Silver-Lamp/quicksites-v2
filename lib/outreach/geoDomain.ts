@@ -75,21 +75,42 @@ export function apexSlugForDomain(domain: string): string {
 }
 
 /**
- * Restaurant apex candidates for a city, **best first**.
+ * Apex-domain candidates for a city + industry, **best first**.
  *
- * ⚠️ PLURAL LEADS DELIBERATELY. The domain's whole job is to match what a hungry person types, and
- * that is "kent restaurants" — the plural is the exact match, the singular is a near-miss we happen
- * to have standardised on internally. Both are still checked, because an existing contest may sit
- * on either form and a city we already own must never look buyable.
+ * ⚠️ PLURALISING IS PER-INDUSTRY, NOT A RULE. For food the plural IS the exact match — a hungry
+ * person types "kent restaurants" — so it leads. For most trades the plural is wrong or absurd:
+ * nobody searches "paterson auto repairs" or "renton roofings". Offering a bad alternate is worse
+ * than offering one candidate, because the operator has to judge which is real at the moment of
+ * spending money.
+ *
+ * ⚠️ EVERY FORM WE MIGHT ALREADY OWN MUST STAY IN THE LIST. A city we own must never look buyable —
+ * that is how a second Renton domain nearly got bought while the first sat parked at Namecheap.
+ */
+const APEX_ALTERNATES: Partial<Record<string, (slug: string) => string[]>> = {
+  // Food is the one where the plural is the natural search term, so it leads.
+  restaurant: (slug) => [`${slug}s`],
+};
+
+export function apexCandidatesFor(
+  city: string,
+  industryKey: IndustryKey,
+  tld = 'com',
+): Array<{ domain: string; slug: string }> {
+  const canonical = geoDomainFor(city, industryKey, tld);
+  const alts = (APEX_ALTERNATES[industryKey]?.(canonical.slug) ?? []).map((slug) => ({
+    domain: `${slug}.${tld}`,
+    slug,
+  }));
+  // Alternates first when they exist — for food the plural is the better buy.
+  return [...alts, canonical];
+}
+
+/**
+ * @deprecated Use `apexCandidatesFor(city, 'restaurant')`. Kept so existing callers are unchanged.
  */
 export function restaurantApexCandidates(
   city: string,
   tld = 'com',
 ): Array<{ domain: string; slug: string }> {
-  const singular = geoDomainFor(city, 'restaurant' as IndustryKey, tld);
-  const pluralSlug = `${singular.slug}s`;
-  return [
-    { domain: `${pluralSlug}.${tld}`, slug: pluralSlug },
-    singular,
-  ];
+  return apexCandidatesFor(city, 'restaurant' as IndustryKey, tld);
 }

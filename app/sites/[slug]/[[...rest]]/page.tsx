@@ -262,10 +262,10 @@ async function loadSnapshotDataById(id: string): Promise<any | null> {
  */
 const loadDraftTemplate = cache(async (
   templateId: string,
-): Promise<{ data: any; siteFields: any; claimSource: string | null } | null> => {
+): Promise<{ data: any; siteFields: any; claimSource: string | null; ownerId: string | null } | null> => {
   const { data, error } = await supabaseAdmin
     .from('templates')
-    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain, claim_source')
+    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain, claim_source, owner_id')
     .eq('id', templateId)
     .maybeSingle();
   if (error) {
@@ -286,8 +286,27 @@ const loadDraftTemplate = cache(async (
       default_subdomain: null,
     },
     claimSource: (data as any)?.claim_source ?? null,
+    ownerId: (data as any)?.owner_id ?? null,
   };
 });
+
+/**
+ * May this unclaimed draft be shown to the public on ANY host?
+ *
+ * ⚠️ THIS USED TO BE "IS IT THE MENU HOST?", AND THAT COUPLING BROKE A DOMAIN WE HAD JUST BOUGHT.
+ * Serving a pre-claim draft is a property of the DRAFT — operator-built, from a public listing,
+ * nobody owns it yet — not a property of delivered.menu. It was written as a host check because
+ * restaurants were the only vertical, and the moment auto shops arrived every "Visit shop →" link
+ * on paterson-auto-repair.com 404'd: the directory points at <slug>.quicksites.ai, and the platform
+ * host refused to render an unpublished draft.
+ *
+ * ⚠️ DELIBERATELY NARROW. Only operator-built listing drafts with NO owner. A guest_build draft is
+ * somebody's private work-in-progress and must stay invisible until they publish it.
+ */
+function isPublicPreClaimDraft(claimSource: string | null, ownerId: string | null): boolean {
+  if (ownerId) return false;
+  return claimSource === 'listing_import' || claimSource === 'operator_draft';
+}
 
 /** Current request user (auth cookie), memoized per request. */
 const getCurrentUser = cache(async () => {
@@ -468,9 +487,12 @@ export default async function SitePreviewPage({
     }
   }
 
-  if (!normalized && (admin || menuHost) && siteRow.template_id) {
+  if (!normalized && siteRow.template_id) {
     const draft = await loadDraftTemplate(siteRow.template_id);
-    if (draft?.data) {
+    // Admins and the menu host see any draft; everyone else only an unclaimed operator draft.
+    const mayShow =
+      admin || menuHost || (draft ? isPublicPreClaimDraft(draft.claimSource, draft.ownerId) : false);
+    if (draft?.data && mayShow) {
       normalized = normalizeForRenderer(draft.data, draft.siteFields);
       isDraft = true;
       claimSource = draft.claimSource;
@@ -488,10 +510,12 @@ export default async function SitePreviewPage({
 
   // Watermark only the public draft on the menu surface; a claimed+published site
   // (published_snapshot_id present) renders clean and indexable.
-  const showWatermark = isDraft && menuHost;
+  // ⚠️ Follows the DRAFT, not the host. An unclaimed draft on quicksites.ai is exactly as
+  // unclaimed as one on delivered.menu, and an unwatermarked one reads as a finished site.
+  const showWatermark = isDraft;
   // Show the "claim your site" bar only for a still-claimable outreach draft on the
   // menu surface — mirrors the gate the claim page itself enforces.
-  const showClaimBar = isDraft && menuHost && claimSource === 'listing_import';
+  const showClaimBar = isDraft && (claimSource === 'listing_import' || claimSource === 'operator_draft');
   const claimToken = showClaimBar ? mintSiteClaimToken(siteRow.id) : null;
   const claimBusinessName =
     (normalized as any).business_name ?? (normalized as any).meta?.business_name ?? null;

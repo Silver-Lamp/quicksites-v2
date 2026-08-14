@@ -17,6 +17,7 @@
 // is not one a nine-year-old is in a position to weigh. The stand name is the site's own title,
 // which the grown-up chose and can change.
 import QRCode from 'qrcode';
+import { lemonYumSiteUrl } from '@/lib/lemonade/lemonYum';
 
 export type StandSignModel = {
   /** The stand's public site URL — what the QR resolves to. */
@@ -43,7 +44,11 @@ export function standUrlFor(t: { slug?: string | null; custom_domain?: string | 
   if (custom) return `https://${custom.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
   const slug = (t.slug || '').trim();
   if (!slug) return null;
-  return `https://${slug}.quicksites.ai`;
+  // Prefer the branded host once lemonyum.com is configured: shorter to print, easier to read
+  // aloud, and reliably linkified in phone messaging apps (a `.com`, unlike delivered.menu's
+  // gTLD — see docs/LEMONYUM_PLAN.md §1). Falls back to the platform subdomain while inert, so
+  // signs printed today keep working after the domain is pointed.
+  return lemonYumSiteUrl(slug) ?? `https://${slug}.quicksites.ai`;
 }
 
 /**

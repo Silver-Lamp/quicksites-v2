@@ -205,6 +205,16 @@ export const CONFIG_GATES: ConfigGate[] = [
       'delivered.menu traffic is ignored — <slug>.delivered.menu and delivered.menu/<slug> stop resolving to restaurant sites. NOTE: this is a NEXT_PUBLIC_ var, so changing it requires a REBUILD, not just a redeploy of the same build.',
   },
   {
+    key: 'lemonyum_host',
+    label: 'lemonyum.com lemonade-stand surface',
+    enabledBy: 'NEXT_PUBLIC_LEMONYUM_BASE_DOMAIN',
+    enabledWhen: (raw) => !!(raw && raw.trim()),
+    requires: [],
+    degradeOnly: true,
+    breaks:
+      'lemonyum.com traffic is ignored — lemonyum.com/<slug> stops resolving to a stand, and printed signs fall back to <slug>.quicksites.ai. Signs already in the world keep working either way. NOTE: NEXT_PUBLIC_ var, so changing it needs a REBUILD, not just a redeploy.',
+  },
+  {
     key: 'persona_findings',
     label: 'Persona-testing receiver (HiveJournal)',
     // Keyed on the secret's PRESENCE, requiring nothing else — so it reports `off` when the

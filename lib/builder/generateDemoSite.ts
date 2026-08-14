@@ -230,14 +230,13 @@ export async function ideateCopy(spec: DemoSpec, userId: string | null): Promise
 export async function generateHero(spec: DemoSpec, userId: string | null): Promise<string | null> {
   // No-people is mandatory network-wide — see lib/images/noPeople.ts.
   //
-  // ⚠️ …AND SO IS NO-LETTERING, which this call site was missing. `NO_PEOPLE_CLAUSE` carries
-  // only the NEGATIVE "no text", which noPeople.ts itself records the model ignoring often
-  // enough to matter ("VB FERAONT SMLPEE" on a tanker, "Seacoating" for the trade word). The
-  // positive-form `NO_TEXT_INSTRUCTION` is what actually works, and only the interactive route
-  // was using it. Regenerating four demo heroes on 2026-08-14 produced a fresh instance
-  // immediately: a wall sign reading "EUGENE PRÈSSURE WASHING".
+  // ⚠️ NO BUSINESS NAME IN AN IMAGE PROMPT. See the long note on heroPrompt in
+  // lib/rebuild/generateHero.ts: naming the business is what summons a painted sign (21 of 21
+  // on a 2026-08-14 sweep), and the model then spells the string it was given — "EUGENE
+  // PRÈSSURE WASHING", "desmoines-towing". With the name removed the sign comes back blank.
+  // The city/state stay: they steer the setting, and no model renders them as lettering.
   const prompt =
-    `Professional hero photo for a ${spec.industryLabel} business named "${spec.businessName}" in ${spec.city}, ${spec.state}. ` +
+    `Professional hero photo for a ${spec.industryLabel} business in ${spec.city}, ${spec.state}. ` +
     `Real-world, high quality, on-brand. ` +
     NO_PEOPLE_NO_TEXT_CLAUSE;
 

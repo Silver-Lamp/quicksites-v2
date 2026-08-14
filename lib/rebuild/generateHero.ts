@@ -45,16 +45,28 @@ function slugify(s: string): string {
  *  The no-people clause is NOT optional here. This path auto-builds sites for real,
  *  named businesses from their public listing, so a generated photo of staff or diners
  *  would assert people who don't exist on a page that presents as that business's own.
- *  See lib/images/noPeople.ts for why, and the mesh standard it implements. */
+ *  See lib/images/noPeople.ts for why, and the mesh standard it implements.
+ *
+ *  ⚠️ THE BUSINESS NAME IS DELIBERATELY ABSENT, AND REMOVING IT IS WHAT MAKES THE
+ *  NO-LETTERING CLAUSE WORK.
+ *
+ *  This prompt used to say `a ${industryLabel} business named "${businessName}"`, and the
+ *  clause asking for clean unmarked surfaces lost every time: a sweep on 2026-08-14
+ *  regenerated 21 heroes with the name in the prompt and got a big painted sign on
+ *  21 OF 21. Naming a business and then asking for no lettering is a contradiction, and
+ *  the name wins. Worse, the model spells whatever string it is handed — those 21 came
+ *  back reading "ARAB-TOWING", "desmoines-towing", "PLUMBING-1", because the name the
+ *  caller had was the slug.
+ *
+ *  Controlled check, same clause and model, name removed: the building's sign came back
+ *  BLANK. So the rule is not "add a stronger no-text clause", it is DO NOT PUT A NAME IN
+ *  AN IMAGE PROMPT. `industryLabel` already carries everything the model needs to compose
+ *  the scene, and the business's real name belongs in the page copy, where it is spelled
+ *  by us and not by an image model. */
 export function heroPrompt(spec: RebuildSpec): string {
   return (
-    `Professional website hero photo for a ${spec.industryLabel} business named "${spec.businessName}". ` +
+    `Professional website hero photo for a ${spec.industryLabel} business. ` +
     `Real-world, high quality, on-brand, bright and inviting. ` +
-    // ⚠️ NO_TEXT matters MORE here than anywhere else, and this was the last call site without
-    // it. The negative "no text" inside NO_PEOPLE_CLAUSE is not enough — noPeople.ts records the
-    // model stencilling "VB FERAONT SMLPEE" onto a tanker despite it. On this path the misspelt
-    // signage lands on a REAL, NAMED business's own page, which is the same wrong as inventing
-    // their staff: they did not write it, and it reads as their sign.
     NO_PEOPLE_NO_TEXT_CLAUSE
   );
 }

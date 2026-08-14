@@ -60,14 +60,28 @@ async function main() {
   }
 
   const db = admin();
-  const { data: rows, error } = await db
-    .from('templates')
-    .select('id, slug, data, rev, published, claim_source, template_name')
-    .in('slug', SLUGS);
-  if (error) throw error;
 
-  const found = rows ?? [];
-  const missing = SLUGS.filter((s) => !found.some((r: any) => r.slug === s));
+  // One row per request. A bulk `.in('slug', SLUGS)` would work too — this is just so a single
+  // bad slug reports itself rather than being lost in a set difference, and so `data` (a large
+  // blob) is never fetched 20-wide.
+  //
+  // ⚠️ IF EVERY SLUG COMES BACK "not found", SUSPECT YOUR SHELL BEFORE THIS CODE.
+  // zsh does not word-split unquoted parameters, so `script $SLUGS` passes ONE argument
+  // containing every name, which is of course not a slug. It fails as "21 sites missing",
+  // which reads as a database problem and is not one. Use `${=SLUGS}` in zsh, or pass the
+  // slugs literally. I diagnosed this as a PostgREST response-size limit first and was wrong.
+  const found: any[] = [];
+  const missing: string[] = [];
+  for (const slug of SLUGS) {
+    const { data, error } = await db
+      .from('templates')
+      .select('id, slug, data, rev, published, claim_source, template_name')
+      .eq('slug', slug)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) found.push(data);
+    else missing.push(slug);
+  }
   if (missing.length) console.warn(`⚠️  not found: ${missing.join(', ')}`);
 
   console.log(

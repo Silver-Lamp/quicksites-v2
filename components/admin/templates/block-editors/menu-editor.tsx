@@ -69,7 +69,24 @@ function writeMerchantToTemplate(template: any, merchantId: string) {
 }
 
 export default function MenuEditor({ block, onSave, onClose, template }: BlockEditorProps) {
-  const initial = (block as any)?.content ?? {};
+  /**
+   * ⚠️ READ `content` OR `props`. A MENU LIVES IN BOTH, DEPENDING ON WHAT LAST TOUCHED IT.
+   *
+   * Reported from real use: an owner opened the menu editor on a stand whose page was visibly
+   * showing three priced drinks, and got an empty editor — default title, no sections, and a
+   * "Create 0 products & enable ordering" button. The items were never lost. They were under
+   * `props`, because the block had passed through the Zod block schema (admin/lib/zod/
+   * blockSchema.ts), which emits the schema shape and defaults `currency: 'USD'` — the
+   * fingerprint that identified it. The RENDERER reads both, so the page looked perfect while
+   * the editor showed nothing.
+   *
+   * 172 of 173 imported restaurant menus carry `content`; exactly one carried `props`. That
+   * ratio is why this reads as "impossible" until it happens to you, and why tolerance beats
+   * picking a winner: whichever key holds the data, the owner must be able to edit their menu.
+   */
+  const initial = ((block as any)?.content && Object.keys((block as any).content).length
+    ? (block as any).content
+    : (block as any)?.props) ?? {};
   const [title, setTitle] = React.useState<string>(initial.title || 'Menu');
   const [note, setNote] = React.useState<string>(initial.note || '');
   const [sections, setSections] = React.useState<Section[]>(() => cloneSections(initial));
@@ -131,7 +148,12 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
   );
 
   const commit = (secs: Section[] = sections) => {
-    const updated: Block = { ...(block as Block), type: 'menu', content: buildContent(secs) } as Block;
+    const next = buildContent(secs);
+    // Write BOTH keys, the way the hero editor does. Saving only `content` would leave a stale
+    // `props.sections` behind it — and the renderer prefers whichever it finds first, so the
+    // page could keep showing the pre-edit menu while the editor showed the new one. Two copies
+    // of one truth is what caused this; leaving one of them stale would keep causing it.
+    const updated: Block = { ...(block as Block), type: 'menu', content: next, props: next } as Block;
     onSave(updated);
   };
 

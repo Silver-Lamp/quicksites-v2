@@ -39,6 +39,7 @@ const INDUSTRIES = ARGS.filter((a, i) => !a.startsWith('--') && ARGS[i - 1] !== 
 
 /** Measured on 2026-08-14 across 54 renders: $2.70 / 54 = $0.05. */
 const ASSUMED_USD_PER_IMAGE = 0.05;
+const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
 
 function admin() {
   return createClient(
@@ -48,13 +49,25 @@ function admin() {
   );
 }
 
-/** Actual spend since a timestamp, straight from the meter. */
-async function spentSince(db: any, sinceIso: string): Promise<number> {
-  const { data } = await db
+/**
+ * Actual spend since a timestamp, straight from the meter.
+ *
+ * ⚠️ RETURNS null WHEN THE METER CANNOT BE READ, AND THE CALLER MUST TREAT THAT AS FATAL.
+ * The first version returned a number and swallowed the error case, so a failed read looked
+ * exactly like "nothing has been spent". On the 2026-08-14 run it reported `metered $0.00` for
+ * 74 generated images and would have gone on reporting $0.00 for 74,000 — `ai_usage_events` is
+ * RLS deny-default, so the read came back empty. A budget guard that cannot see the budget must
+ * stop the run, not bless it: silence and zero are the same value here, and only one of them is
+ * safe to act on.
+ */
+async function spentSince(db: any, sinceIso: string): Promise<number | null> {
+  const { data, error } = await db
     .from('ai_usage_events')
     .select('cost_usd')
     .gte('occurred_at', sinceIso);
-  return (data ?? []).reduce((n: number, r: any) => n + Number(r.cost_usd || 0), 0);
+  if (error) return null;
+  if (!Array.isArray(data)) return null;
+  return data.reduce((n: number, r: any) => n + Number(r.cost_usd || 0), 0);
 }
 
 async function main() {
@@ -126,6 +139,11 @@ async function main() {
       // unit cost; this is the part that holds when the assumption is wrong.
       if (made % 10 === 0 && made > 0) {
         const spent = await spentSince(db, startedAt);
+        if (spent === null) {
+          console.log('\n\n  ⛔ stopping: cannot read ai_usage_events, so the spend ceiling is unverifiable.');
+          progress = false;
+          break;
+        }
         if (spent >= BUDGET_USD) {
           console.log(`\n\n  ⛔ stopping: metered spend $${spent.toFixed(2)} reached the $${BUDGET_USD.toFixed(2)} budget.`);
           progress = false;
@@ -136,10 +154,26 @@ async function main() {
   }
 
   const spent = await spentSince(db, startedAt);
-  console.log(`\n\n  done · ${made} images · metered $${spent.toFixed(2)} of $${BUDGET_USD.toFixed(2)}`);
+  console.log(
+    `\n\n  done · ${made} images · metered ` +
+      (spent === null ? 'UNREADABLE (see spentSince)' : `$${spent.toFixed(2)}`) +
+      ` of $${BUDGET_USD.toFixed(2)}`,
+  );
+
+  // ⚠️ Count from STORAGE, not listPool(). listPool is documented to return [] on any error, so
+  // the closing report on the 2026-08-14 run said every industry was at 0/25 — moments after
+  // writing 74 images into them. An error-swallowing read is fine in the request path, where a
+  // missing backdrop should degrade quietly; it is actively misleading in a report, where "0"
+  // and "I couldn't tell" have to be different words.
+  const { data: objs, error: objErr } = await db.storage.from(BUCKET).list('backdrops/pool', { limit: 500 });
+  if (objErr || !objs) {
+    console.log('  (could not read the pool from storage to confirm final counts)');
+    return;
+  }
   for (const p of plan) {
-    const have = (await listPool(p.key)).length;
-    console.log(`  ${p.key.padEnd(22)} now ${have}/${POOL_TARGET}`);
+    const sub = await db.storage.from(BUCKET).list(`backdrops/pool/${p.key}`, { limit: 100 });
+    const have = sub.error ? null : (sub.data ?? []).length;
+    console.log(`  ${p.key.padEnd(22)} now ${have === null ? '(unreadable)' : `${have}/${POOL_TARGET}`}`);
   }
 }
 

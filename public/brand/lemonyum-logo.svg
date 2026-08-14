@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LemonYum">
+  <!--
+    LemonYum mark. Hand-authored SVG, not generated: a logo must stay crisp at 16px in a browser
+    tab and recolour with the brand, and a generated raster is soft at that size and can smuggle
+    in stray marks (the same day this was drawn, a generated backdrop arrived with "PEST CONTROL"
+    lettered into it).
+
+    ⚠️ THE BODY IS ONE PATH, NOT AN ELLIPSE PLUS TWO NUBS. The first version drew the tips as
+    separate wedges and they rendered DETACHED — at 200px they read as crumbs beside the fruit,
+    and at 16px as dirt on the tab. A single silhouette can't come apart, and it's what makes the
+    shape read as a lemon rather than an egg. Checked at 200/64/32/16 on both light and dark
+    grounds, which is the only way that class of flaw shows up.
+  -->
+  <g transform="rotate(-25 32 32)">
+    <!-- body: pointed at both ends, filling the box so the mark is big at favicon sizes -->
+    <path d="M3 32c4-10 13-17 29-17s25 7 29 17c-4 10-13 17-29 17S7 42 3 32z" fill="#F5C518" />
+    <!-- underside shading, kept inside the silhouette so it can never separate from it -->
+    <path d="M3 32c4 10 13 17 29 17s25-7 29-17c-2 12-13 20-29 20S5 44 3 32z" fill="#D9A50E" opacity=".45" />
+    <!-- waxy highlight; a flat fill reads as a balloon -->
+    <ellipse cx="23" cy="25" rx="8" ry="4.4" fill="#FDE68A" opacity=".9" transform="rotate(-16 23 25)" />
+  </g>
+  <!-- leaf, outside the rotation so it sits upright against the tilt -->
+  <path d="M44 9c-7.5.4-12 3.4-13.4 8.4 5.5 1.6 10.4-.6 13.4-8.4z" fill="#4D9A5B" />
+  <path d="M44 9c-5.5 2.2-9.2 5.1-11.4 8.4" fill="none" stroke="#3B7A47" stroke-width="1.2" stroke-linecap="round" opacity=".65" />
+</svg>

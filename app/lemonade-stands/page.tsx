@@ -22,7 +22,8 @@ import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
 import { marketingOg } from '@/lib/marketingOg';
 
-export const metadata = marketingOg({
+export const metadata = {
+  ...marketingOg({
   title: 'Lemonade stand payments — take cards with a QR code | QuickSites',
   description:
     'Your kid’s lemonade stand, but nobody walks away because they have no cash. A free page with the menu, a printable QR sign, and card payments that land in your bank account.',
@@ -30,7 +31,19 @@ export const metadata = marketingOg({
   ogEyebrow: 'For lemonade stands',
   ogTitle: '“Sorry, I don’t have any cash.”',
   ogSubtitle: 'Now they do. Scan, tap, done — and the money lands in your account.',
-});
+  }),
+  // Route-level icons: lemonyum.com rewrites to this page, so the tab shows a lemon rather
+  // than the QuickSites mark. SVG first for crispness at any size, 32px PNG for browsers that
+  // won't take one, and a padded 180px for iOS (which crops to a rounded square and would
+  // otherwise clip the tips off a full-bleed mark).
+  icons: {
+    icon: [
+      { url: '/brand/lemonyum-logo.svg', type: 'image/svg+xml' },
+      { url: '/brand/lemonyum-icon-32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [{ url: '/brand/lemonyum-icon-180.png', sizes: '180x180' }],
+  },
+};
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -111,7 +124,15 @@ export default function LemonadeStandsPage() {
           {/* Full-bleed backdrop, constrained content. The max-width used to sit on the
               <section>, which meant the painting was clipped to a 1024px band with hard vertical
               edges against the cream page — it read as a mistake rather than a hero. */}
-          <div className="relative z-10 mx-auto max-w-5xl px-6 pt-24 pb-20 text-center">
+          <div className="relative z-10 mx-auto max-w-5xl px-6 pt-20 pb-20 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/lemonyum-logo.svg"
+            alt=""
+            width={72}
+            height={72}
+            className="mx-auto mb-5 drop-shadow-sm"
+          />
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-yellow-800">
             For lemonade stands
           </p>

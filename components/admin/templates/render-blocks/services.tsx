@@ -62,7 +62,27 @@ export default function ServicesRender({
     fromBlock;
 
   const cfg = ((block?.content ?? {}) as any) || {};
-  const heading = String(cfg.heading ?? cfg.title ?? '').trim() || 'Our Services';
+
+  /**
+   * ⚠️ ONE ITEM IS NOT A LIST, AND NUMBERING IT MAKES THE PAGE LOOK BROKEN.
+   *
+   * A listing import derives services from the business's Google categories, which for most
+   * non-food businesses is exactly one. Every auto-shop draft rendered:
+   *
+   *     Our Services
+   *     01   Car Repair
+   *
+   * …on a business named "La Tranca Auto Repair". The "01" promises a 02 that never comes, and the
+   * plural heading promises a list of one. It reads as a rendering bug, which costs more trust than
+   * the line earns — the first thing an owner sees is a page that looks half-built.
+   *
+   * So a single service drops the ordinal and the plural. The CONTENT is untouched: a lone
+   * "Transmission Shop" is genuinely more specific than "auto repair" and is still worth showing.
+   * This is presentation only, and it fixes every existing draft with no backfill.
+   */
+  const singleService = items.length === 1;
+  const heading =
+    String(cfg.heading ?? cfg.title ?? '').trim() || (singleService ? 'What we do' : 'Our Services');
 
   // ⚠️ ON A PERSON'S SITE THIS BLOCK IS A SKILLS LIST, NOT A SERVICE MENU. Forty numbered bullets
   // is a wall nobody reads top-to-bottom; grouped chips are scannable in about three seconds.
@@ -147,7 +167,9 @@ export default function ServicesRender({
           return (
             <div key={`${i}-${item}`} className="rounded-lg border border-border bg-card text-card-foreground p-5 shadow-sm">
               <div className="flex items-baseline gap-2">
-                <span className="text-primary font-bold">{String(i + 1).padStart(2, '0')}</span>
+                {!singleService && (
+                  <span className="text-primary font-bold">{String(i + 1).padStart(2, '0')}</span>
+                )}
                 <span className="font-semibold">{label}</span>
               </div>
               {meta && <div className="mt-1 text-sm text-muted-foreground">{meta}</div>}
@@ -165,7 +187,9 @@ export default function ServicesRender({
           return (
             <li key={`${i}-${item}`} className="flex items-baseline justify-between gap-4 py-4">
               <span className="flex items-baseline gap-3 text-lg text-foreground">
-                <span className="text-primary font-bold tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+                {!singleService && (
+                  <span className="text-primary font-bold tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+                )}
                 {label}
               </span>
               {meta && <span className="text-muted-foreground shrink-0">{meta}</span>}

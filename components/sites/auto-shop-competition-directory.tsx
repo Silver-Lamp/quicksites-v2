@@ -14,12 +14,23 @@ export default function AutoShopCompetitionDirectory({ dir }: { dir: AutoShopDir
   const place = dir.region ? `${dir.city}, ${dir.region}` : dir.city;
   const entries = dir.entries;
 
+  // ⚠️ PAINT THE PAGE, NOT JUST THE CARDS. This styled light cards (bg-white, border-zinc-200) but
+  // set NO background of its own, so it rendered on the dark app chrome and the shop names — which
+  // carried no colour and inherited the page's white — were white on white. Not one business name
+  // was readable, on a domain we had just bought.
+  //
+  // CLAUDE.md §7 for the third time: a surface and the text on it must be stated TOGETHER, or which
+  // one wins is decided by context nobody checked. Matching the restaurant directory's dark palette
+  // keeps both coherent in the one place they render.
+  //
+  // ⚠️ A JSX COMMENT CANNOT BE THE FIRST CHILD OF `return (` — that is a syntax error, and putting
+  // it there is how this file 500'd a moment ago. Explanation goes ABOVE the return.
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
+    <main className="mx-auto min-h-screen max-w-5xl bg-zinc-950 px-4 py-10 text-white">
       <header className="text-center">
-        <p className="text-xs uppercase tracking-widest text-zinc-500">Auto repair · {place}</p>
+        <p className="text-xs uppercase tracking-widest text-zinc-400">Auto repair · {place}</p>
         <h1 className="mt-2 text-3xl font-bold md:text-4xl">Trusted auto shops in {place}</h1>
-        <p className="mx-auto mt-3 max-w-xl text-zinc-500">
+        <p className="mx-auto mt-3 max-w-xl text-zinc-400">
           {/* ⚠️ TWO SUBHEADS, AND WHICH ONE SHOWS IS NOT A STYLE CHOICE.
               The SecondSet line describes a capability behind SECONDSET_ENABLED, which is OFF. On a
               domain we have bought and are actively sending mechanics to, promising a photo-of-the-
@@ -30,7 +41,7 @@ export default function AutoShopCompetitionDirectory({ dir }: { dir: AutoShopDir
               and have no website of their own. */}
           {secondsetLive ? (
             <>
-              Shops that <span className="font-semibold text-zinc-700">show you the work</span> — a photo
+              Shops that <span className="font-semibold text-zinc-200">show you the work</span> — a photo
               of the actual problem and the tech&apos;s note, so you approve the repair before it happens.
             </>
           ) : (
@@ -43,7 +54,7 @@ export default function AutoShopCompetitionDirectory({ dir }: { dir: AutoShopDir
       </header>
 
       {entries.length === 0 ? (
-        <p className="mt-10 text-center text-zinc-500">Shops are being added — check back soon.</p>
+        <p className="mt-10 text-center text-zinc-400">Shops are being added — check back soon.</p>
       ) : (
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {entries.map((e) => (
@@ -51,21 +62,23 @@ export default function AutoShopCompetitionDirectory({ dir }: { dir: AutoShopDir
               key={e.templateId}
               href={e.url}
               className={`group block overflow-hidden rounded-2xl border transition hover:shadow-lg ${
-                e.isWinner ? 'border-emerald-400 bg-emerald-50/40 sm:col-span-2' : 'border-zinc-200 bg-white'
+                e.isWinner
+                  ? 'border-emerald-500/50 bg-emerald-500/10 sm:col-span-2'
+                  : 'border-zinc-800 bg-zinc-900/50 hover:border-emerald-500/40'
               }`}
             >
               {e.heroUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={e.heroUrl} alt={e.businessName} className={`w-full object-cover ${e.isWinner ? 'h-56' : 'h-40'}`} />
               ) : (
-                <div className={`flex w-full items-center justify-center bg-zinc-100 text-4xl ${e.isWinner ? 'h-56' : 'h-40'}`}>🔧</div>
+                <div className={`flex w-full items-center justify-center bg-zinc-800 text-4xl ${e.isWinner ? 'h-56' : 'h-40'}`}>🔧</div>
               )}
               <div className="p-4">
                 {e.isWinner ? (
                   <span className="inline-block rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-white">★ Featured</span>
                 ) : null}
-                <div className="mt-1 text-lg font-semibold">{e.businessName}</div>
-                <div className="mt-0.5 text-sm text-emerald-700 group-hover:underline">Visit shop →</div>
+                <div className="mt-1 text-lg font-semibold text-zinc-100">{e.businessName}</div>
+                <div className="mt-0.5 text-sm text-emerald-400 group-hover:underline">Visit shop →</div>
               </div>
             </a>
           ))}

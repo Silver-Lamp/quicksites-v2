@@ -16,14 +16,33 @@ batch 1's window closes **2026-08-18** · **Owner:** Sandon · **Written:** 2026
 
 **Does handing someone a finished thing built from their own words get a reply, or did we get lucky once?**
 
-We have exactly one datum: a driveway-repair contractor got a hand-made site, a printed flyer and
-one personal text, and replied **"how much?"** — the first inbound from a stranger any product in
-the mesh has logged.
+⚠️ **THE ONE DATUM THIS DOC WAS BUILT ON IS NOT IN THE SYSTEM.** A driveway-repair contractor got a
+hand-made site, a printed flyer and one personal text, and replied **"how much?"** — the first
+inbound from a stranger any product in the mesh has logged.
+
+Except it was never logged. Checked 2026-08-14: **0 inbound touches exist in `outreach_touches`**,
+and no driveway/paving/contractor subject appears anywhere in it. He exists as this paragraph.
+
+⚠️ **`outreach_touches` was built precisely so a reply could not evaporate** — verbatim, per
+business, with a rule that a summary is not evidence. It was created after him and **the one
+conversation it most needed to hold was never backfilled into it.** Nobody noticed for weeks,
+because the prose reads like a record.
+
+The generalisation is worth more than the incident (PorchHearth, 2026-08-14): **a well-written
+narrative is the strongest possible disincentive to create a record, because it satisfies the felt
+need for one.** The better the description, the safer it feels to skip the row. This paragraph was
+good enough that three sessions re-cited it in a single day and none reached for the table. So
+"write it down" is not sufficient and can actively harm — good prose *competes* with the structured
+record rather than pointing at its absence.
+
+**Open action, and it costs nothing:** ask the contractor whether *"how much?"* still stands, and
+**write the answer into `outreach_touches` as a row — including "he never replied again" if that is
+the answer.** Only Sandon can; nobody else has the thread.
 
 PorchHearth audited that result and was right to deflate it: one prediction, one confirming reply,
-and at least four mechanisms that could have produced it (locating the catch / a price check
-before declining / assuming free was an intro rate / not having registered "free" at all). **One
-reply is an absence of disconfirmation, not a finding.**
+and at least four mechanisms that could have produced it (locating the catch / a price check before
+declining / assuming free was an intro rate / not having registered "free" at all). **One reply is
+an absence of disconfirmation, not a finding** — and an unrecorded one is not even that.
 
 ## Why by hand, and why not a pipeline
 
@@ -54,10 +73,37 @@ would be arithmetic performed on two different experiments.
 
 Write this down **before** sending anything, so the result cannot be explained away afterwards.
 
-- **4–5 replies of 5** → the offer is doing real work. *Then* ask what to automate, with data.
-- **2–3 of 5** → something is there; run five more before concluding anything.
-- **0–1 of 5** → the driveway contractor was a friendly individual, not a signal. Stop building
-  outreach tooling and go find out why.
+⚠️ **REWRITTEN 2026-08-14, before any result landed.** The original rule was broken twice, and both
+faults would have been invisible once numbers arrived.
+
+**Fault 1 — the comparator was unrecoverable.** The `0–1` branch read *"the driveway contractor was
+a friendly individual, not a signal."* That contractor is **not in `outreach_touches`** — 0 inbound
+touches have ever been logged and no driveway/paving subject exists. He survives only as prose in
+this file. So the rule compared measured outcomes against a remembered one, and it could not fire
+correctly in **either** direction: a good result couldn't establish the mechanism works (he was
+never shown to be more than two words), and a null couldn't distinguish *he was a fluke* from *he
+was never a data point.* An unfalsifiable comparator doesn't bias a rule — it **voids** it, and a
+voided rule left standing is worse than none, because whoever reads it after the results will
+resolve it in the direction they already prefer and it will look pre-registered while they do.
+(PorchHearth, crosstalk 2026-08-14.)
+
+**Fault 2 — the denominator was wrong.** It is phrased in fives. We have contacted **19 businesses
+across four arms**, none clean.
+
+The rule below references no anecdote and matches the actual sample.
+
+- **≥3 replies of 19** → the mechanism provokes response. Run one **clean** arm (single touch,
+  working link, no directory line) to get an uncontaminated rate before automating anything.
+- **1–2 of 19** → ambiguous and consistent with a low single-digit rate. Not a green light; run the
+  clean arm before drawing any conclusion in either direction.
+- **0 of 19** → no evidence the mechanism provokes response at this volume. `P(0|19)` is 0.014 at a
+  true 20% rate, so this argues against a strong converter while remaining consistent with ~10%
+  (0.135). **Stop adding outreach surface** and change something structural — channel, offer, or
+  category — before sending more. Do not read it as "nobody wants this"; read it as "not at a rate
+  this method can detect, and the method is now the thing to change."
+
+⚠️ **No branch permits "keep building pages."** Supply grew 285 → 390 in six hours on 2026-08-14
+while contacted stayed at 19. Every branch above constrains outreach or the offer, never inventory.
 
 A "reply" is **any human response at all** — including "no thanks" and "take it down". A refusal
 is a reply; silence is not. We are measuring whether the thing provokes a response, not whether it

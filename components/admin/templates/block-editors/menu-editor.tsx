@@ -441,7 +441,10 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
 
                             {/* Multi-select add-ons (extra cheese, bacon). Add to the price. */}
                             <div>
-                              <div className="text-[11px] text-zinc-500">Add-ons — optional extras (e.g. Extra cheese). Each adds to the price.</div>
+                              <div className="text-[11px] text-zinc-500">
+                                Add-ons — optional extras (e.g. Extra cheese). Listed on your menu; they
+                                become selectable at checkout once online ordering is on.
+                              </div>
                               {(it.addons ?? []).map((a, ai) => (
                                 <div key={ai} className="mt-1 grid grid-cols-[1fr,72px,auto] gap-2">
                                   <input className={inputCls} value={a.label} onChange={(e) => setAddon(si, ii, ai, { label: e.target.value })} placeholder="Add-on (e.g. Bacon)" />

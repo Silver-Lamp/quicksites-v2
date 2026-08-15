@@ -15,6 +15,34 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.en
  * by GET /api/connect/status). Replaces the deprecated merchant_payment_accounts path.
  */
 export async function POST(req: NextRequest) {
+  try {
+    return await handle(req);
+  } catch (e: any) {
+    /**
+     * ⚠️ A MONEY-PATH ROUTE MUST NEVER RETURN A BODILESS 500.
+     *
+     * This one did, twice in a day, and the owner saw "Could not start Stripe setup. Please try
+     * again." both times — advice that could not work, with nothing to act on. I diagnosed it
+     * once from the code and was WRONG (blamed an empty base URL; the fix deployed and the 500
+     * persisted, and it was a 500 rather than the 502 that fix would have produced — which is
+     * the detail that disproved it).
+     *
+     * The failure is somewhere before the account link is built, and no log I can reach says
+     * where. So the route now reports its own cause: Stripe's `code`/`type` and message reach
+     * the client instead of being swallowed by the framework's default handler. Guessing from
+     * source was cheaper than instrumenting right up until it was twice as expensive.
+     */
+    const raw = e?.raw ?? e;
+    const detail = [raw?.type, raw?.code, raw?.message].filter(Boolean).join(' · ');
+    console.error('[connect/onboard] unhandled', detail || e);
+    return NextResponse.json(
+      { error: detail || 'Stripe onboarding failed for an unknown reason.', where: 'connect/onboard' },
+      { status: 502 },
+    );
+  }
+}
+
+async function handle(req: NextRequest) {
   if (!process.env.STRIPE_SECRET_KEY) {
     return NextResponse.json({ error: 'STRIPE_SECRET_KEY is not configured' }, { status: 400 });
   }

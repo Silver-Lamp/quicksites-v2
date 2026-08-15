@@ -56,13 +56,36 @@ export async function POST(req: NextRequest) {
   );
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  const base = process.env.APP_BASE_URL || process.env.QS_PUBLIC_URL || '';
-  const link = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: `${base}/merchant/connect?merchant=${merchantId}&state=refresh`,
-    return_url: `${base}/merchant/connect?merchant=${merchantId}&state=return`,
-    type: 'account_onboarding',
-  });
+  /**
+   * ⚠️ THIS MUST BE ABSOLUTE, AND IT WAS SILENTLY EMPTY IN PRODUCTION.
+   *
+   * The base was `APP_BASE_URL || QS_PUBLIC_URL || ''` and NEITHER is set on this project, so
+   * the account link went to Stripe with `refresh_url: "/merchant/connect?..."`. Stripe requires
+   * an absolute URL, threw, and — with no try/catch on this route — the owner got a bare 500 and
+   * "Could not start Stripe setup. Please try again." Trying again could never have worked.
+   *
+   * The literal default is the fix that cannot regress: a deploy with no env at all still
+   * produces a valid URL. The env vars stay first so a preview deploy can point at itself.
+   */
+  const base = (
+    process.env.APP_BASE_URL ||
+    process.env.QS_PUBLIC_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    'https://www.quicksites.ai'
+  ).replace(/\/+$/, '');
 
-  return NextResponse.json({ url: link.url, accountId });
+  try {
+    const link = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: `${base}/merchant/connect?merchant=${merchantId}&state=refresh`,
+      return_url: `${base}/merchant/connect?merchant=${merchantId}&state=return`,
+      type: 'account_onboarding',
+    });
+    return NextResponse.json({ url: link.url, accountId });
+  } catch (e: any) {
+    // Surface Stripe's own message. "Please try again" is the wrong advice for a
+    // misconfiguration, and a 500 with no body gave the operator nothing to act on.
+    const message = e?.raw?.message || e?.message || 'Stripe rejected the onboarding link.';
+    return NextResponse.json({ error: `Stripe onboarding failed: ${message}` }, { status: 502 });
+  }
 }

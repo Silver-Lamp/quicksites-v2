@@ -6,6 +6,7 @@ import type { Block } from '@/types/blocks';
 import type { BlockEditorProps } from '@/components/admin/templates/block-editors';
 import { parsePriceToCents, centsToDisplay } from '@/lib/commerce/menuPrice';
 import { applyCatalogLinks } from '@/lib/commerce/menuCatalog';
+import { TOOLBAR_CLEARANCE } from '@/lib/ui/toolbarClearance';
 import ImageUploadField from '@/components/merchant/ImageUploadField';
 
 // Owner-asserted tags (badges on the rendered menu). Kept short + fixed so dietary
@@ -579,8 +580,9 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
         {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center gap-3 border-t border-zinc-800 pt-4">
+      {/* Footer — cleared of the floating toolbar strip. See lib/ui/toolbarClearance.ts:
+          this is the third panel whose Save was covered by a toolbar at the z-index ceiling. */}
+      <div className={`flex items-center gap-3 border-t border-zinc-800 pt-4 ${TOOLBAR_CLEARANCE}`}>
         <button onClick={() => commit()} className="rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-sky-400">
           Save menu
         </button>

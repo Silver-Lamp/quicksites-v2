@@ -2,6 +2,7 @@
 'use client';
 
 import BackdropPanel from '@/components/admin/templates/panels/backdrop-panel';
+import { TOOLBAR_CLEARANCE_PADDING } from '@/lib/ui/toolbarClearance';
 import TakeItWithYouPanel from '@/components/admin/templates/panels/take-it-with-you-panel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IdentityPanel from '../templates/panels/identity-panel';
@@ -317,8 +318,12 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
     <div
       className={
         variant === 'drawer'
-          ? "flex-1 overflow-y-auto overflow-x-auto h-full"
-          : "space-y-4 px-4 pt-2 h-full overflow-y-auto"
+          // ⚠️ Bottom padding, not just overflow: the floating editor toolbar sits over the
+          // last ~6rem of the viewport at the z-index ceiling, so without this the final rows
+          // of settings (and any button among them) are unreachable while it is on screen.
+          // See lib/ui/toolbarClearance.ts — third panel to hit this.
+          ? `flex-1 overflow-y-auto overflow-x-auto h-full ${TOOLBAR_CLEARANCE_PADDING}`
+          : `space-y-4 px-4 pt-2 h-full overflow-y-auto ${TOOLBAR_CLEARANCE_PADDING}`
       }
       id="sidebar-settings-inner"
     >

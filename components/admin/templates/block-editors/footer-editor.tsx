@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { TOOLBAR_CLEARANCE } from '@/lib/ui/toolbarClearance';
 import type { Block } from '@/types/blocks';
 import BlockField from './block-field';
 import type { BlockEditorProps } from './index';
@@ -370,7 +371,7 @@ export default function FooterEditor({
       </div>
 
       {/* Sticky bottom actions */}
-      <div className="sticky bottom-0 z-20 border-t border-white/10 bg-neutral-900/70 backdrop-blur px-6 py-3">
+      <div className={`sticky bottom-0 z-20 ${TOOLBAR_CLEARANCE} border-t border-white/10 bg-neutral-900/70 backdrop-blur px-6 py-3`}>
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={!canSave} title={!canSave ? 'Some links are missing label or URL' : ''}>

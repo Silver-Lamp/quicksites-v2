@@ -129,6 +129,9 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
   const [connecting, setConnecting] = React.useState(false);
   const [result, setResult] = React.useState<{ count: number; merchantId: string } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [operatorAction, setOperatorAction] = React.useState<
+    { what?: string; url?: string; stripeMessage?: string } | null
+  >(null);
 
   // A merchant from a prior "Enable ordering" run (so returning owners can connect
   // Stripe without re-publishing).
@@ -151,6 +154,9 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.url) {
         setError(json?.error || 'Could not start Stripe setup. Please try again.');
+        // Platform-side failures carry an operator action — the merchant sees a plain "this is
+        // on us", and whoever can actually fix it gets the link. See the note in the route.
+        setOperatorAction(json?.operatorAction ?? null);
         setConnecting(false);
         return;
       }
@@ -578,6 +584,26 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
         )}
 
         {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+        {/* Shown only when the failure is OURS. A merchant reads the plain error above and is
+            told it isn't their fault; whoever can actually fix it gets the link and Stripe's
+            own words. Same fact, two audiences — see the note in app/api/connect/onboard. */}
+        {operatorAction?.url && (
+          <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+            <div className="font-semibold text-amber-300">For the QuickSites operator</div>
+            <p className="mt-1 text-zinc-300">{operatorAction.what}</p>
+            <a
+              href={operatorAction.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block font-medium text-amber-300 underline hover:text-amber-200"
+            >
+              Activate Stripe Connect →
+            </a>
+            {operatorAction.stripeMessage && (
+              <p className="mt-2 text-xs text-zinc-500">Stripe said: {operatorAction.stripeMessage}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Footer — cleared of the floating toolbar strip. See lib/ui/toolbarClearance.ts:

@@ -35,6 +35,40 @@ export async function POST(req: NextRequest) {
     const raw = e?.raw ?? e;
     const detail = [raw?.type, raw?.code, raw?.message].filter(Boolean).join(' · ');
     console.error('[connect/onboard] unhandled', detail || e);
+
+    /**
+     * ⚠️ SOME STRIPE ERRORS ARE OURS, AND MUST NOT BE READ OUT TO A MERCHANT AS THEIR TO-DO.
+     *
+     * "You can only create new accounts if you've signed up for Connect" is about OUR platform
+     * account. A parent setting up a lemonade stand cannot act on it — they do not own that
+     * dashboard, and telling them to go sign up for Connect sends them to configure a Stripe
+     * account that isn't theirs.
+     *
+     * So platform-side failures are reported as ours, in plain language, and the actionable link
+     * is marked `operatorAction` for the admin UI to surface. Same fact, two audiences: the
+     * merchant learns it is not their fault and not their task; the operator gets the URL.
+     */
+    const msg = String(raw?.message || '');
+    const isPlatformSetup =
+      /signed up for Connect|only Stripe platforms|platform profile/i.test(msg);
+
+    if (isPlatformSetup) {
+      return NextResponse.json(
+        {
+          error:
+            'Payments aren’t switched on for this site yet — that’s on us, not you. ' +
+            'Nothing you did caused this, and there’s nothing to retry.',
+          operatorAction: {
+            what: 'QuickSites must activate Stripe Connect on its platform account before any merchant can be onboarded.',
+            url: 'https://dashboard.stripe.com/connect',
+            stripeMessage: msg,
+          },
+          where: 'connect/onboard',
+        },
+        { status: 503 },
+      );
+    }
+
     return NextResponse.json(
       { error: detail || 'Stripe onboarding failed for an unknown reason.', where: 'connect/onboard' },
       { status: 502 },
@@ -62,7 +96,39 @@ async function handle(req: NextRequest) {
 
   let accountId = existing?.account_ref as string | undefined;
   if (!accountId) {
-    const account = await stripe.accounts.create({ type: 'express' });
+    /**
+     * Pre-fill everything we already know, so the merchant types less.
+     *
+     * `stripe.accounts.create({ type: 'express' })` with no data hands a parent a blank Stripe
+     * form: email, business name, website, category. We know all four — the signed-in user's
+     * email, and the merchant's own site. Every field passed here is one the person setting up a
+     * lemonade stand on a Saturday morning does not have to fill in.
+     *
+     * ⚠️ PREFILL, NOT ASSERTION. Stripe treats these as defaults the account holder confirms or
+     * corrects during onboarding; they are not claims we are making on their behalf, and nothing
+     * here is used for verification. That distinction is why passing a business name is fine
+     * where inventing one on a page would not be.
+     */
+    const { data: m } = await supabase
+      .from('merchants')
+      .select('display_name, site_slug')
+      .eq('id', merchantId)
+      .maybeSingle();
+
+    const slug = (m as any)?.site_slug as string | undefined;
+    const prefill: Record<string, any> = { type: 'express' };
+    if (gate.user.email) prefill.email = gate.user.email;
+
+    const businessName = ((m as any)?.display_name as string | undefined)?.trim();
+    const siteUrl = slug ? `https://${slug}.quicksites.ai` : undefined;
+    if (businessName || siteUrl) {
+      prefill.business_profile = {
+        ...(businessName ? { name: businessName } : {}),
+        ...(siteUrl ? { url: siteUrl } : {}),
+      };
+    }
+
+    const account = await stripe.accounts.create(prefill);
     accountId = account.id;
   }
 

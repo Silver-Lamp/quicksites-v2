@@ -17,14 +17,38 @@ import { join } from 'node:path';
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
-describe('the hero editor Save button cannot be covered by a floating toolbar', () => {
+describe('panels with a bottom action bar clear the floating toolbar', () => {
   const editor = read('components/admin/templates/block-editors/hero-editor.tsx');
 
-  it('keeps the footer clear of the bottom toolbar strip', () => {
-    const footer = editor.split('\n').find((l) => l.includes('sticky bottom-0') && l.includes('flex justify-end'));
-    expect(footer).toBeDefined();
-    // Clearance, not stacking. Without it the footer sits exactly where the toolbar renders.
-    expect(footer).toMatch(/\bmb-24\b/);
+  // ⚠️ EVERY panel that can be open while the editor toolbar is on screen, not just the hero.
+  // This bug has now been reported three times, each on a different surface, each as "it won't
+  // save" when the save path was fine. A per-file fix is how it kept coming back.
+  it.each([
+    ['components/admin/templates/block-editors/hero-editor.tsx'],
+    ['components/admin/templates/block-editors/menu-editor.tsx'],
+    ['components/admin/templates/block-editors/footer-editor.tsx'],
+    ['components/admin/template-settings-panel/sidebar-settings.tsx'],
+  ])('%s reserves toolbar clearance', (file) => {
+    const src = read(file);
+    expect(src).toMatch(/TOOLBAR_CLEARANCE(_PADDING)?/);
+    expect(src).toContain('lib/ui/toolbarClearance');
+  });
+
+  it('the clearance is spacing, never a z-index', () => {
+    // The ordinal fix already failed once: the modal was raised to INT32_MAX and a toolbar was
+    // later given the same value, so the tie broke on DOM order.
+    //
+    // ⚠️ Strip comments before asserting. The first version failed because this file's own
+    // explanation NAMES the z-index it forbids — a source-scan matching prose rather than code.
+    // Third time today; these tests need their subject narrowed, not their pattern widened.
+    const util = read('lib/ui/toolbarClearance.ts')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('//'))
+      .join('\n');
+    expect(util).toMatch(/mb-24/);
+    expect(util).toMatch(/pb-24/);
+    expect(util).not.toMatch(/z-\[/);
   });
 
   it('documents why spacing rather than a higher z-index', () => {

@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import { TOOLBAR_CLEARANCE } from '@/lib/ui/toolbarClearance';
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import type { BlockEditorProps } from './index';
@@ -1655,7 +1656,7 @@ export default function HeroEditor({
           z-index ceiling is a shared resource and every component believes it is the frontmost
           thing on screen; not needing to be frontmost is the only stable position.
         */}
-        <div className="sticky bottom-0 z-10 mb-24 border-t border-white/10 bg-neutral-950/90 backdrop-blur px-4 py-3 flex justify-end gap-2">
+        <div className={`sticky bottom-0 z-10 ${TOOLBAR_CLEARANCE} border-t border-white/10 bg-neutral-950/90 backdrop-blur px-4 py-3 flex justify-end gap-2`}>
           <button
             onClick={() => onClose?.()}
             className="text-sm px-3 py-1.5 border border-white/10 rounded bg-neutral-900 hover:bg-neutral-800"

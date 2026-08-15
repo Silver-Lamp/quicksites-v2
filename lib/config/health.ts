@@ -205,6 +205,28 @@ export const CONFIG_GATES: ConfigGate[] = [
       'delivered.menu traffic is ignored — <slug>.delivered.menu and delivered.menu/<slug> stop resolving to restaurant sites. NOTE: this is a NEXT_PUBLIC_ var, so changing it requires a REBUILD, not just a redeploy of the same build.',
   },
   {
+    /**
+     * ⚠️ THE APP'S OWN PUBLIC URL. Reads as trivia until something needs to hand an ABSOLUTE
+     * url to a third party — then its absence is a 500 at the worst possible moment.
+     *
+     * Found 2026-08-15: Stripe Connect onboarding built `refresh_url` as `${base}/merchant/...`
+     * with `base` falling back to ''. Neither APP_BASE_URL nor QS_PUBLIC_URL was set, so Stripe
+     * got a relative URL, rejected it, and the owner saw "Could not start Stripe setup. Please
+     * try again" — advice that could never have worked. Roughly eight other call sites build
+     * fetch URLs the same way.
+     *
+     * degradeOnly: the code now defaults to the production host, so an unset value is wrong-ish
+     * on previews rather than broken everywhere. It still deserves to be visible.
+     */
+    key: 'public_base_url',
+    label: 'App public base URL (absolute links to third parties)',
+    requires: [],
+    requiresAnyOf: [['APP_BASE_URL', 'QS_PUBLIC_URL', 'NEXT_PUBLIC_APP_URL']],
+    degradeOnly: true,
+    breaks:
+      'Anything handing an absolute URL to a third party falls back to the production host. On a preview deploy that sends Stripe Connect returns and referral links to production instead of the preview.',
+  },
+  {
     key: 'yardsale_host',
     label: 'yardsalesites.com garage-sale surface',
     enabledBy: 'NEXT_PUBLIC_YARDSALE_BASE_DOMAIN',

@@ -91,6 +91,38 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
   const [note, setNote] = React.useState<string>(initial.note || '');
   const [sections, setSections] = React.useState<Section[]>(() => cloneSections(initial));
 
+  /**
+   * Which items have their detail panel open. Collapsed by default — a stand with four drinks
+   * was seven stacked rows per item (name, description, six tag chips, photo, options, add-ons),
+   * so the whole menu never fit on screen and "+ Add item" sat below the fold.
+   *
+   * ⚠️ COLLAPSING MUST NEVER HIDE CONFIGURED DATA SILENTLY. Every collapsed row prints a summary
+   * of what is set inside it ("Popular · photo · 2 options"), so an owner can see that an item
+   * carries options without opening it. A disclosure that swallows existing content is a worse
+   * bug than the density it fixes — it is how someone concludes their add-ons were deleted.
+   */
+  const [openItems, setOpenItems] = React.useState<Set<string>>(new Set());
+  const itemKey = (si: number, ii: number) => `${si}:${ii}`;
+  const toggleItemOpen = (si: number, ii: number) =>
+    setOpenItems((prev) => {
+      const next = new Set(prev);
+      const k = itemKey(si, ii);
+      next.has(k) ? next.delete(k) : next.add(k);
+      return next;
+    });
+
+  /** What an item has configured behind the fold, in the owner's words. */
+  const extrasSummary = (it: Item): string[] => {
+    const out: string[] = [];
+    for (const t of it.tags ?? []) out.push(t);
+    if (it.image_url) out.push('photo');
+    const o = (it.options ?? []).length;
+    if (o) out.push(`${o} option${o === 1 ? '' : 's'}`);
+    const a = (it.addons ?? []).length;
+    if (a) out.push(`${a} add-on${a === 1 ? '' : 's'}`);
+    return out;
+  };
+
   const [confirming, setConfirming] = React.useState(false);
   const [publishing, setPublishing] = React.useState(false);
   const [connecting, setConnecting] = React.useState(false);
@@ -305,7 +337,7 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
       </div>
 
       {/* Sections + items */}
-      <div className="space-y-5">
+      <div className="space-y-3">
         {sections.map((section, si) => (
           <div key={si} className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
             <div className="flex items-center gap-2">
@@ -320,7 +352,7 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
               </button>
             </div>
 
-            <div className="mt-3 space-y-2">
+            <div className="mt-2 space-y-1.5">
               {section.items.map((it, ii) => (
                 <div key={ii} className="rounded-md border border-zinc-800/70 p-2">
                   <div className="grid grid-cols-[1fr,88px,auto] gap-2">
@@ -331,67 +363,102 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
                     </button>
                   </div>
                   <input
-                    className={`${inputCls} mt-2`}
+                    className={`${inputCls} mt-1.5`}
                     value={it.description ?? ''}
                     onChange={(e) => setItem(si, ii, { description: e.target.value })}
                     placeholder="Description (optional)"
                   />
 
-                  {/* Tags — owner-asserted badges shown on the menu. */}
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {PRESET_TAGS.map((tag) => {
-                      const active = (it.tags ?? []).includes(tag);
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => toggleTag(si, ii, tag)}
-                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition ${
-                            active
-                              ? 'border-transparent bg-sky-500 text-zinc-950'
-                              : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
-                          }`}
-                        >
-                          {tag}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {/* ── Details, collapsed by default ──────────────────────────────────
+                      Tags, photo, options and add-ons live behind one toggle. Most items
+                      never need any of them; a lemonade costs $2 and that is the whole
+                      record. Keeping four rarely-used controls permanently on screen is what
+                      pushed "+ Add item" below the fold. */}
+                  {(() => {
+                    const open = openItems.has(itemKey(si, ii));
+                    const summary = extrasSummary(it);
+                    return (
+                      <>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleItemOpen(si, ii)}
+                            className="rounded-md border border-zinc-700/70 px-2 py-0.5 text-[11px] text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
+                            aria-expanded={open}
+                          >
+                            {open ? '− Details' : '+ Details'}
+                          </button>
+                          {/* The summary is the guarantee that collapsing hides nothing the
+                              owner set. Without it, an item with two options looks identical
+                              to an item with none. */}
+                          {!open && summary.length > 0 && (
+                            <span className="truncate text-[11px] text-zinc-500">{summary.join(' · ')}</span>
+                          )}
+                        </div>
 
-                  <div className="mt-2">
-                    <ImageUploadField
-                      value={it.image_url ?? ''}
-                      onChange={(url) => setItem(si, ii, { image_url: url })}
-                      folder="menu"
-                      placeholder="Photo URL, or upload →"
-                    />
-                  </div>
+                        {open && (
+                          <div className="mt-1.5 space-y-1.5 border-l border-zinc-800 pl-2">
+                            {/* Tags — owner-asserted badges shown on the menu. */}
+                            <div className="flex flex-wrap gap-1.5">
+                              {PRESET_TAGS.map((tag) => {
+                                const active = (it.tags ?? []).includes(tag);
+                                return (
+                                  <button
+                                    key={tag}
+                                    type="button"
+                                    onClick={() => toggleTag(si, ii, tag)}
+                                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition ${
+                                      active
+                                        ? 'border-transparent bg-sky-500 text-zinc-950'
+                                        : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                                    }`}
+                                  >
+                                    {tag}
+                                  </button>
+                                );
+                              })}
+                            </div>
 
-                  {/* Choose-one options (sizes / half-full). When present they set the price. */}
-                  <div className="mt-2 border-l border-zinc-800 pl-2">
-                    <div className="text-[11px] text-zinc-500">Options — choose one (e.g. Small / Large). Overrides the price above.</div>
-                    {(it.options ?? []).map((o, oi) => (
-                      <div key={oi} className="mt-1 grid grid-cols-[1fr,72px,auto] gap-2">
-                        <input className={inputCls} value={o.label} onChange={(e) => setOption(si, ii, oi, { label: e.target.value })} placeholder="Option (e.g. Large)" />
-                        <input className={inputCls} value={o.price ?? ''} onChange={(e) => setOption(si, ii, oi, { price: e.target.value })} placeholder="$14" />
-                        <button onClick={() => removeOption(si, ii, oi)} className="rounded-md border border-zinc-700 px-2 text-xs text-zinc-400 hover:text-red-300">✕</button>
-                      </div>
-                    ))}
-                    <button onClick={() => addOption(si, ii)} className="mt-1 text-[11px] text-sky-400 hover:text-sky-300">+ Add option</button>
-                  </div>
+                            <ImageUploadField
+                              value={it.image_url ?? ''}
+                              onChange={(url) => setItem(si, ii, { image_url: url })}
+                              folder="menu"
+                              placeholder="Photo URL, or upload →"
+                            />
 
-                  {/* Multi-select add-ons (extra cheese, bacon). Add to the price. */}
-                  <div className="mt-2 border-l border-zinc-800 pl-2">
-                    <div className="text-[11px] text-zinc-500">Add-ons — optional extras (e.g. Extra cheese). Each adds to the price.</div>
-                    {(it.addons ?? []).map((a, ai) => (
-                      <div key={ai} className="mt-1 grid grid-cols-[1fr,72px,auto] gap-2">
-                        <input className={inputCls} value={a.label} onChange={(e) => setAddon(si, ii, ai, { label: e.target.value })} placeholder="Add-on (e.g. Bacon)" />
-                        <input className={inputCls} value={a.price ?? ''} onChange={(e) => setAddon(si, ii, ai, { price: e.target.value })} placeholder="$2" />
-                        <button onClick={() => removeAddon(si, ii, ai)} className="rounded-md border border-zinc-700 px-2 text-xs text-zinc-400 hover:text-red-300">✕</button>
-                      </div>
-                    ))}
-                    <button onClick={() => addAddon(si, ii)} className="mt-1 text-[11px] text-sky-400 hover:text-sky-300">+ Add add-on</button>
-                  </div>
+                            {/* Choose-one options (sizes / half-full). When present they set the price. */}
+                            <div>
+                              <div className="text-[11px] text-zinc-500">Options — choose one (e.g. Small / Large). Overrides the price above.</div>
+                              {(it.options ?? []).map((o, oi) => (
+                                <div key={oi} className="mt-1 grid grid-cols-[1fr,72px,auto] gap-2">
+                                  <input className={inputCls} value={o.label} onChange={(e) => setOption(si, ii, oi, { label: e.target.value })} placeholder="Option (e.g. Large)" />
+                                  <input className={inputCls} value={o.price ?? ''} onChange={(e) => setOption(si, ii, oi, { price: e.target.value })} placeholder="$14" />
+                                  <button onClick={() => removeOption(si, ii, oi)} className="rounded-md border border-zinc-700 px-2 text-xs text-zinc-400 hover:text-red-300">✕</button>
+                                </div>
+                              ))}
+                              <button onClick={() => addOption(si, ii)} className="mt-1 text-[11px] text-sky-400 hover:text-sky-300">+ Add option</button>
+                            </div>
+
+                            {/* Multi-select add-ons (extra cheese, bacon). Add to the price. */}
+                            <div>
+                              <div className="text-[11px] text-zinc-500">
+                                Add-ons — optional extras (e.g. Extra cheese). Listed on your menu; they
+                                become selectable at checkout once online ordering is on.
+                              </div>
+                              {(it.addons ?? []).map((a, ai) => (
+                                <div key={ai} className="mt-1 grid grid-cols-[1fr,72px,auto] gap-2">
+                                  <input className={inputCls} value={a.label} onChange={(e) => setAddon(si, ii, ai, { label: e.target.value })} placeholder="Add-on (e.g. Bacon)" />
+                                  <input className={inputCls} value={a.price ?? ''} onChange={(e) => setAddon(si, ii, ai, { price: e.target.value })} placeholder="$2" />
+                                  <button onClick={() => removeAddon(si, ii, ai)} className="rounded-md border border-zinc-700 px-2 text-xs text-zinc-400 hover:text-red-300">✕</button>
+                                </div>
+                              ))}
+                              <button onClick={() => addAddon(si, ii)} className="mt-1 text-[11px] text-sky-400 hover:text-sky-300">+ Add add-on</button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
 
                   {it.catalog_item_id && <span className="mt-1 block text-[11px] text-emerald-400">✓ Orderable</span>}
                 </div>

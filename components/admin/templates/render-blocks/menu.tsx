@@ -104,6 +104,23 @@ function MenuItemRow({
   const options = orderableOptions(item);
   const hasOptions = options.length > 0;
   const addons = orderableAddons(item);
+  /**
+   * Add-ons as the owner typed them, for display when the item cannot be ordered. Deliberately
+   * NOT `orderableAddons` — that filters on `id`, which is a catalog concept. Nothing here is
+   * clickable, so an id would be a requirement with no purpose, and requiring one is exactly
+   * what made these invisible.
+   */
+  const staticAddons: { label: string; priceText: string }[] = (Array.isArray(item.addons) ? item.addons : [])
+    .filter((a: any) => a?.label)
+    .map((a: any) => ({
+      label: String(a.label),
+      priceText:
+        typeof a.price_cents === 'number' && a.price_cents > 0
+          ? `+${centsDisplay(a.price_cents)}`
+          : a.price
+            ? `+${String(a.price).replace(/^\+/, '')}`
+            : '',
+    }));
   const [sel, setSel] = React.useState(0);
   const [selAddonIds, setSelAddonIds] = React.useState<string[]>([]);
   const selected = hasOptions ? options[Math.min(sel, options.length - 1)] : undefined;
@@ -171,7 +188,33 @@ function MenuItemRow({
           </div>
         )}
 
-        {/* Add-on multi-select */}
+        {/* ── Add-ons the seller listed, shown even when ordering is OFF ───────────────
+            ⚠️ REPORTED FROM REAL USE: "I added add-ons but they don't display."
+
+            They were gated twice. `orderableAddons` requires an `id`, which only exists after
+            publishing to the catalog, and the block below additionally required
+            `catalog_item_id`. So on a site without online ordering an owner could type two
+            add-ons, save, and see nothing — with no hint that the field was inert.
+
+            But an add-on is a real thing the seller offers, and "Strawberry juice +$1" is
+            useful to somebody reading a paper-style menu with no checkout at all. So when the
+            item is not orderable we render the same information as plain text, straight from
+            what the owner typed — no id needed, because nothing is being ordered.
+
+            Below that, the interactive multi-select stays exactly as it was for orderable
+            items. Two presentations of one fact, picked by whether it can be acted on. */}
+        {!item.catalog_item_id && staticAddons.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            {staticAddons.map((a, ai) => (
+              <span key={ai}>
+                + {a.label}
+                {a.priceText ? ` ${a.priceText}` : ''}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Add-on multi-select (orderable items only) */}
         {addons.length > 0 && item.catalog_item_id && (
           <div className="mt-2 flex flex-col gap-1.5">
             {addons.map((a) => (

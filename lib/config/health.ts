@@ -195,6 +195,15 @@ export const CONFIG_GATES: ConfigGate[] = [
       'The nightly pool-fill cron no-ops, so new sites keep their free CSS backdrop instead of a painterly one. Nothing breaks; nothing is spent either.',
   },
   {
+    key: 'hero_pool',
+    label: 'Painterly hero pool (spends money)',
+    enabledBy: 'HERO_POOL_ENABLED',
+    requires: ['OPENAI_API_KEY'],
+    degradeOnly: true,
+    breaks:
+      'Painterly heroes are never generated or applied, so lemonade stands and yard sales keep whatever hero their scaffold gave them. Nothing breaks; nothing is spent either. HERO_POOL_TARGET caps how many images an industry may ever generate (default 12, ~$0.04 each).',
+  },
+  {
     key: 'menu_host',
     label: 'delivered.menu restaurant surface',
     enabledBy: 'NEXT_PUBLIC_MENU_BASE_DOMAIN',

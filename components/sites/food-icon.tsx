@@ -17,16 +17,19 @@ export default function FoodIcon({
   name,
   tags,
   set,
+  prefer,
   className = '',
 }: {
   name?: string | null;
   tags?: string[] | null;
   set: MenuIconSet;
+  /** 'ingredient' for add-ons, where the modifier carries the information, not the dish. */
+  prefer?: 'dish' | 'ingredient';
   className?: string;
 }) {
   if (set === 'none') return null;
 
-  const key = matchFoodIcon(name, tags);
+  const key = matchFoodIcon(name, tags, { prefer });
   if (!key) return null;
 
   const icon = FOOD_ICONS[key];
@@ -34,7 +37,7 @@ export default function FoodIcon({
 
   if (set === 'emoji') {
     return (
-      <span aria-hidden="true" className={`shrink-0 text-[1.1em] leading-none ${className}`}>
+      <span aria-hidden="true" className={`shrink-0 leading-none ${className}`}>
         {icon.emoji}
       </span>
     );

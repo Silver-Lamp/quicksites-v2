@@ -7,6 +7,7 @@ import { inferIndustry } from '@/lib/builder/inferIndustry';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import { autogenerateForTemplate } from '@/lib/builder/autogenerateForTemplate';
 import { pickPoolBackdrop } from '@/lib/theme/backdropPool';
+import { pickPoolHero, prefersPainterlyHero } from '@/lib/theme/heroPool';
 import type { IndustryKey } from '@/lib/industries';
 
 export const runtime = 'nodejs';
@@ -133,6 +134,38 @@ export async function POST(req: Request) {
     }
   } catch {
     /* best-effort decoration — never fail site creation over a backdrop */
+  }
+
+  // Same read-only trick for the HERO, on the verticals that default to a painted one
+  // (lib/theme/heroPool.ts). Never generates; an empty pool leaves the scaffold's hero exactly
+  // as it was, so a vertical with no pool is no worse than today.
+  //
+  // ⚠️ Only fills an EMPTY hero. An image already on the block came from the scaffold's own
+  // choice or an import, and silently painting over it would be this feature deciding it knows
+  // better than whatever put a real picture there.
+  try {
+    const industryForHero = industryCol || String(obj(data).meta?.industry || '') || null;
+    if (prefersPainterlyHero(industryForHero)) {
+      const pooledHero = await pickPoolHero(industryForHero);
+      if (pooledHero) {
+        const d = obj(data);
+        for (const page of Array.isArray(d.pages) ? d.pages : []) {
+          for (const key of ['content_blocks', 'blocks']) {
+            if (!Array.isArray(page?.[key])) continue;
+            page[key] = page[key].map((b: any) => {
+              if (b?.type !== 'hero') return b;
+              const bag = b.content ?? b.props ?? {};
+              if (bag.image_url) return b;
+              const patched = { ...bag, image_url: pooledHero, art_style: 'painterly' };
+              return b.content ? { ...b, content: patched } : { ...b, props: patched };
+            });
+          }
+        }
+        data = d;
+      }
+    }
+  } catch {
+    /* best-effort decoration — never fail site creation over a hero image */
   }
 
   // Build minimal, canonical payload

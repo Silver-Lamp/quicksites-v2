@@ -34,17 +34,45 @@ async function currentHost(): Promise<string> {
  * about.
  */
 export async function venmoHandleForSlug(slug: string | null | undefined): Promise<string | null> {
+  return (await cartShellForSlug(slug)).venmoHandle;
+}
+
+export type CartShell = {
+  venmoHandle: string | null;
+  /** The site's own light/dark, so the cart does not arrive in the opposite theme. */
+  colorMode: 'light' | 'dark';
+};
+
+/**
+ * Everything the tenant cart/checkout needs about its site, in one read.
+ *
+ * ⚠️ COLOR MODE IS PART OF THIS BECAUSE THE CART IS NOT INSIDE THE SITE'S THEME SCOPE.
+ * `TemplateThemeWrapper` establishes `[data-theme]` around the RENDERED BLOCKS; the cart and
+ * checkout are returned by the site route before any of that, so they inherit the app chrome —
+ * which is always dark (CLAUDE.md §7). A light restaurant site therefore handed its customer a
+ * black cart halfway through ordering. Nothing was broken and nothing logged; it just looked
+ * like a different website, at the exact moment a stranger decides whether to trust it.
+ *
+ * Defaults to dark to match the platform default, so a site with no explicit mode is unchanged.
+ */
+export async function cartShellForSlug(slug: string | null | undefined): Promise<CartShell> {
   const s = String(slug ?? '').trim();
-  if (!s) return null;
+  if (!s) return { venmoHandle: null, colorMode: 'dark' };
   try {
     const { data } = await supabaseAdmin
       .from('templates')
-      .select('data')
+      .select('data, color_mode')
       .eq('slug', s)
       .maybeSingle();
-    return data ? readVenmoHandle((data as any).data) : null;
+    if (!data) return { venmoHandle: null, colorMode: 'dark' };
+    const row = data as any;
+    const mode = row.color_mode ?? row.data?.color_mode;
+    return {
+      venmoHandle: readVenmoHandle(row.data),
+      colorMode: mode === 'light' ? 'light' : 'dark',
+    };
   } catch {
-    return null;
+    return { venmoHandle: null, colorMode: 'dark' };
   }
 }
 

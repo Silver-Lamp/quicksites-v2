@@ -21,19 +21,26 @@ describe('tenant site cart/checkout receive the venmo handle', () => {
   });
 
   it('passes venmoHandle to the cart', () => {
-    const line = src.split('\n').find((l) => l.includes("rest[0] === 'cart'"));
+    const line = src.split('\n').find((l) => l.includes("rest[0] === 'cart' &&"));
     expect(line).toBeDefined();
     expect(line).toMatch(/venmoHandle=\{/);
   });
 
   it('passes venmoHandle to checkout', () => {
-    const line = src.split('\n').find((l) => l.includes("rest[0] === 'checkout'"));
+    const line = src.split('\n').find((l) => l.includes("rest[0] === 'checkout' &&"));
     expect(line).toBeDefined();
     expect(line).toMatch(/venmoHandle=\{/);
   });
 
+  it('wraps them in the SITE theme, not the always-dark app chrome', () => {
+    // Without this a light site served a black cart halfway through ordering — nothing broken,
+    // nothing logged, the page just stopped looking like the same website.
+    expect(src).toContain('SiteThemeShell');
+    expect(src).toMatch(/colorMode=\{shell\.colorMode\}/);
+  });
+
   it('resolves it by slug, not by host — the rewrite already hid the host once', () => {
-    expect(src).toContain('venmoHandleForSlug');
+    expect(src).toContain('cartShellForSlug');
     // A host-based lookup here would re-introduce the bug: the request host is the tenant's,
     // but reasoning about it from inside a rewritten route is the step that went wrong.
     expect(src).not.toContain('venmoHandleForCurrentHost');

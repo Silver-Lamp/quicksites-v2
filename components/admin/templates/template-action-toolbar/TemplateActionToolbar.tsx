@@ -426,6 +426,31 @@ useEffect(() => {
     return () => window.removeEventListener('qs:template:apply-patch', onPatch as any);
   }, [apply, queueFullSave]);
 
+  /* save bus — the event nine callers fire and nobody was listening for.
+   *
+   * ⚠️ `qs:toolbar:save-now` IS DISPATCHED FROM NINE PLACES AND HAD NO LISTENER HERE.
+   * The sidebar's requestToolbarSaveSoon, the e-commerce panel, the product manager, the
+   * products-grid editor, the services panel, the hero editor and ⌘S from the hero command
+   * palette all ask the toolbar to commit. The only listener in the repo was identity-panel's,
+   * which commits IDENTITY FIELDS ONLY and only when that panel is itself dirty — so for every
+   * other caller the request evaporated.
+   *
+   * The symptom was never "save failed", because no save was attempted: the in-memory template
+   * updated, the preview rendered the change, and the row was never written. A whole evening of
+   * "it doesn't save" bugs — a hero image, a Venmo handle, a merchant stamp — were this one
+   * missing listener seen from different panels. Local state agreeing with you is what makes it
+   * so convincing; the preview is drawn from the same object that never reached the server.
+   *
+   * A dispatcher with no listener cannot fail loudly. Nothing throws, nothing logs, and the
+   * absence of a save looks exactly like a save with nothing to do.
+   */
+  useEffect(() => {
+    const onSaveNow = () => { queueFullSave('save'); };
+    const events = ['qs:toolbar:save-now', 'qs:save-now'];
+    events.forEach((ev) => window.addEventListener(ev, onSaveNow));
+    return () => events.forEach((ev) => window.removeEventListener(ev, onSaveNow));
+  }, [queueFullSave]);
+
   /* save */
   const handleSaveClick = async () => {
     try {

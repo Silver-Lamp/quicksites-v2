@@ -22,7 +22,8 @@ import {
 import { buildLocalBusinessSchema, localBusinessSchemaEnabled } from '@/lib/seo/localBusinessSchema';
 import { buildPersonSchema, personIdentityFromTemplate, personSchemaEnabled } from '@/lib/seo/personSchema';
 import CartPageClient from '@/components/cart/CartPageClient';
-import { venmoHandleForSlug } from '@/lib/payments/venmoForHost';
+import { cartShellForSlug } from '@/lib/payments/venmoForHost';
+import SiteThemeShell from '@/components/sites/site-theme-shell';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
 import PreviewWatermark from '@/components/sites/preview-watermark';
@@ -472,10 +473,17 @@ export default async function SitePreviewPage({
   // ⚠️ THIS IS THE CART ON EVERY TENANT SITE, not app/cart — middleware rewrites
   // `<slug>.quicksites.ai/cart` to `/sites/<slug>/cart`, so the app route only ever runs on the
   // platform host. A prop added there alone reaches nobody's customers.
-  if (Array.isArray(rest)) {
-    if (rest[0] === 'cart') return <CartPageClient venmoHandle={await venmoHandleForSlug(slug)} />;
-    if (rest[0] === 'checkout') return <CheckoutPageClient venmoHandle={await venmoHandleForSlug(slug)} />;
-    if (rest[0] === 'thank-you') return <ThankYouPageClient />;
+  if (Array.isArray(rest) && ['cart', 'checkout', 'thank-you'].includes(rest[0])) {
+    // One read for both facts, then wrap in the SITE's theme — these routes sit outside
+    // TemplateThemeWrapper, so without the shell a light site serves a dark cart.
+    const shell = await cartShellForSlug(slug);
+    return (
+      <SiteThemeShell colorMode={shell.colorMode}>
+        {rest[0] === 'cart' && <CartPageClient venmoHandle={shell.venmoHandle} />}
+        {rest[0] === 'checkout' && <CheckoutPageClient venmoHandle={shell.venmoHandle} />}
+        {rest[0] === 'thank-you' && <ThankYouPageClient />}
+      </SiteThemeShell>
+    );
   }
 
   const user = await getCurrentUser();

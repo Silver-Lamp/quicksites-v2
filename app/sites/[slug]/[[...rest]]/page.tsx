@@ -22,6 +22,7 @@ import {
 import { buildLocalBusinessSchema, localBusinessSchemaEnabled } from '@/lib/seo/localBusinessSchema';
 import { buildPersonSchema, personIdentityFromTemplate, personSchemaEnabled } from '@/lib/seo/personSchema';
 import CartPageClient from '@/components/cart/CartPageClient';
+import { venmoHandleForSlug } from '@/lib/payments/venmoForHost';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
 import PreviewWatermark from '@/components/sites/preview-watermark';
@@ -466,10 +467,14 @@ export default async function SitePreviewPage({
   const { slug, rest } = await params;
   const sp = (await searchParams) ?? {};
 
-  // Special routes served directly
+  // Special routes served directly.
+  //
+  // ⚠️ THIS IS THE CART ON EVERY TENANT SITE, not app/cart — middleware rewrites
+  // `<slug>.quicksites.ai/cart` to `/sites/<slug>/cart`, so the app route only ever runs on the
+  // platform host. A prop added there alone reaches nobody's customers.
   if (Array.isArray(rest)) {
-    if (rest[0] === 'cart') return <CartPageClient />;
-    if (rest[0] === 'checkout') return <CheckoutPageClient />;
+    if (rest[0] === 'cart') return <CartPageClient venmoHandle={await venmoHandleForSlug(slug)} />;
+    if (rest[0] === 'checkout') return <CheckoutPageClient venmoHandle={await venmoHandleForSlug(slug)} />;
     if (rest[0] === 'thank-you') return <ThankYouPageClient />;
   }
 

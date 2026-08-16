@@ -12,6 +12,7 @@ import SeoPanel from '../templates/panels/seo-panel';
 import ThemePanel from '../templates/panels/theme-panel';
 import PaymentSettingsPanel from '../payments/payment-settings-panel';
 import VenmoPanel from '../templates/panels/venmo-panel';
+import MenuIconsPanel from '../templates/panels/menu-icons-panel';
 import HoursPanel from '../templates/panels/hours-panel';
 import { Button } from '@/components/ui/button';
 import { Save, Loader2, AlertTriangle, Check } from 'lucide-react';
@@ -228,6 +229,17 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
   const [staleSave, setStaleSave] = useState(false);
   const STALE_SAVE_MS = 4000;
 
+  // Does this site actually have a menu? Drives whether the icon picker is offered at all.
+  const hasMenuBlock = useMemo(() => {
+    for (const page of getPages(template) ?? []) {
+      for (const key of ['content_blocks', 'blocks'] as const) {
+        const list = (page as any)?.[key];
+        if (Array.isArray(list) && list.some((b: any) => b?.type === 'menu')) return true;
+      }
+    }
+    return false;
+  }, [template]);
+
   // The store this site sells through — meta.ecom.merchant_id, falling back to the owner's
   // merchant. `null` means "no store yet", which the Payments panel renders as such rather
   // than reporting a connection status for a merchant that doesn't exist.
@@ -433,6 +445,14 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
         <EcommercePanel templateId={(template as any)?.id ?? null} currentPageId={activePageId} />
       </PanelBoundary>
 
+      {/* Menu icons — food sites only. A setting that cannot apply is clutter, and clutter in
+          a settings panel makes the settings that DO apply look less considered. */}
+      {hasMenuBlock && (
+        <PanelBoundary name="MenuIconsPanel">
+          <MenuIconsPanel template={template} onPatch={applyPatch} />
+        </PanelBoundary>
+      )}
+
       {/* Venmo — always available, with or without a store. A $3 lemonade does not justify
           Stripe onboarding, so this path exists precisely for the sites that will never have a
           merchant. It is not gated on siteMerchantId for that reason. */}
@@ -464,7 +484,7 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
         </div>
       )}
     </div>
-  ), [activePageId, applyPatch, dirty, forceOpenHours, pending, saveNow, siteMerchantId, staleSave, spotlightHours, template, variant]);
+  ), [activePageId, applyPatch, dirty, forceOpenHours, hasMenuBlock, pending, saveNow, siteMerchantId, staleSave, spotlightHours, template, variant]);
 
   return (
     <aside

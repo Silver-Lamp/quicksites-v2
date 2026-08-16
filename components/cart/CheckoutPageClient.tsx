@@ -195,8 +195,13 @@ export default function CheckoutPageClient({ venmoHandle, iconSet = 'none' }: { 
               />
             </div>
 
+            {/* ⚠️ `bg-red-950/30` + `text-red-300` was a DARK-ONLY pairing: near-black ground,
+                pale text. On a light site that renders pale pink on pale pink — the error was
+                literally unreadable, on the one element whose whole job is to be read, at the
+                moment a payment just failed. Alpha tints read on either theme (CLAUDE.md §7),
+                and `text-destructive` follows the site's own palette. */}
             {err && (
-              <div role="alert" className="rounded-md border border-red-600/40 bg-red-950/30 px-3 py-2 text-xs text-red-300">
+              <div role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
                 {err}
               </div>
             )}

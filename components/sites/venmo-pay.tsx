@@ -20,9 +20,26 @@ import { venmoProfileUrl } from '@/lib/payments/venmo';
  * hurt by the wrong assumption: they would go looking in an Orders list that will never have
  * the row. The line is not fine print for that reason.
  */
-export default function VenmoPay({ handle, amountHint }: { handle: string; amountHint?: string }) {
+export default function VenmoPay({
+  handle,
+  amountHint,
+  amountCents,
+  context = 'menu',
+}: {
+  handle: string;
+  amountHint?: string;
+  /** Cart total, when this renders somewhere a total is actually known. */
+  amountCents?: number;
+  /** 'cart' adds the "this does not place an order" warning — see below. */
+  context?: 'menu' | 'cart';
+}) {
   const url = venmoProfileUrl(handle);
   if (!url) return null;
+
+  const amount =
+    typeof amountCents === 'number' && amountCents > 0
+      ? `$${(amountCents / 100).toFixed(2)}`
+      : null;
 
   return (
     <div className="mt-6 rounded-xl border border-border bg-card p-4 text-card-foreground sm:p-5">
@@ -37,16 +54,41 @@ export default function VenmoPay({ handle, amountHint }: { handle: string; amoun
 
         <div className="min-w-0">
           <div className="text-base font-semibold">Pay with Venmo</div>
+
+          {/* The amount is the whole reason to show this on the cart: the link cannot carry one
+              (see venmo.ts), so the number has to be legible enough to type from. */}
+          {amount && (
+            <p className="mt-1 text-sm">
+              Send <span className="text-xl font-bold tabular-nums">{amount}</span> to{' '}
+              <span className="font-semibold">@{handle}</span>
+            </p>
+          )}
+
           <p className="mt-1 text-sm text-muted-foreground">
             Scan the code, or{' '}
             <a href={url} target="_blank" rel="noopener noreferrer" className="font-medium underline underline-offset-2">
               open @{handle} in Venmo
             </a>
-            . {amountHint ? `Enter ${amountHint} when you pay.` : 'Enter the amount when you pay.'}
+            .{' '}
+            {amount
+              ? 'Venmo can’t prefill the amount, so type it in.'
+              : amountHint
+                ? `Enter ${amountHint} when you pay.`
+                : 'Enter the amount when you pay.'}
           </p>
+
           <p className="mt-2 text-xs text-muted-foreground">
-            This goes straight to the seller — this site doesn&apos;t process it, so you won&apos;t
-            get an order confirmation here.
+            {context === 'cart' ? (
+              <>
+                Paying this way doesn&apos;t place an order here — nothing is sent to the seller,
+                so show them your payment. Your cart stays as it is.
+              </>
+            ) : (
+              <>
+                This goes straight to the seller — this site doesn&apos;t process it, so you
+                won&apos;t get an order confirmation here.
+              </>
+            )}
           </p>
         </div>
       </div>

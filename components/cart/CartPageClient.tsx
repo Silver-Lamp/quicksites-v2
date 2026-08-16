@@ -8,8 +8,9 @@ import AutoApplyFromQuery from '@/components/cart/auto-apply-from-query';
 import CartSummary from '@/app/cart/checkout/page';
 import { useCartStore } from '@/components/cart/cart-store';
 import { Button } from '@/components/ui/button';
+import VenmoPay from '@/components/sites/venmo-pay';
 
-export default function CartPageClient() {
+export default function CartPageClient({ venmoHandle }: { venmoHandle?: string | null } = {}) {
   // ✅ SSR-safe: select primitives/arrays directly (no wrapped object)
   const merchantId = useCartStore((s) => s.merchantId || '');
   const subtotalCents = useCartStore((s) => s.subtotalCents || 0);
@@ -110,6 +111,13 @@ export default function CartPageClient() {
 
           {/* Main summary (items, steppers, totals, coupon chip) */}
           <CartSummary merchantId={merchantId} subtotalCents={subtotalCents} />
+
+          {/* Pay the seller directly. Sits BELOW the summary deliberately: the cart's job is
+              still to total the order, and this is one of two ways to settle it — not a
+              competing checkout. It carries the total because the Venmo link cannot. */}
+          {venmoHandle && (
+            <VenmoPay handle={venmoHandle} amountCents={subtotalCents} context="cart" />
+          )}
         </>
       )}
     </div>

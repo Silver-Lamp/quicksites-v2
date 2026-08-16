@@ -3,6 +3,8 @@
 
 import * as React from 'react';
 import VenmoPay from '@/components/sites/venmo-pay';
+import FoodIcon from '@/components/sites/food-icon';
+import { readMenuIconSet, type MenuIconSet } from '@/lib/menu/foodIcons';
 import { readVenmoHandle } from '@/lib/payments/venmo';
 import {
   assessFreshness,
@@ -98,10 +100,12 @@ function MenuItemRow({
   item,
   rowKey,
   freshness,
+  iconSet,
 }: {
   item: MenuItem;
   rowKey: string;
   freshness: MenuFreshness;
+  iconSet: MenuIconSet;
 }) {
   const options = orderableOptions(item);
   const hasOptions = options.length > 0;
@@ -157,7 +161,10 @@ function MenuItemRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="font-medium">{item.name}</span>
+          <span className="flex min-w-0 items-center gap-2 font-medium">
+            <FoodIcon name={item.name} tags={item.tags} set={iconSet} />
+            <span className="min-w-0">{item.name}</span>
+          </span>
           {price && <span className="shrink-0 tabular-nums text-muted-foreground">{price}</span>}
         </div>
         {item.description && <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>}
@@ -263,6 +270,8 @@ export default function RenderMenu(props: any) {
   // Optional "pay the seller directly" handle (site settings → Payments). Off unless set, and
   // never a substitute for the cart: it takes no fee and records no order (lib/payments/venmo).
   const venmoHandle = readVenmoHandle(props?.template?.data ?? props?.template);
+  // Opt-in per site; 'none' unless the owner picked a set (lib/menu/foodIcons.ts).
+  const iconSet = readMenuIconSet(props?.template?.data ?? props?.template);
   const sections: MenuSection[] = Array.isArray(content.sections) ? content.sections : [];
 
   // ⚠️ THE RULE EXISTED AND HAD EXACTLY ONE CALLER — the city SEARCH index — so prices aged out
@@ -337,7 +346,7 @@ export default function RenderMenu(props: any) {
 
             <ul className="mt-4 divide-y divide-border">
               {(section.items ?? []).map((it, ii) => (
-                <MenuItemRow key={`${slugId(section.name, si)}-${ii}`} item={it} rowKey={`${slugId(section.name, si)}-${ii}`} freshness={freshness} />
+                <MenuItemRow key={`${slugId(section.name, si)}-${ii}`} item={it} rowKey={`${slugId(section.name, si)}-${ii}`} freshness={freshness} iconSet={iconSet} />
               ))}
             </ul>
           </div>

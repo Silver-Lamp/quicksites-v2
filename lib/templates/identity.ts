@@ -88,6 +88,11 @@ export function normalizeIndustryTriplet(incomingMeta: any, beforeMeta: any) {
   return {};
 }
 
+/**
+ * The meta keys `enrichPatchWithIdentity` OWNS and normalizes. Documentation only — it no
+ * longer filters what survives a commit. See the note at the nextMeta assignment for what
+ * happened when it did.
+ */
 const ALLOWED_META_KEYS = new Set<string>([
   'identity', 'industry', 'industry_label', 'industry_other',
   'site_type', 'siteTitle', 'business', 'contact', 'services',
@@ -117,8 +122,32 @@ export function enrichPatchWithIdentity(originalPatch: any, beforeData: any) {
 
   const normIndustry = normalizeIndustryTriplet(inMeta, beforeMeta);
 
-  const nextMeta: any = {};
-  for (const k of Object.keys(metaBase)) if (ALLOWED_META_KEYS.has(k)) nextMeta[k] = metaBase[k];
+  /**
+   * ⚠️ THIS USED TO BE AN ALLOWLIST, AND IT SILENTLY ATE EVERY META KEY IT DID NOT KNOW.
+   *
+   * The line was:
+   *     for (const k of Object.keys(metaBase)) if (ALLOWED_META_KEYS.has(k)) nextMeta[k] = ...
+   *
+   * `ALLOWED_META_KEYS` lists the nine identity mirrors this function normalizes. Rebuilding
+   * `meta` from it meant EVERY OTHER KEY WAS DROPPED ON EVERY COMMIT — not by a rule about
+   * meta, but as a side effect of a helper whose job is identity. Two features died on it:
+   *
+   *   • `meta.ecom.merchant_id` — the link to the merchant that can charge a card. Written
+   *     server-side, gone on the owner's next save. The menu kept its "Add to order" buttons
+   *     because those live under `pages`, so the site looked like a working store with no till.
+   *   • `meta.payments.venmo` — saved, rendered in the preview, never in the row. Survived
+   *     three separate "fix the save path" attempts tonight, because the save path was fine:
+   *     the write reached the server and this function removed the key before it landed.
+   *
+   * The tell was in the data the whole time: the stored meta had exactly nine keys, and they
+   * were exactly this list.
+   *
+   * Now: keep everything, then normalize the identity mirrors on top. A key that nobody here
+   * has heard of is not evidence that it is junk. The allowlist stays only as documentation of
+   * which keys this function OWNS — it no longer decides what survives, because "add your key
+   * to a list in a file you'd never think to open" is a trap that only springs in production.
+   */
+  const nextMeta: any = { ...metaBase };
   nextMeta.identity = mergedMetaIdentity;
   if (normIndustry.industry        !== undefined) nextMeta.industry        = normIndustry.industry;
   if (normIndustry.industry_label  !== undefined) nextMeta.industry_label  = normIndustry.industry_label;

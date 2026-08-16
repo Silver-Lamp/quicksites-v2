@@ -64,11 +64,17 @@ export default function ThankYouPageClient({ iconSet = 'none' }: { iconSet?: Men
    * the payment path; the demo card form writes provider:'card' with no charge behind it and
    * the express buttons write 'apple'/'google' the same way.
    *
+   * A real checkout writes the SERVER's order id into the snapshot before redirecting to
+   * Stripe, and Stripe returns to a success URL carrying that same id. Requiring BOTH — and
+   * requiring them to match — means a receipt claims payment only for a buyer who actually
+   * came back through Stripe's success redirect. Landing on this page directly, or via the
+   * demo path, satisfies neither.
+   *
    * ⚠️ Treat UNKNOWN as demo. Getting this backwards means telling someone they paid when they
    * did not, which is the failure that matters here — the opposite mistake merely under-claims
    * on a real order, and a real order has a server record to correct it from.
    */
-  const isDemo = !order?.serverOrderId;
+  const isDemo = !(order?.serverOrderId && orderIdFromQuery && orderIdFromQuery === order.serverOrderId);
 
   const continueShopping = React.useCallback(() => {
     const path = window.location.pathname;

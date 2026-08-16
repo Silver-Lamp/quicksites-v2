@@ -101,8 +101,13 @@ export async function POST(req: NextRequest) {
   );
 
   const base = process.env.QS_PUBLIC_URL ?? '';
-  const successUrl = body.successUrl ?? `${base}/checkout/success?order=${orderId}`;
-  const cancelUrl = body.cancelUrl ?? `${base}/checkout/cancel?order=${orderId}`;
+  // A caller can pass its own return URLs — a tenant site wants its OWN receipt page, not the
+  // platform's. `{ORDER_ID}` is substituted here because the client cannot know the id it is
+  // asking for: the order is created by this request. Without the placeholder the caller either
+  // hardcodes the platform URL or gets a receipt that cannot identify its own order.
+  const withOrderId = (u: string) => u.replace(/\{ORDER_ID\}/g, encodeURIComponent(orderId));
+  const successUrl = body.successUrl ? withOrderId(body.successUrl) : `${base}/checkout/success?order=${orderId}`;
+  const cancelUrl = body.cancelUrl ? withOrderId(body.cancelUrl) : `${base}/checkout/cancel?order=${orderId}`;
   const forceTest = process.env.QS_TEST_CHECKOUT === '1';
 
   try {

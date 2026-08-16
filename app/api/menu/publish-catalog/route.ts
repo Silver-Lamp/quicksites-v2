@@ -14,7 +14,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import { requireUser } from '@/lib/auth/requireUser';
-import { buildCatalogRowsFromMenu } from '@/lib/commerce/menuCatalog';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
+import { buildCatalogRowsFromMenu, linkCatalogIntoTemplateData } from '@/lib/commerce/menuCatalog';
+import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
 import { normalizeVariants } from '@/lib/commerce/variants';
 
 export const runtime = 'nodejs';
@@ -62,6 +64,7 @@ export async function POST(req: Request) {
   }
 
   const siteSlug = String(body?.siteSlug || '').trim();
+  const templateId = String(body?.templateId || '').trim();
   const rows = buildCatalogRowsFromMenu(Array.isArray(body?.sections) ? body.sections : []);
   if (!rows.length) {
     return NextResponse.json(
@@ -135,5 +138,44 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, merchantId, items });
+  // Link the ids onto the menu block + stamp the merchant, in this same request.
+  //
+  // ⚠️ This used to be the browser's job and the browser lost it — see the header on
+  // linkCatalogIntoTemplateData. The rows are useless without the link (the renderer draws
+  // "Add to order" only for an item carrying a catalog_item_id), so the two halves belong in
+  // one transaction from the owner's point of view: press once, get a page that sells.
+  let linked = false;
+  let linkError: string | null = null;
+  if (templateId) {
+    const gateTpl = await requireTemplateOwner(templateId);
+    if (!gateTpl.ok) return gateTpl.response;
+
+    const { data: tpl } = await admin
+      .from('templates')
+      .select('id, rev, data')
+      .eq('id', templateId)
+      .maybeSingle();
+
+    if (!tpl) {
+      linkError = 'Ordering is on, but that site could not be found to link it to.';
+    } else {
+      const out = linkCatalogIntoTemplateData((tpl as any).data, items, merchantId);
+      if (!out.linkedBlocks) {
+        linkError = 'Ordering is on, but this site has no menu block to link it to.';
+      } else {
+        const commitErr = await commitTemplatePatch(
+          templateId,
+          (tpl as any).rev ?? 0,
+          { data: out.data },
+          user.id,
+        );
+        if (commitErr) linkError = commitErr;
+        else linked = true;
+      }
+    }
+  }
+
+  // Report the link separately from the rows. Saying "ok" when only half landed is what let a
+  // published menu sit there un-orderable with nothing on screen admitting it.
+  return NextResponse.json({ ok: true, merchantId, items, linked, ...(linkError ? { linkError } : {}) });
 }

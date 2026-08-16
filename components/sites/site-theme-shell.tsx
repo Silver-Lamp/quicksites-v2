@@ -31,7 +31,16 @@ export default function SiteThemeShell({
   children: React.ReactNode;
 }) {
   return (
-    <div data-theme={colorMode} data-qs-themed="1" className="min-h-screen bg-background text-foreground">
+    <div
+      data-theme={colorMode}
+      data-qs-themed="1"
+      // colorScheme is what the BROWSER reads to paint native controls — checkboxes, radios,
+      // scrollbars, date pickers. `data-theme` never reaches them. Checkout is full of native
+      // inputs, so without this a light site renders dark form controls at the exact moment
+      // someone is deciding whether to type a card number into them.
+      style={{ colorScheme: colorMode }}
+      className="min-h-screen bg-background text-foreground"
+    >
       {children}
     </div>
   );

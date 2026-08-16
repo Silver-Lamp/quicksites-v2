@@ -71,6 +71,18 @@ export function TemplateThemeWrapper({
         // Painting the same token one level UP keeps the surface opaque (which is what that
         // rule was for) while leaving the backdrop in front of it.
         background: 'hsl(var(--background))',
+        // ⚠️ NATIVE CONTROLS ARE PAINTED BY THE BROWSER, NOT BY OUR TOKENS.
+        //
+        // A checkbox, radio, scrollbar or date picker takes its colours from the CSS
+        // `color-scheme` property, which no semantic token touches. app/layout.tsx declares
+        // `<meta name="color-scheme" content="light dark">` at the document level and the app
+        // chrome is always dark, so the browser resolved every native control to DARK — a black
+        // checkbox on a white restaurant menu, which is what an owner sees and reports.
+        //
+        // `data-theme` fixes everything WE draw; this fixes everything the browser draws. Both
+        // are needed, and the second one is invisible until a site is light — the same blind
+        // spot as the cart FAB and SectionShell, in a third layer.
+        colorScheme: colorMode,
         ...(wrapperStyle ?? {}),
         ...(backdropStyle ? { position: 'relative' } : null),
       }}

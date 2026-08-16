@@ -152,6 +152,33 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
     (template as any)?.data?.meta?.ecommerce?.merchant_id ??
     '';
 
+  /**
+   * Is that merchant's Stripe already live? `null` while unknown.
+   *
+   * ⚠️ WITHOUT THIS, THE PANEL SENDS A CONNECTED OWNER BACK TO STRIPE FOREVER. The connect
+   * button rendered on the mere existence of a merchant, never on its status, so it kept
+   * reading "Connect Stripe to get paid →" after Stripe was fully connected. Beside a green
+   * "Enable online ordering", the money-sounding one is the one you press — and it lands on
+   * Stripe onboarding, which completes, returns you here, and offers it again. Observed: two
+   * full trips through Express onboarding while the actual product-creating step, one button
+   * to its left, was never run once.
+   */
+  const [stripeLive, setStripeLive] = React.useState<boolean | null>(null);
+  React.useEffect(() => {
+    if (!existingMerchantId) { setStripeLive(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/connect/status?merchantId=${encodeURIComponent(existingMerchantId)}`);
+        const json = await res.json().catch(() => ({}));
+        if (!cancelled) setStripeLive(res.ok ? !!json?.chargesEnabled : null);
+      } catch {
+        if (!cancelled) setStripeLive(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [existingMerchantId]);
+
   /** Start Stripe Connect onboarding for this merchant and hand off to Stripe. */
   const connectStripe = async (merchantId: string) => {
     if (!merchantId || connecting) return;
@@ -516,7 +543,10 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
               <button onClick={openConfirm} className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 hover:opacity-90">
                 Enable online ordering →
               </button>
-              {existingMerchantId && (
+              {/* Offer Stripe only when it is actually the outstanding step. Once charges are
+                  enabled this becomes a statement, not a button — there is nothing left to do
+                  there, and an action that re-does finished work reads as the next step. */}
+              {existingMerchantId && stripeLive === false && (
                 <button
                   onClick={() => connectStripe(existingMerchantId)}
                   disabled={connecting}
@@ -524,6 +554,9 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
                 >
                   {connecting ? 'Opening Stripe…' : 'Connect Stripe to get paid →'}
                 </button>
+              )}
+              {existingMerchantId && stripeLive === true && (
+                <span className="text-sm font-medium text-emerald-400">Stripe connected ✓</span>
               )}
             </div>
           </>
@@ -596,16 +629,25 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
         {result && (
           <div className="text-sm">
             <div className="font-semibold text-emerald-300">✓ Ordering enabled — {result.count} item{result.count === 1 ? '' : 's'} are now sellable.</div>
-            <p className="mt-1 text-zinc-400">
-              The menu's "Add to order" buttons are live. Connect Stripe to actually collect payment.
-            </p>
-            <button
-              onClick={() => connectStripe(result.merchantId)}
-              disabled={connecting}
-              className="mt-3 rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {connecting ? 'Opening Stripe…' : 'Connect Stripe to get paid →'}
-            </button>
+            {stripeLive === true ? (
+              <p className="mt-1 text-zinc-400">
+                The menu's "Add to order" buttons are live and Stripe is connected. Publish the site
+                and it can take orders.
+              </p>
+            ) : (
+              <>
+                <p className="mt-1 text-zinc-400">
+                  The menu's "Add to order" buttons are live. Connect Stripe to actually collect payment.
+                </p>
+                <button
+                  onClick={() => connectStripe(result.merchantId)}
+                  disabled={connecting}
+                  className="mt-3 rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {connecting ? 'Opening Stripe…' : 'Connect Stripe to get paid →'}
+                </button>
+              </>
+            )}
           </div>
         )}
 

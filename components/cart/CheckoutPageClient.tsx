@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2, Apple, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CartSummary from '@/app/cart/checkout/page';
 import { useCartStore } from '@/components/cart/cart-store';
+import VenmoPay from '@/components/sites/venmo-pay';
 
 /* ----------------------- tiny validators ----------------------- */
 function onlyDigits(s: string) { return s.replace(/\D+/g, ''); }
@@ -46,7 +47,7 @@ function makeOrderId() {
 }
 
 /* ----------------------- component ----------------------- */
-export default function CheckoutPageClient() {
+export default function CheckoutPageClient({ venmoHandle }: { venmoHandle?: string | null } = {}) {
   // SSR-safe selectors
   const merchantId = useCartStore((s) => s.merchantId || '');
   const subtotalCents = useCartStore((s) => s.subtotalCents || 0);
@@ -264,6 +265,13 @@ export default function CheckoutPageClient() {
               Demo buttons — no real payment. Proceeds directly to Thank You.
             </p>
           </div>
+
+          {/* Pay the seller directly. Above the card form, because for a $3 order it is often
+              the ONLY thing the buyer will do — burying it under a card form they will not fill
+              in makes the page longer for everyone and useless for them. */}
+          {venmoHandle && (
+            <VenmoPay handle={venmoHandle} amountCents={subtotalCents} context="cart" />
+          )}
 
           {/* Card form */}
           <div className="rounded-xl border p-4 space-y-3">

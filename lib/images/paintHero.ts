@@ -27,6 +27,8 @@ import { getOpenAI } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { NO_PEOPLE_NO_TEXT_CLAUSE } from '@/lib/images/noPeople';
+import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
+import { republishIfPublished } from '@/lib/templates/republishIfPublished';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
 const ROUTE = 'lib/images/paintHero';
@@ -111,4 +113,101 @@ export async function paintHeroPoolImage(
   } catch {
     return false;
   }
+}
+
+export type PaintHeroResult = {
+  changed: boolean;
+  reason?: string;
+  url?: string;
+  republished?: boolean;
+  warning?: string;
+};
+
+/**
+ * Repaint ONE site's hero and persist it. Costs ~$0.04 — an owner/admin action, never a
+ * request path, and never a sweep.
+ *
+ * Mirrors paintSiteBackdrop, including the two details that are easy to get wrong:
+ *
+ *   • Deterministic path + upsert, so a repaint overwrites in place instead of accumulating
+ *     orphaned objects — with the cache-bust PERSISTED into the stored URL, because
+ *     overwriting at a fixed path leaves the CDN serving the old bytes to anyone who
+ *     re-derives the bare URL.
+ *   • A republish at the end. A published site serves a SNAPSHOT, not templates.data, so
+ *     without it the paint is real in the database and invisible on the live page — which is
+ *     precisely the "the write worked and nothing changed" shape that has cost this repo
+ *     several debugging cycles. Guarded so it never takes an unpublished draft live.
+ *
+ * Writes BOTH block shapes it finds, for the reason in lib/menu/menuBlocks.ts: the fleet
+ * carries `content` and `props` heroes and the renderer reads whichever it finds first.
+ */
+export async function paintSiteHero(
+  templateId: string,
+  actorId: string | null,
+  opts: { subject?: string | null } = {},
+): Promise<PaintHeroResult> {
+  const { data: tpl, error } = await supabaseAdmin
+    .from('templates')
+    .select('id, rev, industry, data')
+    .eq('id', templateId)
+    .maybeSingle();
+  if (error || !tpl) return { changed: false, reason: 'not_found' };
+
+  const row = tpl as any;
+  const industryKey = row.industry ?? row.data?.meta?.industry ?? null;
+  const industryLabel = row.data?.meta?.industry_label ?? industryKey ?? null;
+  const prompt = heroPrompt({ industryKey, industryLabel, subject: opts.subject ?? null });
+
+  let dataUrl: string | null = null;
+  try {
+    dataUrl = await meterLLMCall<string | null>(
+      { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: actorId, route: `${ROUTE}#site` },
+      async () => {
+        const openai = getOpenAI('image');
+        const gen = await openai.images.generate({
+          model: 'gpt-image-1',
+          prompt,
+          size: '1536x1024',
+          quality: 'medium',
+        });
+        const b64 = gen.data?.[0]?.b64_json;
+        return { value: b64 ? `data:image/png;base64,${b64}` : null, usage: { images: 1 } };
+      },
+    );
+  } catch (e: any) {
+    return { changed: false, reason: 'generate_failed', ...(e?.message ? { warning: e.message } : {}) };
+  }
+  if (!dataUrl) return { changed: false, reason: 'no_image' };
+
+  const [, b64] = dataUrl.split(',');
+  const path = `heroes/site/${templateId}.png`;
+  const { error: upErr } = await supabaseAdmin.storage
+    .from(BUCKET)
+    .upload(path, Buffer.from(b64, 'base64'), { contentType: 'image/png', upsert: true });
+  if (upErr) return { changed: false, reason: 'upload_failed' };
+
+  const { data: pub } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
+  if (!pub?.publicUrl) return { changed: false, reason: 'no_public_url' };
+  const url = `${pub.publicUrl}?v=${Date.now()}`;
+
+  const data = JSON.parse(JSON.stringify(row.data ?? {}));
+  let touched = false;
+  for (const page of Array.isArray(data?.pages) ? data.pages : []) {
+    for (const key of ['content_blocks', 'blocks'] as const) {
+      if (!Array.isArray(page?.[key])) continue;
+      page[key] = page[key].map((b: any) => {
+        if (b?.type !== 'hero') return b;
+        touched = true;
+        const bag = { ...(b.content ?? b.props ?? {}), image_url: url, art_style: 'painterly' };
+        return b.content ? { ...b, content: bag } : { ...b, props: bag };
+      });
+    }
+  }
+  if (!touched) return { changed: false, reason: 'no_hero_block' };
+
+  const commitErr = await commitTemplatePatch(templateId, row.rev ?? 0, { data }, actorId);
+  if (commitErr) return { changed: false, reason: 'commit_failed', warning: commitErr };
+
+  const rep = await republishIfPublished(templateId);
+  return { changed: true, url, republished: rep.republished, ...(rep.warning ? { warning: rep.warning } : {}) };
 }

@@ -155,3 +155,38 @@ describe('enrichPatchWithIdentity', () => {
     expect(out.template_name).toBe('Explicit Name');
   });
 });
+
+describe('enrichPatchWithIdentity preserves meta it does not own', () => {
+  // ⚠️ This is the bug that survived three separate "fix the save path" attempts, because the
+  // save path was never broken: the write reached the server and this function deleted the key
+  // before it landed. meta was rebuilt from a nine-key allowlist of identity mirrors, so every
+  // other key died on every commit.
+
+  it('keeps a brand-new meta key the helper has never heard of', () => {
+    const out = enrichPatchWithIdentity(
+      { data: { meta: { payments: { venmo: 'lemonade-stand' } } } },
+      { meta: { siteTitle: 'Renton Lemonade' } },
+    );
+    expect(out.data.meta.payments).toEqual({ venmo: 'lemonade-stand' });
+  });
+
+  it('keeps a meta key written out-of-band that this save never mentions', () => {
+    // meta.ecom.merchant_id was stamped server-side; the owner's next unrelated save wiped it,
+    // leaving a site that rendered "Add to order" with no merchant behind it.
+    const out = enrichPatchWithIdentity(
+      { data: { meta: { siteTitle: 'Renton Lemonade' } } },
+      { meta: { siteTitle: 'Renton Lemonade', ecom: { merchant_id: 'm-1' } } },
+    );
+    expect(out.data.meta.ecom).toEqual({ merchant_id: 'm-1' });
+  });
+
+  it('still normalizes the identity mirrors it does own', () => {
+    const out = enrichPatchWithIdentity(
+      { data: { meta: { industry: 'Auto Repair', payments: { venmo: 'x-stand' } } } },
+      { meta: {} },
+    );
+    expect(out.data.meta.industry).toBe('auto_repair');
+    expect(out.data.meta.industry_label).toBe('Auto Repair');
+    expect(out.data.meta.payments).toEqual({ venmo: 'x-stand' }); // and does not eat the rest
+  });
+});

@@ -10,6 +10,7 @@ import { stripEmpty, obj, dget, ddel, enrichPatchWithIdentity } from '@/lib/temp
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
+import { mergeTemplateMeta } from '@/lib/templates/mergeMeta';
 import { persistReadinessScore } from '@/lib/seo/persistReadiness';
 
 // optional org (keeps single-tenant working)
@@ -254,6 +255,33 @@ export async function POST(req: Request) {
         // If company write fails, we *do not* drop the template hours (keep user data safe)
         if (DEBUG_ID) dbg('[IDENTITY:API] company hours write failed; leaving hours in template patch', { error: e?.message });
       }
+    }
+
+    /**
+     * ⚠️ MERGE `data.meta`, NEVER REPLACE IT — the editor's copy is not authoritative.
+     *
+     * The editor sends the whole `data` blob from its in-memory template, so `data.meta`
+     * arrives as a complete object and overwrites the stored one. Any key the browser's copy
+     * did not happen to contain is therefore DELETED, with no edit to that key and nothing on
+     * screen about it.
+     *
+     * Observed on renton-lemonade-fxny within one hour, twice:
+     *   • `meta.ecom.merchant_id`, written server-side through the sanctioned commit RPC, was
+     *     gone after the next settings save — taking the site's link to the merchant that can
+     *     actually charge a card, while the menu kept its "Add to order" buttons because those
+     *     live under `pages`. A store that looks open and has no till.
+     *   • A Venmo handle saved in the settings panel rendered in the preview and never reached
+     *     the row at all, because the toolbar serialised a `meta` captured before the patch.
+     *
+     * Both are the same shape: a last-writer-wins whole-object write racing an out-of-band one.
+     * Merging makes the loss impossible rather than unlikely — a save can only change the keys
+     * it actually carries. Deleting a meta key now needs an explicit `null`, which is the right
+     * trade: silent deletion is not a feature anyone asked for, and every real deletion here
+     * (clearing a Venmo handle, unsetting a merchant) is a deliberate act that can say so.
+     */
+    const incomingMeta = dget(enrichedPatch, ['data', 'meta']);
+    if (incomingMeta && typeof incomingMeta === 'object' && !Array.isArray(incomingMeta)) {
+      (enrichedPatch as any).data.meta = mergeTemplateMeta((beforeData as any)?.meta, incomingMeta);
     }
 
     const strippedPatch = stripEmpty(enrichedPatch ?? {});

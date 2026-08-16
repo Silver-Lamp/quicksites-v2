@@ -58,7 +58,9 @@ export async function listHeroPool(industryKey: string): Promise<string[]> {
     const { data, error } = await supabaseAdmin.storage.from(BUCKET).list(prefix, { limit: 100 });
     if (error || !data) return [];
     return data
-      .filter((f) => f.name.endsWith('.png'))
+      // Both extensions: pool members are .webp since compressForWeb landed, and any .png
+      // written before that is still a perfectly good image.
+      .filter((f) => /\.(png|webp)$/i.test(f.name))
       .map((f) => supabaseAdmin.storage.from(BUCKET).getPublicUrl(`${prefix}/${f.name}`).data?.publicUrl)
       .filter((u): u is string => !!u);
   } catch {
@@ -108,6 +110,7 @@ export async function fillHeroPool(
   for (let i = 0; i < want; i++) {
     // Index by current count so paths stay deterministic and a partial run resumes cleanly.
     const idx = before + added;
+    // paintHeroPoolImage swaps the extension for whatever it actually wrote.
     const path = `${heroPoolPrefix(industryKey)}/${String(idx).padStart(3, '0')}.png`;
     const ok = await paintHeroPoolImage(industryKey, path, actorId);
     if (!ok) break; // stop on first failure rather than burning budget retrying

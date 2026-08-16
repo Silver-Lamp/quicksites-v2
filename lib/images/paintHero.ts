@@ -27,6 +27,7 @@ import { getOpenAI } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { NO_PEOPLE_NO_TEXT_CLAUSE } from '@/lib/images/noPeople';
+import { compressForWeb } from '@/lib/images/compressForWeb';
 import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
 import { republishIfPublished } from '@/lib/templates/republishIfPublished';
 
@@ -106,9 +107,13 @@ export async function paintHeroPoolImage(
     );
     if (!dataUrl) return false;
     const [, b64] = dataUrl.split(',');
+    // gpt-image-1 returns PNG, which is the worst possible container for a painting —
+    // see lib/images/compressForWeb.ts. Measured on the first hero: 2390 KB → 132 KB.
+    const img = await compressForWeb(Buffer.from(b64, 'base64'));
+    const finalPath = path.replace(/\.png$/, `.${img.ext}`);
     const { error } = await supabaseAdmin.storage
       .from(BUCKET)
-      .upload(path, Buffer.from(b64, 'base64'), { contentType: 'image/png', upsert: false });
+      .upload(finalPath, img.buffer, { contentType: img.contentType, upsert: false });
     return !error;
   } catch {
     return false;
@@ -180,10 +185,14 @@ export async function paintSiteHero(
   if (!dataUrl) return { changed: false, reason: 'no_image' };
 
   const [, b64] = dataUrl.split(',');
-  const path = `heroes/site/${templateId}.png`;
+  // ⚠️ CONVERT, do not just name it .webp. gpt-image-1 always returns PNG and a painting is the
+  // worst case for it — the first hero shipped at 2447 KB to a customer standing outside on
+  // cellular. See lib/images/compressForWeb.ts.
+  const img = await compressForWeb(Buffer.from(b64, 'base64'));
+  const path = `heroes/site/${templateId}.${img.ext}`;
   const { error: upErr } = await supabaseAdmin.storage
     .from(BUCKET)
-    .upload(path, Buffer.from(b64, 'base64'), { contentType: 'image/png', upsert: true });
+    .upload(path, img.buffer, { contentType: img.contentType, upsert: true });
   if (upErr) return { changed: false, reason: 'upload_failed' };
 
   const { data: pub } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);

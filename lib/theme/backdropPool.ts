@@ -52,7 +52,9 @@ export async function listPool(industryKey: string): Promise<string[]> {
     const { data, error } = await supabaseAdmin.storage.from(BUCKET).list(prefix, { limit: 100 });
     if (error || !data) return [];
     return data
-      .filter((f) => f.name.endsWith('.png'))
+      // Both: pool members are .webp since compressForWeb landed; earlier .png members are
+      // still perfectly good images and must keep being served.
+      .filter((f) => /\.(png|webp)$/i.test(f.name))
       .map((f) => supabaseAdmin.storage.from(BUCKET).getPublicUrl(`${prefix}/${f.name}`).data?.publicUrl)
       .filter((u): u is string => !!u);
   } catch {

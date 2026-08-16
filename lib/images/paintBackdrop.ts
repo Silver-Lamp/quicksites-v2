@@ -23,6 +23,7 @@ import { meterLLMCall } from '@/lib/ai/meter';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
 import { NO_PEOPLE_NO_TEXT_CLAUSE } from '@/lib/images/noPeople';
+import { compressForWeb } from '@/lib/images/compressForWeb';
 import { readBackdrop, type SiteBackdrop } from '@/lib/theme/backdrops';
 import { republishIfPublished } from '@/lib/templates/republishIfPublished';
 
@@ -84,9 +85,14 @@ export async function paintPoolImage(
     );
     if (!dataUrl) return false;
     const [, b64] = dataUrl.split(',');
+    // ⚠️ Measured in prod storage 2026-08-16: every pooled backdrop was ~2.1 MB of PNG, and a
+    // backdrop sits behind EVERY page of the sites that use one. gpt-image-1 always returns PNG
+    // and a painting is its worst case — see lib/images/compressForWeb.ts.
+    const img = await compressForWeb(Buffer.from(b64, 'base64'));
+    const finalPath = path.replace(/\.png$/, `.${img.ext}`);
     const { error } = await supabaseAdmin.storage
       .from(BUCKET)
-      .upload(path, Buffer.from(b64, 'base64'), { contentType: 'image/png', upsert: false });
+      .upload(finalPath, img.buffer, { contentType: img.contentType, upsert: false });
     return !error;
   } catch {
     return false;
@@ -152,12 +158,12 @@ export async function paintSiteBackdrop(
   // Rule 3: deterministic path per entity + upsert, so a repaint overwrites in place
   // rather than accumulating orphaned objects.
   const [, b64] = dataUrl.split(',');
-  const buffer = Buffer.from(b64, 'base64');
-  const path = `backdrops/site/${templateId}.png`;
+  const img = await compressForWeb(Buffer.from(b64, 'base64'));
+  const path = `backdrops/site/${templateId}.${img.ext}`;
 
   const { error: upErr } = await supabaseAdmin.storage
     .from(BUCKET)
-    .upload(path, buffer, { contentType: 'image/png', upsert: true });
+    .upload(path, img.buffer, { contentType: img.contentType, upsert: true });
   if (upErr) return { changed: false, reason: 'upload_failed' };
 
   const { data: pub } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);

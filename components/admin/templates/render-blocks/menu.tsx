@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import { useCartStore } from '@/components/cart/cart-store';
 import VenmoPay from '@/components/sites/venmo-pay';
 import FoodIcon from '@/components/sites/food-icon';
 import { readMenuIconSet, type MenuIconSet } from '@/lib/menu/foodIcons';
@@ -38,7 +39,26 @@ function slugId(s: string, i: number) {
   return `menu-${base || 'section'}-${i}`;
 }
 
-function readMerchantId(): string | null {
+/**
+ * The merchant this menu sells through.
+ *
+ * ⚠️ THIS USED TO READ EDITOR GLOBALS ONLY — `__QS_ECOM__`, `__QS_TPL_REF__`,
+ * `__QS_TEMPLATE__` — and NONE of them exist on a published site. So every real customer who
+ * pressed "Add to order" got a cart with `merchantId: null`, and checkout could not identify
+ * the seller. It worked perfectly in the editor preview, where those globals are set, which is
+ * exactly why it survived: the surface an operator tests is the one surface where it works.
+ *
+ * The template is right here in props. Prefer it, and keep the globals as a fallback for the
+ * editor, where the in-memory template can be ahead of the saved one.
+ */
+function readMerchantId(template?: any): string | null {
+  const fromTemplate =
+    template?.data?.meta?.ecom?.merchant_id ??
+    template?.data?.meta?.ecommerce?.merchant_id ??
+    template?.data?.ecommerce?.merchant_id ??
+    null;
+  if (fromTemplate) return String(fromTemplate);
+
   try {
     const w = window as any;
     if (w.__QS_ECOM__?.merchantId) return String(w.__QS_ECOM__.merchantId);
@@ -66,7 +86,7 @@ function orderableAddons(it: MenuItem): MenuAddon[] {
   return (Array.isArray(it.addons) ? it.addons : []).filter((a) => a?.label && a?.id);
 }
 
-function addToOrder(it: MenuItem, option?: MenuOption, addons: MenuAddon[] = []) {
+function addToOrder(it: MenuItem, option?: MenuOption, addons: MenuAddon[] = [], merchantId?: string | null) {
   if (!it.catalog_item_id) return;
   const base = option
     ? (typeof option.price_cents === 'number' ? option.price_cents : 0)
@@ -86,7 +106,7 @@ function addToOrder(it: MenuItem, option?: MenuOption, addons: MenuAddon[] = [])
           title: it.name,
           image_url: it.image_url ?? null,
           product_type: 'meal',
-          merchantId: readMerchantId(),
+          merchantId: merchantId ?? readMerchantId(),
         },
       }),
     );
@@ -101,11 +121,13 @@ function MenuItemRow({
   rowKey,
   freshness,
   iconSet,
+  merchantId,
 }: {
   item: MenuItem;
   rowKey: string;
   freshness: MenuFreshness;
   iconSet: MenuIconSet;
+  merchantId: string | null;
 }) {
   const options = orderableOptions(item);
   const hasOptions = options.length > 0;
@@ -127,6 +149,30 @@ function MenuItemRow({
             ? `+${String(a.price).replace(/^\+/, '')}`
             : '',
     }));
+  // Is THIS dish in the cart, and how many things are in it overall? The first decides whether
+  // to offer the way forward here; the second is what the button reports.
+  const cartItems = useCartStore((st) => st.items);
+  const cartQty = React.useMemo(
+    () => (cartItems.some((ci) => (ci.catalog_item_id || ci.id.split('::')[0]) === item.catalog_item_id)
+      ? cartItems.reduce((n, ci) => n + (Number(ci.qty) || 0), 0)
+      : 0),
+    [cartItems, item.catalog_item_id],
+  );
+
+  /**
+   * Where the cart lives from HERE.
+   *
+   * On a tenant host `/cart` is correct — middleware rewrites it to /sites/<slug>/cart. But this
+   * same renderer runs inside the editor preview and on the platform host, where a bare `/cart`
+   * would walk the operator out of their own site. Derive the prefix from the path we are
+   * actually on rather than assuming one.
+   */
+  const [cartHref, setCartHref] = React.useState('/cart');
+  React.useEffect(() => {
+    const m = window.location.pathname.match(/^\/sites\/([^/]+)/);
+    setCartHref(m ? `/sites/${m[1]}/cart` : '/cart');
+  }, []);
+
   const [sel, setSel] = React.useState(0);
   const [selAddonIds, setSelAddonIds] = React.useState<string[]>([]);
   const selected = hasOptions ? options[Math.min(sel, options.length - 1)] : undefined;
@@ -249,13 +295,30 @@ function MenuItemRow({
         )}
 
         {item.catalog_item_id && (hasOptions ? selected != null : true) && (
-          <button
-            type="button"
-            onClick={() => addToOrder(item, selected, chosenAddons)}
-            className="mt-3 inline-flex items-center rounded-md border border-border px-3 py-1 text-sm font-medium transition hover:bg-muted"
-          >
-            Add to order{addonTotal > 0 ? ` · ${centsDisplay((baseCents ?? 0) + addonTotal)}` : ''}
-          </button>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => addToOrder(item, selected, chosenAddons, merchantId)}
+              className="inline-flex items-center rounded-md border border-border px-3 py-1 text-sm font-medium transition hover:bg-muted"
+            >
+              Add to order{addonTotal > 0 ? ` · ${centsDisplay((baseCents ?? 0) + addonTotal)}` : ''}
+            </button>
+
+            {/* The way forward, shown only once there is something to check out.
+                ⚠️ ONLY ON ROWS ALREADY IN THE CART, not every row. A menu with thirty dishes
+                would otherwise carry thirty checkout buttons — which reads as thirty different
+                actions and makes the one that matters harder to find, not easier. The floating
+                cart already covers "I am elsewhere on the page and want to pay". This covers the
+                moment right after adding, which is where a buyer actually looks for it. */}
+            {cartQty > 0 && (
+              <a
+                href={cartHref}
+                className="inline-flex items-center rounded-md bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+              >
+                Continue to checkout ({cartQty})
+              </a>
+            )}
+          </div>
         )}
       </div>
     </li>
@@ -276,6 +339,8 @@ export default function RenderMenu(props: any) {
   const venmoHandle = readVenmoHandle(props?.template?.data ?? props?.template);
   // Opt-in per site; 'none' unless the owner picked a set (lib/menu/foodIcons.ts).
   const iconSet = readMenuIconSet(props?.template?.data ?? props?.template);
+  // Resolved from the TEMPLATE, so it works on a published page and not just in the editor.
+  const merchantId = readMerchantId(props?.template);
   const sections: MenuSection[] = Array.isArray(content.sections) ? content.sections : [];
 
   // ⚠️ THE RULE EXISTED AND HAD EXACTLY ONE CALLER — the city SEARCH index — so prices aged out
@@ -350,7 +415,7 @@ export default function RenderMenu(props: any) {
 
             <ul className="mt-4 divide-y divide-border">
               {(section.items ?? []).map((it, ii) => (
-                <MenuItemRow key={`${slugId(section.name, si)}-${ii}`} item={it} rowKey={`${slugId(section.name, si)}-${ii}`} freshness={freshness} iconSet={iconSet} />
+                <MenuItemRow key={`${slugId(section.name, si)}-${ii}`} item={it} rowKey={`${slugId(section.name, si)}-${ii}`} freshness={freshness} iconSet={iconSet} merchantId={merchantId} />
               ))}
             </ul>
           </div>

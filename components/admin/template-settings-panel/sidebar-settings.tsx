@@ -227,6 +227,26 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
   const [staleSave, setStaleSave] = useState(false);
   const STALE_SAVE_MS = 4000;
 
+  // The store this site sells through — meta.ecom.merchant_id, falling back to the owner's
+  // merchant. `null` means "no store yet", which the Payments panel renders as such rather
+  // than reporting a connection status for a merchant that doesn't exist.
+  const [siteMerchantId, setSiteMerchantId] = useState<string | null>(null);
+  const templateId = (template as any)?.id ?? null;
+  useEffect(() => {
+    if (!templateId) { setSiteMerchantId(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/commerce/site-merchant?templateId=${encodeURIComponent(templateId)}`);
+        const json = await res.json().catch(() => ({}));
+        if (!cancelled) setSiteMerchantId(res.ok && json?.merchantId ? String(json.merchantId) : null);
+      } catch {
+        if (!cancelled) setSiteMerchantId(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [templateId]);
+
   // "Saving…" is cleared by the toolbar's save-settled signal — but never let it stick if
   // that signal is missed (a failed commit, or a race where it fires before we set pending).
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -412,13 +432,31 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
         <EcommercePanel templateId={(template as any)?.id ?? null} currentPageId={activePageId} />
       </PanelBoundary>
 
-      {/* Payments (separate flow) */}
-      <PaymentSettingsPanel
-        merchantId={'00001'}
-        initialPlatformFeeBps={75}
-      />
+      {/*
+        Payments (separate flow).
+
+        ⚠️ This panel spent its whole life wired to merchantId={'00001'} — a placeholder that is
+        not a uuid and not a merchant. Every site therefore showed "Not connected" and a 0.75%
+        fee no matter what its real Stripe account said, and pressing "Enable payouts" surfaced
+        `invalid input syntax for type uuid: "00001"`. A panel reporting a plausible-looking
+        status for a merchant that does not exist is worse than no panel: it answers the question
+        "am I connected?" with a confident lie, on the one screen an owner goes to to check.
+
+        Render it only once we know which store this site sells through.
+      */}
+      {siteMerchantId ? (
+        <PanelBoundary name="PaymentSettingsPanel">
+          <PaymentSettingsPanel merchantId={siteMerchantId} initialPlatformFeeBps={75} />
+        </PanelBoundary>
+      ) : (
+        <div className="rounded-md border border-border/60 bg-card/40 p-3 text-sm text-muted-foreground">
+          <div className="font-medium text-foreground">Payments</div>
+          No store on this site yet. Enable ordering on a menu or products block first — that
+          creates the store these settings belong to.
+        </div>
+      )}
     </div>
-  ), [activePageId, applyPatch, dirty, forceOpenHours, pending, saveNow, staleSave, spotlightHours, template, variant]);
+  ), [activePageId, applyPatch, dirty, forceOpenHours, pending, saveNow, siteMerchantId, staleSave, spotlightHours, template, variant]);
 
   return (
     <aside

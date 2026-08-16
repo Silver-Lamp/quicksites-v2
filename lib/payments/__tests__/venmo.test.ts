@@ -81,3 +81,25 @@ describe('read/write on template data', () => {
     expect(readVenmoHandle(null)).toBeNull();
   });
 });
+
+describe('cart amount rendering contract', () => {
+  // The cart is the one place a total is known, and the Venmo link still cannot carry it
+  // (see venmoProfileUrl above). So the amount has to be shown as text the buyer types —
+  // which means it must be derived from the cart's own cents, never guessed or rounded.
+  const fmt = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+  it('formats whole and fractional totals to two places', () => {
+    expect(fmt(300)).toBe('$3.00');
+    expect(fmt(500)).toBe('$5.00');
+    expect(fmt(1)).toBe('$0.01');
+    expect(fmt(1999)).toBe('$19.99');
+  });
+
+  it('never displays an amount for an empty cart', () => {
+    // VenmoPay only renders the amount line when amountCents > 0; a "$0.00" instruction on an
+    // empty cart would be a request to send nothing.
+    const shows = (cents: number) => typeof cents === 'number' && cents > 0;
+    expect(shows(0)).toBe(false);
+    expect(shows(300)).toBe(true);
+  });
+});

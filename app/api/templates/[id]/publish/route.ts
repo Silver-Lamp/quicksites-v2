@@ -7,6 +7,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
+import { resolvePublishTarget } from '@/lib/templates/publishTarget';
 
 const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -43,13 +44,31 @@ export async function POST(
   }
 
   // Load canonical
-  const { data: c, error: cErr } = await supabaseAdmin
+  const { data: c0, error: cErr } = await supabaseAdmin
     .from('templates')
     .select('id, owner_id, slug, custom_domain, claim_source')
     .eq('base_slug', base_slug)
     .eq('is_version', false)
     .maybeSingle();
-  if (cErr || !c) return NextResponse.json({ error: 'Canonical not found' }, { status: 404 });
+  if (cErr) return NextResponse.json({ error: cErr.message }, { status: 400 });
+
+  // No canonical? A slugged row with no canonical sibling IS the canonical — see
+  // lib/templates/publishTarget.ts for why 1,376 live sites were stuck unpublishable here.
+  let self: typeof c0 = null;
+  if (!c0) {
+    // The route accepts a uuid OR a base_slug, so resolve "self" the same way.
+    const selfQuery = supabaseAdmin
+      .from('templates')
+      .select('id, owner_id, slug, custom_domain, claim_source')
+      .not('slug', 'is', null)
+      .neq('slug', '');
+    const r = await (UUID_V4.test(id)
+      ? selfQuery.eq('id', id).maybeSingle()
+      : selfQuery.eq('base_slug', base_slug).order('updated_at', { ascending: false }).limit(1).maybeSingle());
+    self = r.data;
+  }
+  const c = resolvePublishTarget(c0, self);
+  if (!c) return NextResponse.json({ error: 'Canonical not found' }, { status: 404 });
 
   // Owner or admin check
   const { data: adminRow } = await supabaseAdmin

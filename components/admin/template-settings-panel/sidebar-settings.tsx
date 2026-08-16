@@ -11,6 +11,7 @@ import DomainPanel from '../templates/panels/domain-panel';
 import SeoPanel from '../templates/panels/seo-panel';
 import ThemePanel from '../templates/panels/theme-panel';
 import PaymentSettingsPanel from '../payments/payment-settings-panel';
+import VenmoPanel from '../templates/panels/venmo-panel';
 import HoursPanel from '../templates/panels/hours-panel';
 import { Button } from '@/components/ui/button';
 import { Save, Loader2, AlertTriangle, Check } from 'lucide-react';
@@ -430,6 +431,13 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
       {/* E-commerce panel */}
       <PanelBoundary name="EcommercePanel">
         <EcommercePanel templateId={(template as any)?.id ?? null} currentPageId={activePageId} />
+      </PanelBoundary>
+
+      {/* Venmo — always available, with or without a store. A $3 lemonade does not justify
+          Stripe onboarding, so this path exists precisely for the sites that will never have a
+          merchant. It is not gated on siteMerchantId for that reason. */}
+      <PanelBoundary name="VenmoPanel">
+        <VenmoPanel template={template} onPatch={applyPatch} />
       </PanelBoundary>
 
       {/*

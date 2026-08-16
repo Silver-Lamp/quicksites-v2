@@ -69,7 +69,12 @@ export default function CartButton({
     <Link
       href="/cart"
       className={clsx(
-        'relative inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm hover:bg-accent transition',
+        // ⚠️ PAINT AN EXPLICIT SURFACE. This used to set `border` with no background and no text
+        // colour, so it inherited both — and as a floating control it can be inherited from
+        // anywhere. Over a light tenant site it came out as a near-white icon on a near-white
+        // page. A control that floats above arbitrary content has to carry its own ground.
+        'relative inline-flex items-center justify-center rounded-md border border-border',
+        'bg-card text-card-foreground shadow-lg px-3 py-1.5 text-sm hover:bg-accent transition',
         bump && 'scale-105',
         className
       )}

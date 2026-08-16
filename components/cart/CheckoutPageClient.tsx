@@ -145,13 +145,16 @@ export default function CheckoutPageClient({ venmoHandle, iconSet = 'none' }: { 
   if (isEmpty) {
     return (
       <div className="mx-auto w-full max-w-5xl px-4 py-6">
-        <div className="mb-4 flex items-center justify-between">
-          <Button variant="outline" onClick={backToCart} className="gap-2">
+        {/* Same header treatment as the populated state — see the note there. Two copies of one
+            header is why the first fix only reached half of them. */}
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <Button variant="outline" onClick={backToCart} className="gap-2 shrink-0">
             <ArrowLeft className="h-4 w-4" />
-            Back to cart
+            <span className="hidden sm:inline">Back to cart</span>
+            <span className="sm:hidden">Cart</span>
           </Button>
-          <h1 className="text-xl font-semibold">Checkout</h1>
-          <div className="w-[110px]" /> {/* spacer */}
+          <h1 className="text-lg font-semibold sm:text-xl">Checkout</h1>
+          <div className="hidden w-[110px] sm:block" />
         </div>
 
         <div className="rounded-xl border p-10 text-center">
@@ -166,13 +169,17 @@ export default function CheckoutPageClient({ venmoHandle, iconSet = 'none' }: { 
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6">
-      <div className="mb-4 flex items-center justify-between">
-        <Button variant="outline" onClick={backToCart} className="gap-2">
+      {/* The spacer exists to centre the title on a wide screen. On a phone it is 110px of
+          nothing competing with a back button and a heading for ~320px — so it only exists
+          from `sm` up, where there is width to spend on symmetry. */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <Button variant="outline" onClick={backToCart} className="gap-2 shrink-0">
           <ArrowLeft className="h-4 w-4" />
-          Back to cart
+          <span className="hidden sm:inline">Back to cart</span>
+          <span className="sm:hidden">Cart</span>
         </Button>
-        <h1 className="text-xl font-semibold">Checkout</h1>
-        <div className="w-[110px]" /> {/* spacer */}
+        <h1 className="text-lg font-semibold sm:text-xl">Checkout</h1>
+        <div className="hidden w-[110px] sm:block" />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

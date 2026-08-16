@@ -479,9 +479,9 @@ export default async function SitePreviewPage({
     const shell = await cartShellForSlug(slug);
     return (
       <SiteThemeShell colorMode={shell.colorMode}>
-        {rest[0] === 'cart' && <CartPageClient venmoHandle={shell.venmoHandle} />}
-        {rest[0] === 'checkout' && <CheckoutPageClient venmoHandle={shell.venmoHandle} />}
-        {rest[0] === 'thank-you' && <ThankYouPageClient />}
+        {rest[0] === 'cart' && <CartPageClient venmoHandle={shell.venmoHandle} iconSet={shell.iconSet} />}
+        {rest[0] === 'checkout' && <CheckoutPageClient venmoHandle={shell.venmoHandle} iconSet={shell.iconSet} />}
+        {rest[0] === 'thank-you' && <ThankYouPageClient iconSet={shell.iconSet} />}
       </SiteThemeShell>
     );
   }

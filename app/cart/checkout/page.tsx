@@ -3,13 +3,18 @@
 
 import CartCouponChip from '@/components/cart/cart-coupon-chip';
 import { useCartStore } from '@/components/cart/cart-store';
+import ItemThumb from '@/components/cart/item-thumb';
+import type { MenuIconSet } from '@/lib/menu/foodIcons';
 
 export default function CartSummary({
   merchantId: propMerchantId,
   subtotalCents: propSubtotalCents,
+  iconSet = 'none',
 }: {
   merchantId?: string;
   subtotalCents?: number;
+  /** The site's menu icon set, so a dish with no photo shows its icon instead of a grey tile. */
+  iconSet?: MenuIconSet;
 }) {
   // SSR-safe selectors (no wrapped object)
   const items = useCartStore((s) => s.items);
@@ -43,12 +48,7 @@ export default function CartSummary({
 
             return (
               <li key={it.id} className="flex items-center gap-3 p-3">
-                <div className="h-12 w-12 rounded bg-muted overflow-hidden shrink-0">
-                  {it.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={it.image_url} alt="" className="h-full w-full object-cover" />
-                  ) : null}
-                </div>
+                <ItemThumb imageUrl={it.image_url} title={it.title} iconSet={iconSet} className="h-12 w-12" />
 
                 <div className="flex-1 min-w-0">
                   <div className="truncate text-sm font-medium">{it.title}</div>

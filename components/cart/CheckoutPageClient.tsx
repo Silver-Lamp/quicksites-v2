@@ -3,51 +3,18 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Apple, CreditCard } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CartSummary from '@/app/cart/checkout/page';
 import { useCartStore } from '@/components/cart/cart-store';
 import VenmoPay from '@/components/sites/venmo-pay';
+import type { MenuIconSet } from '@/lib/menu/foodIcons';
 
 /* ----------------------- tiny validators ----------------------- */
-function onlyDigits(s: string) { return s.replace(/\D+/g, ''); }
-
-function luhnOk(num: string) {
-  let sum = 0, dbl = false;
-  for (let i = num.length - 1; i >= 0; i--) {
-    let d = Number(num[i]);
-    if (dbl) { d *= 2; if (d > 9) d -= 9; }
-    sum += d; dbl = !dbl;
-  }
-  return sum % 10 === 0;
-}
-
-function expiryOk(mmYY: string) {
-  const m = mmYY.match(/^(\d{2})\s*\/\s*(\d{2})$/);
-  if (!m) return false;
-  const mm = Number(m[1]), yy = Number(m[2]);
-  if (mm < 1 || mm > 12) return false;
-  const now = new Date();
-  const curYY = now.getFullYear() % 100;
-  const curMM = now.getMonth() + 1;
-  if (yy < curYY) return false;
-  if (yy === curYY && mm < curMM) return false;
-  return true;
-}
-function cvcOk(cvc: string) { return /^\d{3,4}$/.test(cvc); }
 function emailOk(e: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
-/* ----------------------- helpers ----------------------- */
-function makeOrderId() {
-  // QS-<base36 timestamp>-<4 rand>
-  return `QS-${Date.now().toString(36).toUpperCase()}-${Math.random()
-    .toString(36)
-    .slice(2, 6)
-    .toUpperCase()}`;
-}
-
 /* ----------------------- component ----------------------- */
-export default function CheckoutPageClient({ venmoHandle }: { venmoHandle?: string | null } = {}) {
+export default function CheckoutPageClient({ venmoHandle, iconSet = 'none' }: { venmoHandle?: string | null; iconSet?: MenuIconSet } = {}) {
   // SSR-safe selectors
   const merchantId = useCartStore((s) => s.merchantId || '');
   const subtotalCents = useCartStore((s) => s.subtotalCents || 0);
@@ -56,16 +23,10 @@ export default function CheckoutPageClient({ venmoHandle }: { venmoHandle?: stri
   const isEmpty = !items.length || subtotalCents <= 0;
   const router = useRouter();
 
-  // Card form state
-  const [name, setName] = React.useState('');
-  const [card, setCard] = React.useState('');
-  const [expiry, setExpiry] = React.useState('');
-  const [cvc, setCvc] = React.useState('');
   const [email, setEmail] = React.useState('');
 
   // Processing state
   const [processing, setProcessing] = React.useState(false);
-  const [expressProcessing, setExpressProcessing] = React.useState<null | 'apple' | 'google'>(null);
   const [err, setErr] = React.useState<string | null>(null);
 
   const backToCart = React.useCallback(() => {
@@ -89,104 +50,96 @@ export default function CheckoutPageClient({ venmoHandle }: { venmoHandle?: stri
     else router.push(`/thank-you${q}`);
   }, [router]);
 
-  /* ----------------------- Express checkout ----------------------- */
-  const expressPay = React.useCallback(
-    async (provider: 'apple' | 'google') => {
-      if (isEmpty) return;
-      setErr(null);
-      setExpressProcessing(provider);
-
-      try {
-        window.dispatchEvent(new CustomEvent('qs:checkout:express', {
-          detail: { provider, merchantId, subtotalCents, items },
-        }));
-      } catch {}
-
-      // fake authorization & capture
-      await new Promise((r) => setTimeout(r, 900));
-
-      const orderId = makeOrderId();
-      // stash receipt snapshot
-      try {
-        sessionStorage.setItem('qs_last_order', JSON.stringify({
-          id: orderId,
-          provider,
-          merchantId,
-          subtotalCents,
-          items,
-          email: null,
-          ts: Date.now(),
-        }));
-      } catch {}
-
-      try {
-        window.dispatchEvent(new CustomEvent('qs:checkout:complete', {
-          detail: { provider, merchantId, subtotalCents, items, email: null, orderId },
-        }));
-      } catch {}
-
-      routeToThankYou(orderId);
-    },
-    [isEmpty, merchantId, subtotalCents, items, routeToThankYou],
-  );
-
-  /* ----------------------- Standard card checkout ----------------------- */
+  /* ----------------------- Real card checkout (Stripe) -----------------------
+   *
+   * ⚠️ THIS USED TO BE A SIMULATION ON A LIVE SITE. It collected a card number, waited
+   * 1200ms, minted a client-side order id and routed to a receipt that said "Total paid".
+   * No API call, no order row, no charge — verified against the database after a $5.00
+   * "order" appeared on the lemonade stand.
+   *
+   * Two things are now true that were not:
+   *
+   *   1. It calls the real money path. POST /api/commerce/checkout reprices every line from
+   *      catalog_items (authorizeCheckoutItems), computes the platform fee, creates the draft
+   *      order and returns a Stripe Checkout URL. The client sends IDS AND QUANTITIES ONLY —
+   *      a title or amount in the payload is ignored server-side, so nobody sets their own price.
+   *
+   *   2. WE NEVER TOUCH THE CARD. Stripe's hosted page collects it. The old form put a real PAN
+   *      into our DOM and our state, which is a PCI obligation we have no business taking on for
+   *      a $3 lemonade — and it was doing that to throw the number away.
+   */
   const payNow = React.useCallback(async () => {
     setErr(null);
 
-    const cc = onlyDigits(card);
-    if (!name.trim()) return setErr('Name on card is required.');
-    if (cc.length < 12 || !luhnOk(cc)) return setErr('Please enter a valid card number.');
-    if (!expiryOk(expiry)) return setErr('Expiry must be a valid future MM/YY.');
-    if (!cvcOk(cvc)) return setErr('CVC must be 3–4 digits.');
-    if (!emailOk(email)) return setErr('Please enter a valid email for the receipt.');
+    if (!merchantId) return setErr('This site is not set up to take payments yet.');
+    if (email && !emailOk(email)) return setErr('Please enter a valid email, or leave it blank.');
+
+    const lineItems = items
+      .map((it) => ({
+        catalogItemId: it.catalog_item_id || it.id.split('::')[0],
+        variantId: it.variant_id || undefined,
+        addonIds: it.addon_ids?.length ? it.addon_ids : undefined,
+        quantity: Number(it.qty) || 1,
+      }))
+      .filter((l) => l.catalogItemId);
+
+    if (!lineItems.length) {
+      return setErr('These items are not orderable yet. Ask the seller to enable ordering.');
+    }
 
     setProcessing(true);
-
     try {
       window.dispatchEvent(new CustomEvent('qs:checkout:confirm', {
         detail: { merchantId, subtotalCents, items, email },
       }));
     } catch {}
 
-    await new Promise((r) => setTimeout(r, 1200));
-
-    const orderId = makeOrderId();
-    // stash receipt snapshot
     try {
-      sessionStorage.setItem('qs_last_order', JSON.stringify({
-        id: orderId,
-        provider: 'card',
-        merchantId,
-        subtotalCents,
-        items,
-        email,
-        ts: Date.now(),
-        name,
-        last4: onlyDigits(card).slice(-4),
-      }));
-    } catch {}
+      const slug = window.location.pathname.match(/^\/sites\/([^/]+)/)?.[1] ?? '';
+      const res = await fetch('/api/commerce/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchantId,
+          siteSlug: slug,
+          items: lineItems,
+          // Come back to THIS site's receipt rather than the platform one, and carry the
+          // server's order id so the receipt can tell a real order from a demo.
+          successUrl: `${window.location.origin}${slug ? `/sites/${slug}` : ''}/thank-you?order={ORDER_ID}`,
+          cancelUrl: `${window.location.origin}${slug ? `/sites/${slug}` : ''}/checkout`,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
 
-    try {
-      window.dispatchEvent(new CustomEvent('qs:checkout:complete', {
-        detail: { merchantId, subtotalCents, items, email, orderId },
-      }));
-    } catch {}
+      if (!res.ok || !json?.checkoutUrl) {
+        setProcessing(false);
+        // Surface the server's own words — "Some items just sold out", "no active payment
+        // account" — instead of a generic failure that tells the buyer nothing.
+        setErr(json?.error || 'Could not start checkout. Please try again.');
+        return;
+      }
 
-    routeToThankYou(orderId);
-  }, [card, cvc, email, expiry, items, merchantId, name, routeToThankYou, subtotalCents]);
+      // Snapshot for the receipt, stamped with the SERVER's order id. Its presence is what
+      // lets the receipt claim payment; a demo run has no such id (see ThankYouPageClient).
+      try {
+        sessionStorage.setItem('qs_last_order', JSON.stringify({
+          id: json.orderId,
+          serverOrderId: json.orderId,
+          provider: 'stripe',
+          merchantId,
+          subtotalCents: json.totalCents ?? subtotalCents,
+          items,
+          email: email || null,
+          ts: Date.now(),
+        }));
+      } catch {}
 
-  // input masks
-  const onCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const d = onlyDigits(e.target.value).slice(0, 19);
-    const parts = d.match(/.{1,4}/g) || [];
-    setCard(parts.join(' '));
-  };
-  const onExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const d = onlyDigits(e.target.value).slice(0, 4);
-    if (d.length <= 2) setExpiry(d);
-    else setExpiry(`${d.slice(0, 2)}/${d.slice(2)}`);
-  };
+      window.location.href = json.checkoutUrl;
+    } catch (e: any) {
+      setProcessing(false);
+      setErr(e?.message || 'Could not reach the payment service.');
+    }
+  }, [email, items, merchantId, subtotalCents]);
 
   // Empty cart → don't strand the shopper on a disabled form.
   if (isEmpty) {
@@ -225,106 +178,11 @@ export default function CheckoutPageClient({ venmoHandle }: { venmoHandle?: stri
       <div className="grid gap-6 md:grid-cols-2">
         {/* Left: Payment form + Express */}
         <div className="space-y-4">
-          {/* Express checkout */}
-          <div className="rounded-xl border p-3">
-            <div className="mb-2 text-sm font-medium">Express checkout</div>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                className="flex-1 gap-2"
-                onClick={() => expressPay('apple')}
-                disabled={isEmpty || expressProcessing !== null || processing}
-                aria-disabled={isEmpty || expressProcessing !== null || processing}
-                title={isEmpty ? 'Add an item to checkout' : 'Pay with Apple Pay (demo)'}
-              >
-                {expressProcessing === 'apple' ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Apple className="h-4 w-4" />
-                )}
-                Apple&nbsp;Pay
-              </Button>
-
-              <Button
-                variant="secondary"
-                className="flex-1 gap-2"
-                onClick={() => expressPay('google')}
-                disabled={isEmpty || expressProcessing !== null || processing}
-                aria-disabled={isEmpty || expressProcessing !== null || processing}
-                title={isEmpty ? 'Add an item to checkout' : 'Pay with Google Pay (demo)'}
-              >
-                {expressProcessing === 'google' ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CreditCard className="h-4 w-4" />
-                )}
-                Google&nbsp;Pay
-              </Button>
-            </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Demo buttons — no real payment. Proceeds directly to Thank You.
-            </p>
-          </div>
-
-          {/* Pay the seller directly. Above the card form, because for a $3 order it is often
-              the ONLY thing the buyer will do — burying it under a card form they will not fill
-              in makes the page longer for everyone and useless for them. */}
-          {venmoHandle && (
-            <VenmoPay handle={venmoHandle} amountCents={subtotalCents} context="cart" />
-          )}
-
-          {/* Card form */}
+          {/* Payment.
+              ⚠️ NO CARD FIELDS HERE, DELIBERATELY. This page used to collect a PAN, expiry and
+              CVC into React state — a PCI obligation taken on for a $3 lemonade, in order to
+              throw the number away. Stripe's hosted page collects it now; we never see it. */}
           <div className="rounded-xl border p-4 space-y-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Name on card</label>
-              <input
-                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                placeholder="Jane Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="cc-name"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-muted-foreground">Card number</label>
-              <input
-                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm tracking-widest"
-                placeholder="4242 4242 4242 4242"
-                value={card}
-                onChange={onCardChange}
-                inputMode="numeric"
-                autoComplete="cc-number"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="text-xs text-muted-foreground">Expiry (MM/YY)</label>
-                <input
-                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  placeholder="12/29"
-                  value={expiry}
-                  onChange={onExpiryChange}
-                  inputMode="numeric"
-                  autoComplete="cc-exp"
-                  maxLength={5}
-                />
-              </div>
-              <div className="w-28">
-                <label className="text-xs text-muted-foreground">CVC</label>
-                <input
-                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  placeholder="123"
-                  value={cvc}
-                  onChange={(e) => setCvc(onlyDigits(e.target.value).slice(0, 4))}
-                  inputMode="numeric"
-                  autoComplete="cc-csc"
-                  maxLength={4}
-                />
-              </div>
-            </div>
-
             <div>
               <label className="text-xs text-muted-foreground">Email (receipt)</label>
               <input
@@ -345,24 +203,24 @@ export default function CheckoutPageClient({ venmoHandle }: { venmoHandle?: stri
 
             <Button
               className="w-full justify-center gap-2"
-              disabled={processing || isEmpty || expressProcessing !== null}
-              aria-disabled={processing || isEmpty || expressProcessing !== null}
+              disabled={processing || isEmpty}
+              aria-disabled={processing || isEmpty}
               onClick={payNow}
               title={isEmpty ? 'Add an item to checkout' : 'Pay now'}
             >
               {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {processing ? 'Processing…' : `Pay $${(subtotalCents / 100).toFixed(2)}`}
+              {processing ? 'Taking you to Stripe…' : `Pay $${(subtotalCents / 100).toFixed(2)}`}
             </Button>
 
             <p className="text-[11px] text-muted-foreground">
-              This is a demo payment. No card is charged; the next screen will confirm your order and clear your cart.
+              You&apos;ll be taken to Stripe to pay securely. Your card details never touch this site.
             </p>
           </div>
         </div>
 
         {/* Right: Order summary (items, steppers, totals, coupon chip) */}
         <div className="rounded-xl border p-4">
-          <CartSummary merchantId={merchantId} subtotalCents={subtotalCents} />
+          <CartSummary merchantId={merchantId} subtotalCents={subtotalCents} iconSet={iconSet} />
         </div>
       </div>
     </div>

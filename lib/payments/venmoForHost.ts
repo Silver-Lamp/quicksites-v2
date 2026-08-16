@@ -12,6 +12,7 @@
 import { headers } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { readVenmoHandle } from './venmo';
+import { readMenuIconSet, type MenuIconSet } from '@/lib/menu/foodIcons';
 
 /** The request's host, lowercased and without a port. */
 async function currentHost(): Promise<string> {
@@ -41,6 +42,8 @@ export type CartShell = {
   venmoHandle: string | null;
   /** The site's own light/dark, so the cart does not arrive in the opposite theme. */
   colorMode: 'light' | 'dark';
+  /** The site's menu icon set, so a line item with no photo can still show its icon. */
+  iconSet: MenuIconSet;
 };
 
 /**
@@ -57,22 +60,23 @@ export type CartShell = {
  */
 export async function cartShellForSlug(slug: string | null | undefined): Promise<CartShell> {
   const s = String(slug ?? '').trim();
-  if (!s) return { venmoHandle: null, colorMode: 'dark' };
+  if (!s) return { venmoHandle: null, colorMode: 'dark', iconSet: 'none' };
   try {
     const { data } = await supabaseAdmin
       .from('templates')
       .select('data, color_mode')
       .eq('slug', s)
       .maybeSingle();
-    if (!data) return { venmoHandle: null, colorMode: 'dark' };
+    if (!data) return { venmoHandle: null, colorMode: 'dark', iconSet: 'none' };
     const row = data as any;
     const mode = row.color_mode ?? row.data?.color_mode;
     return {
       venmoHandle: readVenmoHandle(row.data),
       colorMode: mode === 'light' ? 'light' : 'dark',
+      iconSet: readMenuIconSet(row.data),
     };
   } catch {
-    return { venmoHandle: null, colorMode: 'dark' };
+    return { venmoHandle: null, colorMode: 'dark', iconSet: 'none' };
   }
 }
 

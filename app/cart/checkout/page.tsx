@@ -47,16 +47,25 @@ export default function CartSummary({
             const lineTotal = unit * qty;
 
             return (
-              <li key={it.id} className="flex items-center gap-3 p-3">
+              /* ⚠️ ONE UNWRAPPABLE ROW DOES NOT FIT A PHONE. Thumb (48) + stepper (~120) +
+                 line total (96) + Remove (~63) + gaps (48) is ~375px of FIXED width before the
+                 title gets a single pixel — and a 390px phone offers ~320px inside the padding.
+                 The title was crushed to nothing and the controls spilled.
+
+                 So the row wraps: identity on the first line, controls on their own line below,
+                 and everything back inline from `sm` up where the width exists. */
+              <li key={it.id} className="flex flex-wrap items-center gap-3 p-3">
                 <ItemThumb imageUrl={it.image_url} title={it.title} iconSet={iconSet} className="h-12 w-12" />
 
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1 basis-40">
                   <div className="truncate text-sm font-medium">{it.title}</div>
                   <div className="text-xs text-muted-foreground">
                     ${(unit / 100).toFixed(2)} each
                   </div>
                 </div>
 
+                {/* Controls: own line on a phone, inline from sm up. */}
+                <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
                 {/* Qty stepper */}
                 <div className="flex items-center gap-1 shrink-0">
                   <button
@@ -91,18 +100,22 @@ export default function CartSummary({
                   </button>
                 </div>
 
-                {/* Line total */}
-                <div className="w-24 text-right text-sm font-medium tabular-nums shrink-0">
+                {/* Line total. No fixed width on a phone — 96px of reserved space for "$4.00"
+                    is 30% of the viewport spent on four characters. */}
+                <div className="text-right text-sm font-medium tabular-nums shrink-0 sm:w-24">
                   ${(lineTotal / 100).toFixed(2)}
                 </div>
 
+                {/* A 44px tap target, not an 11px underline — this is a destructive action and
+                    it sat next to a "+" button on a touchscreen. */}
                 <button
-                  className="ml-2 text-xs underline shrink-0"
+                  className="shrink-0 rounded-md px-2 py-2 text-xs underline hover:bg-muted"
                   onClick={() => removeItem(it.id)}
                   aria-label={`Remove ${it.title}`}
                 >
                   Remove
                 </button>
+                </div>
               </li>
             );
           })}

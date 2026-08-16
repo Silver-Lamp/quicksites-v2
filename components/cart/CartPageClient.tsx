@@ -64,23 +64,29 @@ export default function CartPageClient({ venmoHandle, iconSet = 'none' }: { venm
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6 space-y-4">
       {/* Header actions */}
-      <div className="flex items-center justify-between">
+      {/* Three items on one row — "Keep shopping", the title, and "Checkout" — is roughly 330px
+          of content on a ~320px phone. It fits by squeezing whichever piece yields first, which
+          is the title. So on a phone the title takes its own line above and the two actions sit
+          beneath it, one at each edge; from `sm` it is the single centred row again. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="order-first w-full text-xl font-semibold sm:order-none sm:w-auto">Your Cart</h1>
+
         <Button
           variant="outline"
           onClick={handleKeepShopping}
-          className="gap-2"
+          className="order-2 gap-2 sm:order-first"
           aria-label="Keep shopping"
         >
           <ArrowLeft className="h-4 w-4" />
-          Keep shopping
+          <span className="hidden sm:inline">Keep shopping</span>
+          <span className="sm:hidden">Back</span>
         </Button>
-
-        <h1 className="text-xl font-semibold">Your Cart</h1>
 
         <Button
           onClick={handleCheckout}
           disabled={isEmpty}
           aria-disabled={isEmpty}
+          className="order-3"
           title={isEmpty ? 'Add an item to checkout' : 'Proceed to checkout'}
         >
           Checkout

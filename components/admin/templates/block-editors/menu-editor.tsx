@@ -52,18 +52,30 @@ function templateSlug(template: any): string {
   return String(template?.slug ?? template?.data?.meta?.siteTitle ?? '').trim();
 }
 
-/** Patch the merchant id onto the template meta + broadcast so the live menu picks it
- *  up immediately, then trigger an autosave. Mirrors product-manager-modal. */
-function writeMerchantToTemplate(template: any, merchantId: string) {
-  const prevData = template?.data ?? {};
-  const prevMeta = prevData.meta ?? {};
-  const prevEcom = prevMeta.ecom ?? prevMeta.ecommerce ?? {};
-  const ecom = { ...prevEcom, merchant_id: merchantId };
-  const nextData = { ...prevData, meta: { ...prevMeta, ecom } };
+/**
+ * Sync the merchant id into the editor's in-memory template, AFTER the server has already
+ * persisted it. Display only — this write is not load-bearing any more.
+ *
+ * ⚠️ THIS FUNCTION USED TO DESTROY THE THING IT RAN AFTER. It built `nextData` by spreading the
+ * `template` prop captured before the catalog links were applied, and the toolbar's patch bus
+ * shallow-merges `data` — so the stale `pages` array replaced the freshly-linked one, and the
+ * `qs:toolbar:save-now` that followed 50ms later wrote that back to the DB. The owner saw no
+ * error; the site simply never gained an "Add to order" button. Two rules keep it harmless:
+ *
+ *   1. Patch `meta` ONLY. Never re-send `pages` from a prop that may be a render behind.
+ *   2. `__transient` — the durable write already happened server-side, so this must not queue
+ *      another full save that could push stale in-memory blocks over it.
+ */
+function syncMerchantIntoEditor(template: any, merchantId: string) {
+  const prevMeta = template?.data?.meta ?? {};
+  const ecom = { ...(prevMeta.ecom ?? prevMeta.ecommerce ?? {}), merchant_id: merchantId };
   try {
-    window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail: { data: nextData } }));
+    window.dispatchEvent(
+      new CustomEvent('qs:template:apply-patch', {
+        detail: { __transient: true, data: { meta: { ...prevMeta, ecom } } },
+      }),
+    );
     (window as any).__QS_ECOM__ = { ...((window as any).__QS_ECOM__ ?? {}), merchantId };
-    setTimeout(() => window.dispatchEvent(new Event('qs:toolbar:save-now')), 50);
   } catch {
     /* noop */
   }
@@ -302,7 +314,13 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
       const res = await fetch('/api/menu/publish-catalog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteSlug: templateSlug(template), sections: payloadSections }),
+        body: JSON.stringify({
+          siteSlug: templateSlug(template),
+          // The server links the ids onto the block itself — see publish-catalog. Without an id
+          // it can only create the rows, which is the half-finished state this flow shipped with.
+          templateId: template?.id ?? null,
+          sections: payloadSections,
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
@@ -311,12 +329,20 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
         return;
       }
 
-      // Link catalog ids/prices back onto the menu, save the block, set the merchant.
+      // The durable link is already written (server-side, same request). Mirror it into the
+      // editor so the preview lights up without a reload — but if the server could not link,
+      // say so instead of closing on a green checkmark: rows with no link do not sell.
       const linked = applyCatalogLinks(buildContent(sections), json.items);
       const nextSections = cloneSections(linked);
       setSections(nextSections);
       commit(nextSections);
-      writeMerchantToTemplate(template, json.merchantId);
+      syncMerchantIntoEditor(template, json.merchantId);
+
+      if (json.linked === false) {
+        setError(json.linkError || 'Products were created, but this menu could not be linked to them. Nothing is orderable yet.');
+        setPublishing(false);
+        return;
+      }
 
       setResult({ count: json.items.length, merchantId: json.merchantId });
       setConfirming(false);

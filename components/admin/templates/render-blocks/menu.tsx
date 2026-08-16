@@ -2,6 +2,8 @@
 'use client';
 
 import * as React from 'react';
+import VenmoPay from '@/components/sites/venmo-pay';
+import { readVenmoHandle } from '@/lib/payments/venmo';
 import {
   assessFreshness,
   freshnessNote,
@@ -258,6 +260,9 @@ export default function RenderMenu(props: any) {
   const content: any = props?.block?.content ?? props?.content ?? props ?? {};
   const title: string = content.title || 'Menu';
   const note: string = content.note || '';
+  // Optional "pay the seller directly" handle (site settings → Payments). Off unless set, and
+  // never a substitute for the cart: it takes no fee and records no order (lib/payments/venmo).
+  const venmoHandle = readVenmoHandle(props?.template?.data ?? props?.template);
   const sections: MenuSection[] = Array.isArray(content.sections) ? content.sections : [];
 
   // ⚠️ THE RULE EXISTED AND HAD EXACTLY ONE CALLER — the city SEARCH index — so prices aged out
@@ -338,6 +343,8 @@ export default function RenderMenu(props: any) {
           </div>
         ))}
       </div>
+
+      {venmoHandle && <VenmoPay handle={venmoHandle} />}
     </section>
   );
 }

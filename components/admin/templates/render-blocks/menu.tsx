@@ -215,7 +215,10 @@ function MenuItemRow({
         {!item.catalog_item_id && staticAddons.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
             {staticAddons.map((a, ai) => (
-              <span key={ai}>
+              <span key={ai} className="inline-flex items-center gap-1">
+                {/* prefer:'ingredient' — in an add-on the modifier is the information. See
+                    lib/menu/foodIcons.ts: dish-first gives every "... Juice" the same icon. */}
+                <FoodIcon name={a.label} set={iconSet} prefer="ingredient" className="opacity-80" />
                 + {a.label}
                 {a.priceText ? ` ${a.priceText}` : ''}
               </span>
@@ -235,6 +238,7 @@ function MenuItemRow({
                   className="h-4 w-4"
                   style={{ accentColor: 'hsl(var(--primary))' }}
                 />
+                <FoodIcon name={a.label} set={iconSet} prefer="ingredient" className="opacity-80" />
                 <span>{a.label}</span>
                 {typeof a.price_cents === 'number' && a.price_cents > 0 && (
                   <span className="text-muted-foreground">+{centsDisplay(a.price_cents)}</span>

@@ -144,3 +144,37 @@ describe('set selection', () => {
     expect(isMenuIconSet('sparkles')).toBe(false);
   });
 });
+
+describe('add-ons prefer the ingredient, not the dish', () => {
+  const addon = (n: string) => matchFoodIcon(n, null, { prefer: 'ingredient' });
+
+  it('gives two "... Juice" add-ons DIFFERENT icons', () => {
+    // ⚠️ The reason this mode exists. Dish-first resolves both of these to `juice`, and two
+    // different add-ons wearing one icon does not merely fail to inform — it says they are
+    // the same thing. Observed on the live lemonade stand: both add-ons rendered 🧃.
+    expect(addon('Strawberry Juice - Freshly Pressed')).toBe('strawberry');
+    expect(addon('Blueberry Juice - Freshly Pressed')).toBe('blueberry');
+    expect(addon('Strawberry Juice')).not.toBe(addon('Blueberry Juice'));
+  });
+
+  it('still finds the dish when an add-on names no ingredient', () => {
+    expect(addon('Side Salad')).toBe('salad');
+    expect(addon('Extra Fries')).toBe('fries');
+  });
+
+  it('picks the ingredient on a bare topping', () => {
+    expect(addon('Extra Cheese')).toBe('cheese');
+    expect(addon('Add Chicken')).toBe('chicken');
+  });
+
+  it('leaves ITEM names alone — the dish is still the head there', () => {
+    // The flip is scoped to add-ons. An item is unchanged.
+    expect(matchFoodIcon('Chicken Noodle Soup')).toBe('soup');
+    expect(matchFoodIcon('Strawberry Ice Cream')).toBe('icecream');
+  });
+
+  it('still renders nothing when nothing fits', () => {
+    expect(addon('Make it special')).toBeNull();
+    expect(addon('')).toBeNull();
+  });
+});

@@ -225,8 +225,22 @@ export const FOOD_ICONS: Record<string, FoodIcon> = {
     ingredient: true,
     label: 'Fruit',
     emoji: '🍎',
-    terms: ['apple', 'berry', 'berries', 'strawberry', 'blueberry', 'peach', 'fruit'],
+    terms: ['apple', 'berry', 'berries', 'peach', 'fruit'],
     path: `<path ${S} d="M12 7.5c-3.5-2.5-8 0-8 5 0 4 3 8 5.5 8 1.2 0 1.8-.6 2.5-.6s1.3.6 2.5.6c2.5 0 5.5-4 5.5-8 0-5-4.5-7.5-8-5z"/><path ${S} d="M12 7.5V5a2.5 2.5 0 0 1 2.5-2.5"/>`,
+  },
+  strawberry: {
+    ingredient: true,
+    label: 'Strawberry',
+    emoji: '🍓',
+    terms: ['strawberry'],
+    path: `<path ${S} d="M12 21c-3.6-1.4-6-4.6-6-8.2 0-2.4 2.7-4.3 6-4.3s6 1.9 6 4.3c0 3.6-2.4 6.8-6 8.2z"/><path ${S} d="M9 6.5c1-1.2 1.8-1.6 3-1.6s2 .4 3 1.6"/><path ${S} d="M12 4.9V8.5"/><path ${S} d="M10 13h.01M14 13h.01M12 16h.01"/>`,
+  },
+  blueberry: {
+    ingredient: true,
+    label: 'Blueberry',
+    emoji: '🫐',
+    terms: ['blueberry'],
+    path: `<path ${S} d="M8.5 17a4 4 0 1 0 .01 0z"/><path ${S} d="M15.5 17a4 4 0 1 0 .01 0z"/><path ${S} d="M12 10.5a4 4 0 1 0 .01 0z"/><path ${S} d="M12 10.5 11 7.5M12 10.5l1.6-2.6"/>`,
   },
   veg: {
     ingredient: true,
@@ -260,7 +274,11 @@ export const FOOD_ICONS: Record<string, FoodIcon> = {
  * Matching is on WORD BOUNDARIES so "beefsteak tomato" does not become a steak, and the longest
  * term wins so "iced tea" beats "tea" and "hot dog" beats "dog".
  */
-export function matchFoodIcon(name: string | null | undefined, tags?: string[] | null): string | null {
+export function matchFoodIcon(
+  name: string | null | undefined,
+  tags?: string[] | null,
+  opts: { prefer?: 'dish' | 'ingredient' } = {},
+): string | null {
   const haystack = ` ${String(name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
   if (haystack.trim().length < 2) return null;
 
@@ -274,8 +292,15 @@ export function matchFoodIcon(name: string | null | undefined, tags?: string[] |
       if (at < 0) continue;
       const cand = { key, len: lower.length, dish: !icon.ingredient };
       if (!best) { best = cand; continue; }
-      // Dish beats ingredient outright; only then does the longer term win.
-      if (cand.dish !== best.dish) { if (cand.dish) best = cand; continue; }
+      // ⚠️ THE PREFERENCE FLIPS FOR ADD-ONS, and it has to.
+      //
+      // In an ITEM name the dish is the head: "Chicken Noodle Soup" is a soup. In an ADD-ON the
+      // dish word is usually the shared part and the modifier is the whole point — "Strawberry
+      // Juice" and "Blueberry Juice" are both juice, so preferring the dish gives them the SAME
+      // icon. Two different add-ons wearing one icon is worse than no icon at all: it does not
+      // merely fail to inform, it actively says they are the same thing.
+      const wantDish = opts.prefer !== 'ingredient';
+      if (cand.dish !== best.dish) { if (cand.dish === wantDish) best = cand; continue; }
       if (cand.len > best.len) best = cand;
     }
   }

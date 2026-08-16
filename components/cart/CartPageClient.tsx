@@ -9,8 +9,9 @@ import CartSummary from '@/app/cart/checkout/page';
 import { useCartStore } from '@/components/cart/cart-store';
 import { Button } from '@/components/ui/button';
 import VenmoPay from '@/components/sites/venmo-pay';
+import type { MenuIconSet } from '@/lib/menu/foodIcons';
 
-export default function CartPageClient({ venmoHandle }: { venmoHandle?: string | null } = {}) {
+export default function CartPageClient({ venmoHandle, iconSet = 'none' }: { venmoHandle?: string | null; iconSet?: MenuIconSet } = {}) {
   // ✅ SSR-safe: select primitives/arrays directly (no wrapped object)
   const merchantId = useCartStore((s) => s.merchantId || '');
   const subtotalCents = useCartStore((s) => s.subtotalCents || 0);
@@ -110,7 +111,7 @@ export default function CartPageClient({ venmoHandle }: { venmoHandle?: string |
           )}
 
           {/* Main summary (items, steppers, totals, coupon chip) */}
-          <CartSummary merchantId={merchantId} subtotalCents={subtotalCents} />
+          <CartSummary merchantId={merchantId} subtotalCents={subtotalCents} iconSet={iconSet} />
 
           {/* Pay the seller directly. Sits BELOW the summary deliberately: the cart's job is
               still to total the order, and this is one of two ways to settle it — not a

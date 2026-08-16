@@ -5,12 +5,14 @@ import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useCartStore } from '@/components/cart/cart-store';
+import ItemThumb from '@/components/cart/item-thumb';
+import type { MenuIconSet } from '@/lib/menu/foodIcons';
 
 function fmtUSD(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export default function ThankYouPageClient() {
+export default function ThankYouPageClient({ iconSet = 'none' }: { iconSet?: MenuIconSet } = {}) {
   // We snapshot & clear cart; show details from sessionStorage
   const clearCart = useCartStore((s) => s.clearCart);
 
@@ -25,6 +27,8 @@ export default function ThankYouPageClient() {
     items: Array<{ id: string; title: string; qty: number; price_cents: number; image_url?: string | null }>;
     email?: string | null;
     provider?: string | null;
+    /** Set only by a real server-side order. Its ABSENCE is what marks a demo run. */
+    serverOrderId?: string | null;
     ts?: number;
     name?: string;
     last4?: string;
@@ -51,6 +55,20 @@ export default function ThankYouPageClient() {
     clearCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * Was this the demo checkout?
+   *
+   * The receipt is rebuilt entirely from a sessionStorage snapshot that the CLIENT wrote — no
+   * server round-trip happens on this page at all. A real order would carry a provider set by
+   * the payment path; the demo card form writes provider:'card' with no charge behind it and
+   * the express buttons write 'apple'/'google' the same way.
+   *
+   * ⚠️ Treat UNKNOWN as demo. Getting this backwards means telling someone they paid when they
+   * did not, which is the failure that matters here — the opposite mistake merely under-claims
+   * on a real order, and a real order has a server record to correct it from.
+   */
+  const isDemo = !order?.serverOrderId;
 
   const continueShopping = React.useCallback(() => {
     const path = window.location.pathname;
@@ -95,8 +113,17 @@ export default function ThankYouPageClient() {
     <div className="mx-auto w-full max-w-3xl px-4 py-12 space-y-6">
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-semibold">Thank you!</h1>
+        {/* ⚠️ THIS PAGE MUST NOT ASSERT THINGS THE DEMO CHECKOUT DID NOT DO.
+            CheckoutPageClient's card form makes no API call: it waits 1200ms, mints a
+            client-side id, and routes here. No order row, no charge, no email. This copy
+            previously read "Your order was received. A receipt was sent to you." — three
+            claims, all false, on a live site that had just accepted a card number.
+            The checkout page does disclose it is a demo; the receipt dropped that and spoke
+            with full confidence, which is the worst possible place to lose the caveat. */}
         <p className="text-sm text-muted-foreground">
-          Your order was received{order?.email ? <>. A receipt was sent to <b>{order.email}</b>.</> : '.'}
+          {isDemo
+            ? 'This was a demo checkout — no payment was taken and no order was sent to the seller.'
+            : <>Your order was received{order?.email ? <>. A receipt was sent to <b>{order.email}</b>.</> : '.'}</>}
         </p>
       </div>
 
@@ -124,12 +151,7 @@ export default function ThankYouPageClient() {
           <ul className="divide-y">
             {order.items.map((it) => (
               <li key={it.id} className="flex items-center gap-3 py-2">
-                <div className="h-10 w-10 rounded bg-muted overflow-hidden shrink-0">
-                  {it.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={it.image_url} alt="" className="h-full w-full object-cover" />
-                  ) : null}
-                </div>
+                <ItemThumb imageUrl={it.image_url} title={it.title} iconSet={iconSet} />
                 <div className="flex-1 min-w-0">
                   <div className="truncate text-sm">{it.title}</div>
                   <div className="text-xs text-muted-foreground">
@@ -145,7 +167,7 @@ export default function ThankYouPageClient() {
 
           {/* Totals */}
           <div className="mt-3 border-t pt-2 text-sm flex justify-between font-medium">
-            <span>Total paid</span>
+            <span>{isDemo ? 'Order total (not charged)' : 'Total paid'}</span>
             <span>{fmtUSD(order.subtotalCents || 0)}</span>
           </div>
         </div>

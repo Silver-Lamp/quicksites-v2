@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import CartSummary from '@/app/cart/checkout/page';
 import { useCartStore } from '@/components/cart/cart-store';
 import VenmoPay from '@/components/sites/venmo-pay';
+import type { MenuIconSet } from '@/lib/menu/foodIcons';
 
 /* ----------------------- tiny validators ----------------------- */
 function onlyDigits(s: string) { return s.replace(/\D+/g, ''); }
@@ -47,7 +48,7 @@ function makeOrderId() {
 }
 
 /* ----------------------- component ----------------------- */
-export default function CheckoutPageClient({ venmoHandle }: { venmoHandle?: string | null } = {}) {
+export default function CheckoutPageClient({ venmoHandle, iconSet = 'none' }: { venmoHandle?: string | null; iconSet?: MenuIconSet } = {}) {
   // SSR-safe selectors
   const merchantId = useCartStore((s) => s.merchantId || '');
   const subtotalCents = useCartStore((s) => s.subtotalCents || 0);
@@ -362,7 +363,7 @@ export default function CheckoutPageClient({ venmoHandle }: { venmoHandle?: stri
 
         {/* Right: Order summary (items, steppers, totals, coupon chip) */}
         <div className="rounded-xl border p-4">
-          <CartSummary merchantId={merchantId} subtotalCents={subtotalCents} />
+          <CartSummary merchantId={merchantId} subtotalCents={subtotalCents} iconSet={iconSet} />
         </div>
       </div>
     </div>

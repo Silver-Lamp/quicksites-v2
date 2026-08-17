@@ -73,6 +73,32 @@ describe('nothing occludes the backdrop', () => {
   });
 });
 
+describe('native controls follow the scope, not the visitor OS', () => {
+  // ⚠️ THE BUG THIS PINS WAS INVISIBLE TO EVERY CHECK THAT "VERIFIED" THIS SURFACE.
+  //
+  // A checkbox, radio, scrollbar, select or date picker is painted by the BROWSER from the CSS
+  // `color-scheme` property — no semantic token touches it. `app/layout.tsx` declares
+  // `<meta name="color-scheme" content="light dark">`, so without an explicit declaration the
+  // browser resolves native controls from the visitor's OS preference: a dark-mode visitor got a
+  // black checkbox on this light page, reported live on /yard-sale/new.
+  //
+  // It survived a passing HTML assertion AND a Playwright screenshot, because headless Chromium
+  // defaults to a LIGHT OS preference — the check sampled the one condition under which the bug
+  // does not appear. When testing a light surface, emulate `colorScheme: 'dark'`.
+  const css = read('styles/globals.css');
+
+  it('the light scope declares color-scheme: light', () => {
+    const block = css.slice(css.indexOf("[data-theme='light']"));
+    expect(block.slice(0, block.indexOf('}'))).toMatch(/color-scheme:\s*light/);
+  });
+
+  it('the document still advertises both schemes, so the scope is what decides', () => {
+    // If layout ever hard-codes one scheme, the rule above becomes redundant rather than wrong —
+    // this exists so that change is a visible decision instead of a silent one.
+    expect(read('app/layout.tsx')).toMatch(/name="color-scheme"/);
+  });
+});
+
 describe('dark literals are confined to the deliberately-dark header', () => {
   // The shared SiteHeader is dark-only and `sticky` makes it translucent; over a light page its
   // own zinc-300 links land near 1.5:1. It is kept dark and made opaque instead of being edited,

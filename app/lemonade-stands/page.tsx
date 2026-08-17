@@ -56,6 +56,13 @@ export const metadata = {
  * This is belt-and-braces on the one that matters most: a CTA that depends on a reserved-path
  * list staying complete is a CTA that breaks the next time someone adds a route.
  */
+/**
+ * The one real stand we point at. Absolute, because this page is served from lemonyum.com as
+ * well as quicksites.ai — a relative link would send a LemonYum visitor to a stand that does
+ * not exist on that host.
+ */
+const EXAMPLE_STAND_URL = 'https://renton-lemonade.quicksites.ai/';
+
 const BUILDER_URL =
   `${(process.env.NEXT_PUBLIC_APP_URL || 'https://www.quicksites.ai').replace(/\/+$/, '')}` +
   '/admin/templates/new?industry=lemonade_stand';
@@ -220,12 +227,68 @@ export default function LemonadeStandsPage() {
                 splashed or half in shadow. The web address is printed underneath for anyone
                 whose camera won’t cooperate.
               </Card>
+              {/* ⚠️ ORDER MATTERS HERE AND IT IS A RECORDED DECISION, NOT A PREFERENCE.
+                  docs/LEMONYUM_PLAN.md §2a (owner, 2026-08-14): handles first, Connect as an
+                  upgrade — because a parent selling $2 cups should not face SSN-and-bank
+                  onboarding and a multi-day first payout to sell lemonade on a Saturday.
+
+                  The old copy said only "we never hold it", which is true of the handle path
+                  and false of the card path that now exists — a stand took a real card tonight
+                  and the platform kept 5%. So: both, in the decided order, each honest about
+                  its cost. Do not promote cards to the top; that inverts §2a. */}
               <Card title="Money straight to you">
-                Payments land in your own Venmo, Cash App or PayPal — the same place your money
-                already goes. We never hold it, so there’s nothing to pay out and nothing to wait
-                for.
+                Paste your Venmo, Cash App or PayPal handle and customers pay you directly. We
+                never hold it and we take nothing — no payout to wait for, no fee on a $2 cup.
+                <br />
+                <span className="mt-2 block text-zinc-500">
+                  If you’d rather take cards on the page itself, you can connect Stripe later.
+                  That one settles through us and keeps 5%.
+                </span>
               </Card>
             </div>
+          </div>
+        </section>
+
+        {/* A stand that actually exists.
+            ⚠️ ONE REAL STAND, LINKED LIVE — not a mockup and not a carousel of invented ones.
+            Every other claim on this page is about what a stand *would* get; this is the only
+            place a visitor can check us. The preview is the site's own OG image, generated from
+            the published page, so it cannot drift into showing something the stand no longer
+            says. If this link ever 404s the section should come out, because a broken example
+            is worse than none: it is the one element here whose entire job is to be verifiable. */}
+        <section className="w-full border-t border-zinc-200">
+          <div className="mx-auto max-w-5xl px-6 py-14">
+            <h2 className="text-2xl font-semibold md:text-3xl">A stand that’s already running</h2>
+            <p className="mt-3 max-w-2xl text-zinc-600">
+              This one is real. It takes cards, it has add-ons, and the first $4 went through on a
+              Saturday. Have a look at what your driveway could hand a neighbour.
+            </p>
+
+            <a
+              href={EXAMPLE_STAND_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group mt-8 block overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/api/og/renton-lemonade/image"
+                alt="Renton Lemonade — a live lemonade stand page with its menu and prices"
+                className="w-full"
+                width={1200}
+                height={630}
+                loading="lazy"
+              />
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-5 py-4">
+                <div className="min-w-0">
+                  <div className="font-semibold">Renton Lemonade</div>
+                  <div className="truncate text-sm text-zinc-500">renton-lemonade.quicksites.ai</div>
+                </div>
+                <span className="shrink-0 text-sm font-semibold text-amber-700 group-hover:underline">
+                  See the live stand →
+                </span>
+              </div>
+            </a>
           </div>
         </section>
 

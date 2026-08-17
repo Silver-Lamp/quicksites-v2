@@ -20,6 +20,7 @@
 // particular house on a particular afternoon.
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
+import SiteFooter from '@/components/site/site-footer';
 import { marketingOg } from '@/lib/marketingOg';
 
 export const metadata = {
@@ -304,8 +305,15 @@ export default function LemonadeStandsPage() {
               <p className="mt-2 text-sm text-zinc-600">
                 Because payments go straight to your own account, a customer pays with whichever
                 of Venmo, Cash App or PayPal you’ve listed — so add every one you use. Someone
-                with none of them still pays cash, exactly as they do today. Nothing is deducted:
-                a $2 cup is $2, and we take no fee.
+                with none of them still pays cash, exactly as they do today. Nothing is deducted
+                on that path: a $2 cup is $2, and we take no fee.{' '}
+                {/* ⚠️ "we take no fee" is true of handles and false of the card upgrade, where
+                    the platform keeps 5%. Same over-broad claim as the "What the stand gets"
+                    card — scoped here rather than left to be discovered by someone reading two
+                    sentences on one page and believing the friendlier one. */}
+                <span className="text-zinc-500">
+                  (Card payments are the exception — that path runs through us and keeps 5%.)
+                </span>
               </p>
             </div>
 
@@ -339,6 +347,22 @@ export default function LemonadeStandsPage() {
             </Link>
           </div>
         </section>
+
+        {/* ⚠️ THE DISCLOSURE, AND IT IS THE POINT OF THE FOOTER RATHER THAN A BY-PRODUCT.
+            PorchHearth's read on running LemonYum, YardSaleSites and delivered.menu at the same
+            street (crosstalk 2026-08-17): three consumer brands that look independent, meeting
+            the same neighbour three times, is not an efficiency problem — it is a disclosure
+            one. A neighbour will eventually work out one person is behind all three. That is
+            fine if they learn it here and corrosive if they discover it themselves.
+
+            The footer already says "© QuickSites · made by Point Seven Studio", which on
+            lemonyum.com IS the disclosure. It costs a footer and converts something that could
+            later read as astroturf into what it actually is: one person building a few small
+            tools for one street.
+
+            It is dark against this cream page on purpose — a deliberate closing band, not the
+            §7 dark-on-dark bug. */}
+        <SiteFooter />
       </div>
     </>
   );

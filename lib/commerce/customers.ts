@@ -77,6 +77,61 @@ export async function recordCustomerForPaidOrder(
 }
 
 /**
+ * Recover the buyer from a LATE/duplicate Stripe event on an order that is already paid.
+ *
+ * ⚠️ THIS EXISTS BECAUSE THE BUYER ARRIVES ON THE EVENT WE THROW AWAY.
+ *
+ * Stripe fires **two** events for a single Checkout payment — `payment_intent.succeeded`
+ * and `checkout.session.completed` — with different event ids and different object ids, so
+ * neither webhook dedup (keyed on event id) nor the `payments` unique key (keyed on the
+ * provider object id) collapses them. Both reach `markOrderPaid`; the first one to arrive
+ * wins the guarded `pending → paid` transition and the loser returns early as a duplicate.
+ *
+ * **Only `checkout.session.completed` carries `customer_details`.** A payment_intent event
+ * has no buyer contact information at all. So when the payment_intent wins the race — which
+ * is what happened on the first live order (2026-08-16) — the session event holding the
+ * buyer's name and email is discarded at that early return, and the CRM spine records
+ * nothing. `customers` held **0 rows across the entire database** with a paid live order on
+ * the books, and the code was working exactly as written the whole time.
+ *
+ * Idempotent and never throws:
+ *  - no-ops when the event carries no buyer (exactly the payment_intent case),
+ *  - no-ops when the order already has an email recorded (a genuine retry of the session
+ *    event, or the session having won the race in the first place),
+ *  - so it cannot double-count lifetime value.
+ *
+ * `payments.raw` retains the full event for both, which is why the buyer was recoverable
+ * after the fact rather than lost.
+ */
+export async function recordCustomerForAlreadyPaidOrder(
+  supabase: any,
+  opts: { orderId: string; amountCents: number; raw: any },
+): Promise<void> {
+  try {
+    // Nothing to learn from this event — don't spend a query on it.
+    if (!extractBuyerFromStripeEvent(opts.raw)) return;
+
+    const { data: row } = await supabase
+      .from('orders')
+      .select('merchant_id, customer_email, total_cents')
+      .eq('id', opts.orderId)
+      .maybeSingle();
+    if (!row?.merchant_id) return;
+    if (row.customer_email) return; // buyer already known; do not touch LTV again
+
+    await recordCustomerForPaidOrder(supabase, {
+      orderId: opts.orderId,
+      merchantId: row.merchant_id,
+      totalCents: Number(row.total_cents ?? opts.amountCents) || 0,
+      raw: opts.raw,
+      occurredAtIso: new Date().toISOString(),
+    });
+  } catch (e: any) {
+    console.warn('[customers] late-event buyer recovery failed:', e?.message || e);
+  }
+}
+
+/**
  * After a paid order rolls into a customer, emit the buyer-level PostHog events:
  * `customer_created` (their first order) or `repeat_purchase` (a returning buyer),
  * and `campaign_order_attributed` when a campaign reached them within the attribution

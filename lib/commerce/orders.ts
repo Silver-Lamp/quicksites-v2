@@ -16,7 +16,7 @@ import { isAgencyPlanMerchant } from '@/lib/billing/plans';
 import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, computePhysicalShippingCents, parseStripeTaxTotals } from './fees';
 import { recordAdjustment } from './inventoryLedger';
 import { sendOrderAlert } from '@/lib/commerce/orderNotify';
-import { recordCustomerForPaidOrder } from './customers';
+import { recordCustomerForPaidOrder, recordCustomerForAlreadyPaidOrder } from './customers';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -180,7 +180,16 @@ export async function markOrderPaid(
     .eq('status', 'pending')
     .select('id');
   if (oErr) throw oErr;
-  if (!transitioned || transitioned.length === 0) return;
+  if (!transitioned || transitioned.length === 0) {
+    // ⚠️ A DUPLICATE EVENT IS NOT AN EMPTY EVENT. Stripe sends both
+    // `payment_intent.succeeded` and `checkout.session.completed` for one Checkout payment,
+    // and only the session carries `customer_details`. Whichever arrives first wins the
+    // transition above, so the buyer's identity may be arriving *here*, on the event this
+    // early return used to discard. That is why `customers` was empty after the first live
+    // order. Best-effort, idempotent, no-ops when this event has no buyer.
+    await recordCustomerForAlreadyPaidOrder(supabase, { orderId, amountCents, raw });
+    return;
+  }
 
   // 2b) Record any sales tax Stripe computed at checkout (automatic_tax). Tax is
   //     charged on top of our subtotal and is NOT part of the platform-fee basis

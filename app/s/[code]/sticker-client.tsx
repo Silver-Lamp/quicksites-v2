@@ -26,7 +26,19 @@ function defaultWindow() {
   return { start, end };
 }
 
-export function ActivateForm({ code }: { code: string }) {
+/**
+ * The sale setup form. Serves BOTH entry points.
+ *
+ * ⚠️ ONE FORM, TWO DOORS — deliberately not copied. A `code` means a printed sticker is being
+ * claimed (`/api/garage-sales/activate`); no code means someone found the site and is starting
+ * from nothing (`/api/garage-sales/create`). The fields, defaults and validation are identical
+ * because the thing being described is identical: a sale on a Saturday.
+ *
+ * Duplicating it would have been quicker and would have drifted — the self-serve copy would
+ * eventually miss a field the sticker copy gained, and the two would disagree about what a sale
+ * is. Same reasoning as the two checkout headers, where a fix reached only one of them.
+ */
+export function ActivateForm({ code }: { code?: string }) {
   const win = useMemo(defaultWindow, []);
   const [form, setForm] = useState({
     title: '',
@@ -55,7 +67,7 @@ export function ActivateForm({ code }: { code: string }) {
       // Anonymous session so the seller is running immediately — no account, no password, no
       // email round-trip while they're standing in a driveway.
       await ensureGuestSession();
-      const res = await fetch('/api/garage-sales/activate', {
+      const res = await fetch(code ? '/api/garage-sales/activate' : '/api/garage-sales/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -72,7 +84,11 @@ export function ActivateForm({ code }: { code: string }) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Could not set up the sale.');
-      window.location.reload();
+      // Claiming a sticker: this page IS the sale, so reload and it renders live.
+      // Self-serve: there is nothing to reload into — the sale only just got an address, so go
+      // to it. Reloading here would return the empty form and read as a silent failure.
+      if (code) window.location.reload();
+      else window.location.href = json?.path || '/';
     } catch (err: any) {
       setError(err?.message || 'Something went wrong.');
       setBusy(false);

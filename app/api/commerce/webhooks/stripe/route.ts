@@ -27,8 +27,20 @@ export async function POST(req: NextRequest) {
 
   // 3) Process. If it fails, release the claim so Stripe's retry can reprocess.
   try {
+    // ⚠️ KEY THE LEDGER ON THE PAYMENT, NOT ON THE EVENT'S OWN OBJECT.
+    //
+    // This used to pass `e.raw.data.object.id`, which is `cs_…` for a session event and
+    // `pi_…` for a payment_intent event — two keys for ONE payment. Stripe sends both for a
+    // single Checkout payment, so the `payments` unique constraint on
+    // `(provider, provider_payment_id)` never collapsed them and the first live order
+    // recorded two rows for one $4 charge. `paymentId` is the payment_intent id, which both
+    // events agree on: the second arrival now trips the uniqueness violation that
+    // `markOrderPaid` already tolerates, while still being free to contribute the buyer
+    // identity only the session event carries.
+    //
+    // Merge for facts, collapse for money.
     if (e.type === 'payment_succeeded' && e.orderId && typeof e.amountCents === 'number') {
-      await markOrderPaid(e.orderId, e.amountCents, 'stripe', e.raw.data.object.id, e.raw);
+      await markOrderPaid(e.orderId, e.amountCents, 'stripe', e.paymentId ?? e.raw.data.object.id, e.raw);
     } else if (e.type === 'refund_succeeded' && e.orderId) {
       // Reverse the platform application fee proportionally on Stripe (idempotent),
       // then keep our ledger consistent (void/clawback). Fee reversal is

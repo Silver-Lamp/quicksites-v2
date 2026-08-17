@@ -64,7 +64,16 @@ export function isYardSaleHost(host: string): boolean {
  * match the SHAPE, allowlist the few pages that belong here, and send everything else to the
  * directory rather than serving QuickSites' marketing on a stranger's yard-sale sign.
  */
-const APEX_PAGES = new Set(['', 'privacy', 'terms', 'about']);
+// ⚠️ THIS FENCE IS A TRAP FOR NEW PAGES AND IT IS INVERTED ON PURPOSE. Anything not listed here
+// is redirected to the directory on yardsalesites.com — which is right (a stranger's yard-sale
+// sign must not lead to QuickSites marketing) and means a page you add is INVISIBLE on the brand
+// host until its first segment appears in this set. It fails quietly: the page works perfectly on
+// quicksites.ai and 307s away on the domain it was built for.
+//
+// 'yard-sale' is the self-serve front door (/yard-sale/new). It is the one page a seller arriving
+// at the apex most needs to reach, so its absence here would have made the tool unreachable at
+// exactly the address we are trying to rank.
+const APEX_PAGES = new Set(['', 'privacy', 'terms', 'about', 'yard-sale']);
 
 /** yardsalesites.com/5BC-GP8 → "5BCGP8". Null when the first segment isn't a code. */
 export function yardSaleCodeFromPath(pathname: string): string | null {

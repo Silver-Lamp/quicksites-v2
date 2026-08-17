@@ -82,6 +82,21 @@ export class StripeAdapter implements PaymentsAdapter {
     const secret = process.env.STRIPE_WEBHOOK_SECRET!;
     const event = stripe.webhooks.constructEvent(raw, sig, secret);
 
+    /**
+     * The payment_intent id — the one identifier every event about a single payment agrees
+     * on. See `WebhookEvent.paymentId`: keying the ledger on the event's own object id gave
+     * two `payments` rows for one $4 payment, because a session and a payment_intent are two
+     * objects describing one movement of money.
+     *
+     * Falls back to the object's own id only when there is genuinely no payment_intent
+     * (zero-amount or setup-mode sessions), where the object id IS the payment's identity.
+     */
+    const piId = (o: any): string | undefined => {
+      const pi = o?.payment_intent ?? (o?.object === 'payment_intent' ? o.id : undefined);
+      const id = typeof pi === 'string' ? pi : pi?.id;
+      return id || (typeof o?.id === 'string' ? o.id : undefined);
+    };
+
     switch (event.type) {
       // Checkout finished (synchronous payment methods)
       case 'checkout.session.completed': {
@@ -89,7 +104,7 @@ export class StripeAdapter implements PaymentsAdapter {
         const orderId = (s.metadata as any)?.orderId ?? undefined;
         // amount_total can be null on very old API versions; guard it
         const amount = typeof s.amount_total === 'number' ? s.amount_total : undefined;
-        return { id: event.id, type: 'payment_succeeded', orderId, amountCents: amount, raw: event };
+        return { id: event.id, type: 'payment_succeeded', orderId, amountCents: amount, paymentId: piId(s), raw: event };
       }
 
       // Async payment methods finishing later (e.g., bank redirects)
@@ -97,12 +112,12 @@ export class StripeAdapter implements PaymentsAdapter {
         const s = event.data.object as Stripe.Checkout.Session;
         const orderId = (s.metadata as any)?.orderId ?? undefined;
         const amount = typeof s.amount_total === 'number' ? s.amount_total : undefined;
-        return { id: event.id, type: 'payment_succeeded', orderId, amountCents: amount, raw: event };
+        return { id: event.id, type: 'payment_succeeded', orderId, amountCents: amount, paymentId: piId(s), raw: event };
       }
       case 'checkout.session.async_payment_failed': {
         const s = event.data.object as Stripe.Checkout.Session;
         const orderId = (s.metadata as any)?.orderId ?? undefined;
-        return { id: event.id, type: 'payment_failed', orderId, raw: event };
+        return { id: event.id, type: 'payment_failed', orderId, paymentId: piId(s), raw: event };
       }
 
       // PaymentIntent fallbacks
@@ -110,16 +125,28 @@ export class StripeAdapter implements PaymentsAdapter {
         const pi = event.data.object as Stripe.PaymentIntent;
         const orderId = (pi.metadata as any)?.orderId ?? undefined;
         const amount = typeof pi.amount === 'number' ? pi.amount : undefined;
-        return { id: event.id, type: 'payment_succeeded', orderId, amountCents: amount, raw: event };
+        return { id: event.id, type: 'payment_succeeded', orderId, amountCents: amount, paymentId: piId(pi), raw: event };
       }
       case 'payment_intent.payment_failed': {
         const pi = event.data.object as Stripe.PaymentIntent;
         const orderId = (pi.metadata as any)?.orderId ?? undefined;
         const amount = typeof pi.amount === 'number' ? pi.amount : undefined;
-        return { id: event.id, type: 'payment_failed', orderId, amountCents: amount, raw: event };
+        return { id: event.id, type: 'payment_failed', orderId, amountCents: amount, paymentId: piId(pi), raw: event };
       }
 
       // Refunds
+      //
+      // ⚠️ DELIBERATELY NO `paymentId` HERE, AND SETTING ONE WOULD BE A SILENT MONEY BUG.
+      // `markOrderRefunded` writes the refund into the SAME `payments` table under the SAME
+      // unique key `(provider, provider_payment_id)`, with `state='refunded'`. So keying a
+      // refund on the payment_intent id would collide with the payment's own row, hit the
+      // `23505` branch that is deliberately tolerated — and the refund would never be
+      // recorded at all, with nothing raised.
+      //
+      // The charge id is already the correct key: both `charge.refunded` and
+      // `charge.refund.updated` describe the same charge, so they collapse to one row
+      // correctly today. Leaving `paymentId` undefined keeps the trap unreachable rather
+      // than merely documented.
       case 'charge.refunded':
       case 'charge.refund.updated': {
         const ch = event.data.object as Stripe.Charge;

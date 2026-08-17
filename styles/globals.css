@@ -105,6 +105,25 @@ body { font-family: 'Inter', system-ui, sans-serif; -webkit-text-size-adjust: 10
    (html.dark or [data-theme='dark']) ancestor. Without this, a light scope
    could not override an ancestor dark scope → light/dark mixes. */
 [data-theme='light'] {
+  /* ⚠️ NATIVE CONTROLS ARE PAINTED BY THE BROWSER, NOT BY OUR TOKENS.
+     A checkbox, radio, scrollbar, select or date picker takes its colours from `color-scheme`,
+     which no semantic token touches. app/layout.tsx declares
+     `<meta name="color-scheme" content="light dark">`, so without this line the browser resolves
+     every native control from the VISITOR'S OS PREFERENCE — and a dark-mode visitor got a black
+     checkbox on a light page. Reported on yardsalesites.com/yard-sale/new.
+
+     This is the third layer of one recurring bug: `data-theme` fixes everything WE draw, this
+     fixes everything the BROWSER draws. components/theme/template-theme-wrapper.tsx already
+     learned it for tenant sites and says so at its `colorScheme:` line; the lesson just had not
+     reached the shared light scope.
+
+     ⚠️ It is invisible to a screenshot taken under a light OS preference — which is the default
+     in headless Chromium, so the check that "verified" this surface could not have caught it.
+     Emulate `colorScheme: 'dark'` when testing a light surface. Deliberately NOT mirrored onto
+     the dark block: that would pin controls dark for pages with their own light/dark toggle
+     (app/tools/route-planner), turning one fixed bug into a new one. */
+  color-scheme: light;
+
   --background: 210 20% 98%;
   --foreground: 222.2 47.4% 11.2%;
   --card: 0 0% 100%;

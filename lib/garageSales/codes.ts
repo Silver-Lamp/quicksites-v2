@@ -65,6 +65,32 @@ export function normalizeCode(input: string): string {
     .slice(0, CODE_LEN);
 }
 
+/**
+ * Is a URL SEGMENT itself a code? Strict, and deliberately not `isPlausibleCode`.
+ *
+ * ⚠️ `normalizeCode` ENDS WITH `.slice(0, CODE_LEN)`, WHICH MANUFACTURES VALIDITY. That
+ * truncation is forgiving for input a human typed — but applied to a path segment it turns any
+ * long word into a legal code as soon as its first six alphabet-legal characters happen to be
+ * legal:
+ *
+ *     'yard-sale'    → 'YARDSA'  → accepted  (swallowed /yard-sale/new, the self-serve front door)
+ *     'garage-sales' → 'GARAGE'  → accepted  (swallows the directory at its own path)
+ *     'privacy'      → 'PRIVAC'  → rejected  — but only because 'I' is not in the alphabet
+ *
+ * So `/privacy` and `/terms` were surviving by luck rather than by rule. Worse, the code branch
+ * in middleware runs BEFORE the apex-page allowlist, so adding a page to that set cannot rescue
+ * it — the route is already gone. Verified on the live brand host: `yardsalesites.com/yard-sale/new`
+ * returned 200 and served "We don't recognise that code".
+ *
+ * This checks the segment as given: fold case and drop the display hyphen, then require the WHOLE
+ * thing to be exactly CODE_LEN of alphabet characters. Nothing is truncated away, so length is
+ * evidence again instead of being erased.
+ */
+export function isCodeShapedSegment(input: string): boolean {
+  const c = (input || '').toUpperCase().replace(/[\s-]/g, '');
+  return c.length === CODE_LEN && [...c].every((ch) => ALPHABET.includes(ch));
+}
+
 /** Shape check only — says nothing about whether the code exists or is claimable. */
 export function isPlausibleCode(input: string): boolean {
   const c = normalizeCode(input);

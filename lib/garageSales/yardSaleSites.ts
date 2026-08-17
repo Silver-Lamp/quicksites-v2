@@ -12,7 +12,7 @@
 // someone texts it to a friend (a bare `.menu` did not — see docs/LEMONYUM_PLAN.md §1).
 //
 // Inert until NEXT_PUBLIC_YARDSALE_BASE_DOMAIN is set.
-import { isPlausibleCode, normalizeCode } from './codes';
+import { isCodeShapedSegment, normalizeCode } from './codes';
 
 export const YARDSALE_BASE_DOMAIN = (process.env.NEXT_PUBLIC_YARDSALE_BASE_DOMAIN || '')
   .trim()
@@ -40,8 +40,11 @@ export function yardSaleSubdomainCode(host: string): string | null {
   if (!h.endsWith(suffix)) return null;
   const left = h.slice(0, -suffix.length).split('.')[0];
   if (!left || left === 'www') return null;
-  const code = normalizeCode(left);
-  return isPlausibleCode(code) ? code : null;
+  // Strict, for the same reason as the path resolver: `normalizeCode` truncates, so a WORD
+  // subdomain ('shop.yardsalesites.com') would become a 6-char "code" and be served as a
+  // stranger's sale page. Length has to stay evidence.
+  if (!isCodeShapedSegment(left)) return null;
+  return normalizeCode(left);
 }
 
 export function isYardSaleHost(host: string): boolean {
@@ -79,8 +82,10 @@ const APEX_PAGES = new Set(['', 'privacy', 'terms', 'about', 'yard-sale']);
 export function yardSaleCodeFromPath(pathname: string): string | null {
   const seg = (pathname || '/').split('/').filter(Boolean)[0];
   if (!seg) return null;
-  const code = normalizeCode(seg);
-  return isPlausibleCode(code) ? code : null;
+  // Strict on the SEGMENT — see isCodeShapedSegment. Using the truncating check here meant
+  // '/yard-sale/new' and '/garage-sales' were both routed as sticker codes.
+  if (!isCodeShapedSegment(seg)) return null;
+  return normalizeCode(seg);
 }
 
 /** True when the apex should serve this path itself rather than redirecting to the directory. */

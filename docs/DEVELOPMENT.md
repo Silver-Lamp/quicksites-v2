@@ -68,8 +68,46 @@ With `QS_TEST_CHECKOUT=1` set, the checkout marks orders paid in **test mode** s
 
 For a **real** test-mode Stripe charge (Connect onboarding + `4242` card), follow [`COMMERCE_RUNBOOK.md`](COMMERCE_RUNBOOK.md).
 
+## Working in a git worktree (two sessions, one repo)
+
+When more than one person or session is live, use a worktree — a shared working tree turns an ordinary
+`git checkout -b` into someone else's commits riding your PR, and a stray commit into a
+direct-to-`main` push. Both happened on 2026-08-17.
+
+```bash
+git worktree add -b feat/<your-lane> ../qs-<lane>   # ⚠️ NOT `... ../dir main`
+cp .env.local ../qs-<lane>/.env.local               # gitignored → a fresh tree boots nothing without it
+cd ../qs-<lane> && nvm use && npm install
+npm rebuild canvas                                  # deliberate step, not a fallback — see below
+```
+
+- **`git worktree add <dir> main` fails.** Git refuses one branch in two worktrees and the main tree
+  holds `main`. Always `-b <new-branch>`.
+- **`.env.local` holds live keys**, including a live-mode Stripe secret. Copying it is a decision about
+  where credentials live — it is the owner's call, not a setup detail. Confirm it is still *ignored*
+  (`git -C ../qs-<lane> check-ignore -v .env.local`), not merely untracked, before doing anything else.
+- **Never symlink `node_modules` between worktrees** — native modules fail in ways that read as source
+  bugs.
+
 ## Gotchas (these will bite you)
+- **`canvas` is an `optionalDependency`, so a failed build is SILENT.** `npm install` will not error when
+  it can't build; it skips it. The break surfaces much later as a module-not-found from one of the
+  **seven** consumers — five of them API routes (`/api/posters/[slug]`, `/api/qr-poster`, and three
+  `/api/block-qr/*`) — none of which mentions canvas in its URL. So on a fresh install or a new
+  worktree, run `npm rebuild canvas` **deliberately** and then verify:
+  ```bash
+  curl -sI localhost:3000/api/block-qr/preview   # expect: 200, content-type: image/png
+  ```
+  **`GET /api/block-qr/preview` is a purpose-built canvas smoke test** — no params, no auth, just
+  `createCanvas(100,100)` → PNG. Use it and nothing else. ⚠️ A `400` from `/api/qr-poster` or a `405`
+  from `/api/block-qr` proves only that the module *compiled*: validation short-circuits before
+  `createCanvas` is ever reached, so those replies look identical whether or not the native binding
+  works. (`/api/qr-poster` additionally needs a `support_campaigns` row, and that table is empty here.)
 - **`next build` fails with `canvas.node ... NODE_MODULE_VERSION`** → the native `canvas` module was built for a different Node. Fix: `npm rebuild canvas` (ensure you're on Node 20).
+- **Don't silence stderr in a `&&` chain whose earlier link can fail.** `nvm use >/dev/null 2>&1 && npm install`
+  exited **3 with zero bytes of output** when `.nvmrc` pinned an uninstalled patch — the exit code said
+  something broke and only stderr could say *which link*, so it read as a mysterious `npm install`
+  failure. (`.nvmrc` now pins the major, guarded by `lib/config/__tests__/nodeVersionPin.test.ts`.)
 - **Don't naively run `supabase gen types`** to refresh `types/supabase.ts` — the CLI's output format breaks the pinned `@supabase/supabase-js`, producing ~1000 `'never'` type errors. The committed file is hand-trimmed for compatibility; verify columns against the live DB instead (`psql "$SUPABASE_DB_URL"`). Details in [`../CLAUDE.md`](../CLAUDE.md) §8.
 - **`next@15.2.4` carries CVE-2025-66478** — a planned upgrade (see [`REVIVAL_PLAN.md`](REVIVAL_PLAN.md)).
 - Stale root docs: `README.md`, `ROUTER_STRATEGY.md` describe the old Pages Router. Trust `CLAUDE.md` + this folder.

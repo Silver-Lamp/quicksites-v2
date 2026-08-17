@@ -189,10 +189,26 @@ worth accepting. A campaign that reports only the first is the 285→390 mistake
 
 ## 6. Open questions — owner calls, not mine
 
-1. **September, or spring?** Yard sale season peaks in spring; September is the second peak. If
-   the copy is not ready, waiting for April costs nothing and buys a stronger directory.
-2. **Which comes first, supply or demand?** §3. This is a genuine strategy fork, not a detail.
-3. **Does the card carry the neighbour's OWN sale code, or a generic one?** The useful-artifact
-   argument says theirs (it is a thing they own). The cost argument says generic (one print run).
-   I lean theirs, printed on demand from the stand's own print sheet.
-4. **Budget ceiling for a first route**, if Step 3 happens at all.
+⚠️ **THIS LIST SHRANK. It was four questions; three of them were answered by §3a, and this section
+kept asking them anyway.** Left as-is, a reader who skims to "open questions" — which is what this
+section is *for* — would get the pre-correction version of the plan and re-decide a fork that had
+already dissolved. Same failure as a stale count in a memory file: the correction was written in one
+place and the superseded version left standing in another, where it reads as current.
+
+**Still genuinely open — owner calls:**
+
+1. **Budget ceiling for a first route**, if Step 3 happens at all (~$150–250 for one carrier route).
+2. **September, or spring — as an instrument choice, not a season.** §3a dissolved the *seasonality*
+   half: a tool for texting your own sale page works whenever someone has a sale. What survives is
+   HiveJournal's point, which is different and stronger: the **City of Renton Community Garage Sale
+   in April** is a *concentrated, pre-registered, countable* population of confirmed sellers — a
+   known denominator. A September carrier route is scattered households who mostly are not hosting.
+   So the question is not "which season" but "do we want the clean instrument or the early read."
+
+**Closed, and by what:**
+
+| Was asked | Answer | Closed by |
+|---|---|---|
+| Supply first or demand first? | **Neither — ship the tool.** The seller's own page needs no directory to be worth having. | §3a (PorchHearth) |
+| Neighbour's own sale code, or generic? | **Theirs.** The artifact *is* their page; a generic promo card is us using them to market. | §3a; HJ concurred independently |
+| Is Step 2 a green light for Step 3? | **No — it is a kill gate only.** A warm pass cannot authorize cold postage. | §4 Step 2 (both reviewers, same hole) |

@@ -58,15 +58,15 @@ npm run build                 # next build (heavier; run before shipping infra c
 ## 4. Repo map (where things live)
 
 ```
-app/                 # Next App Router: pages + ~349 API routes (app/api/**/route.ts)
+app/                 # Next App Router: pages + API routes (`git ls-files 'app/api/**/route.ts' | wc -l`)
   api/               # the entire backend lives here today (see ARCHITECTURE.md for the split plan)
   admin/             # the builder/admin UI (templates editor, dashboards)
   sites/             # public rendered sites (catch-all by slug/domain)
   merchant/ chef(s)/ meals/ cart/ checkout/ orders/   # commerce surfaces
   merchant/customers/ merchant/campaigns/             # customer CRM + email campaigns
   orgs/              # per-tenant (org) landing/routing
-components/          # 600+ React components (admin/, sites/, ui/, cart/, ...)
-lib/                 # 280 modules: data access, integrations, business logic
+components/          # React components (admin/, sites/, ui/, cart/, ...)
+lib/                 # data access, integrations, business logic
   supabase/          # client factories (server/admin/browser/middleware)
   commerce/ payments/ stripe/    # money path
   crm/               # customer identity + segments/campaigns/attribution/activity
@@ -74,11 +74,20 @@ lib/                 # 280 modules: data access, integrations, business logic
   ai/                # OpenAI wrappers + cost logging
   org/ request/ auth/ guards/    # tenancy, auth, request context
 supabase/migrations/ # Open Commerce schema (the canonical money model)
-scripts/             # ~100 CLI/SQL/one-off tools
+scripts/             # CLI/SQL/one-off tools
 types/               # shared types incl. generated types/supabase.ts
 middleware.ts        # host → org/site routing, ref-cookie capture
 admin/               # NOTE: a second top-level dir (legacy/parallel admin tooling)
 ```
+
+> ⚠️ **Counts above are deliberately absent, and that is the fix rather than an omission.** They were
+> frozen numbers — `~349` API routes, `280` modules, `~100` scripts — and on 2026-08-17 they read
+> **494**, **574** and **196**. Nobody was ever wrong; each was true when written, and a number in a
+> file never disagrees with itself, so nothing ever flagged them. The one count in this repo that was
+> still exactly right (`KNOWN_UNDECLARED`'s 109-key baseline) is the one with a **test pinning it** —
+> which is the whole lesson: a number survives if something re-derives it, not if someone remembers it.
+> Write the command, not the count. (PorchHearth found six of seven such counts stale in their own
+> orientation doc the same day; the failure is structural, not local.)
 
 > The README and `ROUTER_STRATEGY.md` at the root are **stale** — they describe a Pages Router that was already migrated to App Router. Trust this doc and `docs/ARCHITECTURE.md` over them.
 > *(Falsifying condition: `ROUTER_STRATEGY.md` stops mentioning the Pages Router, or the README is rewritten. Verified 2026-08-05 — still stale, 2 Pages-Router mentions.)*
@@ -205,7 +214,7 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 
 ## 6. Architecture facts that will surprise you
 
-- **The backend = Next API routes.** ~349 `route.ts` files; ~70% of business logic is *inline in routes*, not in a service layer. A thin service layer exists only for commerce (`lib/commerce/*`, `lib/payments/*`). Extracting a standalone backend is the planned north star — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). **When writing new logic, put it in `lib/<domain>/` as a pure function and call it from the route** — this is how we incrementally earn the split.
+- **The backend = Next API routes.** Nearly 500 `route.ts` files; most business logic is *inline in routes*, not in a service layer. A thin service layer exists only for commerce (`lib/commerce/*`, `lib/payments/*`). Extracting a standalone backend is the planned north star — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). **When writing new logic, put it in `lib/<domain>/` as a pure function and call it from the route** — this is how we incrementally earn the split.
 - **Multi-tenant by org.** `middleware.ts` resolves host → org (`lib/org/resolveOrg.ts`), sets `x-qsites-org-*` headers, and rewrites platform/custom domains to `/sites/*` or `/orgs/*`. Default org via `DEFAULT_ORG_SLUG`.
 - **Auth is Supabase SSR.** Clients are created in `lib/supabase/{server,admin,browser,middleware}.ts`. Platform-admin is resolved from `ADMIN_EMAILS` + the `admin_users` table (`getAdminUser()`); **`user_profiles.role` is no longer trusted for admin** — a self-writable-role privilege-escalation was closed, so `public.is_platform_admin()` now trusts only `admin_users`. There is no centralized auth middleware — routes gate themselves via the shared helpers in `lib/auth/requireUser.ts` (`requireAdmin` / `requireUser` / `requireMerchantOwner` / `requireOrgAdmin` / `requireCompanyMember`) + `requireTemplateOwner`. **Anonymous (guest) sessions are real authenticated users** (`getUser()` returns them) — `requireUser()` rejects them unless `{ allowAnonymous: true }`. Gate every new non-public route.
 - **RLS is real on commerce tables** (see `supabase/migrations/20250827_open_commerce.sql`) and a 2026-07 hardening sweep locked the remaining anon-writable public tables (money/report/`site_merchants`/`sites`/`domains`/`user_action_logs`/… — deny-default or owner-scoped policies). But most app queries use the **service-role key** server-side and bypass RLS, so **route-level authorization is still load-bearing** — don't assume RLS protects you in an API route. Per-IP abuse throttle for public endpoints: `lib/api/rateLimitGuard.ts#rateLimitOr429`.

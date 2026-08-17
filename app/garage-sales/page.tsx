@@ -16,7 +16,22 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
+import YardSaleSurface from '@/components/garage-sales/yard-sale-surface';
 import { listSales } from '@/lib/garageSales/sales';
+
+/**
+ * ⚠️ The shared SiteHeader is dark-only, and `sticky` gives it `bg-black/30` — 30% black over
+ * whatever scrolls beneath. That is fine on a dark page and illegible on a light one: over this
+ * surface's near-white background it composites to a mid grey, and the nav's own `text-zinc-300`
+ * links land at roughly 1.5:1 against it.
+ *
+ * So the header stays DARK and is made opaque, rather than being dragged into the light scope.
+ * A solid dark bar above light content is an ordinary pattern; the alternative was editing a
+ * component eleven other pages render, which is exactly how SectionShell (#665) painted every
+ * block's text white for weeks. `cn()` is tailwind-merge, so this genuinely replaces `bg-black/30`
+ * instead of racing it in the class attribute.
+ */
+const HEADER_ON_LIGHT = 'bg-zinc-950 border-zinc-800';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -95,7 +110,7 @@ export default async function GarageSalesPage() {
 
   return (
     <>
-      <SiteHeader sticky />
+      <SiteHeader sticky className={HEADER_ON_LIGHT} />
       {/* Emitted only when there is something to describe. Structured data for an empty list is
           a claim about nothing, and Google treats a rich-result markup that renders no result as
           worse than no markup. */}
@@ -105,12 +120,12 @@ export default async function GarageSalesPage() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd(sales)) }}
         />
       )}
-      <div className="min-h-screen bg-zinc-950 text-white">
+      <YardSaleSurface>
         <section className="mx-auto max-w-3xl px-6 pt-14 pb-10">
           <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
             Garage sales near you this weekend
           </h1>
-          <p className="mt-3 text-zinc-400">
+          <p className="mt-3 text-muted-foreground">
             Yard and garage sales running in the next seven days — what each one has, when it
             starts, and where. Exact addresses appear when a sale begins.
           </p>
@@ -119,9 +134,9 @@ export default async function GarageSalesPage() {
             which meant the route disappeared the moment a third sale showed up — and the empty
             state pointed at a sticker nobody visiting the site has.
           */}
-          <p className="mt-4 text-sm text-zinc-400">
+          <p className="mt-4 text-sm text-muted-foreground">
             Running one?{' '}
-            <Link href="/yard-sale/new" className="font-semibold text-white underline underline-offset-4">
+            <Link href="/yard-sale/new" className="font-semibold text-foreground underline underline-offset-4">
               Make a page for your sale
             </Link>{' '}
             — no sticker, no account, no fee.
@@ -130,11 +145,11 @@ export default async function GarageSalesPage() {
 
         <section className="mx-auto max-w-3xl px-6 pb-20">
           {sales.length === 0 ? (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-8 text-center">
-              <p className="text-zinc-300">No sales listed for the next week yet.</p>
-              <p className="mt-2 text-sm text-zinc-500">
+            <div className="rounded-xl border border-border bg-card/70 p-8 text-center backdrop-blur-sm">
+              <p className="text-card-foreground">No sales listed for the next week yet.</p>
+              <p className="mt-2 text-sm text-muted-foreground">
                 Be the first —{' '}
-                <Link href="/yard-sale/new" className="text-zinc-300 underline underline-offset-4">
+                <Link href="/yard-sale/new" className="text-foreground underline underline-offset-4">
                   make a page for your sale
                 </Link>
                 . Got a sticker? Scan it instead and it will find your sale.
@@ -143,7 +158,7 @@ export default async function GarageSalesPage() {
           ) : (
             <ul className="space-y-3">
               {sales.map(({ sale, miles }) => (
-                <li key={sale.id} className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+                <li key={sale.id} className="rounded-xl border border-border bg-card/70 p-5 backdrop-blur-sm">
                   <div className="flex items-baseline justify-between gap-4">
                     <h2 className="text-lg font-semibold">
                       {sale.stickerCode ? (
@@ -155,25 +170,25 @@ export default async function GarageSalesPage() {
                       )}
                     </h2>
                     {miles != null && (
-                      <span className="flex-none text-sm tabular-nums text-zinc-500">{miles.toFixed(1)} mi</span>
+                      <span className="flex-none text-sm tabular-nums text-muted-foreground">{miles.toFixed(1)} mi</span>
                     )}
                   </div>
-                  <p className="mt-1 text-sm text-zinc-400">{when(sale.startsAt, sale.endsAt)}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{when(sale.startsAt, sale.endsAt)}</p>
                   {sale.address.line && (
-                    <p className="mt-1 text-sm text-zinc-400">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {sale.address.line}
                       {sale.address.city ? `, ${sale.address.city}` : ''}
                       {sale.address.state ? ` ${sale.address.state}` : ''}
-                      {!sale.address.exact && <span className="ml-1 text-zinc-500">· exact address at start time</span>}
+                      {!sale.address.exact && <span className="ml-1 text-muted-foreground">· exact address at start time</span>}
                     </p>
                   )}
-                  {sale.description && <p className="mt-2 text-sm text-zinc-300">{sale.description}</p>}
+                  {sale.description && <p className="mt-2 text-sm text-card-foreground">{sale.description}</p>}
                 </li>
               ))}
             </ul>
           )}
         </section>
-      </div>
+      </YardSaleSurface>
     </>
   );
 }

@@ -16,6 +16,7 @@ import type { Metadata } from 'next';
 import { readSticker } from '@/lib/garageSales/sales';
 import { normalizeCode, formatCode } from '@/lib/garageSales/codes';
 import { listSales } from '@/lib/garageSales/sales';
+import YardSaleSurface from '@/components/garage-sales/yard-sale-surface';
 import { ActivateForm, RingUp } from './sticker-client';
 
 export const runtime = 'nodejs';
@@ -43,10 +44,14 @@ export default async function StickerPage({ params }: { params: Promise<{ code: 
   const code = normalizeCode(raw);
   const sticker = await readSticker(code);
 
+  // ⚠️ The surface paints the background and the backdrop; this must not. The previous
+  // `bg-background` here would have sat on top of the backdrop layer and hidden it completely —
+  // and a hidden backdrop is indistinguishable from a page that never had one, which is how the
+  // same bug survived weeks on the main site renderer (CLAUDE.md §5b).
   const shell = (children: React.ReactNode) => (
-    <div className="min-h-screen bg-background text-foreground">
+    <YardSaleSurface>
       <div className="mx-auto max-w-xl px-5 py-10">{children}</div>
-    </div>
+    </YardSaleSurface>
   );
 
   if (sticker.state === 'unknown') {

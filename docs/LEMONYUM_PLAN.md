@@ -1,5 +1,12 @@
 # LemonYum — plan
 
+> ⚠️ **NO MINOR'S VOICE ON THIS SURFACE — recorded or synthetic.** No owner-voice audio, no
+> kid-recorded welcome, no cloned child voice. A minor cannot give the consent a voice artifact
+> requires, and this binds the *real* child's recording as much as a clone — a kid's voice on a
+> distributed commercial artifact is over the line regardless of how it was made. The stand does not
+> need it: the child's actual voice is already there, live and in person. Ruled out jointly with
+> HiveJournal 2026-08-17, symmetric on both sides. See CLAUDE.md §7.
+
 *`lemonyum.com`, registered 2026-08-14, as the consumer-facing brand for parent-facilitated
 lemonade stands. QuickSites is the engine; LemonYum is the address a customer actually sees.*
 

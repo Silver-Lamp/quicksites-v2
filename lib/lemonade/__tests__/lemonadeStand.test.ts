@@ -37,7 +37,11 @@ describe('the printed sign', () => {
     // A QR-only sign fails exactly the customer it exists for: the one whose camera won't scan.
     const html = await renderStandSignHtml(model);
     expect(html).toContain('ellies-stand.quicksites.ai');
-    expect(html).toContain('data:image/png;base64');
+    // ⚠️ The property this protects is INLINED, not PNG. The sheet must carry its images in the
+    // document so it prints from a library computer with no network — the format is incidental,
+    // and pinning it broke this test when the QRs became SVG (vector: crisp at any print size,
+    // and ~20s→~0s to render). Assert the thing that matters.
+    expect(html).toMatch(/src="data:image\/(png;base64|svg\+xml)/);
   });
 
   it('is self-contained — no external assets to fail on a library printer', async () => {

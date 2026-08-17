@@ -83,7 +83,10 @@ describe('refunds must NOT be keyed on the payment', () => {
     expect(route).toMatch(/markOrderRefunded\([^)]*e\.raw\.data\.object\.id,/);
   });
 
-  it('the refund and payment inserts really do share one table and key', () => {
+  // ⚠️ The name of this test is doing work. "refund records a refund" would not tell the next
+  // reader that the ABSENCE of a paymentId is the load-bearing part — they'd see an undefined
+  // field and read it as an oversight worth tidying. The premise is what needs asserting.
+  it('share one table and one key — which is WHY a refund must not carry the payment id', () => {
     // If this ever stops being true, the rule above can be revisited — but it must be
     // revisited deliberately, not discovered.
     const orders = readFileSync(join(process.cwd(), 'lib/commerce/orders.ts'), 'utf8');

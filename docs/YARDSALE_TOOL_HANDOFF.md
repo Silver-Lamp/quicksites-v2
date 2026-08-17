@@ -31,9 +31,57 @@ only distribution there is — they tell their neighbours.
 | Directory | `/garage-sales`, apex of yardsalesites.com | live, **honestly empty** |
 | Sticker claim | `POST /api/garage-sales/activate` | live (the original, pre-existing path) |
 | Setup form | `ActivateForm` in `app/s/[code]/sticker-client.tsx` | **one form, two doors** — a `code` prop claims a sticker, no code creates from nothing |
+| Page surface | `components/garage-sales/yard-sale-surface.tsx` | **light** themed + backdrop; wraps all three pages above |
 
 `garage_sales` is a **genuine queried zero** — no rows. That makes it a real baseline: any count
 later is measured against nothing, not against noise.
+
+### 2a. The surface is LIGHT, and that is a scope, not a repaint (2026-08-17)
+
+Every yardsalesites.com page renders inside `YardSaleSurface`, which opens a
+`<ThemeScope mode="light">` **inside** the app-wide dark scope from `app/providers.tsx`. That
+nesting is supported on purpose — `styles/globals.css` re-declares the whole light palette under
+`[data-theme='light']` so a light scope can reset a dark ancestor, and because the tokens key off
+that attribute it is correct at SSR rather than after hydration.
+
+**So write semantic tokens in here, never literal light classes.** `bg-card`, `text-foreground`,
+`text-muted-foreground`, `border-border` all resolve light inside the surface and stay correct
+anywhere else. A `bg-white`/`text-zinc-900` would pin the surface light forever and break the
+moment anything reuses it — the `SectionShell` failure (#665) run in reverse.
+
+Two consequences worth knowing before you edit these pages:
+
+- **Nothing inside the surface may paint a page-level background.** The backdrop is a layer at
+  `z-0` with content at `z-10`, so an opaque `bg-background` on the content side hides it — and a
+  hidden backdrop looks exactly like a page that never had one, which is why that same bug ran for
+  weeks on the site renderer (CLAUDE.md §5b). Cards are fine and wanted: `bg-card/70` keeps text
+  legible and lets the painting through. Pinned by `app/garage-sales/__tests__/yardSaleSurface.test.ts`,
+  which strips comments first so no rule can pass on its own explanation.
+- **The shared `SiteHeader` stays dark on purpose.** It is dark-only, and `sticky` gives it
+  `bg-black/30` — over a light page that composites to mid grey and its own `text-zinc-300` links
+  land near 1.5:1. It is kept dark and made *opaque* (`HEADER_ON_LIGHT`) rather than edited,
+  because eleven other pages render it.
+
+### 2b. Painterly backdrop — read-only on this surface
+
+`lib/garageSales/backdrop.ts` resolves one backdrop for all three pages. It **reads** the shared
+pool (`pickPoolBackdrop('yard-sale')`) and **never generates**: rule 2 of
+`crosstalk/contracts/painterly-backdrop.md` says generation is owner/admin-triggered, never
+per-request, and this is the surface where that matters most — `/yard-sale/new` is reachable with
+no account and no fee, so a ~$0.04 image call on that path would be unbounded spend behind an
+anonymous endpoint. One pool is shared by every sale page; painting per sale would scale cost with
+signups for nothing a shared painting doesn't already give.
+
+⚠️ **`yard-sale` is not a `templates.industry`**, so the pool-fill cron's demand-driven sweep will
+never reach it. Fill it explicitly, and only an owner should:
+
+```
+POST /api/cron/backdrop-pool-fill?industryKey=yard-sale   (cron-authorized)
+```
+
+Until it is filled — and whenever the flag is off, the pool is empty, or storage is down — the
+surface falls back to `paper`, a free pure-CSS backdrop built from its own theme vars. **The
+failure mode of the expensive layer is the cheap layer**, never a flat page and never an error.
 
 ## 3. ⚠️ Two bugs fixed today that you must not reintroduce
 

@@ -19,7 +19,12 @@
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import SiteFooter from '@/components/site/site-footer';
+import YardSaleSurface from '@/components/garage-sales/yard-sale-surface';
 import { ActivateForm } from '@/app/s/[code]/sticker-client';
+
+// See the note on the same constant in app/garage-sales/page.tsx: the shared header is dark-only
+// and `sticky` makes it translucent, which is illegible over a light surface.
+const HEADER_ON_LIGHT = 'bg-zinc-950 border-zinc-800';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,27 +42,29 @@ export const metadata: Metadata = {
 export default function NewYardSalePage() {
   return (
     <>
-      <SiteHeader sticky />
-      <main className="mx-auto w-full max-w-2xl px-6 py-12">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Make a page for your sale</h1>
-        <p className="mt-3 text-muted-foreground">
-          Fill this in once and you get a link you can text to anyone, plus a printable sign with a
-          QR code for the corner. It takes about a minute and costs nothing.
-        </p>
+      <SiteHeader sticky className={HEADER_ON_LIGHT} />
+      <YardSaleSurface>
+        <main className="mx-auto w-full max-w-2xl px-6 py-12">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Make a page for your sale</h1>
+          <p className="mt-3 text-muted-foreground">
+            Fill this in once and you get a link you can text to anyone, plus a printable sign with
+            a QR code for the corner. It takes about a minute and costs nothing.
+          </p>
 
-        {/* ⚠️ Say what this does NOT do. The directory is real but thin, and a seller who reads
-            "get more shoppers" and gets none has been mis-sold — in a hyperlocal market that
-            seller is also the only distribution there is, and they tell their neighbours. */}
-        <p className="mt-4 rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-          <strong className="text-foreground">What this is:</strong> a page for your sale that
-          works on its own — you share it. We also list it on this site, but it is a new listing
-          and we are not going to promise you a crowd we cannot yet send.
-        </p>
+          {/* ⚠️ Say what this does NOT do. The directory is real but thin, and a seller who reads
+              "get more shoppers" and gets none has been mis-sold — in a hyperlocal market that
+              seller is also the only distribution there is, and they tell their neighbours. */}
+          <p className="mt-4 rounded-lg border border-border bg-card/70 p-4 text-sm text-muted-foreground backdrop-blur-sm">
+            <strong className="text-foreground">What this is:</strong> a page for your sale that
+            works on its own — you share it. We also list it on this site, but it is a new listing
+            and we are not going to promise you a crowd we cannot yet send.
+          </p>
 
-        {/* One form, two doors — the same component the printed-sticker flow uses. Passing no
-            code is what makes it self-serve. See its header for why it was not copied. */}
-        <ActivateForm />
-      </main>
+          {/* One form, two doors — the same component the printed-sticker flow uses. Passing no
+              code is what makes it self-serve. See its header for why it was not copied. */}
+          <ActivateForm />
+        </main>
+      </YardSaleSurface>
       <SiteFooter />
     </>
   );

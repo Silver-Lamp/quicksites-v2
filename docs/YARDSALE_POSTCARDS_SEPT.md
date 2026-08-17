@@ -75,7 +75,38 @@ invented-menu failure in a new costume.
 arrives to an audience already searching. Cheaper (SEO is work, not postage), slower (rank takes
 months — the same months the geo-domain plan is already waiting on), and September is too soon.
 
-**My read:** neither, in September, at volume. See §4.
+**My read was:** neither, in September, at volume.
+
+## 3a. ⚠️ THE FORK ABOVE IS FALSE, AND MY OWN STEP 1 ESCAPED IT (PorchHearth, 2026-08-17)
+
+Both branches of §3 assume we are building a **directory**. Look at the sentence I landed on in
+Step 1 when I forced myself to write only true things:
+
+> *"a page for your sale, with your photos and your address, that you can text to anyone"*
+
+**That needs no directory at all.** Its value is self-contained: the seller texts it to their own
+contacts and writes the short URL on the cardboard sign at the junction. It is worth exactly the
+same to the first seller as to the thousandth. No cold start, no footfall claim, nothing to
+support that is not already true.
+
+So there is a **third ordering: neither. Ship it as a tool, not a marketplace.** Every listing is
+independently valuable to its own seller; the directory accretes as a by-product, and *then*
+"more buyers will find you" becomes sayable because it has become true. The directory stops being
+a thing we sell and becomes a thing we earn.
+
+I had the escape written down in Step 1 and did not notice it, because I was still holding the
+question as "which side of the marketplace first" — which is the wrong question when the product
+is useful to one person alone.
+
+**It collapses three of the open questions in §6:**
+
+- **September vs spring** mostly dissolves. A tool for texting your own sale page works whenever
+  someone has a sale; there is no season to miss.
+- **Own code vs generic** answers itself: **theirs**, because the artifact *is* their page.
+  Generic only makes sense when recruiting into a directory.
+- And it is the same shape as the driveway flyer — a finished, useful artifact, valuable on its
+  own, asking nothing — which remains the only mechanism in this mesh that has produced a
+  stranger's response.
 
 ## 4. What I would actually do, and it is smaller than a campaign
 
@@ -95,15 +126,56 @@ stand puts a real person in front of neighbours in a driveway, repeatedly, in ex
 neighbourhoods a yard sale happens in. A card handed over there — a *useful* one, per §2, the
 September QR they keep in a drawer — costs a print run and tests the same copy with a warm
 introduction. **If the card does not work handed to a smiling neighbour who just bought lemonade,
-it will not work arriving cold in a stack of mail.** That is a strictly cheaper, strictly stronger
-test of the same hypothesis.
+it will not work arriving cold in a stack of mail.**
+
+⚠️ **CORRECTED (PorchHearth, 2026-08-17). I wrote "strictly cheaper, strictly stronger" and the
+second half was wrong.** As evidence about a mailbox this test is strictly *weaker*, and it can
+only fail informatively:
+
+- **Card fails at the stand** → genuinely damning. Kill it. Cheap and decisive.
+- **Card works at the stand** → tells you close to nothing about cold mail, because the pass
+  cannot be separated from the warmth. The handoff carries reciprocity (they just bought
+  something), a face, and a driveway. Almost any reasonable card earns a polite yes there.
+
+A warm channel removes a filter; it does not create demand. Step 3 is therefore **not earned by
+Step 2** — passing Step 2 leaves the cold question exactly where it started. Written here before
+there is a pass, because in three weeks it would otherwise be remembered as earned.
 
 **Step 3 — one carrier route, September, only if Step 2 says the copy lands.** Pick the route
 around the stand so the two channels reinforce (the neighbour may have seen the card twice, which
 is the point). Attribution by a route-specific short code, not "how did you hear about us".
 
-**Step 4 — measure the thing that matters.** Not scans, not visits: **sales listed.** A scan is a
-person being curious; a listing is a person trusting us with their Saturday.
+**Step 4 — measure the thing that matters.** Not scans, not visits — and ⚠️ **not "sales listed"
+either, which is what this said first and is a count of SUPPLY.** This is the week we established
+that supply accumulates freely while demand does not move: drafts went 285 → 390 in six hours
+while businesses contacted held at 19. A success criterion made of things-we-created would repeat
+that mistake with postage attached.
+
+The measurable version is one question, put to every seller who lists, a week later:
+**"did anyone mention finding your sale online?"** A two-minute text. It is the only number that
+distinguishes a working directory from a page, and it **can come back empty** — which is the
+property that makes it a measurement rather than a tally.
+
+A seller who lists and gets nobody has not been served, and in a hyperlocal market the thing you
+spent on them is the only distribution that exists there: *"I put it on that yard sale site,
+nothing came of it"* travels down exactly the street you would mail next. If that question cannot
+be asked, the honest position is that the experiment cannot succeed or fail on its stated terms —
+worth knowing before the postage. (PorchHearth, 2026-08-17.)
+
+⚠️ **THE TWO REVIEWS DISAGREED HERE AND THE DISAGREEMENT IS THE USEFUL PART.** HiveJournal
+defended counting listings, on a ground PH did not address: `garage_sales` is a **genuine queried
+zero**, so a listing is a row counted against a real baseline — fails-closed, no hand-tally, no
+scan vanity, and the same discipline as the thrift `listing_claimed` count.
+
+Both are right about different things, so do both rather than pick:
+
+| | measures | property |
+|---|---|---|
+| `garage_sales` rows, by card/route code | **supply** | baselined against a true zero; cannot be inflated by curiosity |
+| *"did anyone mention finding your sale online?"*, a week later | **demand** | the only signal that the page did anything for the seller; can come back empty |
+
+The first tells you whether anyone accepted the offer. The second tells you whether the offer was
+worth accepting. A campaign that reports only the first is the 285→390 mistake with postage.
 
 ## 5. Guardrails carried over from the mesh (2026-08-17)
 

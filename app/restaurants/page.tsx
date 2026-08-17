@@ -5,7 +5,13 @@
 // distinguish the vertical from the sky-accented partner/compare pages.
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
+import PageBackdrop from '@/components/backdrop/page-backdrop';
 import { marketingOg } from '@/lib/marketingOg';
+
+export const runtime = 'nodejs';
+// The backdrop is resolved from storage at request time (cached ~5min in the resolver), so this
+// page can no longer be statically rendered at build. Cheap: one `list()` per instance per TTL.
+export const dynamic = 'force-dynamic';
 
 export const metadata = marketingOg({
   title: 'Restaurant websites that take orders — free to host | QuickSites',
@@ -32,7 +38,13 @@ export default function RestaurantsPage() {
   return (
     <>
       <SiteHeader sticky />
-      <div className="relative min-h-screen bg-zinc-950 text-white">
+      {/*
+        Painterly backdrop from the shared `restaurant` pool — the same pool the cron already fills
+        for restaurant SITES, so this page costs nothing extra and looks like the product it sells.
+        PageBackdrop owns the z-0/z-10 layering; the base colour stays here on the wrapper, which is
+        exactly where a fill belongs (a fill on the CHILDREN would hide the art — see its header).
+      */}
+      <PageBackdrop poolKey="restaurant" fallback="wash" intensity={60} className="min-h-screen bg-zinc-950 text-white">
         {/* Hero */}
         <section className="relative mx-auto max-w-5xl px-6 pt-16 pb-12 text-center">
           {/* Amber glow — the restaurant vertical keeps its warm identity, not sky. */}
@@ -206,7 +218,7 @@ export default function RestaurantsPage() {
           <span className="mx-1">•</span>
           <Link href="/partners" className="underline hover:text-zinc-300">Partners</Link>
         </footer>
-      </div>
+      </PageBackdrop>
     </>
   );
 }

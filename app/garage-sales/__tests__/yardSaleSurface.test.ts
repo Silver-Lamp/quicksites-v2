@@ -24,6 +24,9 @@ const strip = (s: string) =>
   s.replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 const SURFACE = 'components/garage-sales/yard-sale-surface.tsx';
+/** The one component that knows the z-0/z-10 layering rule. Asserted here rather than in each
+ *  caller, because the whole point of extracting it was that callers stop re-deriving it. */
+const BACKDROP = 'components/backdrop/page-backdrop.tsx';
 
 /** Every page that renders on yardsalesites.com. */
 const PAGES = [
@@ -36,7 +39,7 @@ describe('the yard-sale surface is light and backdropped', () => {
   it('scans a non-empty set of real files', () => {
     // A sweep that silently matches nothing reports success — the verify:assets lesson.
     expect(PAGES.length).toBeGreaterThan(0);
-    for (const p of [...PAGES, SURFACE]) expect(read(p).length).toBeGreaterThan(0);
+    for (const p of [...PAGES, SURFACE, BACKDROP]) expect(read(p).length).toBeGreaterThan(0);
   });
 
   it('scopes itself to light rather than inheriting the dark app chrome', () => {
@@ -57,7 +60,7 @@ describe('nothing occludes the backdrop', () => {
   });
 
   it('puts the backdrop under the content, not over it', () => {
-    const s = strip(read(SURFACE));
+    const s = strip(read(BACKDROP));
     expect(s).toMatch(/absolute inset-0 z-0/); // the layer
     expect(s).toMatch(/relative z-10/);        // the content, above it
   });
@@ -65,11 +68,18 @@ describe('nothing occludes the backdrop', () => {
   it('renders no layer at all when there is nothing to paint', () => {
     // Rule 7: degrade to plain. `backdropLayerStyle` returns null for style 'none', and the
     // wrapper must honour that by omitting the div rather than rendering an empty one.
-    expect(strip(read(SURFACE))).toMatch(/\{layer &&/);
+    expect(strip(read(BACKDROP))).toMatch(/\{layer &&/);
   });
 
   it('scrims the generated image so contrast is enforced, not hoped for', () => {
-    expect(strip(read(SURFACE))).toMatch(/\{scrim &&/);
+    expect(strip(read(BACKDROP))).toMatch(/\{scrim &&/);
+  });
+
+  // The extraction is only worth anything if callers stop hand-rolling the layering. If a page
+  // starts writing `absolute inset-0 z-0` itself, the rule has been copied rather than reused —
+  // which is precisely how it drifted out of sync the last three times.
+  it.each([...PAGES, 'app/restaurants/page.tsx', SURFACE])('%s does not re-derive the layering', (p) => {
+    expect(strip(read(p))).not.toMatch(/absolute inset-0 z-0/);
   });
 });
 

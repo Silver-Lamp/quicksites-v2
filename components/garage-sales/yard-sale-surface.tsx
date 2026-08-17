@@ -25,23 +25,19 @@
 // the painting through. Pinned by app/garage-sales/__tests__/yardSaleSurface.test.ts.
 import type { ReactNode } from 'react';
 import ThemeScope from '@/components/ui/theme-scope';
-import { backdropLayerStyle, backdropScrimStyle } from '@/lib/theme/backdrops';
-import { resolveYardSaleBackdrop } from '@/lib/garageSales/backdrop';
+import PageBackdrop from '@/components/backdrop/page-backdrop';
+import { YARD_SALE_BACKDROP_KEY } from '@/lib/garageSales/backdrop';
 
-export default async function YardSaleSurface({ children }: { children: ReactNode }) {
-  const backdrop = await resolveYardSaleBackdrop();
-  const layer = backdropLayerStyle(backdrop);
-  // Null for every CSS style — those are already alpha-composited over `--background` and need
-  // no scrim. Only the generated image gets one, because only it can come back dark.
-  const scrim = backdropScrimStyle(backdrop);
-
+export default function YardSaleSurface({ children }: { children: ReactNode }) {
   return (
+    // The light scope paints the base colour; PageBackdrop owns the layering (see its header —
+    // that rule is deliberately in one place because breaking it fails silently in both
+    // directions). `paper` rather than the generic `wash` fallback: a yard sale is a
+    // hand-lettered, cardboard-sign occasion, not a SaaS landing page.
     <ThemeScope mode="light" className="min-h-screen bg-background text-foreground">
-      <div className="relative min-h-screen">
-        {layer && <div aria-hidden className="pointer-events-none absolute inset-0 z-0" style={layer} />}
-        {scrim && <div aria-hidden className="pointer-events-none absolute inset-0 z-0" style={scrim} />}
-        <div className="relative z-10">{children}</div>
-      </div>
+      <PageBackdrop poolKey={YARD_SALE_BACKDROP_KEY} fallback="paper" intensity={55} className="min-h-screen">
+        {children}
+      </PageBackdrop>
     </ThemeScope>
   );
 }

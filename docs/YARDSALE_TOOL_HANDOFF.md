@@ -57,6 +57,10 @@ Two consequences worth knowing before you edit these pages:
   weeks on the site renderer (CLAUDE.md §5b). Cards are fine and wanted: `bg-card/70` keeps text
   legible and lets the painting through. Pinned by `app/garage-sales/__tests__/yardSaleSurface.test.ts`,
   which strips comments first so no rule can pass on its own explanation.
+  ⚠️ **Don't hand-roll that layering** — `PageBackdrop` owns it, and a test fails any page that
+  writes `absolute inset-0 z-0` itself. It fails silently in *both* directions (an opaque child
+  hides the art; an un-positioned child gets painted *over*, since positioned elements paint above
+  non-positioned siblings whatever the source order), which is why it is in exactly one file.
 - **The shared `SiteHeader` stays dark on purpose.** It is dark-only, and `sticky` gives it
   `bg-black/30` — over a light page that composites to mid grey and its own `text-zinc-300` links
   land near 1.5:1. It is kept dark and made *opaque* (`HEADER_ON_LIGHT`) rather than edited,
@@ -64,8 +68,9 @@ Two consequences worth knowing before you edit these pages:
 
 ### 2b. Painterly backdrop — read-only on this surface
 
-`lib/garageSales/backdrop.ts` resolves one backdrop for all three pages. It **reads** the shared
-pool (`pickPoolBackdrop('yard-sale')`) and **never generates**: rule 2 of
+`components/backdrop/page-backdrop.tsx` + `lib/theme/resolvePoolBackdrop.ts` give all three pages
+one backdrop (`lib/garageSales/backdrop.ts` is now just the pool-key constant). They **read** the
+shared pool and **never generate**: rule 2 of
 `crosstalk/contracts/painterly-backdrop.md` says generation is owner/admin-triggered, never
 per-request, and this is the surface where that matters most — `/yard-sale/new` is reachable with
 no account and no fee, so a ~$0.04 image call on that path would be unbounded spend behind an

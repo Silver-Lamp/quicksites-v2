@@ -114,6 +114,18 @@ export default async function GarageSalesPage() {
             Yard and garage sales running in the next seven days — what each one has, when it
             starts, and where. Exact addresses appear when a sale begins.
           </p>
+          {/*
+            Sellers need this whether or not anything is listed. It lived only in the empty state,
+            which meant the route disappeared the moment a third sale showed up — and the empty
+            state pointed at a sticker nobody visiting the site has.
+          */}
+          <p className="mt-4 text-sm text-zinc-400">
+            Running one?{' '}
+            <Link href="/yard-sale/new" className="font-semibold text-white underline underline-offset-4">
+              Make a page for your sale
+            </Link>{' '}
+            — no sticker, no account, no fee.
+          </p>
         </section>
 
         <section className="mx-auto max-w-3xl px-6 pb-20">
@@ -121,7 +133,11 @@ export default async function GarageSalesPage() {
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-8 text-center">
               <p className="text-zinc-300">No sales listed for the next week yet.</p>
               <p className="mt-2 text-sm text-zinc-500">
-                If you&rsquo;re running one and someone handed you a sticker, scan it to get listed.
+                Be the first —{' '}
+                <Link href="/yard-sale/new" className="text-zinc-300 underline underline-offset-4">
+                  make a page for your sale
+                </Link>
+                . Got a sticker? Scan it instead and it will find your sale.
               </p>
             </div>
           ) : (

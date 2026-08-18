@@ -18,6 +18,7 @@ import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import YardSaleSurface from '@/components/garage-sales/yard-sale-surface';
 import { listSales } from '@/lib/garageSales/sales';
+import { YARD_SALE_CITIES } from '@/lib/yardSale/cities';
 
 /**
  * ⚠️ The shared SiteHeader is dark-only, and `sticky` gives it `bg-black/30` — 30% black over
@@ -134,12 +135,27 @@ export default async function GarageSalesPage() {
             which meant the route disappeared the moment a third sale showed up — and the empty
             state pointed at a sticker nobody visiting the site has.
           */}
+          {/* City pages are seller-intent and deliberately few (see lib/yardSale/cities.ts). Linking
+              them from the apex is how they get discovered while robots.txt still points at the
+              tenant sitemap route rather than ours. */}
           <p className="mt-4 text-sm text-muted-foreground">
             Running one?{' '}
             <Link href="/yard-sale/new" className="font-semibold text-foreground underline underline-offset-4">
               Make a page for your sale
             </Link>{' '}
             — no sticker, no account, no fee.
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            In{' '}
+            {YARD_SALE_CITIES.map((c, i) => (
+              <span key={c.slug}>
+                {i > 0 && ' · '}
+                <Link href={`/list-your-sale/${c.slug}`} className="underline underline-offset-4 hover:text-foreground">
+                  {c.city}
+                </Link>
+              </span>
+            ))}
+            ?
           </p>
         </section>
 

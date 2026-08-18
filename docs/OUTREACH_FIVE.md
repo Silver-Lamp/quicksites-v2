@@ -6,9 +6,9 @@ A pre-registered test of one question, by hand, with no tooling.
 > rules that are not style preferences — lives in **[`OUTREACH_METHOD.md`](OUTREACH_METHOD.md)**.
 > This doc is the experiment and its results; that one is how to do it again.
 
-**Status:** batches 1–4 sent 2026-08-11 → 08-13 · **19 businesses contacted, 24 touches, 0 replies** ·
-⏸ Happy At the Bay held to **2026-08-14** (shares a building with Pho Bac) ·
-batch 1's window closes **2026-08-18** · **Owner:** Sandon · **Written:** 2026-08-10
+**Status: RESOLVED 2026-08-18 — 0 replies of 19.** The pre-registered window has closed; the reading
+is recorded below under *The result*. Batches 1–4 sent 2026-08-11 → 08-13 · ⏸ Happy At the Bay held
+to 2026-08-14 (shares a building with Pho Bac) · **Owner:** Sandon · **Written:** 2026-08-10
 
 ---
 
@@ -110,6 +110,66 @@ is a reply; silence is not. We are measuring whether the thing provokes a respon
 converts.
 
 ⚠️ **Decide the timebox now too: 7 days from send.** A reply on day 20 is a different experiment.
+
+## The result — window closed 2026-08-18
+
+**0 replies of 19 businesses.** Queried, not recalled, on the day the window closed:
+
+```
+outreach_touches → 24 touches · 19 distinct subjects
+                   direction: {"outbound": 24}      ← zero inbound, ever
+                   channel:   {"sms": 24}
+                   window:    2026-08-11 → 2026-08-13
+```
+
+A reply was defined in advance as **any human response at all**, including "no thanks" and "take it
+down". There were none of any kind.
+
+### Which branch fires
+
+The **0 of 19** branch, unchanged from how it was written on 2026-08-14 before any result existed:
+
+> No evidence the mechanism provokes response at this volume. `P(0|19)` = 0.014 at a true 20% rate,
+> so this argues against a strong converter while remaining consistent with ~10% (0.135).
+> **Stop adding outreach surface** and change something structural — channel, offer, or category —
+> before sending more.
+
+⚠️ **The honest statement is "not at a rate this method can detect", not "nobody wants this."**
+0/19 is entirely consistent with a true ~10% reply rate. What is ruled out is a *strong* converter,
+and what follows is that **the method is now the thing to change** — not the inventory.
+
+⚠️ **No branch permitted "keep building pages", and that constraint is what this result tests.**
+Between 2026-08-11 and today the draft population grew while businesses contacted held at 19. If the
+next action is another sweep, the rule was decorative.
+
+### Confounds that survive the close, both one-directional
+
+Recorded before the result, and both can only produce a **false negative** — silence from someone who
+never saw the page is not evidence about the offer:
+
+1. **Batch 1's links did not linkify** on a phone (bare new-gTLD host). Five businesses received a
+   message whose site link was untappable; a correction went out the same day.
+2. **Two neighbouring businesses** were texted the same day, so their responses were not independent.
+
+Neither rescues the reading — a confound that can only suppress replies cannot explain a result *in
+the direction of* fewer replies. They matter for the opposite reason: they mean the true rate is
+**at most** as bad as measured, so the next arm should be clean before anyone concludes the offer is
+wrong rather than the channel.
+
+### What is NOT established
+
+- That restaurants don't want this. 19 is a small sample and the rule says so.
+- That cold outreach fails generally. This is one channel (SMS), one category (no-website
+  restaurants), one offer (a menu site), one sender.
+- That the drafts are worthless. Their value was never tested here; only whether a message about them
+  provokes a response.
+
+### The decision this hands to the owner
+
+The rule says change **channel, offer, or category** — it deliberately does not say which. That is
+Sandon's call, and it is the only open item this experiment produces.
+
+---
 
 ## Pre-committed readings (agreed with PorchHearth before any result, 2026-08-13)
 

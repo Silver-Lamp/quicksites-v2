@@ -116,22 +116,43 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key
 
 ## 🔗 Resources
 
-- [Feature Requests](https://github.com/Silver-Lamp/quicksites-core/discussions/categories/feature-requests)
-- [Public Roadmap](https://github.com/Silver-Lamp/quicksites-core/projects)
-- [Live Demo](https://quicksites.ai/demo)
+<!--
+  Every link in this section was dead as of 2026-08-18, and they were dead for two different
+  reasons worth keeping straight:
+
+  1. Three pointed at `Silver-Lamp/quicksites-core`, which is not this repo — this is
+     `quicksites-v2`. (The npm package IS named quicksites-core; the GitHub path never was.)
+  2. Two pointed at features that do not exist rather than at the wrong address: Discussions are
+     DISABLED on this repo, and there is no /demo route. Repointing those at the right repo would
+     have moved the 404 rather than fixed it, which is why each replacement below is a thing that
+     was checked to exist.
+-->
+- [Report a bug or request a feature](https://github.com/Silver-Lamp/quicksites-v2/issues) — Issues are enabled; Discussions are not
+- [Plans and architecture](docs/) — the working planning docs. There is no public roadmap board
+- **A real site built with this:** [renton-lemonade.quicksites.ai](https://renton-lemonade.quicksites.ai) · more on the [homepage showcase](https://www.quicksites.ai)
 
 ---
 
 ## ✅ CI Status
 
-![Visual QA](https://github.com/Silver-Lamp/quicksites-core/actions/workflows/visual.yml/badge.svg)
-![Test](https://github.com/Silver-Lamp/quicksites-core/actions/workflows/test.yml/badge.svg)
+<!--
+  Both previous badges 404'd twice over: wrong repo (`quicksites-core`) AND wrong workflow files.
+  There is no `test.yml` or `visual.yml` — the suite runs in `ci.yml`, and visual.yml lives in
+  .github/workflows/disabled/. A badge pointing at a workflow that does not exist renders as an
+  error image, which reads to a visitor as "the build is broken" rather than "the badge is wrong".
+-->
+![CI](https://github.com/Silver-Lamp/quicksites-v2/actions/workflows/ci.yml/badge.svg)
 
 ---
 
 ## 🚀 Deploy
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/Silver-Lamp/quicksites-core)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/Silver-Lamp/quicksites-v2)
+
+> ⚠️ One-click deploy will build but **will not boot** without Supabase credentials
+> (`NEXT_PUBLIC_SUPABASE_URL`, the anon key, and `SUPABASE_SERVICE_ROLE_KEY`). See
+> [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md). Saying so here because a deploy button that yields a
+> broken app is a worse first impression than no button.
 
 ## 📦 Nightly Sitemap Snapshots
 

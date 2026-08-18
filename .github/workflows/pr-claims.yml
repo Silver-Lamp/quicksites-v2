@@ -1,0 +1,35 @@
+name: PR Claims
+
+# Does the PR say what it is betting on?
+#
+# `edited` is in the trigger list on purpose: the fix for this check is editing the PR description,
+# so without it you would go red, write your claims, and stay red until an unrelated push.
+#
+# ⚠️ This gate is satisfiable by the PR author alone, deliberately. Do not "harden" it into
+# something a second party must satisfy — `main` already carries a rule that cannot be satisfied
+# (one human, `required_approvals=1`), and the result is that `--admin` became routine. See
+# lib/ci/prClaims.ts for the full reasoning before changing anything here.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-claims-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  claims:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # No install step: tsx is run via npx and the checker imports one dependency-free module,
+      # so this job stays a few seconds rather than waiting on the full dependency tree.
+      - name: Check for a Claims block
+        run: npx --yes tsx@4 scripts/check-pr-claims.ts

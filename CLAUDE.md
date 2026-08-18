@@ -89,8 +89,28 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 > Write the command, not the count. (PorchHearth found six of seven such counts stale in their own
 > orientation doc the same day; the failure is structural, not local.)
 
-> The README and `ROUTER_STRATEGY.md` at the root are **stale** — they describe a Pages Router that was already migrated to App Router. Trust this doc and `docs/ARCHITECTURE.md` over them.
-> *(Falsifying condition: `ROUTER_STRATEGY.md` stops mentioning the Pages Router, or the README is rewritten. Verified 2026-08-05 — still stale, 2 Pages-Router mentions.)*
+> ✅ **RESOLVED 2026-08-18. The README was rewritten and `ROUTER_STRATEGY.md` was never stale.**
+> Both are now accurate; read them.
+>
+> ⚠️ **The falsifying condition here was itself the bug, and it is the most useful thing in this
+> note.** It read *"`ROUTER_STRATEGY.md` stops mentioning the Pages Router"* — a string match. But
+> that file was corrected on **2026-06-30** and its opening line says the Pages Router claim *"is no
+> longer true and was actively misleading."* A corrected document trips a mentions-it check **by
+> explaining its own correction**. So the audit on 2026-08-05 grepped, found "Pages Router", and
+> recorded "still stale" — a true measurement supporting a false conclusion, for seven weeks, about
+> a file that had already been fixed.
+>
+> The README genuinely WAS stale, and worse than advertised: its structure diagram showed
+> `pages/_app.tsx` when no `pages/` directory exists at all, it documented `npm run test:e2e` (no
+> such script), claimed `npm run test` runs "unit tests and e2e" (Playwright only), said pre-commit
+> runs `lint:links` (it runs gitleaks), and carried three near-duplicate sitemap sections telling
+> the reader to replace a `YOUR_PROJECT` placeholder that appeared nowhere. Four of nine links were
+> dead (#848). A "this is stale" banner had stood in for fixing any of it.
+>
+> **Lesson for the next falsifying condition written in this file: prefer a condition whose
+> evidence is the code, not the prose.** "No `pages/` directory exists" is checkable and cannot be
+> tripped by a document discussing it. Guarded now by `lib/repo/__tests__/publicLinks.test.ts`,
+> which strips comments before matching for exactly this reason.
 >
 > ⚠️ **`_pages-legacy/`, `_deprecated__domains/` and `_deprecating_sites/` no longer exist.** This
 > line said they were "corpses pending cleanup" long after they were deleted — checked 2026-08-05,
@@ -412,5 +432,9 @@ work. (Operational authority, not equity split, governs what a session may act o
   So: state the falsifying condition, or you are not recording a fact — you are installing a blind
   spot with a citation on it. (Convergent with PorchHearth's §12; crosstalk 2026-08-05.)
   Audited the same day: the three "corpse" directories above were already gone; the purged-files
-  list in §8 is still accurate; `ROUTER_STRATEGY.md` is still stale.
+  list in §8 is still accurate. ⚠️ That same audit also recorded "`ROUTER_STRATEGY.md` is still
+  stale" — **which was wrong**, and wrong in the way this very section warns about: the file had
+  been correct since 2026-06-30, and the grep matched the sentence in it that *disavows* the old
+  claim. Corrected 2026-08-18; see §4. An audit that re-runs a badly-chosen check re-confirms the
+  original error and stamps a fresh date on it.
 - **Keep docs + public surfaces in sync in the same commit** (a mesh-wide rule — HJ + DeckSketch codify it too): when you change a feature, update its doc/this file/the relevant `crosstalk/contracts/*` in the *same* PR. A stale doc is worse than a missing one. When you notice a doc contradicting the code, fix or delete it rather than working around it.

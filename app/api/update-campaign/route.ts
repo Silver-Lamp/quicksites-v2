@@ -1,3 +1,9 @@
+// ⚠️ DORMANT — unlaunched "support campaigns" feature; `support_campaigns` has never had a row.
+// Ten API routes + /posters/<slug> + app/admin/tools/print-all.tsx form the whole feature. No nav
+// link, not in the sitemap. Real work stopped 2025-06; every commit since was a repo-wide types or
+// build sweep, so it compiles out of diligence, not maintenance.
+// KEPT DELIBERATELY (owner decision, 2026-08-17): don't prune it as dead code — and don't assume
+// it works, because none of it has ever run against real data. Building on it? Ask first.
 // app/api/update-campaign/route.ts
 export const runtime = 'nodejs';
 

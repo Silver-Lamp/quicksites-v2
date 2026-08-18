@@ -1,0 +1,59 @@
+name: Content Probe
+
+# Fetches PRODUCTION and asserts what actually came back — content, not status codes.
+#
+# ⚠️ SCHEDULED, NOT PER-PR, AND THAT IS DELIBERATE. A pull request cannot change what production is
+# serving, so running this per-PR would attach red to authors who did not cause it. A check that is
+# often red gets ignored, which is precisely the failure this exists to prevent.
+#
+# On failure it keeps ONE issue open and updates it, rather than filing a new one each run — a
+# recurring outage should be one thing you look at, not a growing pile you learn to scroll past.
+
+on:
+  schedule:
+    - cron: '17 13 * * *'   # daily, mid-morning US — after any overnight deploy has settled
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: content-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Only chromium, and only because the theme checks read computed styles in a real browser.
+      # No screenshots are taken — pixel comparison is where the cost and the flakiness live.
+      - run: npx --yes playwright@1 install --with-deps chromium
+
+      - name: Probe production
+        id: probe
+        run: npx --yes tsx@4 scripts/content-probe.ts 2>&1 | tee probe.log
+        continue-on-error: true
+
+      - name: Open or update the failure issue
+        if: steps.probe.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BODY="$(printf 'The content probe failed against production.\n\n```\n%s\n```\n\nEach failure prints why that check exists. Content assertions mean a 200 is not evidence.\n\nRun: %s/%s/actions/runs/%s\n' \
+            "$(cat probe.log)" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          EXISTING="$(gh issue list --state open --label content-probe --limit 1 --json number --jq '.[0].number')"
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh label create content-probe --description "Production content probe" --color B60205 2>/dev/null || true
+            gh issue create --title "Content probe failing against production" --label content-probe --body "$BODY"
+          fi
+
+      - name: Fail the run if the probe failed
+        if: steps.probe.outcome == 'failure'
+        run: exit 1

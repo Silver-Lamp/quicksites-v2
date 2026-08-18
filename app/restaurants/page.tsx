@@ -44,7 +44,7 @@ export default function RestaurantsPage() {
         PageBackdrop owns the z-0/z-10 layering; the base colour stays here on the wrapper, which is
         exactly where a fill belongs (a fill on the CHILDREN would hide the art — see its header).
       */}
-      <PageBackdrop poolKey="restaurant" fallback="wash" intensity={60} className="min-h-screen bg-zinc-950 text-white">
+      <PageBackdrop poolKey="restaurant" fallback="wash" intensity={90} className="min-h-screen bg-zinc-950 text-white">
         {/* Hero */}
         <section className="relative mx-auto max-w-5xl px-6 pt-16 pb-12 text-center">
           {/* Amber glow — the restaurant vertical keeps its warm identity, not sky. */}

@@ -35,7 +35,7 @@ export default function YardSaleSurface({ children }: { children: ReactNode }) {
     // directions). `paper` rather than the generic `wash` fallback: a yard sale is a
     // hand-lettered, cardboard-sign occasion, not a SaaS landing page.
     <ThemeScope mode="light" className="min-h-screen bg-background text-foreground">
-      <PageBackdrop poolKey={YARD_SALE_BACKDROP_KEY} fallback="paper" intensity={55} className="min-h-screen">
+      <PageBackdrop poolKey={YARD_SALE_BACKDROP_KEY} fallback="paper" intensity={90} className="min-h-screen">
         {children}
       </PageBackdrop>
     </ThemeScope>

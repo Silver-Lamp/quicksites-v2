@@ -76,7 +76,11 @@ export function isYardSaleHost(host: string): boolean {
 // 'yard-sale' is the self-serve front door (/yard-sale/new). It is the one page a seller arriving
 // at the apex most needs to reach, so its absence here would have made the tool unreachable at
 // exactly the address we are trying to rank.
-const APEX_PAGES = new Set(['', 'privacy', 'terms', 'about', 'yard-sale']);
+// ⚠️ A NEW PATH ON THIS HOST IS UNREACHABLE UNTIL ITS SEGMENT IS IN HERE. Anything absent is
+// redirected to the directory, so a page can ship, compile, pass tests and be invisible on the one
+// domain it was built for — which is exactly what happened to `/yard-sale/new` (#834). Adding the
+// route is half the job; this line is the other half.
+const APEX_PAGES = new Set(['', 'privacy', 'terms', 'about', 'yard-sale', 'list-your-sale']);
 
 /** yardsalesites.com/5BC-GP8 → "5BCGP8". Null when the first segment isn't a code. */
 export function yardSaleCodeFromPath(pathname: string): string | null {

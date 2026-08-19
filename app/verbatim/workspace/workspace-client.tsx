@@ -10,15 +10,31 @@
 
 import * as React from 'react';
 import { REHEARSAL_STAGES, STAGE_LABELS, rehearsalLinkFor, type JobPosting } from '@/lib/jobs/postings';
+import type { ResumeVersion } from '@/lib/resumes/versions';
+import ResumeLibrary from './resume-library';
 
-type ResumeSite = { id: string; slug: string | null; name: string; published: boolean };
+type ResumeSite = {
+  id: string;
+  slug: string | null;
+  name: string;
+  published: boolean;
+  url: string | null;
+  /** The résumé version this site currently serves, if any. */
+  servingLabel: string | null;
+};
 
 export default function WorkspaceClient({
   postings: initial,
   resumeSites,
+  versions,
+  siteSlug,
+  siteId,
 }: {
   postings: JobPosting[];
   resumeSites: ResumeSite[];
+  versions: ResumeVersion[];
+  siteSlug: string | null;
+  siteId: string | null;
 }) {
   const [postings, setPostings] = React.useState<JobPosting[]>(initial);
   const [busy, setBusy] = React.useState(false);
@@ -54,6 +70,17 @@ export default function WorkspaceClient({
     if (res.ok) setPostings((p) => p.filter((x) => x.id !== id));
   };
 
+  /** Record which résumé version an application actually went out with. */
+  const linkVersion = async (id: string, resumeVersionId: string) => {
+    const value = resumeVersionId || null;
+    setPostings((p) => p.map((x) => (x.id === id ? { ...x, resume_version_id: value } : x)));
+    await fetch('/api/jobs/postings', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id, resumeVersionId: value }),
+    });
+  };
+
   const field = 'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground';
 
   return (
@@ -63,6 +90,12 @@ export default function WorkspaceClient({
         Private to you. Nobody at QuickSites can see this list — it is not in any admin view.
       </p>
 
+      {/* ⚠️ THE PUBLIC SITE IS SHOWN HERE; THE PRIVATE BOARD IS NEVER SHOWN THERE. This panel is
+          the whole "merge" — the workspace is the control room, and the site is what it publishes.
+          The reverse (serving this page from <slug>.quicksites.ai) was considered and rejected:
+          every path on a platform subdomain is rewritten to /sites/<slug>, so a private surface
+          there means either a second login or widening the session cookie to `.quicksites.ai`,
+          which would send it to every tenant site on the platform. */}
       <section className="mt-8">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Your résumé pages
@@ -76,23 +109,69 @@ export default function WorkspaceClient({
             to make one.
           </p>
         ) : (
-          <ul className="mt-2 flex flex-wrap gap-2">
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2">
             {resumeSites.map((s) => (
-              <li key={s.id}>
-                <a
-                  href={`/admin/templates/${s.id}`}
-                  className="rounded-full border border-border px-3 py-1 text-sm text-foreground hover:bg-muted"
-                >
-                  {s.name}
-                  {!s.published && <span className="ml-2 text-xs text-muted-foreground">draft</span>}
-                </a>
+              <li key={s.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="font-semibold text-card-foreground">{s.name}</span>
+                  {s.published ? (
+                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-400 ring-1 ring-emerald-500/30">
+                      Live
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                      Draft
+                    </span>
+                  )}
+                </div>
+
+                {s.url && (
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate text-xs text-primary underline"
+                  >
+                    {s.url.replace(/^https:\/\//, '')} ↗
+                  </a>
+                )}
+
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {s.servingLabel ? (
+                    <>
+                      Serving{' '}
+                      <span className="font-medium text-foreground">{s.servingLabel}</span>
+                    </>
+                  ) : (
+                    'No résumé published on this site yet'
+                  )}
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a
+                    href={`/admin/templates/${s.id}`}
+                    className="rounded-lg border border-border px-3 py-1 text-xs text-foreground hover:bg-muted"
+                  >
+                    Edit page
+                  </a>
+                  {s.slug && s.servingLabel && (
+                    <a
+                      href={`/api/resume/${s.slug}/pdf`}
+                      className="rounded-lg border border-border px-3 py-1 text-xs text-foreground hover:bg-muted"
+                    >
+                      What visitors download ↓
+                    </a>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <section className="mt-8">
+      <ResumeLibrary versions={versions} postings={postings} siteSlug={siteSlug} siteId={siteId} />
+
+      <section className="mt-10">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Add a posting
         </h2>
@@ -159,6 +238,21 @@ export default function WorkspaceClient({
                      className="rounded-lg border border-primary/40 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10">
                     Practice this interview ↗
                   </a>
+                  {versions.length > 0 && (
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      Sent with
+                      <select
+                        className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                        value={p.resume_version_id ?? ''}
+                        onChange={(e) => void linkVersion(p.id, e.target.value)}
+                      >
+                        <option value="">—</option>
+                        {versions.map((v) => (
+                          <option key={v.id} value={v.id}>{v.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                   <button onClick={() => remove(p.id)}
                           className="text-sm text-muted-foreground hover:text-red-500">
                     Delete

@@ -7,6 +7,7 @@
 // here is reachable from a tenant render, and there is no shareable URL for someone else's board.
 import { redirect } from 'next/navigation';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { publicSiteUrl } from '@/lib/sites/publicUrl';
 import WorkspaceClient from './workspace-client';
 
 export const dynamic = 'force-dynamic';
@@ -31,15 +32,22 @@ export default async function VerbatimWorkspacePage() {
   // is exactly what this table must NOT use. Losing the generated types is the cheaper trade than
   // losing RLS.
   const anyDb = db as any;
-  const [{ data: postings }, { data: sites }] = await Promise.all([
+  const [{ data: postings }, { data: sites }, { data: versions }] = await Promise.all([
     anyDb.from('job_postings').select('*').order('created_at', { ascending: false }).limit(200),
     anyDb
       .from('templates')
-      .select('id, slug, data, published')
+      .select('id, slug, data, published, custom_domain, default_subdomain')
       .eq('owner_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50),
+    anyDb
+      .from('resume_versions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100),
   ]);
+
+  const allVersions = (versions as any[]) ?? [];
 
   const resumeSites = (sites ?? [])
     .filter((t: any) => ['personal', 'author'].includes(t?.data?.meta?.industry))
@@ -48,7 +56,25 @@ export default async function VerbatimWorkspacePage() {
       slug: t.slug,
       name: t?.data?.meta?.business_name ?? t?.data?.meta?.siteTitle ?? t.slug,
       published: !!t.published,
+      url: publicSiteUrl(t),
+      // Which version this site actually serves. Resolved per SITE, never per owner — see
+      // migration 20260830; an owner here may have thousands of sites.
+      servingLabel:
+        allVersions.find((v) => v.is_public && v.public_site_id === t.id)?.label ?? null,
     }));
 
-  return <WorkspaceClient postings={(postings as any[]) ?? []} resumeSites={resumeSites} />;
+  // Which site the public résumé link belongs to. ⚠️ The first PUBLISHED one, not simply the
+  // first: an unpublished draft has no audience, so offering to "make a résumé public" on it would
+  // describe a reach the site does not have.
+  const publicSite = resumeSites.find((s: { published: boolean }) => s.published) ?? null;
+
+  return (
+    <WorkspaceClient
+      postings={(postings as any[]) ?? []}
+      resumeSites={resumeSites}
+      versions={allVersions}
+      siteSlug={publicSite?.slug ?? null}
+      siteId={publicSite?.id ?? null}
+    />
+  );
 }

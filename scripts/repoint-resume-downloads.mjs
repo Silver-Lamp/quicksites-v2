@@ -91,8 +91,13 @@ if (live.length === 0) {
 const data = structuredClone(tpl.data);
 const pages = data?.pages ?? [];
 let found = 0;
+// ⚠️ A PAGE CARRIES TWO BLOCK ARRAYS AND BOTH MUST BE WRITTEN. `content_blocks` is what the
+// public renderer reads; `blocks` is a mirror that is serialized into the page payload and read
+// by other surfaces. Updating only one leaves the site *looking* correct while a stale copy of
+// every href rides along in the HTML — which is exactly what happened on the first run here, and
+// what an earlier commit on this template meant by "(both block arrays)".
 for (const page of pages) {
-  for (const block of page?.content_blocks ?? []) {
+  for (const block of [...(page?.content_blocks ?? []), ...(page?.blocks ?? [])]) {
     if (block?.type !== 'file_downloads') continue;
     found++;
     const before = (block.content?.files ?? []).map((f) => f.href);
@@ -116,6 +121,17 @@ for (const page of pages) {
   }
 }
 if (!found) throw new Error(`No file_downloads block on "${SLUG}".`);
+
+// ⚠️ Post-condition, not decoration: assert no old storage href survives anywhere in the tree.
+// The failure this catches is invisible — the page renders correctly from one array while the
+// other still holds the old URLs.
+const leftovers = JSON.stringify(data).match(/storage\/v1\/object\/public\/resumes\//g);
+if (leftovers) {
+  throw new Error(
+    `${leftovers.length} old storage href(s) still in the template after rewriting ` +
+      `${found} block(s) — another block array was missed. Refusing to write a half-updated tree.`,
+  );
+}
 
 if (!APPLY) {
   console.log('\nDry run. Re-run with --apply to commit.');

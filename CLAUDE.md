@@ -185,6 +185,56 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   logs. Stage values are HJ's (`recruiter_screen`/`hiring_manager`/`exec`/`technical`/`onsite`) —
   ⚠️ we shipped `founder_exec`, they aliased it so our link kept working, and that alias would have
   made the wrong value permanent; it is retired and `exec` is canonical.
+- **Résumé version library — many tailored versions, one of them public (2026-08-18)**: a private
+  library of résumé files (`resume_versions`, migration `20260824`, `lib/resumes/versions.ts`, UI in
+  `app/verbatim/workspace/resume-library.tsx`), each labelled with the job it was tailored for
+  (`job_postings.resume_version_id` records which one an application went out with), and **exactly
+  one** marked public — enforced by a **partial unique index**, not app code, because two public rows
+  make "which résumé does the world see" depend on row order.
+  ⚠️ **THE LABEL AND THE DOCUMENT ARE DIFFERENT PRIVACY CLASSES, AND CONFLATING THEM IS THE BUG THE
+  DESIGN EXISTS TO PREVENT.** The document may be published; the label ("Indeed — Distinguished
+  Engineer, AI") is the `job_postings` disclosure one indirection removed. The obvious build — drop
+  the tailored PDFs into the existing **public** `resumes` bucket under their own names — makes the
+  *filename* the disclosure, world-readable to anyone who has or guesses the URL, and it cannot be
+  walked back. So: files live in a **private** bucket (`resume-versions`) at **server-derived opaque
+  paths** (`<owner>/<version>/resume.<ext>`; the client sends bytes and a format, never a name), and
+  nothing is served straight from storage. **`GET /api/resume/<slug>/<format>` streams** (never
+  redirects, never a signed or public storage URL) so the outgoing `Content-Disposition` filename is
+  ours: a recruiter saves `Sandon-Jurowski-Resume.pdf`, never `…-Indeed-….pdf` — **a résumé is
+  forwarded, so a filename naming the wrong employer is the leak arriving by hand.** The public URL
+  names a site and a format, never a version, so switching is one DB update and every link already in
+  the wild keeps working. Owner-scoped RLS, **no admin bypass**, caller session rather than service
+  role (the public route is the one unavoidable service-role caller, and is written narrow —
+  `.eq('is_public', true)` in the same statement). Pinned by `lib/resumes/__tests__/versions.test.ts`,
+  which includes **source guards**: a unit test cannot catch a deleted `.eq('is_public', true)`,
+  reading the file can. ⚠️ Switching **does not un-publish** what someone already downloaded; the UI
+  says so rather than implying a recall.
+  ⚠️ **"PUBLIC" IS SCOPED TO A SITE, NOT TO AN OWNER (`public_site_id`, migration `20260830`), and
+  the first cut got this wrong in a way every test pointed at the right site would have missed.**
+  Resolving `slug → owner → that owner's public version` reads as obviously fine — an owner has one
+  résumé — but this product's owners are **agencies with client sites**: the account in question owns
+  **2,227 templates**, so all of them served the résumé, and because the outgoing filename is built
+  from the *requested* site's business name, `/api/resume/starter-personal/pdf` returned one person's
+  résumé under another person's name (`Alex-Rivera-Resume.pdf`). **"The sites you own" is not "the
+  site that is about you"** — the same class as §8's `base_slug` bug, where a rule that held for the
+  case in front of you silently generalised to the whole fleet. Found only by requesting a site the
+  feature was *not* built for; a check constraint now forbids `is_public` without a site, and a test
+  asserts the route never filters on `owner_id`. **Never add a "fall back to the owner's site"
+  convenience** — that is this bug, restored.
+  ⚠️ **The workspace deliberately stays on the APP host and is not served from `<slug>.quicksites.ai`.**
+  Asked to "merge" the two, the answer is to merge the *content* (the site serves what the workspace
+  publishes) and invert the navigation (the workspace shows the live site), **not** to move the private
+  board onto the tenant host. Every path on a platform subdomain is rewritten to `/sites/<slug>`
+  (`middleware.ts`; only `/api`, `/host`, `/_domains`, `/sites`, `/login` escape), so a private surface
+  there needs either a second login — session cookies set **no `domain`**, so they are host-only — or a
+  cookie widened to `.quicksites.ai`, **which would send the platform session to every tenant site**
+  (2,826 slugs). A middleware carve-out is also fleet-wide, not per-site: it would give *every*
+  customer site a `/workspace` path. Repointing the public block is `scripts/repoint-resume-downloads.mjs`,
+  which **preflights the live URL and refuses to write unless it already answers 200** — the route does
+  not exist until deploy, and repointing early swaps three working links for three 404s on a live page,
+  a failure invisible from the editor. Verified 2026-08-18: `sandon.<host>/verbatim/workspace` today
+  rewrites to `/sites/sandon/verbatim/workspace` and renders the **site** with a 200 (the catch-all
+  answers 200 for any path), so the workspace is simply unreachable there rather than protected there.
 - **Public marketing surfaces**: `/partners` (reseller landing), `/partners/calculator` (interactive GMV earnings vs flat-markup), and `/compare` (features-vs-Duda/GoHighLevel chart with sourced pricing + an honest "where they lead" section — the CRM/marketing row now reads `partial`, not out-of-scope). Positioning source: [`docs/COMPETITIVE_LANDSCAPE.md`](docs/COMPETITIVE_LANDSCAPE.md).
 - **Guest build (unauthenticated draft sites)** — **LIVE in prod** (anonymous sign-ins enabled in Supabase; `NEXT_PUBLIC_GUEST_BUILD_ENABLED=1` set in Vercel production + preview). Env-gated by that flag (`lib/flags/guestBuild.ts`). Entry points: the homepage hero (`components/home/guest-start.tsx`) and `/build`. A logged-out visitor mints a Supabase **anonymous** session (`ensureGuestSession`), builds a draft template stamped `owner_id=<anon uid>` + `claim_source='guest_build'` (`app/api/templates/create|duplicate`) **seeded with a real industry starter** (hero / services / faq / contact + services + theme via `buildIndustryStarter` — the same scaffold as `/admin/templates/new`, so the editor opens a working site rather than empty/typeless placeholder blocks), and **auto-claims on sign-up** (the anon user upgrades in place, same uid → `owner_id` still matches). It **can't reach the homepage**: anon users are blocked from publishing (`app/api/templates/[id]/publish` → `needs_signup`), the showcase requires `published=true`, and `getShowcaseData` additionally drops any still-anon-owned row (`anonymous_user_ids` RPC). `middleware.ts` confines anon users to the template editor. **Abuse guards** (the load-bearing part): per-guest AI call cap (`enforceGuestAiLimit`, `GUEST_AI_CALL_LIMIT`) — on **every** AI route; per-IP guest-draft rate limit (`lib/rateLimit.ts` on `ratelimit_events`, `GUEST_DRAFT_HOURLY_LIMIT_PER_IP`); the dollar budget guard (`meterLLMCall`, keyed on `ai_usage_events.occurred_at`); and the `/api/cron/ai-cost-alert` watchdog (every 15 min) that emails `ADMIN_EMAILS` + raises a Sentry warning when rolling AI spend crosses `AI_ALERT_{HOURLY,DAILY}_USD` (with an anon breakdown via `ai_spend_report`). Note: image-gen routes (`/api/hero/generate-image`, `favicon`, `icon`) set `maxDuration = 60` — gpt-image-1 is slow (~20s at `quality:'medium'`) and would otherwise hit the default serverless timeout.
 - **Anonymous-token security hardening (2026-07, PRs #102–#122)**: shipping guest build (an anon token is a *real authenticated user*) prompted an audit of everything an anon/authenticated token could reach, and a staged remediation. Shared auth gates now live in `lib/auth/requireUser.ts`; dozens of mutating routes were gated (including an unauthenticated `spawn`-RCE dev route, unauth Stripe-refund execution, an org-domain hijack, and a critical unauthenticated arbitrary-file-read). A privilege-escalation via self-written `user_profiles.role` was closed. Every RLS-disabled anon-writable table from the audit was locked — **deny-default** for service-role-only/sensitive tables, **scoped policies** for browser-written ones (`domains` public-read, `remix_events` owner-insert, `user_action_logs` authed append-only, `dashboard_layouts` authed), and **`public.sites` gained an `owner_id` column + owner-scoped RLS**. Webhooks verify signatures (Twilio added; Stripe/Lulu already did); public email/claim endpoints are per-IP rate-limited. The residual **redesign** follow-ups were closed 2026-07-09 (PRs #268–#274): `send-contact-email` now derives the recipient from `site_slug` server-side (#268, closes an open relay); the Lulu webhook **fails closed** in prod when its secret is unset (#269); `templates/base-name` writes are **owner-scoped** (#270); the public claim endpoints were hardened so no unverified body-derived privileged writes happen — `claim-site` (which had no callers) performs none, `claim/lead` validates email + template existence (#271); and the **domain-claim** path gained a full **email proof-of-control** flow behind `DOMAIN_CLAIM_VERIFICATION_ENABLED` (#272–#274 — see the *Domain-claim email verification* bullet above). The SMS **outreach site-claim** path already had verification behind `CLAIM_VERIFICATION_ENABLED` (see [`docs/CLAIM_VERIFICATION_PLAN.md`](docs/CLAIM_VERIFICATION_PLAN.md)).

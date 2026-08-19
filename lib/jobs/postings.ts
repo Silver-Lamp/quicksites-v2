@@ -19,6 +19,8 @@ export type JobPosting = {
   id: string;
   owner_id: string;
   template_id: string | null;
+  /** Which résumé version this application was sent with (lib/resumes/versions.ts). */
+  resume_version_id: string | null;
   url: string | null;
   company: string | null;
   title: string | null;
@@ -37,6 +39,7 @@ export type JobPostingInput = {
   notes?: string | null;
   stage?: string | null;
   templateId?: string | null;
+  resumeVersionId?: string | null;
 };
 
 function clean(v: unknown): string | null {
@@ -74,6 +77,7 @@ export async function createPosting(
     .insert({
       owner_id: ownerId,
       template_id: input.templateId ?? null,
+      resume_version_id: input.resumeVersionId ?? null,
       url: clean(input.url),
       company: clean(input.company),
       title: clean(input.title),
@@ -114,6 +118,7 @@ export async function updatePosting(
     if (k in input) patch[k] = clean(input[k]);
   }
   if ('templateId' in input) patch.template_id = input.templateId ?? null;
+  if ('resumeVersionId' in input) patch.resume_version_id = input.resumeVersionId ?? null;
   const { error } = await db.from('job_postings').update(patch).eq('id', id);
   return error ? error.message : null;
 }

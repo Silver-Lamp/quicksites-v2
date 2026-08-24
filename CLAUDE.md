@@ -295,7 +295,29 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 - Duplicate/legacy files were purged (2026-07-04): `lib/create-default-block-RESOLVE-DUP.ts`, `lib/blocks/_likely-remove_*`, `vercel.json.bak`, `page-v0.tsx`, and the dead `app/examples/blocks-demo` page (rendered a retired-vertical block through a removed renderer) are gone. If you see a reference to any of them, it's stale.
 - `app/api/deploy-webhook/route.ts` is effectively disabled (commented).
 - **`templates.base_slug` / `is_version` are trigger-maintained, not generated (fixed 2026-07-29, migrations `20260809`+`20260810`).** They *were* generated columns keyed on `'(-[A-Za-z0-9]{2,12})+$'` — "a trailing `-token` means this row is a variant" — which cannot tell a random suffix from a real word and stripped **every** trailing token. So `renton-plumbing` and `renton-restaurant` both based to `renton`, and 2427 of 2531 rows were `is_version=true` including every canonical. Effects: the admin list collapsed all of a city's industries into one family (opening a site gave an editor titled with a different business), and `app/api/templates/[id]/publish`'s canonical lookup (`base_slug` + `is_version=false`) could resolve **zero** rows for any geo site. Now: `public.base_slug_of()` strips **one** trailing token of **4–5** `[a-z0-9]` chars — the shape the app's own `Math.random().toString(36).slice(2,7)` suffix produces — and `trg_templates_set_base_slug` maintains both columns on write. **`is_version` is deliberately three-state**: `NULL` for a slug-less row (it can't be canonical — there's no URL to be canonical at), `true` for a version, `false` for the canonical. Setting it `false` for slug-less rows gave families up to 10 canonicals and broke `.maybeSingle()`. ⚠️ **Known residual**: a 4–5 character real word is still indistinguishable from a random suffix, so `<city>-hvac` still bases to `<city>` (34 rows fleet-wide end in such a suffix); `app/api/admin/templates/list` additionally qualifies its grouping key by industry to cover the display case. The columns were converted with `ALTER COLUMN … DROP EXPRESSION` (in place) precisely so the 5 dependent indexes and 4 dependent views survived untouched.
-- **Direct `UPDATE`s to `templates` are blocked** by the `app.guard_templates_update` trigger ("Use app.commit_template()"). Go through the sanctioned RPCs (`app.commit_template`, `app.set_template_slug`, `app.publish_site`, or the `public.publish_template_demo` helper), or `set_config('app.bypass_template_guard','on', true)` inside a txn for one-off SECURITY DEFINER work. INSERTs are fine.
+- **Direct `UPDATE`s to `templates` are blocked** by the `app.guard_templates_update` trigger ("Use app.commit_template()") — **including the publish pointer**, verified 2026-08-19. Go through the sanctioned RPCs (`app.commit_template`, `app.set_template_slug`, or **`public.publish_template_demo`**), or `set_config('app.bypass_template_guard','on', true)` inside a txn for one-off SECURITY DEFINER work. INSERTs are fine.
+  - ⚠️ **`publish_site` IS BROKEN — do not reach for it.** It exists in *both* the `public` and `app`
+    schemas and appears in no tracked migration, so it looks like the intended path; calling it
+    raises **`relation "app.snapshots" does not exist`**. A callable RPC that throws on a missing
+    table is worse than an absent one, because its presence reads as sanctioned. This line used to
+    recommend it. **The working publish is `public.publish_template_demo(uuid)`** — a misnomer: it
+    is the generic helper (fresh `template_versions` snapshot → upsert `published_sites` → set the
+    bypass → flip `published`), stamps nothing demo-specific, and is granted to `service_role`.
+  - ⚠️ **`app/api/templates/[id]/publish/route.ts` performs exactly the write the guard rejects**
+    (`supabaseAdmin.from('templates').update({ published: true, … })`). Either it publishes through
+    a path a plain service-role key lacks, or **publishing from the admin UI is silently broken**.
+    Fleet-wide **17 of 439** templates with a `custom_domain` are published, which fits the second.
+    **Not diagnosed** — it needs a real session to exercise. Flagged, not asserted; do not trust
+    that button until someone checks.
+- **⚠️ NEVER EDIT TEMPLATE `data` BY PATH — the same content lives in three places.**
+  `.pages[].content_blocks[].content` · `.pages[].blocks[].content` · `.pages[].blocks[].props`.
+  A path-specific edit updates one copy, reports success, and leaves the renderer possibly reading
+  another. `b7ac93c1` fixed this for the résumé repoint script; the geo publish script hit it a week
+  later anyway — its first pass reported "16 promises reworded" while **15 of 29 templates still
+  carried them**, and going structural revealed the true counts were roughly double (26 blocks, 70
+  strings). The lesson is not "remember the second array": **walk the whole tree** (see
+  `scripts/publish-geo-campaigns.mjs#walkStrings` / `stripTestimonialBlocks`), so a fourth copy
+  appearing later cannot defeat the sweep.
 - Stripe Connect onboarding is consolidated on `payment_accounts` (fee config = `platform_fee_percent`/`collect_platform_fee`/`platform_fee_min_cents`). The legacy `merchant_payment_accounts` table + bps fee columns (`merchants.default_platform_fee_bps`, `sites.platform_fee_bps`) were retired in `supabase/migrations/20260701_retire_legacy_connect_bps.sql`. See [`docs/MONETIZATION.md`](docs/MONETIZATION.md).
 - Large artifacts (`quicksites-export.zip`, `get-pip.py`, `.tsbuildinfo`, lint reports) and dead dirs (`_pages-legacy/`, `_deprecated__domains/`, `_deprecating_sites/`) were removed from git in the cleanup milestone — the tree is clean of them today.
 - Two `admin/` locations: `app/admin/` (UI) and a top-level `admin/` (libs/tooling, incl. the master block schema). Don't confuse them.

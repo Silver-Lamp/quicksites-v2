@@ -4,7 +4,15 @@
 > land-grab (`geo_industry_campaigns`, e.g. `boston-towing.com`) becomes a revenue line.
 > Companion: [`MONETIZATION.md`](MONETIZATION.md) (take-rate), [`PRICING_REDESIGN.md`](PRICING_REDESIGN.md), [`RANKED_TARGETING_PLAN.md`](RANKED_TARGETING_PLAN.md) (GSC-rank-aware targeting + refine-before-postcard gate), and the *businesses-near-me* / *geo-domain land-grab* bullets in [`../CLAUDE.md`](../CLAUDE.md).
 
-Status: **built, flag-gated OFF pending a live smoke test.** Shipped: pricing fields +
+Status: **32 pitch sites LIVE as of 2026-08-19** (`scripts/publish-geo-campaigns.mjs`); the rental
+checkout is still **flag-gated OFF and has never taken a live payment.** So there is inventory to
+sell and no proven way to collect — closing a rental before the Stripe path is smoke-tested means a
+deal you cannot bill. ⚠️ Publishing required stripping **26 fabricated testimonial blocks** and
+rewording **70 promise strings** ("fully licensed and insured", "we respond within the hour") across
+17 of 29 templates first: these pages get rented to a real operator who inherits every claim on
+them. The scaffold ships an honest variant of each answer already — the fix was normalising to it,
+never writing new copy. Original status line, for reference: **built, flag-gated OFF pending a live
+smoke test.** Shipped: pricing fields +
 per-industry suggested plans (`lib/outreach/geoPricing.ts`), a Stripe **subscription
 rental checkout** (`/api/admin/prospects/geo-campaign/rent` + `/api/stripe/geo-webhook`),
 the **rank-sync cron** that reads GSC position and **auto-steps the price up on page 1**

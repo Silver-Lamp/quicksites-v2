@@ -1,5 +1,5 @@
-// app/for-shelley/page.tsx
-// Personal, UNLISTED orientation page for Shelley Pritchard — a cold-call salesperson evaluating
+// app/for-shelly/page.tsx
+// Personal, UNLISTED orientation page for Shelly Pritchard — a cold-call salesperson evaluating
 // commission work on QuickSites. Public URL, noindex, linked from nowhere. Follows the
 // /for-ryan · /for-daryle · /for-daniel pattern.
 //
@@ -21,7 +21,7 @@ import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 
 export const metadata: Metadata = {
-  title: 'QuickSites — for Shelley',
+  title: 'QuickSites — for Shelly',
   description: 'What you would be selling, what a call looks like, and what it pays.',
   robots: { index: false, follow: false }, // unlisted: public URL, invisible to search
 };
@@ -114,7 +114,7 @@ const SAMPLE_DOMAINS = [
   'seatac-towing.com',
 ];
 
-export default function ForShelleyPage() {
+export default function ForShellyPage() {
   return (
     <>
       <SiteHeader sticky />
@@ -131,9 +131,7 @@ export default function ForShelleyPage() {
               Draft — for Friday
             </span>
           </div>
-          <h1 className="mt-6 text-4xl font-extrabold tracking-tight md:text-5xl">
-            Hey Shelley 👋
-          </h1>
+          <h1 className="mt-6 text-4xl font-extrabold tracking-tight md:text-5xl">Hey Shelly 👋</h1>
           <p className="mt-4 text-lg leading-relaxed text-zinc-400">
             Here&apos;s the picture before we talk Friday, so you&apos;re not hearing it cold. Short
             version:{' '}
@@ -230,6 +228,17 @@ export default function ForShelleyPage() {
             <p className="mt-3">
               Click one. That&apos;s what the person on the phone will be looking at.
             </p>
+            <p className="mt-3">
+              And for the &ldquo;does this actually work&rdquo; question —{' '}
+              <Link
+                href="/proof/rankings"
+                className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300"
+              >
+                here&apos;s real Google data
+              </Link>{' '}
+              for the domains we&apos;ve had up longest. Honest version: several rank on page one,
+              and the traffic is small. Worth reading before you quote numbers to anyone.
+            </p>
           </Card>
         </section>
 
@@ -246,7 +255,7 @@ export default function ForShelleyPage() {
 
           <div className="mt-4 space-y-2">
             <Say who="you">
-              &ldquo;Hi — is this the owner? My name&apos;s Shelley, I&apos;m calling from
+              &ldquo;Hi — is this the owner? My name&apos;s Shelly, I&apos;m calling from
               QuickSites. This&apos;ll take a minute and it&apos;s not a website pitch. Do you have
               a browser in front of you?&rdquo;
             </Say>

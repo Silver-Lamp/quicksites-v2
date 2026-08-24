@@ -1,0 +1,808 @@
+{
+  "measuredAt": "2026-08-24",
+  "window": {
+    "start": "2026-07-24",
+    "end": "2026-08-21"
+  },
+  "sites": [
+    {
+      "host": "bonneylake-towing.com",
+      "clicks": 1,
+      "impressions": 619,
+      "position": 23.7,
+      "queries": [
+        {
+          "query": "24 hour towing bonney lake",
+          "clicks": 0,
+          "impressions": 60,
+          "position": 30.5,
+          "kind": "city_trade"
+        },
+        {
+          "query": "accident towing bonney lake",
+          "clicks": 0,
+          "impressions": 47,
+          "position": 35.3,
+          "kind": "city_trade"
+        },
+        {
+          "query": "b and l towing",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 7,
+          "kind": "other"
+        },
+        {
+          "query": "bonney lake towing",
+          "clicks": 0,
+          "impressions": 129,
+          "position": 19.1,
+          "kind": "city_trade"
+        },
+        {
+          "query": "car towing near me bonney lake",
+          "clicks": 0,
+          "impressions": 56,
+          "position": 24.9,
+          "kind": "generic"
+        },
+        {
+          "query": "cascade towing bonney lake",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 56,
+          "kind": "city_trade"
+        },
+        {
+          "query": "eastlake towing",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 42,
+          "kind": "other"
+        },
+        {
+          "query": "eastlake towing forney",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 37,
+          "kind": "other"
+        }
+      ]
+    },
+    {
+      "host": "southhilltowing.com",
+      "clicks": 3,
+      "impressions": 164,
+      "position": 16.4,
+      "queries": [
+        {
+          "query": "south hill towing",
+          "clicks": 1,
+          "impressions": 16,
+          "position": 4.6,
+          "kind": "city_trade"
+        },
+        {
+          "query": "auto towing puyallup",
+          "clicks": 0,
+          "impressions": 6,
+          "position": 25.7,
+          "kind": "other"
+        },
+        {
+          "query": "east hill towing",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 27,
+          "kind": "other"
+        },
+        {
+          "query": "hill towing ocean park washington",
+          "clicks": 0,
+          "impressions": 3,
+          "position": 20.3,
+          "kind": "other"
+        },
+        {
+          "query": "hillside towing",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 44,
+          "kind": "other"
+        },
+        {
+          "query": "south beach towing westport wa",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 38,
+          "kind": "other"
+        },
+        {
+          "query": "south sound towing",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 66,
+          "kind": "other"
+        },
+        {
+          "query": "towing 112th puyallup",
+          "clicks": 0,
+          "impressions": 3,
+          "position": 30.3,
+          "kind": "other"
+        }
+      ]
+    },
+    {
+      "host": "quicksites.ai",
+      "clicks": 11,
+      "impressions": 147,
+      "position": 12.7,
+      "queries": [
+        {
+          "query": "quicksites",
+          "clicks": 8,
+          "impressions": 55,
+          "position": 3.9,
+          "kind": "city_trade"
+        },
+        {
+          "query": "quick sites",
+          "clicks": 2,
+          "impressions": 28,
+          "position": 6.1,
+          "kind": "city_trade"
+        },
+        {
+          "query": "bindaas indian restaurant sports bar & dukaan renton menu",
+          "clicks": 0,
+          "impressions": 4,
+          "position": 63,
+          "kind": "other"
+        },
+        {
+          "query": "christy's bar and grill menu",
+          "clicks": 0,
+          "impressions": 3,
+          "position": 10.7,
+          "kind": "other"
+        },
+        {
+          "query": "quick site",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 32,
+          "kind": "other"
+        },
+        {
+          "query": "quicksite",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 58,
+          "kind": "other"
+        },
+        {
+          "query": "restaurant delivery renton wa",
+          "clicks": 0,
+          "impressions": 3,
+          "position": 27.3,
+          "kind": "other"
+        },
+        {
+          "query": "site quick",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 23,
+          "kind": "other"
+        }
+      ]
+    },
+    {
+      "host": "pnw-exteriorcleaning.com",
+      "clicks": 3,
+      "impressions": 140,
+      "position": 19.6,
+      "queries": [
+        {
+          "query": "exterior cleaning kent wa",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 30,
+          "kind": "other"
+        },
+        {
+          "query": "northwest exterior cleaning",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 12,
+          "kind": "other"
+        },
+        {
+          "query": "pacific northwest window cleaning",
+          "clicks": 0,
+          "impressions": 4,
+          "position": 64.5,
+          "kind": "other"
+        },
+        {
+          "query": "pnw exterior cleaning",
+          "clicks": 0,
+          "impressions": 29,
+          "position": 3.2,
+          "kind": "city_trade"
+        },
+        {
+          "query": "pnw pressure washing",
+          "clicks": 0,
+          "impressions": 6,
+          "position": 41,
+          "kind": "city_trade"
+        }
+      ]
+    },
+    {
+      "host": "graftontowing.com",
+      "clicks": 1,
+      "impressions": 88,
+      "position": 10.5,
+      "queries": [
+        {
+          "query": "grafton towing",
+          "clicks": 1,
+          "impressions": 6,
+          "position": 1.5,
+          "kind": "city_trade"
+        },
+        {
+          "query": "grafton towing service",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 1,
+          "kind": "city_trade"
+        },
+        {
+          "query": "roadside assistance burlington wi",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 59,
+          "kind": "other"
+        },
+        {
+          "query": "towing 53024",
+          "clicks": 0,
+          "impressions": 15,
+          "position": 9.7,
+          "kind": "other"
+        },
+        {
+          "query": "towing grafton",
+          "clicks": 0,
+          "impressions": 19,
+          "position": 11.5,
+          "kind": "city_trade"
+        }
+      ]
+    },
+    {
+      "host": "arab-towing.com",
+      "clicks": 1,
+      "impressions": 81,
+      "position": 6.7,
+      "queries": [
+        {
+          "query": "arab towing",
+          "clicks": 1,
+          "impressions": 62,
+          "position": 5,
+          "kind": "city_trade"
+        },
+        {
+          "query": "arab towing and muffler",
+          "clicks": 0,
+          "impressions": 3,
+          "position": 14,
+          "kind": "city_trade"
+        },
+        {
+          "query": "roadside assistance arab",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 41.5,
+          "kind": "city_trade"
+        },
+        {
+          "query": "towing around me",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 9,
+          "kind": "generic"
+        }
+      ]
+    },
+    {
+      "host": "richland-towing.com",
+      "clicks": 0,
+      "impressions": 80,
+      "position": 15.8,
+      "queries": [
+        {
+          "query": "emergency roadside assistance richland",
+          "clicks": 0,
+          "impressions": 6,
+          "position": 22.7,
+          "kind": "generic"
+        },
+        {
+          "query": "emergency tow",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 7,
+          "kind": "generic"
+        },
+        {
+          "query": "gruas near me",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 11,
+          "kind": "generic"
+        },
+        {
+          "query": "richland towing",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 2,
+          "kind": "city_trade"
+        },
+        {
+          "query": "richland towing inc",
+          "clicks": 0,
+          "impressions": 4,
+          "position": 6,
+          "kind": "city_trade"
+        },
+        {
+          "query": "richland wrecker service",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 17,
+          "kind": "city_trade"
+        },
+        {
+          "query": "roadside assistance parkland wa",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 50,
+          "kind": "other"
+        },
+        {
+          "query": "roadside assistance richland",
+          "clicks": 0,
+          "impressions": 9,
+          "position": 20.9,
+          "kind": "city_trade"
+        }
+      ]
+    },
+    {
+      "host": "maplevalley-towing.com",
+      "clicks": 0,
+      "impressions": 53,
+      "position": 25.6,
+      "queries": [
+        {
+          "query": "24 hour roadside assistance renton wa",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 79,
+          "kind": "other"
+        },
+        {
+          "query": "all valley towing llc",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 41,
+          "kind": "other"
+        },
+        {
+          "query": "diamond towing",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 11,
+          "kind": "other"
+        },
+        {
+          "query": "maple towing",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 46,
+          "kind": "other"
+        },
+        {
+          "query": "maple valley towing",
+          "clicks": 0,
+          "impressions": 16,
+          "position": 12.6,
+          "kind": "city_trade"
+        },
+        {
+          "query": "motorcycle towing near me",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 7,
+          "kind": "generic"
+        },
+        {
+          "query": "roadside assist wa",
+          "clicks": 0,
+          "impressions": 3,
+          "position": 23,
+          "kind": "other"
+        },
+        {
+          "query": "roadside assistance north bend wa",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 40.5,
+          "kind": "other"
+        }
+      ]
+    },
+    {
+      "host": "florencetow.com",
+      "clicks": 0,
+      "impressions": 42,
+      "position": 19.6,
+      "queries": [
+        {
+          "query": "florence towing",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 17,
+          "kind": "city_trade"
+        },
+        {
+          "query": "roadside assistance florence",
+          "clicks": 0,
+          "impressions": 11,
+          "position": 21.5,
+          "kind": "city_trade"
+        },
+        {
+          "query": "roadside assistance north florence",
+          "clicks": 0,
+          "impressions": 8,
+          "position": 29.8,
+          "kind": "city_trade"
+        },
+        {
+          "query": "roadside assistance st. florian",
+          "clicks": 0,
+          "impressions": 16,
+          "position": 11.4,
+          "kind": "other"
+        }
+      ]
+    },
+    {
+      "host": "millcreektowing.com",
+      "clicks": 0,
+      "impressions": 27,
+      "position": 56.4,
+      "queries": [
+        {
+          "query": "towing company near me coalinga",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 89,
+          "kind": "generic"
+        },
+        {
+          "query": "towing company near me el dorado",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 98,
+          "kind": "generic"
+        },
+        {
+          "query": "towing company near me elk creek",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 97,
+          "kind": "generic"
+        },
+        {
+          "query": "towing company near me eureka",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 83,
+          "kind": "generic"
+        },
+        {
+          "query": "towing company near me walnut creek",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 74,
+          "kind": "generic"
+        },
+        {
+          "query": "towing company near me willows",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 85.5,
+          "kind": "generic"
+        },
+        {
+          "query": "towing near me redondo beach",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 76.5,
+          "kind": "generic"
+        },
+        {
+          "query": "towing near me walnut creek",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 65,
+          "kind": "generic"
+        }
+      ]
+    },
+    {
+      "host": "covingtontow.com",
+      "clicks": 0,
+      "impressions": 24,
+      "position": 41.1,
+      "queries": [
+        {
+          "query": "covington auto repair wa",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 57,
+          "kind": "city_trade"
+        },
+        {
+          "query": "covington towing",
+          "clicks": 0,
+          "impressions": 7,
+          "position": 15.1,
+          "kind": "city_trade"
+        },
+        {
+          "query": "irvington towing",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 87.5,
+          "kind": "other"
+        },
+        {
+          "query": "towing",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 17.5,
+          "kind": "other"
+        }
+      ]
+    },
+    {
+      "host": "auburnroofcleaning.com",
+      "clicks": 0,
+      "impressions": 24,
+      "position": 67.5,
+      "queries": [
+        {
+          "query": "auburn roof cleaning near me",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 85,
+          "kind": "generic"
+        },
+        {
+          "query": "auburn roof maintenance",
+          "clicks": 0,
+          "impressions": 6,
+          "position": 41.7,
+          "kind": "city_trade"
+        },
+        {
+          "query": "auburn roof repair",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 31,
+          "kind": "city_trade"
+        },
+        {
+          "query": "roof cleaners castle hayne",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 86,
+          "kind": "other"
+        },
+        {
+          "query": "roof cleaners topsail beach",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 82,
+          "kind": "other"
+        },
+        {
+          "query": "roof cleaning auburn",
+          "clicks": 0,
+          "impressions": 8,
+          "position": 79.3,
+          "kind": "city_trade"
+        },
+        {
+          "query": "roof cleaning companies auburn wa",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 79,
+          "kind": "city_trade"
+        },
+        {
+          "query": "roof washing auburn",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 95,
+          "kind": "city_trade"
+        }
+      ]
+    },
+    {
+      "host": "spanawaytowing.com",
+      "clicks": 0,
+      "impressions": 12,
+      "position": 32.9,
+      "queries": []
+    },
+    {
+      "host": "electinfo.org",
+      "clicks": 0,
+      "impressions": 11,
+      "position": 32.5,
+      "queries": [
+        {
+          "query": "elect for",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 60,
+          "kind": "other"
+        },
+        {
+          "query": "elect printing",
+          "clicks": 0,
+          "impressions": 2,
+          "position": 80.5,
+          "kind": "other"
+        }
+      ]
+    },
+    {
+      "host": "bremerton-towing.com",
+      "clicks": 0,
+      "impressions": 8,
+      "position": 61.5,
+      "queries": [
+        {
+          "query": "flatbed towing near me",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 6,
+          "kind": "generic"
+        },
+        {
+          "query": "towing company near me amador city",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 64,
+          "kind": "generic"
+        },
+        {
+          "query": "towing company near me auberry",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 87,
+          "kind": "generic"
+        },
+        {
+          "query": "towing company near me clayton",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 86,
+          "kind": "generic"
+        },
+        {
+          "query": "towing company near me whitethorn",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 97,
+          "kind": "generic"
+        },
+        {
+          "query": "towing near me amador city",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 98,
+          "kind": "generic"
+        }
+      ]
+    },
+    {
+      "host": "cullmantow.com",
+      "clicks": 0,
+      "impressions": 8,
+      "position": 50.5,
+      "queries": [
+        {
+          "query": "lucky 13 towing cullman, al",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 55,
+          "kind": "city_trade"
+        },
+        {
+          "query": "perfect choice towing cullman al",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 50,
+          "kind": "city_trade"
+        },
+        {
+          "query": "roadside assistance cullman",
+          "clicks": 0,
+          "impressions": 4,
+          "position": 52.5,
+          "kind": "city_trade"
+        }
+      ]
+    },
+    {
+      "host": "elmgrovetowing.com",
+      "clicks": 0,
+      "impressions": 4,
+      "position": 16.3,
+      "queries": [
+        {
+          "query": "elmers towing",
+          "clicks": 0,
+          "impressions": 1,
+          "position": 46,
+          "kind": "other"
+        }
+      ]
+    },
+    {
+      "host": "desmoines-towing.com",
+      "clicks": 0,
+      "impressions": 2,
+      "position": 2,
+      "queries": []
+    },
+    {
+      "host": "gallatin-towing.com",
+      "clicks": 0,
+      "impressions": 2,
+      "position": 20.5,
+      "queries": []
+    },
+    {
+      "host": "auburndrivewayrepair.com",
+      "clicks": 0,
+      "impressions": 0,
+      "position": null,
+      "queries": []
+    },
+    {
+      "host": "auburnwindowclean.com",
+      "clicks": 0,
+      "impressions": 0,
+      "position": null,
+      "queries": []
+    }
+  ],
+  "unreadable": [
+    {
+      "host": "delivered.menu",
+      "error": "no access to property"
+    }
+  ]
+}

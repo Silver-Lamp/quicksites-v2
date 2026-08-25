@@ -24,6 +24,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
+import RankDotPlot from '@/components/charts/rank-dot-plot';
 import snapshot from '@/lib/proof/rankingSnapshot.json';
 
 export const metadata: Metadata = {
@@ -67,21 +68,6 @@ function Stat({ n, label, sub }: { n: string; label: string; sub?: string }) {
   );
 }
 
-function QueryRow({ q, host }: { q: Q; host: string }) {
-  return (
-    <div className="flex items-baseline gap-3 border-b border-zinc-800/70 py-2 last:border-0">
-      <span className="w-12 shrink-0 font-mono text-sm font-semibold text-emerald-400">
-        #{q.position}
-      </span>
-      <span className="min-w-0 flex-1 truncate text-sm text-zinc-200">{q.query}</span>
-      <span className="hidden shrink-0 font-mono text-xs text-zinc-500 sm:block">{host}</span>
-      <span className="w-16 shrink-0 text-right font-mono text-xs text-zinc-600">
-        {q.impressions} impr
-      </span>
-    </div>
-  );
-}
-
 export default function RankingsProofPage() {
   return (
     <>
@@ -114,34 +100,24 @@ export default function RankingsProofPage() {
 
         <section className="mx-auto max-w-3xl px-6 pb-6">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
-            Page one for &ldquo;city + trade&rdquo;
+            The {pageOne.length} queries on page one
           </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            The exact search someone types when they need this service in this town. This is the
-            whole thesis of an exact-match domain, and it is the easiest kind for one to win.
-          </p>
-          <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.04] px-4 py-1">
-            {cityTrade.map((q) => (
-              <QueryRow key={`${q.host}-${q.query}`} q={q} host={q.host} />
-            ))}
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-3xl px-6 pb-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
-            Page one for generic &ldquo;near me&rdquo; searches
-          </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Harder — no city or trade token for Google to match on. ⚠️ Read these with suspicion:
-            every one of them was seen{' '}
-            <strong className="text-zinc-300">once or twice in 28 days</strong> and produced{' '}
-            <strong className="text-zinc-300">zero clicks</strong>. A #6 position on a query that
-            surfaced once is close to noise, and it is not evidence of anything yet.
-          </p>
-          <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-900/30 px-4 py-1">
-            {generic.map((q) => (
-              <QueryRow key={`${q.host}-${q.query}`} q={q} host={q.host} />
-            ))}
+          {/* ⚠️ One chart instead of the two lists this replaced. The lists said the same thing
+              twice and separated the flattering half from the sobering one; here position and
+              volume sit on the same row, so a reader cannot take one without the other. */}
+          <RankDotPlot queries={pageOne} />
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <p className="text-xs leading-relaxed text-zinc-500">
+              <span className="font-semibold text-zinc-300">City + trade</span> is the exact search
+              someone types when they need this service in this town — the whole thesis of an
+              exact-match domain, and the easiest kind for one to win.
+            </p>
+            <p className="text-xs leading-relaxed text-zinc-500">
+              <span className="font-semibold text-zinc-300">Generic &ldquo;near me&rdquo;</span> is
+              harder — no city or trade token to match on. ⚠️ Read those with suspicion: each was
+              seen once or twice in 28 days and produced zero clicks. A #6 on a query that surfaced
+              once is close to noise.
+            </p>
           </div>
         </section>
 

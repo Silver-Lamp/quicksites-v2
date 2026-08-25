@@ -233,12 +233,18 @@ export default function ForShellyPage() {
             </p>
             <p className="mt-3">
               And for the &ldquo;does this actually work&rdquo; question —{' '}
-              <Link
+              {/* ⚠️ New tab on purpose: this brief is what she works from on a call, and the
+                  rankings page is a reference she checks mid-read. Navigating away loses her place
+                  in the script and the objection cards. Every other outbound link here already
+                  opens in a new tab; this one was the exception. */}
+              <a
                 href="/proof/rankings"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300"
               >
-                here&apos;s real Google data
-              </Link>{' '}
+                here&apos;s real Google data ↗
+              </a>{' '}
               for the domains we&apos;ve had up longest. Honest version: several rank on page one,
               and the traffic is small. Worth reading before you quote numbers to anyone.
             </p>

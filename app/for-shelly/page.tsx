@@ -11,7 +11,10 @@
 //   • 0 rented, checkout never run live — stated plainly in "Straight talk", not buried.
 //   • 0 replies of 19 on SMS — stated, because she will find out on call ~40 anyway and it is
 //     better she hears it from us first.
-// Commission numbers are PROPOSED (Friday is the negotiation), and labelled as such.
+// The split is 50/50 on anything she brings on, for the life of the account — Sandon's call,
+// 2026-08-24, replacing an earlier "first month 100% + 15%" proposal of mine. Two consequences are
+// spelled out on the page rather than left to be discovered: her half follows the $99 → $399
+// step-up (so $199.50/mo on a ranked domain), and it survives her stopping work.
 //
 // ⚠️ The "what not to say" card is load-bearing, not filler. We spent 2026-08-19 stripping
 // invented promises off these exact sites ("fully licensed and insured", "we respond within the
@@ -339,31 +342,84 @@ export default function ForShellyPage() {
         {/* Money */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
-            What it pays — my proposal, not a final offer
+            What it pays
           </h2>
-          <div className="mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-6">
+          <div className="mt-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6">
             <p className="text-lg font-semibold text-white">
-              Your first month, 100%. Then 15% for the life of the account.
+              Straight 50/50 on anything you bring on — for as long as it stays.
             </p>
             <p className="mt-2 text-sm leading-relaxed text-zinc-300">
-              A close pays you <span className="font-semibold text-amber-200">$99 that week</span>,
-              then $14.85 every month it stays. Three a week is about{' '}
-              <span className="font-semibold text-amber-200">$300/week</span> up front with a tail
-              that keeps building. If a domain reaches page one, your monthly share on it goes to
-              $59.85 — four times more, for no extra work.
+              Every account rents at{' '}
+              <span className="font-semibold text-emerald-200">$99/month</span> and{' '}
+              <span className="font-semibold text-emerald-200">$49.50 of it is yours</span>, every
+              month, for the life of the account. Not a first-month bonus, not a shrinking trail —
+              half, ongoing.
             </p>
-            <More label="Why I'm structuring it this way rather than pure commission">
+
+            <div className="mt-4 overflow-x-auto rounded-lg border border-zinc-800">
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">If you close&hellip;</th>
+                    <th className="px-4 py-2 text-right font-medium">Your monthly, a year in</th>
+                  </tr>
+                </thead>
+                <tbody className="text-zinc-300">
+                  <tr className="border-t border-zinc-800/70">
+                    <td className="px-4 py-2">1 a week</td>
+                    <td className="px-4 py-2 text-right font-mono">$2,574/mo</td>
+                  </tr>
+                  <tr className="border-t border-zinc-800/70">
+                    <td className="px-4 py-2">2 a week</td>
+                    <td className="px-4 py-2 text-right font-mono">$5,148/mo</td>
+                  </tr>
+                  <tr className="border-t border-zinc-800/70">
+                    <td className="px-4 py-2">3 a week</td>
+                    <td className="px-4 py-2 text-right font-mono">$7,722/mo</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+              &#9888;&#65039; That assumes every account stays the full year. Some won&apos;t — it
+              is month-to-month with no contract, which is also what makes it easy to sell. Read it
+              as the shape, not a forecast.
+            </p>
+
+            <p className="mt-4 text-sm leading-relaxed text-zinc-300">
+              And if one of your domains reaches page one, the rent steps to $399 —{' '}
+              <span className="font-semibold text-emerald-200">$199.50/month to you</span>, on an
+              account you already closed, for no extra work.
+            </p>
+
+            <More label="Why half, rather than a smaller trail">
               <p>
-                Straight commission on an unproven product means you fund my experiment with your
-                time. Front-loading it means you get paid on the close, not on whether my business
-                eventually works.
+                Because I&apos;d rather you owned the accounts than rented them from me. A small
+                percentage makes this a side gig you drop the moment something better turns up; half
+                makes it worth building. The inventory is sitting at zero occupancy — half of
+                something beats all of nothing.
               </p>
               <p>
-                Separately, I&apos;d like to pay a flat few hundred for a call log on the first ~50
-                dials — outcome and the actual objection, in their words. Commission pays nothing
-                for a well-documented no, and right now a good no is worth more to me than a sale.
+                My side still works: roughly $48.50/month per account after the domain cost, on
+                domains I already own and pages already built.
               </p>
             </More>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+            <h3 className="text-base font-semibold text-white">Two things to nail down Friday</h3>
+            <ul className="mt-2 space-y-2 text-sm leading-relaxed text-zinc-400">
+              <li>
+                <span className="text-zinc-200">Does your half follow the step-up?</span> Written
+                above as yes — you closed the account, and the price rising isn&apos;t your doing.
+                Worth us both saying it out loud rather than discovering it later.
+              </li>
+              <li>
+                <span className="text-zinc-200">What if you stop calling?</span> My answer is the
+                accounts you closed keep paying you — that is what &ldquo;life of the account&rdquo;
+                means. Better said now than wondered about in six months.
+              </li>
+            </ul>
           </div>
         </section>
 
@@ -406,10 +462,10 @@ export default function ForShellyPage() {
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-6 text-center">
             <p className="text-lg font-semibold text-white">Friday</p>
             <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-              What I&apos;d like to agree: which cities and trades you start with, the number on the
-              call log, and whether the structure above works for you. Bring pushback on the
-              commission split — I&apos;d rather hear it now than have you find out in week three
-              that it doesn&apos;t pay.
+              What I&apos;d like to agree: which cities and trades you start with, and the two open
+              questions above. The split isn&apos;t one of them — 50/50 is the offer, and I&apos;d
+              rather start there than negotiate you down to something that stops being worth your
+              time in week three.
             </p>
             <p className="mt-3 text-sm font-medium text-amber-300">— Sandon</p>
           </div>

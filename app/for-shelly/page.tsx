@@ -22,6 +22,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
+import EarningsLines from '@/components/charts/earnings-lines';
 
 export const metadata: Metadata = {
   title: 'QuickSites — for Shelly',
@@ -361,6 +362,12 @@ export default function ForShellyPage() {
               month, for the life of the account. Not a first-month bonus, not a shrinking trail —
               half, ongoing.
             </p>
+
+            {/* ⚠️ Chart AND table, not chart instead of table. The chart makes the compounding
+                legible — which is the actual question she is asking — and the table keeps the
+                exact figures checkable. A projection drawn as a line looks like history, so the
+                caption says what it is on the chart itself, not in a footnote. */}
+            <EarningsLines />
 
             <div className="mt-4 overflow-x-auto rounded-lg border border-zinc-800">
               <table className="w-full text-sm">

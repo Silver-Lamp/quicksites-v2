@@ -7,11 +7,14 @@ import Link from 'next/link';
 import { MapPin } from 'lucide-react';
 import type { GeoCampaignSummary } from '@/lib/outreach/geoCampaigns';
 import { rankLabel, dollars, nextActionLabel } from '@/components/admin/templates/campaign-badge';
+import { intervalSuffix } from '@/lib/outreach/geoPricing';
 
 export default function GeoCampaignBanner({ c }: { c: GeoCampaignSummary }) {
   const rank = rankLabel(c.rank_status);
   const price =
-    c.pricing_model === 'flat' ? `${dollars(c.locked_rate_cents) ?? '—'} → ${dollars(c.price_cents) ?? '—'}/mo` : null;
+    c.pricing_model === 'flat'
+      ? `${dollars(c.locked_rate_cents) ?? '—'} → ${dollars(c.price_cents) ?? '—'}${intervalSuffix(c.billing_interval)}`
+      : null;
   const nextAction = c.recommendations?.nextAction ?? null;
   const plan = c.recommendations?.summary?.steps?.[0] ?? null;
   const topRec = plan

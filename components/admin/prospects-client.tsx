@@ -12,7 +12,7 @@ import dynamic from 'next/dynamic';
 import type { Prospect } from '@/lib/outreach/prospects';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
-import { effectivePriceCents, formatCents } from '@/lib/outreach/geoPricing';
+import { effectivePriceCents, formatCents, intervalSuffix } from '@/lib/outreach/geoPricing';
 import { nextActionLabel } from '@/components/admin/templates/campaign-badge';
 import { scoreTerritories } from '@/lib/prospects/territoryScore';
 import { buildRankedOpportunities } from '@/lib/prospects/rankedOpportunities';
@@ -641,7 +641,7 @@ export default function ProspectsClient({
     setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
     try {
       const r = await post('/api/admin/prospects/geo-campaign/set-pricing', { campaignId: c.id });
-      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: `Plan set: ${formatCents(r.pricing.locked_rate_cents)} → ${formatCents(r.pricing.price_cents)}/mo` } }));
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: `Plan set: ${formatCents(r.pricing.locked_rate_cents)} → ${formatCents(r.pricing.price_cents)}${intervalSuffix(r.pricing.billing_interval)}` } }));
       router.refresh();
     } catch (e: any) {
       setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
@@ -1711,7 +1711,7 @@ export default function ProspectsClient({
                     <td className="text-xs">
                       {c.pricing_model === 'flat' ? (
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-neutral-200">{formatCents(effectivePriceCents(c))}/mo</span>
+                          <span className="text-neutral-200">{formatCents(effectivePriceCents(c))}{intervalSuffix(c.billing_interval)}</span>
                           {c.rank_status !== 'page1' && c.price_cents && c.locked_rate_cents && c.price_cents !== c.locked_rate_cents ? (
                             <span className="text-amber-400/80">founder → {formatCents(c.price_cents)} on page 1</span>
                           ) : null}

@@ -72,6 +72,28 @@ export function effectivePriceCents(c: {
   return c.locked_rate_cents ?? c.price_cents ?? null;
 }
 
+/**
+ * Suffix for a rental price label, derived from the plan's billing_interval.
+ *
+ * Every price label in the admin UI hardcoded '/mo' back when the checkout also hardcoded
+ * a monthly interval — so the label happened to be true rather than being *made* true. Once
+ * billing_interval became load-bearing, those labels started asserting an interval the plan
+ * does not bill on: a $1/day campaign rendered as "$1/mo" in the editor banner. Read the
+ * field, never assume the unit.
+ */
+export function intervalSuffix(interval?: string | null): string {
+  switch (interval) {
+    case 'day':
+      return '/day';
+    case 'week':
+      return '/wk';
+    case 'year':
+      return '/yr';
+    default:
+      return '/mo';
+  }
+}
+
 export function formatCents(cents?: number | null): string {
   if (cents == null) return '—';
   return `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;

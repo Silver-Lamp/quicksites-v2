@@ -160,6 +160,9 @@ export type GeoCampaignSummary = {
   pricing_model: string | null;
   price_cents: number | null;
   locked_rate_cents: number | null;
+  /** Needed by every price LABEL — without it a caller can only guess the unit, and the
+   *  editor banner guessed '/mo' for a plan billing daily. */
+  billing_interval: string | null;
   subscription_status: string | null;
   tracking_number: string | null;
   recommendations: any;
@@ -169,7 +172,7 @@ export type GeoCampaignSummary = {
 };
 
 const GEO_SUMMARY_COLS =
-  'id, template_id, domain, city, industry_key, status, domain_status, rank_status, pricing_model, price_cents, locked_rate_cents, subscription_status, tracking_number, recommendations, org_id, outreach_ready_at';
+  'id, template_id, domain, city, industry_key, status, domain_status, rank_status, pricing_model, price_cents, locked_rate_cents, billing_interval, subscription_status, tracking_number, recommendations, org_id, outreach_ready_at';
 
 /** Campaign linked to one template (null if the template isn't a geo pitch site). */
 export async function getGeoCampaignByTemplateId(templateId: string): Promise<GeoCampaignSummary | null> {

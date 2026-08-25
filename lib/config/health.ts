@@ -90,6 +90,13 @@ export const CONFIG_GATES: ConfigGate[] = [
       'Checkout cannot create a Stripe session, and without the webhook secret paid orders are never marked paid — money is taken and the order sits unfulfilled.',
   },
   {
+    key: 'geo_rentals',
+    label: 'Geo-domain rental subscriptions (recurring revenue)',
+    requires: ['STRIPE_SECRET_KEY', 'STRIPE_GEO_WEBHOOK_SECRET'],
+    breaks:
+      'A renter completes Stripe checkout and is charged every month, but nothing is written back: the campaign still reads unrented, no subscription id is stored, and renewals and failed payments are invisible. The money moves and our records do not. This gate exists because that was the live state — commerce showed "ready" while the rental webhook answered "not configured", and the one money path that had never taken a payment was the one path no gate watched.',
+  },
+  {
     key: 'ai',
     label: 'AI (copy, hero images, backdrops)',
     requires: ['OPENAI_API_KEY'],

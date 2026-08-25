@@ -49,6 +49,11 @@ export type GeoCampaign = {
   stripe_subscription_id: string | null;
   subscription_status: string | null;
   renter_email: string | null;
+  /** Successful rental invoices recorded. 0 with an 'active' status = billed never, NOT unrented. */
+  payment_count: number | null;
+  last_payment_at: string | null;
+  last_payment_cents: number | null;
+  last_invoice_id: string | null;
   claim_link_visits: number | null;
   recommendations: any;
   rank_trend: any;
@@ -59,7 +64,7 @@ export type GeoCampaign = {
 };
 
 const GEO_COLS =
-  'id, kind, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, claim_link_visits, recommendations, rank_trend, org_id, outreach_ready_at, outreach_reviewed_by, outreach_blockers';
+  'id, kind, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, payment_count, last_payment_at, last_payment_cents, last_invoice_id, claim_link_visits, recommendations, rank_trend, org_id, outreach_ready_at, outreach_reviewed_by, outreach_blockers';
 
 export async function setCampaignPricing(
   id: string,
@@ -92,6 +97,55 @@ export async function setCampaignSubscription(
     .update({ ...s, updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw new Error(`setCampaignSubscription failed: ${error.message}`);
+}
+
+/** Find the campaign a Stripe subscription belongs to. Invoice events don't carry the
+ *  subscription's metadata, so the stored id is the only link back. */
+export async function getGeoCampaignBySubscriptionId(subscriptionId: string): Promise<{ id: string } | null> {
+  const { data, error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('id')
+    .eq('stripe_subscription_id', subscriptionId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as { id: string };
+}
+
+/**
+ * Record one successful rental invoice. Idempotent on the Stripe invoice id, because
+ * Stripe retries webhook deliveries and a bare counter would bill-count a redelivery —
+ * reporting revenue that never landed. Returns whether this call actually counted.
+ */
+export async function recordCampaignPayment(
+  id: string,
+  p: { invoiceId: string; amountCents: number | null; paidAt: string },
+): Promise<{ counted: boolean; payment_count: number }> {
+  const { data: current, error: readErr } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('payment_count, last_invoice_id')
+    .eq('id', id)
+    .maybeSingle();
+  if (readErr || !current) throw new Error(`recordCampaignPayment: campaign ${id} not found`);
+
+  const count = (current as any).payment_count ?? 0;
+  if ((current as any).last_invoice_id && (current as any).last_invoice_id === p.invoiceId) {
+    return { counted: false, payment_count: count };
+  }
+
+  const next = count + 1;
+  const { error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .update({
+      payment_count: next,
+      last_invoice_id: p.invoiceId,
+      last_payment_at: p.paidAt,
+      last_payment_cents: p.amountCents,
+      subscription_status: 'active',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+  if (error) throw new Error(`recordCampaignPayment failed: ${error.message}`);
+  return { counted: true, payment_count: next };
 }
 
 // Compact campaign info to surface on a template (list cards/table + editor banner).

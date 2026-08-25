@@ -32,12 +32,20 @@ export async function POST(req: Request) {
   const priceCents = Number.isFinite(body.priceCents) ? Math.round(Number(body.priceCents)) : suggested.price_cents;
   const lockedCents = Number.isFinite(body.lockedCents) ? Math.round(Number(body.lockedCents)) : suggested.locked_rate_cents;
 
+  // Monthly is the product. 'day'/'week' exist so the rental rail can be PROVEN end-to-end
+  // (a renewal in 24h rather than 30 days) without waiting a billing month to find out that
+  // recurring charges were broken all along.
+  const interval = ['day', 'week', 'month', 'year'].includes(body.interval) ? String(body.interval) : 'month';
+
   await setCampaignPricing(campaignId, {
     pricing_model: 'flat',
     price_cents: priceCents,
     locked_rate_cents: lockedCents,
-    billing_interval: 'month',
+    billing_interval: interval,
   });
 
-  return NextResponse.json({ ok: true, pricing: { price_cents: priceCents, locked_rate_cents: lockedCents } });
+  return NextResponse.json({
+    ok: true,
+    pricing: { price_cents: priceCents, locked_rate_cents: lockedCents, billing_interval: interval },
+  });
 }

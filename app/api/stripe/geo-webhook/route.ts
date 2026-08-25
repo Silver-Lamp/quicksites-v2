@@ -3,12 +3,17 @@
 // Stripe webhook for geo-domain RENTAL subscriptions (separate from the commerce
 // webhook so the money path is untouched). Records the subscription on checkout
 // completion and tracks status changes. Configure a Stripe endpoint → this URL with
-// events checkout.session.completed + customer.subscription.updated/deleted, and set
+// events checkout.session.completed + customer.subscription.updated/deleted +
+// invoice.paid/invoice.payment_failed, and set
 // STRIPE_GEO_WEBHOOK_SECRET. Fails closed in prod when the secret is unset.
 
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/server';
-import { setCampaignSubscription } from '@/lib/outreach/geoCampaigns';
+import {
+  setCampaignSubscription,
+  getGeoCampaignBySubscriptionId,
+  recordCampaignPayment,
+} from '@/lib/outreach/geoCampaigns';
 import type Stripe from 'stripe';
 
 export const runtime = 'nodejs';
@@ -50,10 +55,47 @@ export async function POST(req: Request) {
           subscription_status: event.type === 'customer.subscription.deleted' ? 'canceled' : sub.status,
         });
       }
+    } else if (event.type === 'invoice.paid') {
+      // The ONLY event that distinguishes "still paying" from "paid once, months ago".
+      // subscription.updated fires on renewal too, but it writes status='active' — the value
+      // the row already held — so cycle 2 was indistinguishable from no cycle at all.
+      const inv = event.data.object as Stripe.Invoice;
+      const subId = subscriptionIdOf(inv);
+      const campaign = subId ? await getGeoCampaignBySubscriptionId(subId) : null;
+      if (campaign) {
+        await recordCampaignPayment(campaign.id, {
+          invoiceId: inv.id!,
+          amountCents: inv.amount_paid ?? null,
+          paidAt: new Date((inv.status_transitions?.paid_at ?? event.created) * 1000).toISOString(),
+        });
+      }
+    } else if (event.type === 'invoice.payment_failed') {
+      const inv = event.data.object as Stripe.Invoice;
+      const subId = subscriptionIdOf(inv);
+      const campaign = subId ? await getGeoCampaignBySubscriptionId(subId) : null;
+      if (campaign) {
+        await setCampaignSubscription(campaign.id, { subscription_status: 'past_due' });
+      }
     }
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'handler failed' }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });
+}
+
+/**
+ * The subscription an invoice belongs to. Stripe moved this from `invoice.subscription` to
+ * `invoice.parent.subscription_details.subscription` in the 2025-08 API version; read both so
+ * the handler survives an account-level API-version bump rather than silently matching nothing.
+ */
+function subscriptionIdOf(inv: Stripe.Invoice): string | null {
+  const anyInv = inv as any;
+  const direct = anyInv.subscription;
+  if (typeof direct === 'string') return direct;
+  if (direct?.id) return direct.id;
+  const nested = anyInv.parent?.subscription_details?.subscription;
+  if (typeof nested === 'string') return nested;
+  if (nested?.id) return nested.id;
+  return null;
 }

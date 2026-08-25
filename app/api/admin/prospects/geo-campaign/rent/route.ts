@@ -40,6 +40,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Set a flat plan + price on this campaign first.' }, { status: 400 });
   }
 
+  // billing_interval was stored, selected and typed but read by NOBODY — the checkout
+  // hardcoded 'month', so the column silently described a plan Stripe never billed.
+  // Honouring it also makes the rail provable: a 'day' plan renews in 24h instead of 30.
+  const interval = normalizeInterval(campaign.billing_interval);
+
   const origin = publicBaseUrl();
   try {
     const session = await stripe.checkout.sessions.create({
@@ -52,7 +57,7 @@ export async function POST(req: Request) {
           price_data: {
             currency: 'usd',
             unit_amount: amount,
-            recurring: { interval: 'month' },
+            recurring: { interval },
             product_data: { name: `${campaign.domain} — local lead site` },
           },
         },
@@ -72,4 +77,10 @@ export async function POST(req: Request) {
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Could not create the checkout session.' }, { status: 502 });
   }
+}
+
+/** Stripe's recurring intervals. Anything unrecognised (or unset) falls back to monthly —
+ *  a bad value must not silently become a daily charge. */
+function normalizeInterval(v: string | null | undefined): 'day' | 'week' | 'month' | 'year' {
+  return v === 'day' || v === 'week' || v === 'year' ? v : 'month';
 }

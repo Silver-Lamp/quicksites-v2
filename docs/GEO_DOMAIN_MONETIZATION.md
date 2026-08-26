@@ -5,9 +5,18 @@
 > Companion: [`MONETIZATION.md`](MONETIZATION.md) (take-rate), [`PRICING_REDESIGN.md`](PRICING_REDESIGN.md), [`RANKED_TARGETING_PLAN.md`](RANKED_TARGETING_PLAN.md) (GSC-rank-aware targeting + refine-before-postcard gate), and the *businesses-near-me* / *geo-domain land-grab* bullets in [`../CLAUDE.md`](../CLAUDE.md).
 
 Status: **32 pitch sites LIVE as of 2026-08-19** (`scripts/publish-geo-campaigns.mjs`); the rental
-checkout is still **flag-gated OFF and has never taken a live payment.** So there is inventory to
-sell and no proven way to collect — closing a rental before the Stripe path is smoke-tested means a
-deal you cannot bill. ⚠️ Publishing required stripping **26 fabricated testimonial blocks** and
+checkout **took its first live payment on 2026-08-25** — `boston-plumbing.com`, a real card, with the
+subscription id / amount / invoice id written back to `geo_industry_campaigns` and matching Stripe
+field for field. ⏳ **The renewal is the claim that still isn't proven** — one charge is not a
+recurring charge; the test plan bills *daily* so cycle 2 lands in 24h rather than 30 days.
+
+⚠️ **Two claims that stood here and were both false** — worth keeping as the example. (1) *"has never
+taken a live payment"* was true when written and nothing re-checked it. (2) *"flag-gated OFF"* was
+**never true**: `…/geo-campaign/rent` contains no flag check of any kind (grep it) and is gated only
+by `getAdminUser()`. Believing it was off is what let it sit unexercised — the safest-sounding half
+of a status line is the half nobody verifies. Before this could bill at all, three silent failures
+had to go (PR #861): `STRIPE_GEO_WEBHOOK_SECRET` was set in **no** Vercel environment, a renewal was
+indistinguishable from no renewal, and `billing_interval` was a dead column the checkout ignored. ⚠️ Publishing required stripping **26 fabricated testimonial blocks** and
 rewording **70 promise strings** ("fully licensed and insured", "we respond within the hour") across
 17 of 29 templates first: these pages get rented to a real operator who inherits every claim on
 them. The scaffold ships an honest variant of each answer already — the fix was normalising to it,

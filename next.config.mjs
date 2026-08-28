@@ -13,6 +13,20 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   assetPrefix: '/',
   experimental: {
+    // Next 15 spawns a FIXED 4 static-generation workers by default, regardless of core
+    // count (see getNumberOfWorkers in next/dist/build/index.js — it falls back to 4). On
+    // Vercel's Standard build machine that is 4 workers sharing 8 GB, roughly 2 GB each
+    // once webpack and the main process have taken their share, and twice in ten builds it
+    // was not enough: `npm run build exited with SIGKILL`, the container out of memory.
+    //
+    // Halving the workers doubles what each one gets on the same machine. It costs build
+    // time on the static-generation phase (180 pages across 2 workers instead of 4) and
+    // nothing else. The alternative was paying for the Enhanced machine, which buys the
+    // same ~4 GB per worker by doubling the RAM instead of halving the demand.
+    //
+    // If builds get slow enough to hurt, raise this to 3 or buy the bigger machine — but
+    // measure before assuming 4 is safe again.
+    cpus: 2,
     serverActions: {
       bodySizeLimit: '8mb',
     },

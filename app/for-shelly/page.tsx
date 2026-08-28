@@ -437,6 +437,22 @@ export default function ForShellyPage() {
         </section>
 
         {/* Straight talk */}
+        <section className="mx-auto max-w-3xl px-6 pb-2 pt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
+            Settled since we last spoke
+          </h2>
+          <div className="mt-3">
+            <Card title="The checkout bills, and keeps billing" tag="3 cycles" tone="emerald">
+              When I sent you the brief this had never taken a live payment, which I should not have
+              let stand next to a page telling you it worked. It has now: a real card, a real
+              charge, and three consecutive automatic renewals — on a plan billing daily rather than
+              monthly so the second cycle arrived in a day instead of a month. Every one was written
+              back to our own records, not just Stripe&apos;s. If someone says yes on Friday, you
+              can take their money and it will keep arriving.
+            </Card>
+          </div>
+        </section>
+
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
             Straight talk — what isn&apos;t proven
@@ -461,40 +477,6 @@ export default function ForShellyPage() {
             >
               Not one reply of any kind, including &ldquo;no thanks.&rdquo; That was a different
               offer on a different channel, but you&apos;d find out around call forty anyway.
-            </Card>
-            <Card
-              title="The checkout takes money — the second month is unproven"
-              tag="1 of 2 cycles"
-              tone="amber"
-              more={
-                <>
-                  <p>
-                    On 25 August I rented{' '}
-                    <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-200">
-                      boston-plumbing.com
-                    </code>{' '}
-                    to myself on a real card, on a plan billing daily rather than monthly so a
-                    renewal lands in twenty-four hours instead of thirty days. The charge went
-                    through and — the part that had never worked — the subscription id, the amount
-                    and the invoice id were written back to our own records, matching Stripe field
-                    for field.
-                  </p>
-                  <p>
-                    Until that write existed, a renter could have paid every month while our side
-                    showed them as never having rented. That is a worse failure than a checkout that
-                    plainly breaks, because everything looks fine from the outside.
-                  </p>
-                  <p>
-                    What is still open: a first charge is not a recurring charge. I will not call
-                    recurring billing proven until the second one lands on its own.
-                  </p>
-                </>
-              }
-            >
-              A real card was charged and the payment was recorded correctly — as of 25 August the
-              first cycle works end to end. The <em>renewal</em> hasn&apos;t happened yet, so
-              &ldquo;it bills every month without anyone touching it&rdquo; is not something I can
-              claim to you today.
             </Card>
           </div>
         </section>

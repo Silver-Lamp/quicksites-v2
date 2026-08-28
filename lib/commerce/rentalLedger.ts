@@ -31,9 +31,13 @@ export type RentalRow = {
   payment_count: number;
   last_payment_at: string | null;
   last_payment_cents: number | null;
-  sold_by: string | null;
-  sold_by_manager: string | null;
-  manager_is_recruiter: boolean;
+  sold_by_code: string | null;
+  /** referral_codes.label for the closer, so the page shows a person not a slug. */
+  sold_by_label: string | null;
+  manager_code: string | null;
+  manager_label: string | null;
+  /** Derived from referral_codes.parent_code — never stored a second time. */
+  managerRecruitedCloser: boolean;
   variant: SplitVariant;
   split: RentalSplit;
   /** True when nobody is credited — the split is computable but unpayable. */
@@ -84,16 +88,38 @@ export async function getRentalLedger(): Promise<RentalLedger> {
     .select(
       'id, domain, city, industry_key, renter_email, subscription_status, stripe_subscription_id, ' +
         'billing_interval, pricing_model, price_cents, locked_rate_cents, rank_status, ' +
-        'payment_count, last_payment_at, last_payment_cents, sold_by, sold_by_manager, manager_is_recruiter'
+        'payment_count, last_payment_at, last_payment_cents, sold_by_code, manager_code'
     )
     .not('subscription_status', 'is', null)
     .order('last_payment_at', { ascending: false, nullsFirst: false });
 
   if (error) throw new Error(`getRentalLedger failed: ${error.message}`);
 
+  // One lookup for every code on the board: labels for display, parent_code to decide
+  // whether a manager recruited their closer (15% vs 25%).
+  const codes = [
+    ...new Set((data ?? []).flatMap((c: any) => [c.sold_by_code, c.manager_code]).filter(Boolean)),
+  ] as string[];
+  const codeInfo = new Map<string, { label: string | null; parent: string | null }>();
+  if (codes.length) {
+    const { data: cr } = await supabaseAdmin
+      .from('referral_codes')
+      .select('code, label, parent_code')
+      .in('code', codes);
+    for (const r of (cr ?? []) as any[]) {
+      codeInfo.set(r.code, { label: r.label ?? null, parent: r.parent_code ?? null });
+    }
+  }
+  const labelOf = (code: string | null) => (code ? (codeInfo.get(code)?.label ?? code) : null);
+
   const rows: RentalRow[] = (data ?? []).map((c: any) => {
     const chargeCents = effectiveChargeCents(c);
-    const variant: SplitVariant = c.manager_is_recruiter ? 'recruit' : 'standard';
+    const parent = c.sold_by_code ? codeInfo.get(c.sold_by_code)?.parent : null;
+    const recruited =
+      !!c.manager_code &&
+      !!parent &&
+      String(parent).toLowerCase() === String(c.manager_code).toLowerCase();
+    const variant: SplitVariant = recruited ? 'recruit' : 'standard';
     const monthly = monthlyEquivalentCents(chargeCents, c.billing_interval);
     return {
       id: c.id,
@@ -109,14 +135,16 @@ export async function getRentalLedger(): Promise<RentalLedger> {
       payment_count: c.payment_count ?? 0,
       last_payment_at: c.last_payment_at,
       last_payment_cents: c.last_payment_cents,
-      sold_by: c.sold_by,
-      sold_by_manager: c.sold_by_manager,
-      manager_is_recruiter: !!c.manager_is_recruiter,
+      sold_by_code: c.sold_by_code,
+      sold_by_label: labelOf(c.sold_by_code),
+      manager_code: c.manager_code,
+      manager_label: labelOf(c.manager_code),
+      managerRecruitedCloser: recruited,
       variant,
       // Split the MONTHLY equivalent so every rental is comparable regardless of the
       // interval it bills on — a $1/day test rental must not read as $1 of revenue.
       split: splitRentalPayment(monthly, variant),
-      unassigned: !c.sold_by,
+      unassigned: !c.sold_by_code,
     };
   });
 
@@ -130,7 +158,7 @@ export async function getRentalLedger(): Promise<RentalLedger> {
       acc.closerMonthlyCents += r.split.closerCents;
       // With nobody credited as manager, that share stays with the house rather than
       // silently accruing to a person who does not exist.
-      if (r.sold_by_manager) acc.managerMonthlyCents += r.split.managerCents;
+      if (r.manager_code) acc.managerMonthlyCents += r.split.managerCents;
       else acc.houseMonthlyCents += r.split.managerCents;
       acc.houseMonthlyCents += r.split.houseCents;
       if (r.unassigned) acc.unassignedMonthlyCents += r.split.netCents;
@@ -158,8 +186,8 @@ export async function getRentalLedger(): Promise<RentalLedger> {
     people.set(key, rec);
   };
   for (const r of live) {
-    bump(r.sold_by, 'asCloser', r.split.closerCents);
-    bump(r.sold_by_manager, 'asManager', r.split.managerCents);
+    bump(r.sold_by_label, 'asCloser', r.split.closerCents);
+    bump(r.manager_label, 'asManager', r.split.managerCents);
   }
 
   const byPerson = [...people.values()]

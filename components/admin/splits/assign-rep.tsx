@@ -1,22 +1,33 @@
 'use client';
 
-// Credit a rental to a closer and (optionally) a manager. Free-text on purpose: reps are
-// contractors who get pitched and paid before they ever have a login.
+// Credit a rental to a closer's referral code, and optionally a manager's.
+//
+// Codes rather than names because commission_ledger.referral_code is a foreign key — a name
+// can never become a ledger row, a payout, or a clawback. A code can be minted before the
+// person has an account; their balance accrues as 'held' until they claim it.
+//
+// Whether the manager gets 15% or 25% is NOT asked here: it is derived from the closer's
+// referral_codes.parent_code, the one existing record of who recruited whom. Asking would
+// let the answer disagree with the hub override on the commerce side.
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function AssignRep({
   campaignId,
   domain,
-  soldBy,
-  manager,
-  isRecruiter,
+  soldByCode,
+  soldByLabel,
+  managerCode,
+  managerLabel,
+  recruited,
 }: {
   campaignId: string;
   domain: string;
-  soldBy: string | null;
-  manager: string | null;
-  isRecruiter: boolean;
+  soldByCode: string | null;
+  soldByLabel: string | null;
+  managerCode: string | null;
+  managerLabel: string | null;
+  recruited: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
@@ -24,25 +35,19 @@ export default function AssignRep({
 
   async function assign() {
     const closer = window.prompt(
-      `Who closed ${domain}?\n\nThey take 50% of net for as long as it pays. Leave blank to clear.`,
-      soldBy ?? ''
+      `Which referral code closed ${domain}?\n\nThey take 50% of net for as long as it pays. Leave blank to clear.\nThe code must already exist — mint one in Referral Codes first.`,
+      soldByCode ?? ''
     );
     if (closer === null) return;
 
     let mgr = '';
-    let recruited = false;
     if (closer.trim()) {
       const m = window.prompt(
-        `Who manages ${closer.trim()} on this rental?\n\nThey earn the override. Leave blank for none — the house keeps that share.`,
-        manager ?? ''
+        `Which code earns the override on ${domain}?\n\nLeave blank for none — the house keeps that share.\n\nThe rate is worked out automatically: 25% if they recruited the closer, 15% if not.`,
+        managerCode ?? ''
       );
       if (m === null) return;
       mgr = m.trim();
-      if (mgr) {
-        recruited = window.confirm(
-          `Did ${mgr} recruit ${closer.trim()}?\n\nOK = yes, override is 25% (funded by the house).\nCancel = no, override is 15%.`
-        );
-      }
     }
 
     setBusy(true);
@@ -53,9 +58,8 @@ export default function AssignRep({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           campaignId,
-          soldBy: closer.trim() || null,
-          manager: mgr || null,
-          managerIsRecruiter: recruited,
+          soldByCode: closer.trim() || null,
+          managerCode: mgr || null,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -69,14 +73,15 @@ export default function AssignRep({
   }
 
   return (
-    <div className="min-w-[150px]">
-      {soldBy ? (
+    <div className="min-w-[160px]">
+      {soldByCode ? (
         <div className="text-[13px] leading-snug">
-          <div className="text-white">{soldBy}</div>
-          {manager ? (
+          <div className="text-white">{soldByLabel || soldByCode}</div>
+          {managerCode ? (
             <div className="text-xs text-neutral-500">
-              under {manager}
-              {isRecruiter && <span className="text-amber-400"> · recruit</span>}
+              under {managerLabel || managerCode}
+              {recruited && <span className="text-amber-400"> · recruited · 25%</span>}
+              {!recruited && <span className="text-neutral-600"> · 15%</span>}
             </div>
           ) : (
             <div className="text-xs text-neutral-600">no manager</div>
@@ -91,7 +96,7 @@ export default function AssignRep({
         disabled={busy}
         className="mt-1 text-xs text-sky-400 underline underline-offset-2 hover:text-sky-300 disabled:opacity-50"
       >
-        {busy ? 'Saving…' : soldBy ? 'Change' : 'Assign'}
+        {busy ? 'Saving…' : soldByCode ? 'Change' : 'Assign'}
       </button>
       {err && <div className="mt-1 text-xs text-rose-400">{err}</div>}
     </div>

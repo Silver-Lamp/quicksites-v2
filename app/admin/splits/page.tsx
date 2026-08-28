@@ -221,11 +221,11 @@ export default async function SplitsPage() {
                       {formatCents(r.split.closerCents)}
                     </td>
                     <td className="px-4 py-3 text-right font-mono tabular-nums text-amber-400">
-                      {r.sold_by_manager ? formatCents(r.split.managerCents) : '—'}
+                      {r.manager_code ? formatCents(r.split.managerCents) : '—'}
                     </td>
                     <td className="px-4 py-3 text-right font-mono tabular-nums text-sky-400">
                       {formatCents(
-                        r.sold_by_manager
+                        r.manager_code
                           ? r.split.houseCents
                           : r.split.houseCents + r.split.managerCents
                       )}
@@ -234,9 +234,11 @@ export default async function SplitsPage() {
                       <AssignRep
                         campaignId={r.id}
                         domain={r.domain}
-                        soldBy={r.sold_by}
-                        manager={r.sold_by_manager}
-                        isRecruiter={r.manager_is_recruiter}
+                        soldByCode={r.sold_by_code}
+                        soldByLabel={r.sold_by_label}
+                        managerCode={r.manager_code}
+                        managerLabel={r.manager_label}
+                        recruited={r.managerRecruitedCloser}
                       />
                     </td>
                   </tr>
@@ -345,21 +347,21 @@ export default async function SplitsPage() {
       <section className="mt-12">
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/[0.07] p-5">
           <h2 className="text-sm font-semibold text-amber-300">
-            This page is a report, not a ledger
+            Accrual is automatic; paying is not
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-neutral-300">
-            The commerce side writes a{' '}
-            <code className="rounded bg-neutral-800 px-1 py-0.5">commission_ledger</code> row every
-            time an order is paid, and the payout runner pays from it. The rental rail writes none —
-            its webhook records the payment on the campaign and stops there. So nothing on this page
-            is accrued, owed or paid by the software: a person reads these numbers and sends the
-            money.
+            Every paid rental invoice now writes{' '}
+            <code className="rounded bg-neutral-800 px-1 py-0.5">commission_ledger</code> rows — a
+            closer row and, where a manager is credited, an override row — keyed on the Stripe
+            invoice so a webhook redelivery cannot pay anyone twice. A refund voids anything not yet
+            paid out. These are the same rows the existing payout runner already pays from.
           </p>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-neutral-300">
-            That is workable for a handful of rentals and stops being workable at a dozen. Closing
-            the gap means writing real ledger rows from{' '}
-            <code className="rounded bg-neutral-800 px-1 py-0.5">invoice.paid</code>, at which point
-            refunds, clawbacks and payout runs all work the way they already do for orders.
+            What is still manual is the paying. Accruals sit as{' '}
+            <span className="font-mono text-amber-300">pending</span> until a payout run approves
+            and sends them, and a rep with no Stripe connection has their balance held rather than
+            transferred. A rental with nobody credited accrues <em>nothing</em> — the split is shown
+            above but no debt is recorded, because a commission owed to no one is not a commission.
           </p>
           <p className="mt-3 text-xs text-neutral-500">
             Related:{' '}

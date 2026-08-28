@@ -28,7 +28,10 @@ export async function finalizeBrowserSession(sb: SupabaseClient): Promise<Finali
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ access_token: session.access_token, refresh_token: session.refresh_token }),
+      body: JSON.stringify({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      }),
     });
     const j = await res.json().catch(() => ({}) as any);
     if (!res.ok || j?.ok === false) return { ok: false, error: j?.error || 'cookie_set_failed' };

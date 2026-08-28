@@ -37,7 +37,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loadSession = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
     if (error || !user) {
       setUser(null);
       setRole(null);

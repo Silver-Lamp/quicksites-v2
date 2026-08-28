@@ -45,7 +45,11 @@ export function hashCode(code: string, templateId: string): string {
 }
 
 /** Constant-time compare of a submitted code against the stored hash. */
-export function codeMatches(code: string, templateId: string, hash: string | null | undefined): boolean {
+export function codeMatches(
+  code: string,
+  templateId: string,
+  hash: string | null | undefined
+): boolean {
   if (!hash) return false;
   const a = Buffer.from(hashCode(code, templateId));
   const b = Buffer.from(hash);
@@ -71,7 +75,9 @@ export function toE164(raw: string | null | undefined): string | null {
 
 /** Mint `base64url(payload).hmac` proving verification for a templateId, short TTL. */
 export function mintVerifyGrant(templateId: string, now = Date.now()): string {
-  const body = Buffer.from(JSON.stringify({ t: templateId, exp: now + GRANT_TTL_MS })).toString('base64url');
+  const body = Buffer.from(JSON.stringify({ t: templateId, exp: now + GRANT_TTL_MS })).toString(
+    'base64url'
+  );
   return `${body}.${hmac(body)}`;
 }
 
@@ -79,7 +85,7 @@ export function mintVerifyGrant(templateId: string, now = Date.now()): string {
 export function verifyVerifyGrant(
   token: string | undefined | null,
   templateId: string,
-  now = Date.now(),
+  now = Date.now()
 ): boolean {
   if (!token || typeof token !== 'string' || !secret()) return false;
   const dot = token.indexOf('.');

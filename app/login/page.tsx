@@ -4,7 +4,6 @@ import LoginForm from './LoginForm';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-
 export default function LoginPage() {
   const sha = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GIT_COMMIT_SHA ?? '';
   const short = sha ? sha.slice(0, 7) : 'dev';
@@ -17,9 +16,5 @@ export default function LoginPage() {
     deployId,
   };
 
-  return (
-    <LoginForm
-      build={build}
-    />
-  );
+  return <LoginForm build={build} />;
 }

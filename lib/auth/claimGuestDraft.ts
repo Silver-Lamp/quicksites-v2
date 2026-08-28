@@ -16,7 +16,7 @@ type CookieStore = {
 
 export async function claimPendingGuestDraft(
   user: User | null | undefined,
-  store: CookieStore,
+  store: CookieStore
 ): Promise<void> {
   try {
     if (!user || user.is_anonymous) return;

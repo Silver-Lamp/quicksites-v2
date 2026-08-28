@@ -34,12 +34,17 @@ export type ClaimPayload = { templateId: string; anonUid: string };
 
 /** Mint `base64url(payload).base64url(hmac)` binding the draft to its anon owner. */
 export function mintClaimToken(templateId: string, anonUid: string, now = Date.now()): string {
-  const body = Buffer.from(JSON.stringify({ t: templateId, a: anonUid, exp: now + CLAIM_TTL_MS })).toString('base64url');
+  const body = Buffer.from(
+    JSON.stringify({ t: templateId, a: anonUid, exp: now + CLAIM_TTL_MS })
+  ).toString('base64url');
   return `${body}.${sign(body)}`;
 }
 
 /** Verify signature + expiry; returns the bound ids or null. Constant-time compare. */
-export function verifyClaimToken(token: string | undefined | null, now = Date.now()): ClaimPayload | null {
+export function verifyClaimToken(
+  token: string | undefined | null,
+  now = Date.now()
+): ClaimPayload | null {
   if (!token || typeof token !== 'string' || !secret()) return null;
   const dot = token.indexOf('.');
   if (dot <= 0) return null;

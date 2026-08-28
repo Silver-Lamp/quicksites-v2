@@ -111,9 +111,21 @@ const nextConfig = {
     // apex so `*.quicksites.ai` and custom domains are served as-is. (Vercel also has
     // a domain-level `quicksites.ai → www.quicksites.ai` redirect; this is belt-and-
     // suspenders and matches that intent.)
+    // Auth aliases. /login is the only auth surface, but /signup, /sign-up, /register and
+    // /sign-in are all URLs people type and code links to — three of them WERE linked from
+    // upgrade prompts and every one 404'd, so a visitor trying to pay us hit a dead end.
+    // Applied in every environment: a 404 in dev is the same bug found later.
+    const authAliases = [
+      { source: '/signup', destination: '/login?intent=signup', permanent: false },
+      { source: '/sign-up', destination: '/login?intent=signup', permanent: false },
+      { source: '/register', destination: '/login?intent=signup', permanent: false },
+      { source: '/sign-in', destination: '/login', permanent: false },
+    ];
+
     return isLocal
-      ? []
+      ? authAliases
       : [
+          ...authAliases,
           {
             source: '/:path*',
             has: [{ type: 'host', value: '^quicksites\\.ai$' }],

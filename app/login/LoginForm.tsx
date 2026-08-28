@@ -11,14 +11,18 @@ type BuildInfo = { sha?: string; env?: string; deployId?: string };
 
 type OrgBranding = {
   name?: string | null;
-  logo_url?: string | null;       // light/default logo
-  logo_dark_url?: string | null;  // dark-mode logo (optional)
+  logo_url?: string | null; // light/default logo
+  logo_dark_url?: string | null; // dark-mode logo (optional)
 };
 
 type AuthMode = 'password' | 'magic';
 
 const normalizeEmail = (raw: string) =>
-  raw.normalize('NFKC').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim().toLowerCase();
+  raw
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+    .trim()
+    .toLowerCase();
 
 const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
@@ -31,6 +35,11 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
   }, [sp]);
 
   const [mode, setMode] = useState<AuthMode>('password');
+  // ?intent=signup means the visitor came from a "Sign up" control. Same route either way —
+  // it leads with account creation rather than sending them somewhere that does not exist.
+  const wantsSignup =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('intent') === 'signup';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<string | null>(null);
@@ -151,9 +160,13 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
   // Prefill the referral code from ?ref= (or an existing qs_ref cookie) and reveal the field.
   useEffect(() => {
     const fromParam = sp.get('ref');
-    const fromCookie = typeof document !== 'undefined'
-      ? document.cookie.split('; ').find((c) => c.startsWith('qs_ref='))?.split('=')[1]
-      : undefined;
+    const fromCookie =
+      typeof document !== 'undefined'
+        ? document.cookie
+            .split('; ')
+            .find((c) => c.startsWith('qs_ref='))
+            ?.split('=')[1]
+        : undefined;
     const code = (fromParam || (fromCookie ? decodeURIComponent(fromCookie) : '') || '').trim();
     if (code) {
       setRefCode(code);
@@ -185,7 +198,9 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
   const finalizeAndGo = async () => {
     const r = await finalizeBrowserSession(sb);
     if (!r.ok) {
-      setStatus(`❌ ${r.error === 'no_session' ? 'Could not start your session. Try again.' : r.error}`);
+      setStatus(
+        `❌ ${r.error === 'no_session' ? 'Could not start your session. Try again.' : r.error}`
+      );
       return false;
     }
     window.location.assign(r.redirect || nextPath);
@@ -221,7 +236,9 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
     try {
       const { error } = await sb.auth.signInWithPassword({ email: emailNorm, password });
       if (error) {
-        setStatus('❌ Wrong email or password. Try again, reset your password, or use a magic link.');
+        setStatus(
+          '❌ Wrong email or password. Try again, reset your password, or use a magic link.'
+        );
         return;
       }
       await finalizeAndGo();
@@ -247,7 +264,9 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
         options: { emailRedirectTo: redirectTo() },
       });
       if (error) {
-        setStatus(`❌ ${/already registered/i.test(error.message) ? 'That email already has an account — sign in or reset your password.' : error.message}`);
+        setStatus(
+          `❌ ${/already registered/i.test(error.message) ? 'That email already has an account — sign in or reset your password.' : error.message}`
+        );
         return;
       }
       if (data.session) {
@@ -267,7 +286,8 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
   // ── Forgot password → email a reset link ──
   const forgotPassword = async () => {
     const emailNorm = normalizeEmail(email);
-    if (!isValidEmail(emailNorm)) return setStatus('❌ Enter your email first, then tap “Forgot password”.');
+    if (!isValidEmail(emailNorm))
+      return setStatus('❌ Enter your email first, then tap “Forgot password”.');
     setIsLoading(true);
     setStatus('Sending a reset link…');
     try {
@@ -306,7 +326,7 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailNorm, next: nextPath }),
       });
-      const data = await res.json().catch(() => ({} as any));
+      const data = await res.json().catch(() => ({}) as any);
       if (!res.ok) {
         const { error } = await sb.auth.signInWithOtp({
           email: emailNorm,
@@ -341,11 +361,23 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
           <div className="flex flex-col items-center mb-6">
             {branding?.logo_dark_url ? (
               <>
-                <img src={branding.logo_url || branding.logo_dark_url} alt={branding?.name || 'Organization logo'} className="block dark:hidden h-10 w-auto" />
-                <img src={branding.logo_dark_url} alt={branding?.name || 'Organization logo'} className="hidden dark:block h-10 w-auto" />
+                <img
+                  src={branding.logo_url || branding.logo_dark_url}
+                  alt={branding?.name || 'Organization logo'}
+                  className="block dark:hidden h-10 w-auto"
+                />
+                <img
+                  src={branding.logo_dark_url}
+                  alt={branding?.name || 'Organization logo'}
+                  className="hidden dark:block h-10 w-auto"
+                />
               </>
             ) : branding?.logo_url ? (
-              <img src={branding.logo_url} alt={branding?.name || 'Organization logo'} className="h-10 w-auto" />
+              <img
+                src={branding.logo_url}
+                alt={branding?.name || 'Organization logo'}
+                className="h-10 w-auto"
+              />
             ) : (
               <div className="text-sm font-semibold opacity-80">{branding?.name}</div>
             )}
@@ -363,22 +395,37 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
                 className="w-full flex items-center justify-center gap-3 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-100 disabled:opacity-60"
               >
                 <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-                  <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z" />
-                  <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z" />
-                  <path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z" />
-                  <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.47.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
+                  <path
+                    fill="#4285F4"
+                    d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.47.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"
+                  />
                 </svg>
                 Continue with Google
               </button>
               <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-zinc-500">
-                <span className="h-px flex-1 bg-zinc-700" /> or <span className="h-px flex-1 bg-zinc-700" />
+                <span className="h-px flex-1 bg-zinc-700" /> or{' '}
+                <span className="h-px flex-1 bg-zinc-700" />
               </div>
             </>
           )}
 
           {/* Email */}
           <div>
-            <label htmlFor="email" className="sr-only">Email</label>
+            <label htmlFor="email" className="sr-only">
+              Email
+            </label>
             <input
               id="email"
               type="email"
@@ -395,8 +442,15 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
           {mode === 'password' && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label htmlFor="password" className="text-xs text-zinc-400">Password</label>
-                <button type="button" onClick={forgotPassword} disabled={isLoading} className="text-xs text-zinc-400 hover:text-zinc-200 underline underline-offset-4">
+                <label htmlFor="password" className="text-xs text-zinc-400">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={forgotPassword}
+                  disabled={isLoading}
+                  className="text-xs text-zinc-400 hover:text-zinc-200 underline underline-offset-4"
+                >
                   Forgot password?
                 </button>
               </div>
@@ -406,7 +460,12 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onSubmit(); } }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onSubmit();
+                  }
+                }}
                 placeholder="••••••••"
                 className={inputCls}
                 disabled={isLoading}
@@ -417,12 +476,17 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
           {/* Referral code — optional, revealed by a toggle unless prefilled from ?ref/cookie */}
           {showRef ? (
             <div>
-              <label htmlFor="refCode" className="block text-xs text-zinc-400 mb-1">Referral code</label>
+              <label htmlFor="refCode" className="block text-xs text-zinc-400 mb-1">
+                Referral code
+              </label>
               <input
                 id="refCode"
                 type="text"
                 value={refCode}
-                onChange={(e) => { setRefCode(e.target.value); setRefNote(null); }}
+                onChange={(e) => {
+                  setRefCode(e.target.value);
+                  setRefNote(null);
+                }}
                 onBlur={applyRefCode}
                 placeholder="e.g. daniel"
                 autoCapitalize="none"
@@ -431,11 +495,19 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
                 disabled={isLoading}
               />
               {refNote && (
-                <p className={`mt-1 text-xs ${refNote.startsWith('✓') ? 'text-green-400' : 'text-yellow-400'}`}>{refNote}</p>
+                <p
+                  className={`mt-1 text-xs ${refNote.startsWith('✓') ? 'text-green-400' : 'text-yellow-400'}`}
+                >
+                  {refNote}
+                </p>
               )}
             </div>
           ) : (
-            <button type="button" onClick={() => setShowRef(true)} className="text-xs text-zinc-400 hover:text-zinc-200 underline underline-offset-4">
+            <button
+              type="button"
+              onClick={() => setShowRef(true)}
+              className="text-xs text-zinc-400 hover:text-zinc-200 underline underline-offset-4"
+            >
               Have a referral code?
             </button>
           )}
@@ -443,15 +515,32 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
           {/* Primary actions */}
           {mode === 'password' ? (
             <div className="space-y-2">
-              <button type="submit" disabled={isLoading} className={`w-full text-white py-2 px-4 rounded ${isLoading ? 'bg-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                {isLoading ? 'Please wait…' : 'Sign in'}
+              {/* Order follows intent: whichever action they came here to take is the filled
+                  one. Both are always present — a visitor who meant the other is one click
+                  away, never one dead URL away. */}
+              <button
+                type={wantsSignup ? 'button' : 'submit'}
+                onClick={wantsSignup ? createAccount : undefined}
+                disabled={isLoading}
+                className={`w-full text-white py-2 px-4 rounded ${isLoading ? 'bg-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+              >
+                {isLoading ? 'Please wait…' : wantsSignup ? 'Create account' : 'Sign in'}
               </button>
-              <button type="button" onClick={createAccount} disabled={isLoading} className="w-full py-2 px-4 rounded border border-zinc-700 text-zinc-200 hover:bg-zinc-800 disabled:opacity-60">
-                Create account
+              <button
+                type={wantsSignup ? 'submit' : 'button'}
+                onClick={wantsSignup ? undefined : createAccount}
+                disabled={isLoading}
+                className="w-full py-2 px-4 rounded border border-zinc-700 text-zinc-200 hover:bg-zinc-800 disabled:opacity-60"
+              >
+                {wantsSignup ? 'Sign in' : 'Create account'}
               </button>
             </div>
           ) : (
-            <button type="submit" disabled={isLoading} className={`w-full text-white py-2 px-4 rounded ${isLoading ? 'bg-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full text-white py-2 px-4 rounded ${isLoading ? 'bg-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+            >
               {isLoading ? 'Sending…' : 'Send magic link'}
             </button>
           )}
@@ -460,7 +549,10 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => { setMode((m) => (m === 'password' ? 'magic' : 'password')); setStatus(null); }}
+              onClick={() => {
+                setMode((m) => (m === 'password' ? 'magic' : 'password'));
+                setStatus(null);
+              }}
               className="text-xs text-zinc-400 hover:text-zinc-200 underline underline-offset-4"
             >
               {mode === 'password' ? 'Email me a magic link instead' : 'Use a password instead'}
@@ -468,7 +560,9 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
           </div>
 
           {status && (
-            <p className={`text-sm ${status.startsWith('✅') ? 'text-green-400' : status.startsWith('❌') ? 'text-red-400' : 'text-yellow-400'}`}>
+            <p
+              className={`text-sm ${status.startsWith('✅') ? 'text-green-400' : status.startsWith('❌') ? 'text-red-400' : 'text-yellow-400'}`}
+            >
               {status}
             </p>
           )}
@@ -477,7 +571,12 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
           {build && (
             <p className="mt-2 text-center text-[10px] text-zinc-500">
               build <span className="font-mono">{build.sha}</span> • {build.env}
-              {build.deployId ? <> • <span className="font-mono">{build.deployId}</span></> : null}
+              {build.deployId ? (
+                <>
+                  {' '}
+                  • <span className="font-mono">{build.deployId}</span>
+                </>
+              ) : null}
             </p>
           )}
 

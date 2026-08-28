@@ -16,7 +16,8 @@ export async function adminUserId(): Promise<string | null> {
       cookieEncoding: 'base64url',
       cookies: {
         getAll: () => store.getAll().map(({ name, value }) => ({ name, value })),
-        setAll: (cks) => cks.forEach((c) => store.set(c.name, c.value, c.options as CookieOptions | undefined)),
+        setAll: (cks) =>
+          cks.forEach((c) => store.set(c.name, c.value, c.options as CookieOptions | undefined)),
       },
     }
   );

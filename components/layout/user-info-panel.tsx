@@ -1,6 +1,7 @@
 // components/layout/user-info-panel.tsx
 'use client';
 
+import { SignInLink } from '@/components/auth/auth-links';
 import type { SafeUser } from '@/types/safe-user';
 
 type Props = {
@@ -9,17 +10,9 @@ type Props = {
   isLoggedIn: boolean;
 };
 
-export default function UserInfoPanel({
-  isLoggedIn,
-  user,
-  role,
-}: Props) {
+export default function UserInfoPanel({ isLoggedIn, user, role }: Props) {
   if (!isLoggedIn || !user) {
-    return (
-      <a href="/login" className="text-blue-400 hover:underline">
-        Log In
-      </a>
-    );
+    return <SignInLink variant="inline" />;
   }
 
   return (

@@ -20,7 +20,9 @@ export async function getAdminUser() {
   if (!user) return null;
 
   const email = (user.email || '').toLowerCase();
-  const role = String((user.app_metadata as any)?.role || (user.user_metadata as any)?.role || '').toLowerCase();
+  const role = String(
+    (user.app_metadata as any)?.role || (user.user_metadata as any)?.role || ''
+  ).toLowerCase();
   if (ADMIN_EMAILS.includes(email) || role === 'admin' || role === 'superadmin') return user;
 
   // Authoritative fallback: the admin_users table (readable by the session; RLS SELECT

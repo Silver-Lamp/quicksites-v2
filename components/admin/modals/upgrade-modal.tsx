@@ -1,5 +1,6 @@
 'use client';
 
+import { signUpHref } from '@/lib/auth/authLinks';
 import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSearchParams } from 'next/navigation';
@@ -88,7 +89,7 @@ export default function UpgradeModal({ open, onClose, context, triggerReason }: 
         new Promise((r) => setTimeout(r, 1200)),
       ]);
     } catch {}
-    window.location.href = '/sign-up?redirect_url=' + encodeURIComponent(window.location.href);
+    window.location.href = signUpHref(window.location.pathname);
   };
 
   return (

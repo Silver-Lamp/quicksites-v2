@@ -277,6 +277,13 @@ const NAV_ADMIN: NavItem[] = [
   },
   {
     type: 'item',
+    label: 'Rental Splits',
+    href: '/admin/splits',
+    icon: <DollarSign size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
     label: 'Payouts',
     icon: <DollarSign size={18} />,
     adminOnly: true,

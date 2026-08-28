@@ -47,6 +47,37 @@ function More({ label = 'More detail', children }: { label?: string; children: R
   );
 }
 
+/**
+ * Section-level disclosure. Same language as <More>, but sized to wrap a whole block —
+ * the call script and the objection cards are worth keeping and not worth making her
+ * scroll past on a page she is reading between calls.
+ */
+function FoldSection({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group mt-3 rounded-xl border border-zinc-800 bg-zinc-900/30">
+      <summary className="flex cursor-pointer select-none items-center gap-2 px-4 py-3 text-sm font-medium text-zinc-300 transition-colors hover:text-white [&::-webkit-details-marker]:hidden">
+        <span
+          aria-hidden
+          className="inline-block text-zinc-600 transition-transform group-open:rotate-90"
+        >
+          ›
+        </span>
+        {label}
+        {hint && <span className="ml-auto text-xs font-normal text-zinc-600">{hint}</span>}
+      </summary>
+      <div className="border-t border-zinc-800/70 px-4 pb-5 pt-4">{children}</div>
+    </details>
+  );
+}
+
 function Card({
   title,
   tag,
@@ -132,23 +163,21 @@ export default function ForShellyPage() {
               Unlisted — just for you
             </span>
             <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
-              Draft — for Friday
+              For today
             </span>
           </div>
           <h1 className="mt-6 text-4xl font-extrabold tracking-tight md:text-5xl">Hey Shelly 👋</h1>
           <p className="mt-4 text-lg leading-relaxed text-zinc-400">
-            Here&apos;s the picture before we talk Friday, so you&apos;re not hearing it cold. Short
-            version:{' '}
             <span className="text-zinc-200">
-              I own 32 city-and-trade domains that are live right now, and the product is renting
-              one of them to the one business in that city that wants it.
+              I own 32 city-and-trade domains that are live right now. The product is renting one of
+              them to the one business in that city that wants it, for $99/month.
             </span>{' '}
-            You can click any of them below while you read this.
+            You get half of that, every month, for as long as they stay.
           </p>
           <p className="mt-3 text-sm text-zinc-500">
-            I&apos;ve written the awkward parts down too — what hasn&apos;t worked yet, and what
-            isn&apos;t finished. You&apos;d be spending your time on this, and you can&apos;t price
-            that without the bad news.
+            You&apos;ve already made calls, so you know more about the hard part than this page
+            does. What&apos;s here is the mechanics, the numbers, and the parts that aren&apos;t
+            proven — everything is expandable, so read the headline and open only what you want.
           </p>
         </section>
 
@@ -258,65 +287,67 @@ export default function ForShellyPage() {
             What a call looks like
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-            Roughly ninety seconds to the point where they either want it or don&apos;t. The strong
-            move is getting them to open the domain while you&apos;re talking — it stops being a
-            pitch and starts being a thing they&apos;re looking at.
+            Ninety seconds to the point where they either want it or don&apos;t. The strong move is
+            getting them to open the domain while you&apos;re talking — it stops being a pitch and
+            starts being a thing they&apos;re looking at.
           </p>
 
-          <div className="mt-4 space-y-2">
-            <Say who="you">
-              &ldquo;Hi — is this the owner? My name&apos;s Shelly, I&apos;m calling from
-              QuickSites. This&apos;ll take a minute and it&apos;s not a website pitch. Do you have
-              a browser in front of you?&rdquo;
-            </Say>
-            <Say who="you">
-              &ldquo;Type in <span className="text-amber-200">renton-towing.com</span>. That&apos;s
-              ours. We buy the city-and-trade domain and rent it to one business in town — and
-              nobody has that one yet.&rdquo;
-            </Say>
-            <Say who="them">&ldquo;…okay, I&apos;m looking at it. What is this?&rdquo;</Say>
-            <Say who="you">
-              &ldquo;It&apos;s a working site on the exact name people type when they need a tow in
-              Renton. Rent it and it&apos;s yours — your phone number, your name on it, and no other
-              tow company in Renton can have it. Ninety-nine a month.&rdquo;
-            </Say>
-            <Say who="them">&ldquo;Does it come up on Google?&rdquo;</Say>
-            <Say who="you">
-              &ldquo;Not yet — it&apos;s new, and I&apos;m not going to promise you it will. What I
-              can tell you is the price is ninety-nine now and it&apos;s three-ninety-nine once one
-              of these reaches page one. If you&apos;re in at ninety-nine you stay at ninety-nine.
-              That&apos;s the whole reason to do it today rather than later.&rdquo;
-            </Say>
-            <Say who="them">&ldquo;What do I have to do?&rdquo;</Say>
-            <Say who="you">
-              &ldquo;Give me the number you want calls going to and an email. I&apos;ll send a link,
-              you put a card in, and I&apos;ll have your details on the site same day. Cancel
-              whenever — there&apos;s no contract.&rdquo;
-            </Say>
-          </div>
+          <FoldSection label="The script, line by line" hint="and the four objections">
+            <div className="mt-4 space-y-2">
+              <Say who="you">
+                &ldquo;Hi — is this the owner? My name&apos;s Shelly, I&apos;m calling from
+                QuickSites. This&apos;ll take a minute and it&apos;s not a website pitch. Do you
+                have a browser in front of you?&rdquo;
+              </Say>
+              <Say who="you">
+                &ldquo;Type in <span className="text-amber-200">renton-towing.com</span>.
+                That&apos;s ours. We buy the city-and-trade domain and rent it to one business in
+                town — and nobody has that one yet.&rdquo;
+              </Say>
+              <Say who="them">&ldquo;…okay, I&apos;m looking at it. What is this?&rdquo;</Say>
+              <Say who="you">
+                &ldquo;It&apos;s a working site on the exact name people type when they need a tow
+                in Renton. Rent it and it&apos;s yours — your phone number, your name on it, and no
+                other tow company in Renton can have it. Ninety-nine a month.&rdquo;
+              </Say>
+              <Say who="them">&ldquo;Does it come up on Google?&rdquo;</Say>
+              <Say who="you">
+                &ldquo;Not yet — it&apos;s new, and I&apos;m not going to promise you it will. What
+                I can tell you is the price is ninety-nine now and it&apos;s three-ninety-nine once
+                one of these reaches page one. If you&apos;re in at ninety-nine you stay at
+                ninety-nine. That&apos;s the whole reason to do it today rather than later.&rdquo;
+              </Say>
+              <Say who="them">&ldquo;What do I have to do?&rdquo;</Say>
+              <Say who="you">
+                &ldquo;Give me the number you want calls going to and an email. I&apos;ll send a
+                link, you put a card in, and I&apos;ll have your details on the site same day.
+                Cancel whenever — there&apos;s no contract.&rdquo;
+              </Say>
+            </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <Card title="&ldquo;I already have a website.&rdquo;" tone="amber">
-              Good — this isn&apos;t a replacement. It&apos;s a second front door on the name people
-              actually type, and it can point at the site they already have.
-            </Card>
-            <Card title="&ldquo;Ninety-nine for what, exactly?&rdquo;" tone="amber">
-              The name, exclusively, in their town. If one call a month turns into a job, it paid
-              for itself several times over — but let them do that math out loud, don&apos;t do it
-              for them.
-            </Card>
-            <Card title="&ldquo;Call me back later.&rdquo;" tone="amber">
-              Fine — but the domain is first-come. Take the callback and note it; do not invent a
-              deadline that isn&apos;t real.
-            </Card>
-            <Card title="&ldquo;Who are you people?&rdquo;" tone="amber">
-              A small studio in Seattle that builds these. Send them{' '}
-              <Link href="/" className="text-amber-400 underline underline-offset-4">
-                quicksites.ai
-              </Link>{' '}
-              and let them look while you&apos;re on the line.
-            </Card>
-          </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <Card title="&ldquo;I already have a website.&rdquo;" tone="amber">
+                Good — this isn&apos;t a replacement. It&apos;s a second front door on the name
+                people actually type, and it can point at the site they already have.
+              </Card>
+              <Card title="&ldquo;Ninety-nine for what, exactly?&rdquo;" tone="amber">
+                The name, exclusively, in their town. If one call a month turns into a job, it paid
+                for itself several times over — but let them do that math out loud, don&apos;t do it
+                for them.
+              </Card>
+              <Card title="&ldquo;Call me back later.&rdquo;" tone="amber">
+                Fine — but the domain is first-come. Take the callback and note it; do not invent a
+                deadline that isn&apos;t real.
+              </Card>
+              <Card title="&ldquo;Who are you people?&rdquo;" tone="amber">
+                A small studio in Seattle that builds these. Send them{' '}
+                <Link href="/" className="text-amber-400 underline underline-offset-4">
+                  quicksites.ai
+                </Link>{' '}
+                and let them look while you&apos;re on the line.
+              </Card>
+            </div>
+          </FoldSection>
 
           <div className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/[0.05] p-5">
             <h3 className="text-base font-semibold text-white">
@@ -366,44 +397,48 @@ export default function ForShellyPage() {
             {/* ⚠️ Chart AND table, not chart instead of table. The chart makes the compounding
                 legible — which is the actual question she is asking — and the table keeps the
                 exact figures checkable. A projection drawn as a line looks like history, so the
-                caption says what it is on the chart itself, not in a footnote. */}
-            <EarningsLines />
+                caption says what it is on the chart itself, not in a footnote.
+                Folded, not cut: she has read this once already, and on a second visit the
+                headline (half of $99, ongoing) is the part she needs at a glance. */}
+            <FoldSection label="What that adds up to" hint="chart + exact figures">
+              <EarningsLines />
 
-            <div className="mt-4 overflow-x-auto rounded-lg border border-zinc-800">
-              <table className="w-full text-sm">
-                <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
-                  <tr>
-                    <th className="px-4 py-2 text-left font-medium">If you close&hellip;</th>
-                    <th className="px-4 py-2 text-right font-medium">Your monthly, a year in</th>
-                  </tr>
-                </thead>
-                <tbody className="text-zinc-300">
-                  <tr className="border-t border-zinc-800/70">
-                    <td className="px-4 py-2">1 a week</td>
-                    <td className="px-4 py-2 text-right font-mono">$2,574/mo</td>
-                  </tr>
-                  <tr className="border-t border-zinc-800/70">
-                    <td className="px-4 py-2">2 a week</td>
-                    <td className="px-4 py-2 text-right font-mono">$5,148/mo</td>
-                  </tr>
-                  <tr className="border-t border-zinc-800/70">
-                    <td className="px-4 py-2">3 a week</td>
-                    <td className="px-4 py-2 text-right font-mono">$7,722/mo</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-              &#9888;&#65039; That assumes every account stays the full year. Some won&apos;t — it
-              is month-to-month with no contract, which is also what makes it easy to sell. Read it
-              as the shape, not a forecast.
-            </p>
+              <div className="mt-4 overflow-x-auto rounded-lg border border-zinc-800">
+                <table className="w-full text-sm">
+                  <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-medium">If you close&hellip;</th>
+                      <th className="px-4 py-2 text-right font-medium">Your monthly, a year in</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-zinc-300">
+                    <tr className="border-t border-zinc-800/70">
+                      <td className="px-4 py-2">1 a week</td>
+                      <td className="px-4 py-2 text-right font-mono">$2,574/mo</td>
+                    </tr>
+                    <tr className="border-t border-zinc-800/70">
+                      <td className="px-4 py-2">2 a week</td>
+                      <td className="px-4 py-2 text-right font-mono">$5,148/mo</td>
+                    </tr>
+                    <tr className="border-t border-zinc-800/70">
+                      <td className="px-4 py-2">3 a week</td>
+                      <td className="px-4 py-2 text-right font-mono">$7,722/mo</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+                &#9888;&#65039; That assumes every account stays the full year. Some won&apos;t — it
+                is month-to-month with no contract, which is also what makes it easy to sell. Read
+                it as the shape, not a forecast.
+              </p>
 
-            <p className="mt-4 text-sm leading-relaxed text-zinc-300">
-              And if one of your domains reaches page one, the rent steps to $399 —{' '}
-              <span className="font-semibold text-emerald-200">$199.50/month to you</span>, on an
-              account you already closed, for no extra work.
-            </p>
+              <p className="mt-4 text-sm leading-relaxed text-zinc-300">
+                And if one of your domains reaches page one, the rent steps to $399 —{' '}
+                <span className="font-semibold text-emerald-200">$199.50/month to you</span>, on an
+                account you already closed, for no extra work.
+              </p>
+            </FoldSection>
 
             <More label="Why half, rather than a smaller trail">
               <p>
@@ -420,7 +455,7 @@ export default function ForShellyPage() {
           </div>
 
           <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
-            <h3 className="text-base font-semibold text-white">Two things to nail down Friday</h3>
+            <h3 className="text-base font-semibold text-white">Two things to nail down today</h3>
             <ul className="mt-2 space-y-2 text-sm leading-relaxed text-zinc-400">
               <li>
                 <span className="text-zinc-200">Does your half follow the step-up?</span> Written
@@ -442,13 +477,27 @@ export default function ForShellyPage() {
             Settled since we last spoke
           </h2>
           <div className="mt-3">
-            <Card title="The checkout bills, and keeps billing" tag="3 cycles" tone="emerald">
-              When I sent you the brief this had never taken a live payment, which I should not have
-              let stand next to a page telling you it worked. It has now: a real card, a real
-              charge, and three consecutive automatic renewals — on a plan billing daily rather than
-              monthly so the second cycle arrived in a day instead of a month. Every one was written
-              back to our own records, not just Stripe&apos;s. If someone says yes on Friday, you
-              can take their money and it will keep arriving.
+            <Card
+              title="The checkout bills, and keeps billing"
+              tag="3 cycles"
+              tone="emerald"
+              more={
+                <>
+                  <p>
+                    A real card, a real charge, and three consecutive automatic renewals — on a plan
+                    billing daily rather than monthly, so the second cycle arrived in a day instead
+                    of a month. Every one was written back to our own records, not just
+                    Stripe&apos;s.
+                  </p>
+                  <p>
+                    When I first sent you this, it had never taken a live payment — which I
+                    shouldn&apos;t have let stand next to a page telling you it worked. It has now.
+                  </p>
+                </>
+              }
+            >
+              If someone says yes today, you can take their money and it will keep arriving on its
+              own.
             </Card>
           </div>
         </section>
@@ -459,8 +508,9 @@ export default function ForShellyPage() {
           </h2>
           <div className="mt-3 space-y-3">
             <Card title="Nobody has rented one of these yet" tag="0 rented" tone="rose">
-              Zero. You&apos;d be the first person to try to sell it. The price is set and the sites
-              are live, but no one has said yes to it.
+              Still zero paid rentals as of today. The price is set, the sites are live, and your
+              calls this week are the first real test it has ever had — a trial isn&apos;t a rental
+              until it bills.
             </Card>
             <Card
               title="I texted 19 businesses a free site and got 0 replies"
@@ -484,9 +534,9 @@ export default function ForShellyPage() {
         {/* Close */}
         <section className="mx-auto max-w-3xl px-6 pb-24 pt-8">
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-6 text-center">
-            <p className="text-lg font-semibold text-white">Friday</p>
+            <p className="text-lg font-semibold text-white">Today</p>
             <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-              What I&apos;d like to agree: which cities and trades you start with, and the two open
+              What I&apos;d like to agree: which cities and trades you work next, and the two open
               questions above. The split isn&apos;t one of them — 50/50 is the offer, and I&apos;d
               rather start there than negotiate you down to something that stops being worth your
               time in week three.

@@ -5,6 +5,7 @@
 // fires PASSWORD_RECOVERY, giving us a short-lived recovery session. We take a new password,
 // call updateUser, then bridge the session into server cookies (same path as login).
 
+import { SignInLink } from '@/components/auth/auth-links';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient as createBrowserClient } from '@supabase/supabase-js';
@@ -88,7 +89,7 @@ export default function ResetClient() {
         {status && (
           <p className={`text-sm ${status.startsWith('✅') ? 'text-green-400' : status.startsWith('❌') ? 'text-red-400' : 'text-yellow-400'}`}>{status}</p>
         )}
-        <p className="text-center text-xs text-zinc-500"><a href="/login" className="underline underline-offset-4 hover:text-zinc-300">Back to sign in</a></p>
+        <p className="text-center text-xs text-zinc-500"><SignInLink variant="inline" label="Back to sign in" /></p>
       </form>
     </div>
   );

@@ -4,6 +4,7 @@
 // directly. If the guest-build feature flag is off, falls back to /login so we
 // never drop someone into a flow whose editor would bounce them (the editor's
 // anon access is also flag-gated).
+import { signInHref } from '@/lib/auth/authLinks';
 import { redirect } from 'next/navigation';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import SiteHeader from '@/components/site/site-header';
@@ -18,7 +19,7 @@ export default async function BuildPage({
 }) {
   const sp = await searchParams;
   const initialIndustry = typeof sp.industry === 'string' ? sp.industry : undefined;
-  if (!guestBuildEnabled()) redirect('/login');
+  if (!guestBuildEnabled()) redirect(signInHref());
 
   return (
     <>

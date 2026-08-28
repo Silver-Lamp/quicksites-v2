@@ -1,4 +1,5 @@
 // app/orgs/[slug]/portfolio/page.tsx
+import { signInHref } from '@/lib/auth/authLinks';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cookies } from 'next/headers';
@@ -160,7 +161,7 @@ export default async function PortfoliosPage({ params }: { params: { slug: strin
                     Book a consult
                   </Button>
                 </Link>
-                <Link href="/login" className="inline-flex">
+                <Link href={signInHref()} className="inline-flex">
                   <Button
                     size="lg"
                     variant="outline"

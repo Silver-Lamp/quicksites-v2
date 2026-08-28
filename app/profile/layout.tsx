@@ -1,3 +1,4 @@
+import { signInHref } from '@/lib/auth/authLinks';
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { getSupabaseRSC } from '@/lib/supabase/serverClient';
@@ -11,6 +12,6 @@ export default async function ProfileLayout({ children }: { children: ReactNode 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent('/profile')}`);
+  if (!user) redirect(signInHref('/profile'));
   return <AdminChrome>{children}</AdminChrome>;
 }

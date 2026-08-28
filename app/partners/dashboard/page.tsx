@@ -1,6 +1,7 @@
 // app/partners/dashboard/page.tsx
 // Partner-scoped dashboard: the logged-in partner's referral code, shareable
 // signup link, referred merchants, and residual commissions (their codes only).
+import { signInHref } from '@/lib/auth/authLinks';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getServerSupabase } from '@/lib/supabase/server';
@@ -28,7 +29,7 @@ export default async function PartnerDashboard() {
   const {
     data: { user },
   } = await supa.auth.getUser();
-  if (!user) redirect('/login?next=/partners/dashboard');
+  if (!user) redirect(signInHref('/partners/dashboard'));
 
   const admin = await getServerSupabase({ serviceRole: true });
   const { data: codes } = await admin

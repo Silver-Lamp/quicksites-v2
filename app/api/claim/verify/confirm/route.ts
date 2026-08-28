@@ -4,6 +4,7 @@
 // verified and hand the browser two httpOnly cookies — the pending site-claim token
 // and a short-lived "verify grant" — so the post-login transfer (claimPendingSiteDraft)
 // will actually run. Constant-time compare, per-code attempt cap, per-IP throttle.
+import { signInHref } from '@/lib/auth/authLinks';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifySiteClaimToken, SITE_CLAIM_COOKIE, SITE_CLAIM_TTL_MS } from '@/lib/auth/siteClaimToken';
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
     .update({ attempts, verified_at: nowIso })
     .eq('id', (row as any).id);
 
-  const next = `/login?next=${encodeURIComponent(`/welcome/${id}`)}`;
+  const next = signInHref(`/welcome/${id}`);
   const res = NextResponse.json({ ok: true, next });
   const secure = process.env.NODE_ENV === 'production';
   // The verify grant proves THIS browser passed the OTP; the site-claim cookie carries

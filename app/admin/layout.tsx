@@ -1,3 +1,4 @@
+import { signInHref } from '@/lib/auth/authLinks';
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
@@ -17,7 +18,7 @@ function isGuestAllowedPath(pathname: string): boolean {
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await getSupabaseRSC();              // ✅ RSC-safe
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent('/admin/templates/list')}`);
+  if (!user) redirect(signInHref('/admin/templates/list'));
 
   // Guest (anonymous) gating — confined to the editor, only when the flag is on.
   if (user.is_anonymous) {

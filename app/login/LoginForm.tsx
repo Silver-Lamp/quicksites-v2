@@ -34,6 +34,22 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
     return n.startsWith('/') ? n : '/admin/templates/list';
   }, [sp]);
 
+  // Why the visitor is here, when something sent them. Five call sites redirect with these
+  // flags — ?error=unauthorized, ?logout=1, ?timeout=true — and NOTHING read them, so a
+  // bounced or expired user landed on a blank form with no explanation of what happened.
+  const arrivalNotice = useMemo(() => {
+    if (sp.get('logout')) {
+      return sp.get('error')
+        ? 'Signed out, though something went wrong on the way.'
+        : 'You are signed out.';
+    }
+    if (sp.get('timeout'))
+      return 'Your session expired. Sign in again to pick up where you left off.';
+    if (sp.get('error') === 'unauthorized')
+      return 'That page needs an account with access. Sign in to continue.';
+    return null;
+  }, [sp]);
+
   const [mode, setMode] = useState<AuthMode>('password');
   // ?intent=signup means the visitor came from a "Sign up" control. Same route either way —
   // it leads with account creation rather than sending them somewhere that does not exist.
@@ -558,6 +574,12 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
               {mode === 'password' ? 'Email me a magic link instead' : 'Use a password instead'}
             </button>
           </div>
+
+          {arrivalNotice && (
+            <p className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+              {arrivalNotice}
+            </p>
+          )}
 
           {status && (
             <p

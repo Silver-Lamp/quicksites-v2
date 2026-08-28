@@ -28,7 +28,9 @@ export default async function GigsIndexPage() {
 
   return (
     <div className="mx-auto min-h-screen max-w-2xl px-4 py-12 text-foreground">
-      <div className="mb-2 text-sm font-medium text-sky-600 dark:text-sky-400">🧺 Store-walk gigs</div>
+      <div className="mb-2 text-sm font-medium text-sky-600 dark:text-sky-400">
+        🧺 Store-walk gigs
+      </div>
       <h1 className="text-3xl font-bold tracking-tight">Flexible local gigs, ~20 minutes each</h1>
       <p className="mt-2 text-muted-foreground">
         Walk a store&rsquo;s aisles and catalog it &mdash; on your own schedule. Claim one to get
@@ -77,8 +79,8 @@ export default async function GigsIndexPage() {
             staff.
           </li>
           <li>
-            <span className="font-medium text-foreground">3. Submit and you&rsquo;re done.</span> Your
-            walk board keeps the list, so you can stop and pick it up later.
+            <span className="font-medium text-foreground">3. Submit and you&rsquo;re done.</span>{' '}
+            Your walk board keeps the list, so you can stop and pick it up later.
           </li>
         </ol>
 
@@ -92,10 +94,10 @@ export default async function GigsIndexPage() {
             About pay &mdash; please read before you claim
           </div>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            These gigs are <span className="font-medium text-foreground">not paid yet</span>. This is
-            an early pilot and we&rsquo;d rather say so than let &ldquo;gig&rdquo; imply a paycheck.
-            Claim one if you&rsquo;re curious about the project or happy to help it get off the
-            ground &mdash; not because you&rsquo;re expecting to earn from it today.
+            These gigs are <span className="font-medium text-foreground">not paid yet</span>. This
+            is an early pilot and we&rsquo;d rather say so than let &ldquo;gig&rdquo; imply a
+            paycheck. Claim one if you&rsquo;re curious about the project or happy to help it get
+            off the ground &mdash; not because you&rsquo;re expecting to earn from it today.
           </p>
         </div>
       </section>

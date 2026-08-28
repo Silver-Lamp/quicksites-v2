@@ -1,5 +1,6 @@
 'use client';
 
+import { signInHref } from '@/lib/auth/authLinks';
 import { supabase } from '@/lib/supabase/client';
 
 export default function LogoutButton() {
@@ -28,7 +29,7 @@ export default function LogoutButton() {
     }
 
     // 🔁 Redirect to login or homepage
-    window.location.href = '/login';
+    window.location.href = signInHref();
   };
 
   return (

@@ -4,6 +4,7 @@
 // drop the pending-claim cookie, and send the prospect to sign up. The transfer
 // itself happens post-login in claimPendingSiteDraft (auth callback / set-session).
 // The token is the grant — public by design (whoever opens the link claims it once).
+import { signInHref } from '@/lib/auth/authLinks';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySiteClaimToken, SITE_CLAIM_COOKIE, SITE_CLAIM_TTL_MS } from '@/lib/auth/siteClaimToken';
@@ -33,5 +34,5 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // Land on the post-claim welcome (shows the demand we captured) rather than straight
   // into the editor; it forwards to the editor.
   const next = `/welcome/${params.id}`;
-  return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(next)}`, url.origin));
+  return NextResponse.redirect(new URL(signInHref(next), url.origin));
 }

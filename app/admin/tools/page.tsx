@@ -1,6 +1,7 @@
 // app/admin/tools/page.tsx
 // SERVER ONLY — no "use client"
 
+import { signInHref } from '@/lib/auth/authLinks';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
@@ -30,7 +31,7 @@ export default async function Page() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/login?next=${encodeURIComponent('/admin/tools')}`);
+    redirect(signInHref('/admin/tools'));
   }
 
   return <AdminToolsPage />;

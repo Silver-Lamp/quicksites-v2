@@ -1,5 +1,6 @@
 // admin/pages/reset.tsx
 
+import { signInHref } from '@/lib/auth/authLinks';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/admin/lib/supabaseClient';
@@ -24,7 +25,7 @@ export default function ResetPassword() {
       setStatus(`Error: ${error.message}`);
     } else {
       setStatus('Password updated! Redirecting...');
-      setTimeout(() => router.push('/login'), 2000);
+      setTimeout(() => router.push(signInHref()), 2000);
     }
   };
 

@@ -437,6 +437,22 @@ export default function ForShellyPage() {
         </section>
 
         {/* Straight talk */}
+        <section className="mx-auto max-w-3xl px-6 pb-2 pt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
+            Settled since we last spoke
+          </h2>
+          <div className="mt-3">
+            <Card title="The checkout bills, and keeps billing" tag="3 cycles" tone="emerald">
+              When I sent you the brief this had never taken a live payment, which I should not have
+              let stand next to a page telling you it worked. It has now: a real card, a real
+              charge, and three consecutive automatic renewals — on a plan billing daily rather than
+              monthly so the second cycle arrived in a day instead of a month. Every one was written
+              back to our own records, not just Stripe&apos;s. If someone says yes on Friday, you
+              can take their money and it will keep arriving.
+            </Card>
+          </div>
+        </section>
+
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
             Straight talk — what isn&apos;t proven
@@ -461,11 +477,6 @@ export default function ForShellyPage() {
             >
               Not one reply of any kind, including &ldquo;no thanks.&rdquo; That was a different
               offer on a different channel, but you&apos;d find out around call forty anyway.
-            </Card>
-            <Card title="The checkout hasn't taken a live payment" tag="in progress" tone="rose">
-              The Stripe path is built but has never run end-to-end. I&apos;m fixing that before you
-              make a single call — closing someone and then not being able to bill them is worse
-              than not closing them.
             </Card>
           </div>
         </section>

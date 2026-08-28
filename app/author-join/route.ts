@@ -8,6 +8,7 @@
 //
 // The token is the grant — a bearer link, exactly like the operator site-claim link.
 // Provisioning is idempotent per (org, work_id), so opening it twice is safe.
+import { signInHref } from '@/lib/auth/authLinks';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import {
@@ -41,5 +42,5 @@ export async function GET(req: Request) {
   // Land in the admin after provisioning; the callback redirects to the new editor
   // when it knows the fresh template id.
   const next = '/admin/templates';
-  return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(next)}`, url.origin));
+  return NextResponse.redirect(new URL(signInHref(next), url.origin));
 }

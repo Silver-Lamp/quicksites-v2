@@ -1,6 +1,7 @@
 // components/admin/tools/AdminToolsPage.tsx
 'use client';
 
+import { SignInLink } from '@/components/auth/auth-links';
 import * as React from 'react';
 import { CurrentUserContext } from '@/components/admin/context/current-user-provider';
 
@@ -97,7 +98,7 @@ export function AdminToolsPage() {
     return (
       <main className="mx-auto max-w-6xl p-6">
         <p className="text-sm text-muted-foreground">
-          You’re not signed in. Please <a className="underline" href="/login?next=%2Fadmin%2Ftools">log in</a>.
+          You’re not signed in. Please <SignInLink next="/admin/tools" variant="inline" label="sign in" />.
         </p>
       </main>
     );

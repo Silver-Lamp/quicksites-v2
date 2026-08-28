@@ -9,6 +9,7 @@
 // Colors use the semantic theme tokens (not literal zinc/white) — the app wraps pages in a
 // dark ThemeScope, so hard-coded light values rendered dark-on-dark. Same fix as /walker.
 
+import { signInHref } from '@/lib/auth/authLinks';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -41,12 +42,14 @@ export default async function GigPage({ params }: { params: Promise<{ id: string
   if (!gig) notFound();
 
   const where = gigWhere(gig);
-  const claimHref = `/login?next=/walker`;
+  const claimHref = signInHref('/walker');
   const available = gig.status === 'open';
 
   return (
     <div className="mx-auto min-h-screen max-w-xl px-4 py-12 text-foreground">
-      <div className="mb-6 text-sm font-medium text-sky-600 dark:text-sky-400">🧺 Store-walk gig</div>
+      <div className="mb-6 text-sm font-medium text-sky-600 dark:text-sky-400">
+        🧺 Store-walk gig
+      </div>
       <h1 className="text-3xl font-bold tracking-tight">Catalog a store&rsquo;s aisles</h1>
       <p className="mt-1 text-muted-foreground">{gigLocality(gig)}</p>
 

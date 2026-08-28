@@ -10,6 +10,7 @@
 // `[data-theme]` wrapper, unlike `dark:` utilities which need the post-hydration
 // `.dark` class). Accents use alpha tints so they read on either theme.
 
+import { SignInLink } from '@/components/auth/auth-links';
 import * as React from 'react';
 
 type Gig = {
@@ -60,7 +61,7 @@ export default function WalkerBoard() {
       <div className="mx-auto min-h-screen max-w-xl px-4 py-16 text-center text-foreground">
         <h1 className="text-2xl font-bold">🧺 Store-walk gigs</h1>
         <p className="mt-3 text-sm text-muted-foreground">Sign in to see open cataloging gigs and plan your route.</p>
-        <a href="/login?next=/walker" className="mt-6 inline-block rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">Sign in</a>
+        <SignInLink next="/walker" variant="primary" className="mt-6" />
       </div>
     );
   }

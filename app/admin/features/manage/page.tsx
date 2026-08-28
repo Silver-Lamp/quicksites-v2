@@ -1,6 +1,7 @@
 // app/admin/features/manage/page.tsx
 'use client';
 
+import { signInHref } from '@/lib/auth/authLinks';
 import * as React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -1083,7 +1084,7 @@ export default function ManageFeaturesPage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Link href="/login" className="inline-flex">
+                <Link href={signInHref()} className="inline-flex">
                   <Button size="sm">Log in</Button>
                 </Link>
                 <Button size="sm" variant="outline" onClick={() => location.reload()}>

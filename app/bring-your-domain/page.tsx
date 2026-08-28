@@ -6,6 +6,7 @@
 // starter draft + the exact two DNS records (no transfer, MX/email untouched).
 // Rides the guest-build flow (anonymous draft, sign up to publish), so it gates on
 // the same flag as /build.
+import { signInHref } from '@/lib/auth/authLinks';
 import { redirect } from 'next/navigation';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import SiteHeader from '@/components/site/site-header';
@@ -27,7 +28,7 @@ export default async function BringYourDomainPage({
   // public page (Facebook etc.) to build the draft FROM (the parked-domain + FB combo).
   searchParams: Promise<{ domain?: string; ref?: string }>;
 }) {
-  if (!guestBuildEnabled()) redirect('/login');
+  if (!guestBuildEnabled()) redirect(signInHref());
   const sp = await searchParams;
   const initialDomain = typeof sp?.domain === 'string' ? sp.domain.slice(0, 253) : '';
   const initialRef = typeof sp?.ref === 'string' ? sp.ref.slice(0, 500) : '';

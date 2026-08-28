@@ -7,6 +7,7 @@
 // Held = accrued but not yet transferred (they connect Stripe Connect → it transfers, or it
 // transfers at the next sale if already connected).
 
+import { signInHref } from '@/lib/auth/authLinks';
 import Link from 'next/link';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { earningsForOwner } from '@/lib/referrals/codes';
@@ -35,7 +36,7 @@ export default async function ReferralDashboardPage() {
         <h1 className="text-2xl font-bold text-white">Referral earnings</h1>
         <p className="mt-3 text-sm text-zinc-400">Sign in to see your referral earnings.</p>
         <Link
-          href="/login?next=/referrals/dashboard"
+          href={signInHref('/referrals/dashboard')}
           className="mt-6 inline-block rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
         >
           Sign in

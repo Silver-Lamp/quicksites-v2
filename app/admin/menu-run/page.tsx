@@ -5,6 +5,7 @@
 //
 // Deliberately NOT a public gig: it involves driving between stops and speaking for QuickSites
 // at a stranger's counter. Neither belongs on an unpaid public gig board.
+import { signInHref } from '@/lib/auth/authLinks';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
@@ -20,7 +21,7 @@ export default async function MenuRunPage({
   searchParams: Promise<{ campaign?: string }> | { campaign?: string };
 }) {
   const admin = await getAdminUser();
-  if (!admin) redirect('/login?next=/admin/menu-run');
+  if (!admin) redirect(signInHref('/admin/menu-run'));
 
   const sp = await searchParams;
   const { data: campaigns } = await supabaseAdmin

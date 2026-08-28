@@ -8,6 +8,7 @@
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+import { signInHref } from '@/lib/auth/authLinks';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getServerSupabase } from '@/lib/supabase/server';
@@ -25,7 +26,7 @@ export default async function ClaimWelcomePage({ params }: { params: { id: strin
 
   const supa = await getServerSupabase();
   const { data: { user } } = await supa.auth.getUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(`/welcome/${id}`)}`);
+  if (!user) redirect(signInHref(`/welcome/${id}`));
 
   const { data: tpl } = await supabaseAdmin
     .from('templates')

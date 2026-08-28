@@ -1,14 +1,33 @@
 'use client';
 
+import { signInHref } from '@/lib/auth/authLinks';
 import * as React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  ArrowRight, Layers, Sparkles, Palette, ShoppingCart,
-  Blocks, Globe, TrendingUp, BarChart3, PhoneCall, LayoutTemplate, Rocket,
-  Users, Mail,
+  ArrowRight,
+  Layers,
+  Sparkles,
+  Palette,
+  ShoppingCart,
+  Blocks,
+  Globe,
+  TrendingUp,
+  BarChart3,
+  PhoneCall,
+  LayoutTemplate,
+  Rocket,
+  Users,
+  Mail,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { featureDetail } from '@/lib/features/detail';
@@ -43,9 +62,21 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
 };
 
 const STEPS = [
-  { icon: LayoutTemplate, title: 'Pick a starting point', body: 'Start from an industry scaffold, duplicate a template, or open a blank canvas.' },
-  { icon: Blocks, title: 'Edit with blocks', body: 'Drag, drop, and tweak reusable blocks — with optional AI to draft the copy.' },
-  { icon: Rocket, title: 'Publish & sell', body: 'Ship to a subdomain or custom domain, then take orders with Stripe built in.' },
+  {
+    icon: LayoutTemplate,
+    title: 'Pick a starting point',
+    body: 'Start from an industry scaffold, duplicate a template, or open a blank canvas.',
+  },
+  {
+    icon: Blocks,
+    title: 'Edit with blocks',
+    body: 'Drag, drop, and tweak reusable blocks — with optional AI to draft the copy.',
+  },
+  {
+    icon: Rocket,
+    title: 'Publish & sell',
+    body: 'Ship to a subdomain or custom domain, then take orders with Stripe built in.',
+  },
 ];
 
 type FeatureRow = {
@@ -86,7 +117,8 @@ function FeatureCard({ f }: { f: FeatureRow }) {
     <Card
       className={classNames(
         'h-full flex flex-col overflow-hidden border-zinc-800/50 transition-all duration-200',
-        href && 'group-hover:-translate-y-1 group-hover:border-sky-500/40 group-hover:shadow-2xl group-hover:shadow-sky-500/10',
+        href &&
+          'group-hover:-translate-y-1 group-hover:border-sky-500/40 group-hover:shadow-2xl group-hover:shadow-sky-500/10',
         !href && 'hover:border-zinc-700',
         f.featured && featuredGlow
       )}
@@ -120,7 +152,10 @@ function FeatureCard({ f }: { f: FeatureRow }) {
           <ul className="grid gap-2.5 sm:grid-cols-2">
             {detail!.how.slice(0, 4).map((h) => (
               <li key={h} className="flex gap-2.5 text-sm leading-relaxed text-muted-foreground">
-                <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400/70" />
+                <span
+                  aria-hidden
+                  className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400/70"
+                />
                 <span>{h}</span>
               </li>
             ))}
@@ -150,13 +185,15 @@ function FeatureCard({ f }: { f: FeatureRow }) {
   return (
     <Link
       href={href}
-      className={classNames('group block focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-xl', wide && 'md:col-span-2')}
+      className={classNames(
+        'group block focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-xl',
+        wide && 'md:col-span-2'
+      )}
     >
       {body}
     </Link>
   );
 }
-
 
 export default function FeatureGalleryClient({ initialRows }: { initialRows: FeatureRow[] }) {
   const [cat, setCat] = React.useState<'All' | string>('All');
@@ -195,12 +232,8 @@ export default function FeatureGalleryClient({ initialRows }: { initialRows: Fea
                 Everything in every plan
               </Badge>
             </div>
-            <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
-              {COPY.heroTitle}
-            </h1>
-            <p className="mt-3 max-w-2xl text-muted-foreground">
-              {COPY.heroSubtitle}
-            </p>
+            <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">{COPY.heroTitle}</h1>
+            <p className="mt-3 max-w-2xl text-muted-foreground">{COPY.heroSubtitle}</p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Link href={COPY.ctas.primaryHref} className="inline-flex">
                 <Button size="lg">
@@ -305,15 +338,14 @@ export default function FeatureGalleryClient({ initialRows }: { initialRows: Fea
         <Card className="bg-gradient-to-br from-primary/5 to-transparent border-zinc-800/50">
           <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h3 className="text-xl md:text-2xl font-semibold">
-                See it on your own site
-              </h3>
+              <h3 className="text-xl md:text-2xl font-semibold">See it on your own site</h3>
               <p className="text-muted-foreground">
-                Spin up a free trial and build a real page in minutes — or book a live walkthrough and we’ll show you around.
+                Spin up a free trial and build a real page in minutes — or book a live walkthrough
+                and we’ll show you around.
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/login" className="inline-flex">
+              <Link href={signInHref()} className="inline-flex">
                 <Button size="lg">
                   Start free trial
                   <ArrowRight className="ml-2 h-4 w-4" />

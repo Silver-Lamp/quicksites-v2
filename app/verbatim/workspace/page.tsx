@@ -5,6 +5,7 @@
 // ⚠️ SIGNED-IN ONLY, AND NEVER PART OF A PUBLISHED SITE. The résumé page a Verbatim user publishes
 // is public by design; this is the opposite — a private list of who they are applying to. Nothing
 // here is reachable from a tenant render, and there is no shareable URL for someone else's board.
+import { signInHref } from '@/lib/auth/authLinks';
 import { redirect } from 'next/navigation';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { publicSiteUrl } from '@/lib/sites/publicUrl';
@@ -22,7 +23,7 @@ export const metadata = {
 export default async function VerbatimWorkspacePage() {
   const db = await getServerSupabase();
   const { data: { user } } = await db.auth.getUser();
-  if (!user) redirect('/login?next=/verbatim/workspace');
+  if (!user) redirect(signInHref('/verbatim/workspace'));
 
   // Both queries run as the USER, so RLS scopes them. See lib/jobs/postings.ts.
   //

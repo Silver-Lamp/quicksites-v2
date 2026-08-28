@@ -18,6 +18,7 @@
 // link work, so the affordance leaks nothing to a stranger who trips over it — they just get
 // bounced to login and then a 403.
 
+import { signInHref } from '@/lib/auth/authLinks';
 import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { supabaseAdmin } from '@/lib/supabase/admin';
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
   if (!admin) {
     // Send them to login and come back here, so the round trip completes in one click.
     const back = `/admin/templates/resolve?slug=${encodeURIComponent(slug)}&host=${encodeURIComponent(host)}`;
-    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(back)}`, url.origin));
+    return NextResponse.redirect(new URL(signInHref(back), url.origin));
   }
 
   if (!slug && !host) {

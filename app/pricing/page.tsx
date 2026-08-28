@@ -1,12 +1,30 @@
 'use client';
 
+import { signInHref } from '@/lib/auth/authLinks';
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Check, ArrowRight, Sparkles, Store, Users, Handshake, Globe, BadgeCheck, Phone } from 'lucide-react';
+import {
+  Check,
+  ArrowRight,
+  Sparkles,
+  Store,
+  Users,
+  Handshake,
+  Globe,
+  BadgeCheck,
+  Phone,
+} from 'lucide-react';
 
 // shadcn/ui — adjust imports if your paths differ
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -44,21 +62,21 @@ import {
   RESTAURANT_FEE_MIN_CENTS,
 } from '@/lib/commerce/pricingPolicy';
 
-const ORDER_FEE_PCT = GENERAL_FEE_PERCENT;              // most storefronts
-const FOOD_FEE_PCT = RESTAURANT_FEE_PERCENT;            // any site with a menu block
-const FOOD_FEE_MIN = RESTAURANT_FEE_MIN_CENTS;          // per-order floor, in cents
-const AI_ADDON_PER_USER = 10;      // $/user/mo
+const ORDER_FEE_PCT = GENERAL_FEE_PERCENT; // most storefronts
+const FOOD_FEE_PCT = RESTAURANT_FEE_PERCENT; // any site with a menu block
+const FOOD_FEE_MIN = RESTAURANT_FEE_MIN_CENTS; // per-order floor, in cents
+const AI_ADDON_PER_USER = 10; // $/user/mo
 const FOUNDER_PLAN = { platform: 15, perSite: 5 }; // Path B (agency) — beta
 const PUBLIC_PLAN = { platform: 19, perSite: 6 };
 // Path D (lead-gen / no online store): flat monthly on a premium local domain, at a
 // founder rate that steps up to the full rate once the site reaches page 1. Varies by
 // trade — see lib/outreach/geoPricing.ts / docs/GEO_DOMAIN_MONETIZATION.md.
 const LEADGEN_PLAN = { founderFrom: 49, fullFrom: 99, premiumFull: 399 };
-const PARTNER_FEE_SHARE = 0.8;     // partners keep 80% of the order fee
+const PARTNER_FEE_SHARE = 0.8; // partners keep 80% of the order fee
 
 const CTA = {
-  buildHref: '/build',     // guest builder (no-signup); /build redirects to /login if the flag is off
-  signupHref: '/login',    // account signup (agency trial)
+  buildHref: '/build', // guest builder (no-signup); /build redirects to /login if the flag is off
+  signupHref: '/login', // account signup (agency trial)
   contactHref: '/contact',
   partnersHref: '/partners',
 };
@@ -76,7 +94,7 @@ async function startAgencyCheckout(tier: 'founder' | 'public') {
       body: JSON.stringify({ tier }),
     });
     if (res.status === 401) {
-      window.location.href = `/login?next=${encodeURIComponent('/pricing#agency')}`;
+      window.location.href = signInHref('/pricing#agency');
       return;
     }
     const data = await res.json().catch(() => ({}));
@@ -91,10 +109,20 @@ async function startAgencyCheckout(tier: 'founder' | 'public') {
 }
 
 // ---- Utilities ----
-const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
-const usd0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+const usd = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 2,
+});
+const usd0 = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+});
 const pct = (n: number) => `${Math.round(n * 100)}%`;
-function classNames(...xs: (string | false | null | undefined)[]) { return xs.filter(Boolean).join(' '); }
+function classNames(...xs: (string | false | null | undefined)[]) {
+  return xs.filter(Boolean).join(' ');
+}
 
 function Feature({ text }: { text: string }) {
   return (
@@ -108,10 +136,34 @@ function Feature({ text }: { text: string }) {
 // ---- Top-of-page path chooser ----
 function PathChooser() {
   const paths = [
-    { icon: Store, title: 'Build my own site', blurb: 'Free to build & host. Pay only when you sell.', href: '#merchant', tag: 'Most popular' },
-    { icon: Phone, title: 'No online store', blurb: 'Service trades: flat monthly on a premium local domain.', href: '#leadgen', tag: 'Lead-gen' },
-    { icon: Users, title: 'Run sites for clients', blurb: 'Flat, predictable pricing for agencies.', href: '#agency', tag: 'Agencies' },
-    { icon: Handshake, title: 'Resell under my brand', blurb: 'White-label and earn 80% on every order, for life.', href: '#partner', tag: 'Partners' },
+    {
+      icon: Store,
+      title: 'Build my own site',
+      blurb: 'Free to build & host. Pay only when you sell.',
+      href: '#merchant',
+      tag: 'Most popular',
+    },
+    {
+      icon: Phone,
+      title: 'No online store',
+      blurb: 'Service trades: flat monthly on a premium local domain.',
+      href: '#leadgen',
+      tag: 'Lead-gen',
+    },
+    {
+      icon: Users,
+      title: 'Run sites for clients',
+      blurb: 'Flat, predictable pricing for agencies.',
+      href: '#agency',
+      tag: 'Agencies',
+    },
+    {
+      icon: Handshake,
+      title: 'Resell under my brand',
+      blurb: 'White-label and earn 80% on every order, for life.',
+      href: '#partner',
+      tag: 'Partners',
+    },
   ];
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -128,7 +180,8 @@ function PathChooser() {
             </CardHeader>
             <CardFooter>
               <span className="inline-flex items-center text-sm font-medium text-sky-400">
-                See details <ArrowRight className="ml-1 h-4 w-4 transition group-hover:translate-x-0.5" />
+                See details{' '}
+                <ArrowRight className="ml-1 h-4 w-4 transition group-hover:translate-x-0.5" />
               </span>
             </CardFooter>
           </Card>
@@ -149,7 +202,8 @@ function OrderFeeCalc() {
         <CardTitle>What “pay when you sell” looks like</CardTitle>
         <CardDescription>
           We take {pct(ORDER_FEE_PCT)} of each order. No monthly fee on the free plan. Food ordering
-          is {pct(FOOD_FEE_PCT)} + {FOOD_FEE_MIN}¢ per order — the figures below use the {pct(ORDER_FEE_PCT)} rate.
+          is {pct(FOOD_FEE_PCT)} + {FOOD_FEE_MIN}¢ per order — the figures below use the{' '}
+          {pct(ORDER_FEE_PCT)} rate.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -157,12 +211,19 @@ function OrderFeeCalc() {
           <Label htmlFor="gmv">Your monthly sales</Label>
           <div className="mt-2 flex items-center gap-3">
             <input
-              id="gmv" type="range" min={0} max={50000} step={100}
-              value={gmv} onChange={(e) => setGmv(parseInt(e.target.value || '0', 10))}
+              id="gmv"
+              type="range"
+              min={0}
+              max={50000}
+              step={100}
+              value={gmv}
+              onChange={(e) => setGmv(parseInt(e.target.value || '0', 10))}
               className="w-full"
             />
             <Input
-              type="number" min={0} value={gmv}
+              type="number"
+              min={0}
+              value={gmv}
               onChange={(e) => setGmv(Math.max(0, Number(e.target.value || 0)))}
               className="w-28"
             />
@@ -174,7 +235,8 @@ function OrderFeeCalc() {
           <Stat label="You keep" value={usd0.format(keep)} highlight />
         </div>
         <p className="text-xs text-muted-foreground">
-          Collected automatically via Stripe at checkout. Plus standard Stripe processing fees. No sales, no fee.
+          Collected automatically via Stripe at checkout. Plus standard Stripe processing fees. No
+          sales, no fee.
         </p>
       </CardContent>
     </Card>
@@ -184,17 +246,22 @@ function OrderFeeCalc() {
 // ---- Path D: Lead-gen / service business (no online store) ----
 function LeadGenSection() {
   return (
-    <section id="leadgen" className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60">
+    <section
+      id="leadgen"
+      className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60"
+    >
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Phone className="h-6 w-6 text-sky-400" />
         <h2 className="text-2xl font-semibold">Service business — no online store</h2>
-        <Badge variant="secondary" className="ml-2">Flat monthly</Badge>
+        <Badge variant="secondary" className="ml-2">
+          Flat monthly
+        </Badge>
       </div>
       <p className="mb-6 max-w-3xl text-sm text-muted-foreground">
-        Trades that get paid offline — towing, plumbing, HVAC, salons, contractors — don’t
-        have a checkout for us to take a per-order fee on. So instead of a take-rate, we host
-        your site on a <span className="text-foreground font-medium">premium exact-match local
-        domain</span> for a flat monthly rate.
+        Trades that get paid offline — towing, plumbing, HVAC, salons, contractors — don’t have a
+        checkout for us to take a per-order fee on. So instead of a take-rate, we host your site on
+        a <span className="text-foreground font-medium">premium exact-match local domain</span> for
+        a flat monthly rate.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border-zinc-800/60">
@@ -213,7 +280,12 @@ function LeadGenSection() {
             <Feature text="No online-order fee, ever — keep 100% of the jobs you book" />
           </CardContent>
           <CardFooter>
-            <Link href={CTA.contactHref}><Button>Get your local domain<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+            <Link href={CTA.contactHref}>
+              <Button>
+                Get your local domain
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </CardFooter>
         </Card>
 
@@ -222,14 +294,22 @@ function LeadGenSection() {
             <CardTitle>You only pay full price once it’s on page 1</CardTitle>
             <CardDescription>
               Lock in a low founder rate while the domain is still climbing. It steps up to the
-              standard rate <span className="text-foreground font-medium">only</span> once the
-              site reaches Google’s first page — when it’s actually sending you calls.
+              standard rate <span className="text-foreground font-medium">only</span> once the site
+              reaches Google’s first page — when it’s actually sending you calls.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <NumberTile label="Founder rate — while it climbs" value={`from ${usd0.format(LEADGEN_PLAN.founderFrom)}`} suffix="/mo" />
-              <NumberTile label="Full rate — on page 1" value={`from ${usd0.format(LEADGEN_PLAN.fullFrom)}`} suffix="/mo" />
+              <NumberTile
+                label="Founder rate — while it climbs"
+                value={`from ${usd0.format(LEADGEN_PLAN.founderFrom)}`}
+                suffix="/mo"
+              />
+              <NumberTile
+                label="Full rate — on page 1"
+                value={`from ${usd0.format(LEADGEN_PLAN.fullFrom)}`}
+                suffix="/mo"
+              />
             </div>
             <p className="text-xs text-muted-foreground">
               Rate varies by trade and market — higher-value emergency trades (towing, plumbing,
@@ -242,24 +322,51 @@ function LeadGenSection() {
   );
 }
 
-function Stat({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+function Stat({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className={classNames('rounded-xl border border-zinc-800/60 p-4', highlight && 'border-sky-500/40 bg-sky-500/[0.04]')}>
+    <div
+      className={classNames(
+        'rounded-xl border border-zinc-800/60 p-4',
+        highlight && 'border-sky-500/40 bg-sky-500/[0.04]'
+      )}
+    >
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={classNames('mt-1 text-xl font-semibold', highlight && 'text-sky-400')}>{value}</div>
+      <div className={classNames('mt-1 text-xl font-semibold', highlight && 'text-sky-400')}>
+        {value}
+      </div>
     </div>
   );
 }
 
 // ---- Path B: Agency tier card + reseller calculator ----
-function PlanToggle({ value, onChange }: { value: 'founder' | 'public'; onChange: (v: 'founder' | 'public') => void }) {
+function PlanToggle({
+  value,
+  onChange,
+}: {
+  value: 'founder' | 'public';
+  onChange: (v: 'founder' | 'public') => void;
+}) {
   return (
     <div className="inline-flex items-center rounded-full bg-muted p-1 shadow-inner">
       {(['founder', 'public'] as const).map((v) => (
         <button
-          key={v} type="button" onClick={() => onChange(v)}
-          className={classNames('px-4 py-1.5 rounded-full text-sm font-medium transition',
-            value === v ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground')}
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          className={classNames(
+            'px-4 py-1.5 rounded-full text-sm font-medium transition',
+            value === v
+              ? 'bg-background shadow text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
         >
           {v === 'founder' ? 'Founder / Beta' : 'Public'}
         </button>
@@ -273,7 +380,10 @@ function NumberTile({ label, value, suffix }: { label: string; value: string; su
     <div className="rounded-xl border border-zinc-800/60 p-4 overflow-hidden">
       <div className="text-sm text-muted-foreground">{label}</div>
       <div className="text-2xl font-semibold">
-        {value}{suffix ? <span className="ml-1 text-base font-normal text-muted-foreground">{suffix}</span> : null}
+        {value}
+        {suffix ? (
+          <span className="ml-1 text-base font-normal text-muted-foreground">{suffix}</span>
+        ) : null}
       </div>
     </div>
   );
@@ -285,10 +395,19 @@ function AgencyPlanCard({ mode }: { mode: 'founder' | 'public' }) {
     <Card className="h-full border-zinc-800/60">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xl">{mode === 'founder' ? 'Founder / Beta' : 'Public'}</CardTitle>
-          {mode === 'founder' ? <Badge variant="secondary">Grandfathered 12 mo</Badge> : <Badge variant="outline">Standard</Badge>}
+          <CardTitle className="text-xl">
+            {mode === 'founder' ? 'Founder / Beta' : 'Public'}
+          </CardTitle>
+          {mode === 'founder' ? (
+            <Badge variant="secondary">Grandfathered 12 mo</Badge>
+          ) : (
+            <Badge variant="outline">Standard</Badge>
+          )}
         </div>
-        <CardDescription>Flat, predictable pricing for agencies who’d rather not share order revenue. No per-order fee on this plan.</CardDescription>
+        <CardDescription>
+          Flat, predictable pricing for agencies who’d rather not share order revenue. No per-order
+          fee on this plan.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -304,25 +423,38 @@ function AgencyPlanCard({ mode }: { mode: 'founder' | 'public' }) {
         </ul>
         {AGENCY_BILLING_ENABLED ? (
           <div className="rounded-lg bg-sky-500/10 border border-sky-500/30 p-3 text-xs text-sky-200">
-            Self-serve checkout: you’ll pay the platform fee plus {usd.format(plan.perSite)}/site for your current live sites.
-            Per-site billing tracks your published sites automatically.
+            Self-serve checkout: you’ll pay the platform fee plus {usd.format(plan.perSite)}/site
+            for your current live sites. Per-site billing tracks your published sites automatically.
           </div>
         ) : (
           <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-200">
-            Flat per-site billing is rolling out in beta — we’ll set your account up directly. Talk to us to get started.
+            Flat per-site billing is rolling out in beta — we’ll set your account up directly. Talk
+            to us to get started.
           </div>
         )}
       </CardContent>
       <CardFooter className="justify-between">
         {AGENCY_BILLING_ENABLED ? (
           <>
-            <Button onClick={() => startAgencyCheckout(mode)}>Start agency plan<ArrowRight className="ml-2 h-4 w-4" /></Button>
-            <Link href={CTA.contactHref}><Button variant="ghost">Talk to us</Button></Link>
+            <Button onClick={() => startAgencyCheckout(mode)}>
+              Start agency plan
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+            <Link href={CTA.contactHref}>
+              <Button variant="ghost">Talk to us</Button>
+            </Link>
           </>
         ) : (
           <>
-            <Link href={CTA.contactHref}><Button>Talk to us<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
-            <Link href={CTA.signupHref}><Button variant="ghost">Start a free trial</Button></Link>
+            <Link href={CTA.contactHref}>
+              <Button>
+                Talk to us
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href={CTA.signupHref}>
+              <Button variant="ghost">Start a free trial</Button>
+            </Link>
           </>
         )}
       </CardFooter>
@@ -352,32 +484,65 @@ function AgencyCalculator({ mode }: { mode: 'founder' | 'public' }) {
           <div>
             <Label htmlFor="sites">Client sites</Label>
             <div className="mt-2 flex items-center gap-3">
-              <input id="sites" type="range" min={0} max={500} step={1} value={sites}
-                onChange={(e) => setSites(parseInt(e.target.value || '0', 10))} className="w-full" />
-              <Input type="number" min={0} value={sites}
-                onChange={(e) => setSites(Math.max(0, Number(e.target.value || 0)))} className="w-24" />
+              <input
+                id="sites"
+                type="range"
+                min={0}
+                max={500}
+                step={1}
+                value={sites}
+                onChange={(e) => setSites(parseInt(e.target.value || '0', 10))}
+                className="w-full"
+              />
+              <Input
+                type="number"
+                min={0}
+                value={sites}
+                onChange={(e) => setSites(Math.max(0, Number(e.target.value || 0)))}
+                className="w-24"
+              />
             </div>
           </div>
           <div>
             <Label htmlFor="pps">Price you charge each client / mo</Label>
             <div className="mt-2 flex items-center gap-3">
-              <input id="pps" type="range" min={10} max={500} step={1} value={pricePerSite}
-                onChange={(e) => setPricePerSite(clamp(parseInt(e.target.value || '0', 10), 10, 500))} className="w-full" />
-              <Input type="number" min={10} value={pricePerSite}
-                onChange={(e) => setPricePerSite(clamp(Number(e.target.value || 0), 10, 5000))} className="w-24" />
+              <input
+                id="pps"
+                type="range"
+                min={10}
+                max={500}
+                step={1}
+                value={pricePerSite}
+                onChange={(e) =>
+                  setPricePerSite(clamp(parseInt(e.target.value || '0', 10), 10, 500))
+                }
+                className="w-full"
+              />
+              <Input
+                type="number"
+                min={10}
+                value={pricePerSite}
+                onChange={(e) => setPricePerSite(clamp(Number(e.target.value || 0), 10, 5000))}
+                className="w-24"
+              />
             </div>
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat label={`Platform`} value={usd.format(numbers.platform)} />
-          <Stat label={`${sites} sites × ${usd.format(numbers.perSite)}`} value={usd.format(siteCost)} />
+          <Stat
+            label={`${sites} sites × ${usd.format(numbers.perSite)}`}
+            value={usd.format(siteCost)}
+          />
           <Stat label="Your revenue" value={usd.format(revenue)} />
           <Stat label="Gross margin" value={usd.format(margin)} highlight />
         </div>
         <p className="text-xs text-muted-foreground" aria-live="polite">
-          {sites} site{sites === 1 ? '' : 's'} → you pay <span className="font-medium text-foreground">{usd.format(monthlyCost)}</span>/mo,
-          bill clients <span className="font-medium text-foreground">{usd.format(revenue)}</span>/mo →
-          margin <span className="font-medium text-foreground">{usd.format(margin)}</span>/mo (before payment processing).
+          {sites} site{sites === 1 ? '' : 's'} → you pay{' '}
+          <span className="font-medium text-foreground">{usd.format(monthlyCost)}</span>/mo, bill
+          clients <span className="font-medium text-foreground">{usd.format(revenue)}</span>/mo →
+          margin <span className="font-medium text-foreground">{usd.format(margin)}</span>/mo
+          (before payment processing).
         </p>
       </CardContent>
     </Card>
@@ -387,9 +552,26 @@ function AgencyCalculator({ mode }: { mode: 'founder' | 'public' }) {
 // ---- Add-ons ----
 function AddOns() {
   const items = [
-    { icon: Sparkles, title: 'AI Assist Pack', price: `+${usd.format(AI_ADDON_PER_USER)}/user/mo`, blurb: 'Hero/services/FAQ copy, meta & schema, image prompts. The free plan includes a starter AI allowance.' },
-    { icon: Globe, title: 'Custom domain', price: 'Paid plans', blurb: 'Publish to your own domain (free sites use a quicksites.ai subdomain). Auto DNS + SSL.' },
-    { icon: BadgeCheck, title: 'Remove branding', price: 'Paid plans', blurb: 'Drop the “Made with QuickSites” badge for a fully white-labeled site.' },
+    {
+      icon: Sparkles,
+      title: 'AI Assist Pack',
+      price: `+${usd.format(AI_ADDON_PER_USER)}/user/mo`,
+      blurb:
+        'Hero/services/FAQ copy, meta & schema, image prompts. The free plan includes a starter AI allowance.',
+    },
+    {
+      icon: Globe,
+      title: 'Custom domain',
+      price: 'Paid plans',
+      blurb:
+        'Publish to your own domain (free sites use a quicksites.ai subdomain). Auto DNS + SSL.',
+    },
+    {
+      icon: BadgeCheck,
+      title: 'Remove branding',
+      price: 'Paid plans',
+      blurb: 'Drop the “Made with QuickSites” badge for a fully white-labeled site.',
+    },
   ];
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -399,7 +581,9 @@ function AddOns() {
             <div className="flex items-center gap-2">
               <it.icon className="h-5 w-5 text-sky-400" />
               <CardTitle className="text-base">{it.title}</CardTitle>
-              <Badge className="ml-auto" variant="secondary">{it.price}</Badge>
+              <Badge className="ml-auto" variant="secondary">
+                {it.price}
+              </Badge>
             </div>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">{it.blurb}</CardContent>
@@ -411,12 +595,30 @@ function AddOns() {
 
 // ---- FAQs ----
 const FAQS: { q: string; a: string }[] = [
-  { q: 'Is it really free to start?', a: 'Yes — building, hosting, and publishing to a quicksites.ai subdomain are free. On the free (merchant) plan we only take a fee on orders you actually sell. No sales, no fee.' },
-  { q: 'What do you charge on a restaurant or food-ordering site?', a: `8% plus 60¢ per order, with no monthly fee. It is higher than the 5% on other storefronts for one reason: card processing takes a fixed ~30¢ off every transaction, so on a $9 order a flat percentage does not cover the cost of moving the money. The 60¢ floor is what makes small tickets work at all. You are told this rate before you connect payments, and it is the same rate on the claim page.` },
-  { q: 'When would I pay a subscription instead?', a: 'If you’re an agency running many client sites and prefer flat, predictable costs over a per-order fee, the Agency plan bills per user + per site with no order fee. Talk to us to get set up during the beta.' },
-  { q: 'How do partners make money?', a: 'Partners white-label QuickSites, set their merchants’ order fee (up to 10%), and keep 80% of every fee as a lifetime residual. See the partner program for details.' },
-  { q: 'What about payment processing fees?', a: 'Standard Stripe processing fees apply on top of our platform fee, the same as any checkout. You’ll always see fees before you publish.' },
-  { q: 'I don’t sell online — how does pricing work?', a: 'Service businesses that get paid offline (towing, plumbing, HVAC, salons, contractors…) don’t have an order for us to take a fee on. Instead we host your site on a premium exact-match local domain for a flat monthly rate — at a low founder rate while it’s still climbing that steps up to the standard rate only once it reaches Google’s first page. Includes call tracking so you can see the leads, and there’s never an online-order fee.' },
+  {
+    q: 'Is it really free to start?',
+    a: 'Yes — building, hosting, and publishing to a quicksites.ai subdomain are free. On the free (merchant) plan we only take a fee on orders you actually sell. No sales, no fee.',
+  },
+  {
+    q: 'What do you charge on a restaurant or food-ordering site?',
+    a: `8% plus 60¢ per order, with no monthly fee. It is higher than the 5% on other storefronts for one reason: card processing takes a fixed ~30¢ off every transaction, so on a $9 order a flat percentage does not cover the cost of moving the money. The 60¢ floor is what makes small tickets work at all. You are told this rate before you connect payments, and it is the same rate on the claim page.`,
+  },
+  {
+    q: 'When would I pay a subscription instead?',
+    a: 'If you’re an agency running many client sites and prefer flat, predictable costs over a per-order fee, the Agency plan bills per user + per site with no order fee. Talk to us to get set up during the beta.',
+  },
+  {
+    q: 'How do partners make money?',
+    a: 'Partners white-label QuickSites, set their merchants’ order fee (up to 10%), and keep 80% of every fee as a lifetime residual. See the partner program for details.',
+  },
+  {
+    q: 'What about payment processing fees?',
+    a: 'Standard Stripe processing fees apply on top of our platform fee, the same as any checkout. You’ll always see fees before you publish.',
+  },
+  {
+    q: 'I don’t sell online — how does pricing work?',
+    a: 'Service businesses that get paid offline (towing, plumbing, HVAC, salons, contractors…) don’t have an order for us to take a fee on. Instead we host your site on a premium exact-match local domain for a flat monthly rate — at a low founder rate while it’s still climbing that steps up to the standard rate only once it reaches Google’s first page. Includes call tracking so you can see the leads, and there’s never an online-order fee.',
+  },
 ];
 
 // ---- Page ----
@@ -427,7 +629,7 @@ export default function PricingPage() {
     <>
       <SiteHeader sticky />
       <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
-      <PageBackdrop style="mesh" />
+        <PageBackdrop style="mesh" />
         {/* hero */}
         <section className="relative overflow-hidden">
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
@@ -435,32 +637,63 @@ export default function PricingPage() {
             <div className="absolute top-0 right-[10%] h-64 w-64 rounded-full bg-fuchsia-500/10 blur-3xl" />
           </div>
           <div className="mx-auto grid max-w-6xl gap-10 px-6 pt-14 pb-8 lg:grid-cols-2 lg:items-center">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <Badge variant="outline" className="mb-4">Pricing</Badge>
-              <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">Start free. Pay when you sell.</h1>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Badge variant="outline" className="mb-4">
+                Pricing
+              </Badge>
+              <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
+                Start free. Pay when you sell.
+              </h1>
               <p className="mt-3 max-w-2xl text-muted-foreground">
-                Build and host your site for free — including a storefront, Stripe checkout, and a customer CRM. We take a small {pct(ORDER_FEE_PCT)} fee
-                only on the orders you actually sell — {pct(FOOD_FEE_PCT)} plus {FOOD_FEE_MIN}¢ on food ordering, where card fees eat a small ticket alive.
-                No online store? Service trades can host on a premium local domain for a flat monthly rate.
-                Running sites for clients or reselling under your brand? There’s a path for that too.
+                Build and host your site for free — including a storefront, Stripe checkout, and a
+                customer CRM. We take a small {pct(ORDER_FEE_PCT)} fee only on the orders you
+                actually sell — {pct(FOOD_FEE_PCT)} plus {FOOD_FEE_MIN}¢ on food ordering, where
+                card fees eat a small ticket alive. No online store? Service trades can host on a
+                premium local domain for a flat monthly rate. Running sites for clients or reselling
+                under your brand? There’s a path for that too.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link href={CTA.buildHref}><Button size="lg">Create your free site<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
-                <Link href={CTA.contactHref}><Button size="lg" variant="ghost">Talk to us</Button></Link>
+                <Link href={CTA.buildHref}>
+                  <Button size="lg">
+                    Create your free site
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href={CTA.contactHref}>
+                  <Button size="lg" variant="ghost">
+                    Talk to us
+                  </Button>
+                </Link>
               </div>
               <div className="mt-6 flex flex-wrap gap-2">
-                {['Free to build & host', 'No card to start', `${pct(ORDER_FEE_PCT)} per order on free (${pct(FOOD_FEE_PCT)} + ${FOOD_FEE_MIN}¢ for food)`].map((r) => (
-                  <Badge key={r} variant="secondary">{r}</Badge>
+                {[
+                  'Free to build & host',
+                  'No card to start',
+                  `${pct(ORDER_FEE_PCT)} per order on free (${pct(FOOD_FEE_PCT)} + ${FOOD_FEE_MIN}¢ for food)`,
+                ].map((r) => (
+                  <Badge key={r} variant="secondary">
+                    {r}
+                  </Badge>
                 ))}
               </div>
             </motion.div>
             <motion.div
-              initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.1 }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
               className="hidden lg:block"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/qs-hero-bg.jpg" alt="" aria-hidden
-                className="ml-auto w-full max-w-md rounded-2xl object-cover ring-1 ring-white/10 shadow-[0_0_90px_-24px_rgba(56,189,248,0.55)]" />
+              <img
+                src="/brand/qs-hero-bg.jpg"
+                alt=""
+                aria-hidden
+                className="ml-auto w-full max-w-md rounded-2xl object-cover ring-1 ring-white/10 shadow-[0_0_90px_-24px_rgba(56,189,248,0.55)]"
+              />
             </motion.div>
           </div>
         </section>
@@ -475,7 +708,9 @@ export default function PricingPage() {
           <div className="mb-6 flex items-center gap-2">
             <Store className="h-6 w-6 text-sky-400" />
             <h2 className="text-2xl font-semibold">Build my own site</h2>
-            <Badge variant="secondary" className="ml-2">Free</Badge>
+            <Badge variant="secondary" className="ml-2">
+              Free
+            </Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="border-zinc-800/60">
@@ -489,13 +724,21 @@ export default function PricingPage() {
                 <Feature text="Storefront + Stripe checkout on every site" />
                 <Feature text="Customer CRM + email campaigns — built in, free" />
                 <Feature text="Starter AI allowance (copy, images)" />
-                <Feature text={`We take ${pct(ORDER_FEE_PCT)} per order — nothing until you sell (${pct(FOOD_FEE_PCT)} + ${FOOD_FEE_MIN}¢ on food ordering)`} />
+                <Feature
+                  text={`We take ${pct(ORDER_FEE_PCT)} per order — nothing until you sell (${pct(FOOD_FEE_PCT)} + ${FOOD_FEE_MIN}¢ on food ordering)`}
+                />
                 <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
-                  Want your own domain or to remove the QuickSites badge? Those are paid add-ons below.
+                  Want your own domain or to remove the QuickSites badge? Those are paid add-ons
+                  below.
                 </div>
               </CardContent>
               <CardFooter>
-                <Link href={CTA.buildHref}><Button>Create your free site<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+                <Link href={CTA.buildHref}>
+                  <Button>
+                    Create your free site
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
               </CardFooter>
             </Card>
             <OrderFeeCalc />
@@ -506,15 +749,19 @@ export default function PricingPage() {
         <LeadGenSection />
 
         {/* Path B — Agency */}
-        <section id="agency" className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60">
+        <section
+          id="agency"
+          className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60"
+        >
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <Users className="h-6 w-6 text-sky-400" />
             <h2 className="text-2xl font-semibold">Run sites for clients</h2>
             <PlanToggle value={mode} onChange={setMode} />
           </div>
           <p className="mb-6 max-w-2xl text-sm text-muted-foreground">
-            Prefer flat, predictable costs to a per-order fee? The Agency plan bills per user + per site with{' '}
-            <span className="text-foreground font-medium">no platform fee on orders</span>.
+            Prefer flat, predictable costs to a per-order fee? The Agency plan bills per user + per
+            site with <span className="text-foreground font-medium">no platform fee on orders</span>
+            .
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <AgencyPlanCard mode={mode} />
@@ -523,7 +770,10 @@ export default function PricingPage() {
         </section>
 
         {/* Path C — Partner */}
-        <section id="partner" className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60">
+        <section
+          id="partner"
+          className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60"
+        >
           <Card className="border-zinc-800/60 bg-gradient-to-br from-sky-500/10 to-transparent">
             <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="max-w-2xl">
@@ -532,18 +782,29 @@ export default function PricingPage() {
                   <h2 className="text-2xl font-semibold">Resell under my brand</h2>
                 </div>
                 <p className="mt-2 text-muted-foreground">
-                  White-label QuickSites for your network. Set each merchant’s order fee (up to 10%), keep{' '}
-                  <span className="text-foreground font-medium">{pct(PARTNER_FEE_SHARE)} of every fee as a lifetime residual</span>.
-                  Hosting is free for your merchants.
+                  White-label QuickSites for your network. Set each merchant’s order fee (up to
+                  10%), keep{' '}
+                  <span className="text-foreground font-medium">
+                    {pct(PARTNER_FEE_SHARE)} of every fee as a lifetime residual
+                  </span>
+                  . Hosting is free for your merchants.
                 </p>
               </div>
-              <Link href={CTA.partnersHref}><Button size="lg">See the partner program<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+              <Link href={CTA.partnersHref}>
+                <Button size="lg">
+                  See the partner program
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </section>
 
         {/* Add-ons */}
-        <section id="addons" className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60">
+        <section
+          id="addons"
+          className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60"
+        >
           <h2 className="mb-6 text-2xl font-semibold">Add-ons</h2>
           <AddOns />
         </section>
@@ -554,7 +815,9 @@ export default function PricingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {FAQS.map((item, i) => (
               <Card key={i} className="border-zinc-800/60">
-                <CardHeader><CardTitle className="text-base">{item.q}</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle className="text-base">{item.q}</CardTitle>
+                </CardHeader>
                 <CardContent className="text-sm text-muted-foreground">{item.a}</CardContent>
               </Card>
             ))}
@@ -566,17 +829,34 @@ export default function PricingPage() {
           <Card className="bg-gradient-to-br from-sky-500/5 to-transparent border-zinc-800/60">
             <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
               <div>
-                <h3 className="text-xl md:text-2xl font-semibold">Launch your site in minutes — free.</h3>
-                <p className="text-muted-foreground">No card required. You only pay when you make a sale.</p>
+                <h3 className="text-xl md:text-2xl font-semibold">
+                  Launch your site in minutes — free.
+                </h3>
+                <p className="text-muted-foreground">
+                  No card required. You only pay when you make a sale.
+                </p>
               </div>
               <div className="flex items-center gap-3">
-                <Link href={CTA.buildHref}><Button size="lg">Create your free site<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
-                <Link href={CTA.contactHref}><Button size="lg" variant="outline">Talk to us</Button></Link>
+                <Link href={CTA.buildHref}>
+                  <Button size="lg">
+                    Create your free site
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href={CTA.contactHref}>
+                  <Button size="lg" variant="outline">
+                    Talk to us
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
           <div className="mt-6 text-center">
-            <Link href="/"><Button variant="ghost" size="sm">← Back home</Button></Link>
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                ← Back home
+              </Button>
+            </Link>
           </div>
         </section>
       </div>

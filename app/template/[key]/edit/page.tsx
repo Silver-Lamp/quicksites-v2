@@ -1,4 +1,5 @@
 // app/template/[key]/edit/page.tsx
+import { signInHref } from '@/lib/auth/authLinks';
 import { redirect, notFound } from 'next/navigation';
 import { getServerSupabase } from '@/lib/supabase/server';
 import CachedEditWrapper from '@/components/admin/templates/cached-edit-wrapper';
@@ -40,7 +41,7 @@ export default async function TemplateEditPage({
 
   if (userErr || !user) {
     const next = `/template/${key}/edit${qs}`;
-    redirect(`/login?next=${encodeURIComponent(next)}`);
+    redirect(signInHref(next));
   }
 
   // Only admins can open non-owned templates

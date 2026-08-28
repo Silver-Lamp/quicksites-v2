@@ -6,6 +6,7 @@
 // binds their glasses session to it), propose line items, and watch the customer's
 // approve/decline land. Auth is enforced by the API routes; a 401 shows a sign-in prompt.
 
+import { SignInLink } from '@/components/auth/auth-links';
 import * as React from 'react';
 import type { ServiceJob, ServiceJobDetail } from '@/lib/serviceJobs/types';
 
@@ -162,7 +163,7 @@ export default function ShopJobsClient() {
 
   if (auth === 'loading') return <p className="mt-6 text-sm text-muted-foreground">Loading…</p>;
   if (auth === 'disabled') return <p className="mt-6 text-sm text-muted-foreground">SecondSet isn&apos;t enabled in this environment.</p>;
-  if (auth === 'unauth') return <p className="mt-6 text-sm">Please <a className="underline" href="/login">sign in</a> to manage service jobs.</p>;
+  if (auth === 'unauth') return <p className="mt-6 text-sm">Please <SignInLink variant="inline" label="sign in" /> to manage service jobs.</p>;
 
   const portalUrl = sel ? `${typeof window !== 'undefined' ? window.location.origin : ''}/jobs/${sel.public_token}` : '';
 

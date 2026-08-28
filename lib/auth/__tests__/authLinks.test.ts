@@ -84,4 +84,26 @@ describe('no component links to an auth route that does not exist', () => {
     expect(dead.test(`href="/sign-up?redirect_url=x"`)).toBe(true);
     expect(dead.test(`href="/login"`)).toBe(false);
   });
+
+  it('finds no hand-built /login?next= string', () => {
+    // Hand-building the query is how the parameter came to be spelled two ways and how an
+    // unencoded destination gets through. signInHref() is the only thing that should know
+    // the shape of this URL.
+    const handBuilt = /['"`]\/login\?next=/;
+    const hits = files
+      .filter((f) => {
+        const src = readFileSync(f, 'utf8');
+        return src
+          .split('\n')
+          .some((line) => handBuilt.test(line) && !line.trim().startsWith('//'));
+      })
+      .map((f) => f.replace(process.cwd() + '/', ''));
+    expect(hits).toEqual([]);
+  });
+
+  it('would catch a hand-built one — this matcher is not inert either', () => {
+    const handBuilt = /['"`]\/login\?next=/;
+    expect(handBuilt.test('redirect(`/login?next=${x}`)')).toBe(true);
+    expect(handBuilt.test('redirect(signInHref(x))')).toBe(false);
+  });
 });

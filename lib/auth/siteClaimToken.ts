@@ -30,12 +30,17 @@ function sign(body: string): string {
 
 /** Mint `base64url(payload).base64url(hmac)` binding a claimable draft to its id. */
 export function mintSiteClaimToken(templateId: string, now = Date.now()): string {
-  const body = Buffer.from(JSON.stringify({ t: templateId, exp: now + SITE_CLAIM_TTL_MS })).toString('base64url');
+  const body = Buffer.from(
+    JSON.stringify({ t: templateId, exp: now + SITE_CLAIM_TTL_MS })
+  ).toString('base64url');
   return `${body}.${sign(body)}`;
 }
 
 /** Verify signature + expiry; returns { templateId } or null. Constant-time compare. */
-export function verifySiteClaimToken(token: string | undefined | null, now = Date.now()): { templateId: string } | null {
+export function verifySiteClaimToken(
+  token: string | undefined | null,
+  now = Date.now()
+): { templateId: string } | null {
   if (!token || typeof token !== 'string' || !secret()) return null;
   const dot = token.indexOf('.');
   if (dot <= 0) return null;

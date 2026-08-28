@@ -1,3 +1,4 @@
+import { signUpHref } from '@/lib/auth/authLinks';
 import { useEffect, useState } from 'react';
 
 export default function UpgradePrompt({
@@ -18,7 +19,7 @@ export default function UpgradePrompt({
 
   const handleUpgrade = () => {
     if (returnTo) window.location.href = returnTo;
-    else window.location.href = '/register';
+    else window.location.href = signUpHref(window.location.pathname);
   };
 
   if (!visible) return null;

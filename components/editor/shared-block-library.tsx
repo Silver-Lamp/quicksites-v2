@@ -16,7 +16,10 @@ const MOCK_LIBRARY = [
     type: 'cta',
     content: {
       label: 'Get Started',
-      link: '/signup',
+      // Points at the SITE'S OWN contact page, not ours. This preset is inserted into
+      // customer sites, so aiming it at the QuickSites signup route put a local business's
+      // main CTA on our login page — on their domain, under their brand.
+      link: '/contact',
     },
   },
 ];

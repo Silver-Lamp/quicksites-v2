@@ -7,9 +7,9 @@ import Image from 'next/image';
 export default function UserMenu() {
   const { user, loading } = useLoginStatus();
 
-  const traceId = typeof window !== 'undefined' ? document?.body?.dataset?.traceId ?? '' : '';
-  const abVariant = typeof window !== 'undefined' ? document?.body?.dataset?.abVariant ?? '' : '';
-  const role = typeof window !== 'undefined' ? document?.body?.dataset?.userRole ?? 'guest' : '';
+  const traceId = typeof window !== 'undefined' ? (document?.body?.dataset?.traceId ?? '') : '';
+  const abVariant = typeof window !== 'undefined' ? (document?.body?.dataset?.abVariant ?? '') : '';
+  const role = typeof window !== 'undefined' ? (document?.body?.dataset?.userRole ?? 'guest') : '';
 
   if (loading || !user) return null;
 

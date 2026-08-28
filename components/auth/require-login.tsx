@@ -24,7 +24,9 @@ export default function RequireLogin({
     let mounted = true;
 
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!mounted) return;
       setIsAuthenticated(!!session);
       setLoading(false);

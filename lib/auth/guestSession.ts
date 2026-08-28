@@ -29,7 +29,9 @@ export type EnsureGuestResult =
  */
 export async function ensureGuestSession(): Promise<EnsureGuestResult> {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (session?.user) {
       return { user: session.user, created: false };
     }

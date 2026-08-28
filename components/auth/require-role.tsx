@@ -13,9 +13,7 @@ type Props = {
 export default function RequireRole({ role, fallback = null, children }: Props) {
   const { role: currentRole } = useSession();
 
-  const allowed = Array.isArray(role)
-    ? role.includes(currentRole)
-    : currentRole === role;
+  const allowed = Array.isArray(role) ? role.includes(currentRole) : currentRole === role;
 
   return allowed ? <>{children}</> : <>{fallback}</>;
 }

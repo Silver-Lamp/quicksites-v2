@@ -23,13 +23,19 @@ type CookieStore = {
  * an operator manually verified the draft (a `channel='manual'` verified row). Returns
  * true when the gate is satisfied (or disabled). Also consumes the SMS verification row.
  */
-async function verificationSatisfied(templateId: string, grant: string | undefined): Promise<boolean> {
+async function verificationSatisfied(
+  templateId: string,
+  grant: string | undefined
+): Promise<boolean> {
   if (!CLAIM_VERIFICATION_ENABLED) return true;
 
   // claim_verifications isn't in types/supabase.ts yet → use the client untyped.
   const db = supabaseAdmin as any;
   const consume = async (rowId: string) =>
-    db.from('claim_verifications').update({ consumed_at: new Date().toISOString() }).eq('id', rowId);
+    db
+      .from('claim_verifications')
+      .update({ consumed_at: new Date().toISOString() })
+      .eq('id', rowId);
 
   if (verifyVerifyGrant(grant, templateId)) {
     // Mark the freshest verified SMS row consumed (audit; best-effort).
@@ -67,7 +73,7 @@ async function verificationSatisfied(templateId: string, grant: string | undefin
 
 export async function claimPendingSiteDraft(
   user: User | null | undefined,
-  store: CookieStore,
+  store: CookieStore
 ): Promise<void> {
   try {
     if (!user || user.is_anonymous) return;

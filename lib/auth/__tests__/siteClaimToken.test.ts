@@ -7,7 +7,11 @@
 // Pin the security-relevant properties: it binds one template id, expires, and a
 // tampered/foreign token verifies to null.
 
-import { mintSiteClaimToken, verifySiteClaimToken, SITE_CLAIM_TTL_MS } from '@/lib/auth/siteClaimToken';
+import {
+  mintSiteClaimToken,
+  verifySiteClaimToken,
+  SITE_CLAIM_TTL_MS,
+} from '@/lib/auth/siteClaimToken';
 
 // The token needs a signing secret; provide one for the suite.
 process.env.CLAIM_TOKEN_SECRET = 'test-site-claim-secret';
@@ -31,7 +35,9 @@ describe('siteClaimToken', () => {
 
   it('rejects a tampered payload (different id → sig mismatch)', () => {
     const [, sig] = mintSiteClaimToken('tpl-123').split('.');
-    const forged = Buffer.from(JSON.stringify({ t: 'tpl-999', exp: Date.now() + 1000 })).toString('base64url');
+    const forged = Buffer.from(JSON.stringify({ t: 'tpl-999', exp: Date.now() + 1000 })).toString(
+      'base64url'
+    );
     expect(verifySiteClaimToken(`${forged}.${sig}`)).toBeNull();
   });
 

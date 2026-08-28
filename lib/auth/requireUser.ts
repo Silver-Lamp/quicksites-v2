@@ -25,19 +25,30 @@ export async function requireAdmin(): Promise<{ user: User } | NextResponse> {
  * Signed-in-user gate → { user } or a 401 response. Rejects anonymous (guest)
  * sessions unless allowAnonymous is set (e.g. guest-build draft endpoints).
  */
-export async function requireUser(opts?: { allowAnonymous?: boolean }): Promise<{ user: User } | NextResponse> {
+export async function requireUser(opts?: {
+  allowAnonymous?: boolean;
+}): Promise<{ user: User } | NextResponse> {
   const supa = await getServerSupabase();
-  const { data: { user } } = await supa.auth.getUser();
+  const {
+    data: { user },
+  } = await supa.auth.getUser();
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   if (user.is_anonymous && !opts?.allowAnonymous) {
-    return NextResponse.json({ error: 'sign up to continue', code: 'needs_signup' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'sign up to continue', code: 'needs_signup' },
+      { status: 401 }
+    );
   }
   return { user };
 }
 
 /** Platform admin bypass. */
 async function isPlatformAdmin(userId: string): Promise<boolean> {
-  const { data } = await supabaseAdmin.from('admin_users').select('user_id').eq('user_id', userId).maybeSingle();
+  const { data } = await supabaseAdmin
+    .from('admin_users')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle();
   return !!data;
 }
 
@@ -46,12 +57,18 @@ async function isPlatformAdmin(userId: string): Promise<boolean> {
  * platform admin → { user } or 401/403/404. Most merchant routes take a merchantId
  * in the body and write via the service role (RLS bypass), so this is the gate.
  */
-export async function requireMerchantOwner(merchantId: string): Promise<{ user: User } | NextResponse> {
+export async function requireMerchantOwner(
+  merchantId: string
+): Promise<{ user: User } | NextResponse> {
   const gate = await requireUser();
   if (gate instanceof NextResponse) return gate;
   if (await isPlatformAdmin(gate.user.id)) return gate;
 
-  const { data: m } = await supabaseAdmin.from('merchants').select('owner_id, user_id').eq('id', merchantId).maybeSingle();
+  const { data: m } = await supabaseAdmin
+    .from('merchants')
+    .select('owner_id, user_id')
+    .eq('id', merchantId)
+    .maybeSingle();
   if (!m) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if ((m as any).owner_id !== gate.user.id && (m as any).user_id !== gate.user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -65,19 +82,27 @@ export async function requireMerchantOwner(merchantId: string): Promise<{ user: 
  * 401/403/404. Scheduler/company-config routes take a company_id in the body/query
  * and write via the service role (RLS bypass), so this is the gate.
  */
-export async function requireCompanyMember(companyId: string): Promise<{ user: User } | NextResponse> {
+export async function requireCompanyMember(
+  companyId: string
+): Promise<{ user: User } | NextResponse> {
   const gate = await requireUser();
   if (gate instanceof NextResponse) return gate;
   if (await isPlatformAdmin(gate.user.id)) return gate;
 
   const { data: co } = await (supabaseAdmin as any)
-    .from('companies').select('created_by').eq('id', companyId).maybeSingle();
+    .from('companies')
+    .select('created_by')
+    .eq('id', companyId)
+    .maybeSingle();
   if (!co) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (co.created_by === gate.user.id) return gate;
 
   const { data: mem } = await (supabaseAdmin as any)
-    .from('company_members').select('user_id')
-    .eq('company_id', companyId).eq('user_id', gate.user.id).maybeSingle();
+    .from('company_members')
+    .select('user_id')
+    .eq('company_id', companyId)
+    .eq('user_id', gate.user.id)
+    .maybeSingle();
   if (!mem) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   return gate;
 }
@@ -92,7 +117,9 @@ export async function requireOrgAdmin(orgId: string): Promise<{ user: User } | N
 
   const [admin, { data: isOrgAdmin }] = await Promise.all([
     isPlatformAdmin(gate.user.id),
-    (supabaseAdmin as any).schema('app').rpc('is_org_admin', { p_org: orgId, p_user: gate.user.id }),
+    (supabaseAdmin as any)
+      .schema('app')
+      .rpc('is_org_admin', { p_org: orgId, p_user: gate.user.id }),
   ]);
   if (!admin && !isOrgAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   return gate;

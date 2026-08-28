@@ -76,7 +76,8 @@ export default function LoginClient() {
       const envLogoDark = process.env.NEXT_PUBLIC_LOGIN_LOGO_DARK_URL || null;
       const envName = process.env.NEXT_PUBLIC_ORG_NAME || null;
       if (envLogo || envLogoDark || envName) {
-        if (!cancelled) setBranding({ name: envName, logo_url: envLogo, logo_dark_url: envLogoDark });
+        if (!cancelled)
+          setBranding({ name: envName, logo_url: envLogo, logo_dark_url: envLogoDark });
         return;
       }
 

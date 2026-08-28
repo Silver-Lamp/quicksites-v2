@@ -9,25 +9,24 @@ import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 import { resolvePublishTarget } from '@/lib/templates/publishTarget';
 
-const UUID_V4 =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export async function POST(
-  req: NextRequest,
-  ctx: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const { version_id }: { version_id?: string } = await req.json().catch(() => ({}));
 
   const supa = await getServerSupabase();
-  const { data: { user }, error: userErr } = await supa.auth.getUser();
+  const {
+    data: { user },
+    error: userErr,
+  } = await supa.auth.getUser();
   if (userErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   // Guests (anonymous users) can build but must sign up before going live.
   if (user.is_anonymous) {
     return NextResponse.json(
       { error: 'Sign up to publish your site.', code: 'needs_signup' },
-      { status: 403 },
+      { status: 403 }
     );
   }
 
@@ -64,7 +63,11 @@ export async function POST(
       .neq('slug', '');
     const r = await (UUID_V4.test(id)
       ? selfQuery.eq('id', id).maybeSingle()
-      : selfQuery.eq('base_slug', base_slug).order('updated_at', { ascending: false }).limit(1).maybeSingle());
+      : selfQuery
+          .eq('base_slug', base_slug)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle());
     self = r.data;
   }
   const c = resolvePublishTarget(c0, self);
@@ -80,16 +83,19 @@ export async function POST(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Update publish pointer on canonical
-  const { error: upErr } = await supabaseAdmin
-    .from('templates')
-    .update({
-      published: true,
-      published_version_id: version_id ?? null,
-      published_at: new Date().toISOString(),
-      published_by: user.id,
-    })
-    .eq('id', c.id);
+  // Publish through the sanctioned RPC. A plain UPDATE here is rejected outright by
+  // trg_guard_templates_update ("Direct updates to templates are blocked"), which is
+  // exactly what this route used to do — so the Publish button returned a 400 carrying a
+  // raw Postgres message, and every site live today was published by a script instead.
+  //
+  // The RPC also does the half a pointer-flip would have missed: it mints (or validates)
+  // the snapshot and upserts published_sites, which is what the public render actually
+  // serves. Setting `published` alone yields a site marked live with nothing behind it.
+  const { data: snapshotId, error: upErr } = await supabaseAdmin.rpc('publish_template', {
+    p_template_id: c.id,
+    p_version_id: version_id ?? null,
+    p_actor: user.id,
+  });
 
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
 
@@ -126,5 +132,8 @@ export async function POST(
     }
   }
 
-  return NextResponse.json({ ok: true, published_version_id: version_id ?? null });
+  // Report the snapshot actually served, not the one that was asked for — when no version
+  // is named the RPC mints a fresh one, and echoing back `null` would tell the caller
+  // nothing was published.
+  return NextResponse.json({ ok: true, published_version_id: snapshotId ?? version_id ?? null });
 }

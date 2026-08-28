@@ -117,7 +117,9 @@ function Stat({
     >
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{label}</span>
-        <span aria-hidden className={`transition-transform ${active ? 'rotate-90' : ''}`}>›</span>
+        <span aria-hidden className={`transition-transform ${active ? 'rotate-90' : ''}`}>
+          ›
+        </span>
       </div>
       <div className="mt-1 text-xl font-semibold">{value}</div>
     </button>
@@ -125,7 +127,8 @@ function Stat({
 }
 
 function OrdersTable({ rows, emphasizeFee }: { rows: OrderRow[]; emphasizeFee?: boolean }) {
-  if (!rows.length) return <div className="py-4 text-sm text-muted-foreground">No orders in this window.</div>;
+  if (!rows.length)
+    return <div className="py-4 text-sm text-muted-foreground">No orders in this window.</div>;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -135,7 +138,9 @@ function OrdersTable({ rows, emphasizeFee }: { rows: OrderRow[]; emphasizeFee?: 
             <th className="py-1 pr-3 font-normal">Merchant</th>
             <th className="py-1 pr-3 font-normal">Site</th>
             <th className="py-1 pr-3 text-right font-normal">Total</th>
-            <th className={`py-1 text-right font-normal ${emphasizeFee ? 'text-foreground' : ''}`}>Fee</th>
+            <th className={`py-1 text-right font-normal ${emphasizeFee ? 'text-foreground' : ''}`}>
+              Fee
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -157,7 +162,10 @@ function OrdersTable({ rows, emphasizeFee }: { rows: OrderRow[]; emphasizeFee?: 
 }
 
 function CommissionsTable({ rows }: { rows: CommissionRow[] }) {
-  if (!rows.length) return <div className="py-4 text-sm text-muted-foreground">No ledger entries in this window.</div>;
+  if (!rows.length)
+    return (
+      <div className="py-4 text-sm text-muted-foreground">No ledger entries in this window.</div>
+    );
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -178,7 +186,9 @@ function CommissionsTable({ rows }: { rows: CommissionRow[] }) {
               <td className="py-1 pr-3">{r.referral_code}</td>
               <td className="py-1 pr-3">{r.kind === 'override' ? 'hub override' : 'residual'}</td>
               <td className="py-1 pr-3 capitalize">{r.status}</td>
-              <td className="py-1 pr-3 font-mono text-xs text-muted-foreground">{r.subject_id.slice(0, 8)}</td>
+              <td className="py-1 pr-3 font-mono text-xs text-muted-foreground">
+                {r.subject_id.slice(0, 8)}
+              </td>
               <td className="py-1 text-right tabular-nums">{fmt(r.amount_cents)}</td>
             </tr>
           ))}
@@ -220,8 +230,8 @@ function NetBreakdown({ data }: { data: any }) {
       </ul>
       {(residual.void || 0) + (override.void || 0) > 0 && (
         <p className="mt-2 text-xs text-muted-foreground">
-          {fmt((residual.void || 0) + (override.void || 0))} in voided commissions (reversed on refund) is excluded
-          from both sides.
+          {fmt((residual.void || 0) + (override.void || 0))} in voided commissions (reversed on
+          refund) is excluded from both sides.
         </p>
       )}
     </div>
@@ -242,25 +252,28 @@ export default function RevenuePage() {
   const [detailLoading, setDetailLoading] = React.useState(false);
   const [detailError, setDetailError] = React.useState<string | null>(null);
 
-  const load = React.useCallback(async (withStripe = false) => {
-    setError(null);
-    if (withStripe) setChecking(true);
-    try {
-      const params = new URLSearchParams();
-      if (since) params.set('since', since);
-      if (withStripe) params.set('stripe', '1');
-      const qs = params.toString() ? `?${params.toString()}` : '';
-      const res = await fetch(`/api/admin/revenue${qs}`, { cache: 'no-store' });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || `failed (${res.status})`);
-      setData(json);
-      setDetails({}); // window changed — drop the drill-down cache
-    } catch (e: any) {
-      setError(e?.message || 'failed');
-    } finally {
-      setChecking(false);
-    }
-  }, [since]);
+  const load = React.useCallback(
+    async (withStripe = false) => {
+      setError(null);
+      if (withStripe) setChecking(true);
+      try {
+        const params = new URLSearchParams();
+        if (since) params.set('since', since);
+        if (withStripe) params.set('stripe', '1');
+        const qs = params.toString() ? `?${params.toString()}` : '';
+        const res = await fetch(`/api/admin/revenue${qs}`, { cache: 'no-store' });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || `failed (${res.status})`);
+        setData(json);
+        setDetails({}); // window changed — drop the drill-down cache
+      } catch (e: any) {
+        setError(e?.message || 'failed');
+      } finally {
+        setChecking(false);
+      }
+    },
+    [since]
+  );
 
   React.useEffect(() => {
     void load();
@@ -309,7 +322,15 @@ export default function RevenuePage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
-      <h1 className="mb-6 text-2xl font-bold">Platform revenue</h1>
+      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="text-2xl font-bold">Platform revenue</h1>
+        <a
+          href="/admin/splits"
+          className="text-sm text-sky-400 underline underline-offset-4 hover:text-sky-300"
+        >
+          Rental commission splits →
+        </a>
+      </div>
 
       <div className="mb-4 flex items-center gap-2">
         <label className="text-sm text-muted-foreground">Since</label>
@@ -341,19 +362,75 @@ export default function RevenuePage() {
         <>
           {/* The headline money story: what QuickSites keeps, what it owes partners. */}
           <div className="grid grid-cols-2 gap-3">
-            <Stat label="QuickSites net take" value={fmt(data.qs_net_cents)} highlight active={openCard === 'net'} onClick={() => toggleCard('net')} />
-            <Stat label="Partners owed (unpaid)" value={fmt(residual.owed)} highlight active={openCard === 'partners_owed'} onClick={() => toggleCard('partners_owed')} />
+            <Stat
+              label="QuickSites net take"
+              value={fmt(data.qs_net_cents)}
+              highlight
+              active={openCard === 'net'}
+              onClick={() => toggleCard('net')}
+            />
+            <Stat
+              label="Partners owed (unpaid)"
+              value={fmt(residual.owed)}
+              highlight
+              active={openCard === 'partners_owed'}
+              onClick={() => toggleCard('partners_owed')}
+            />
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <Stat label="Platform fees (gross)" value={fmt(data.platform_fee_cents)} active={openCard === 'fees'} onClick={() => toggleCard('fees')} />
-            <Stat label="Partner residual paid" value={fmt(residual.paid)} active={openCard === 'residual_paid'} onClick={() => toggleCard('residual_paid')} />
-            {hasOverride && <Stat label="Hub overrides (owed)" value={fmt(override.owed)} active={openCard === 'hub_owed'} onClick={() => toggleCard('hub_owed')} />}
-            {hasOverride && <Stat label="Hub overrides (paid)" value={fmt(override.paid)} active={openCard === 'hub_paid'} onClick={() => toggleCard('hub_paid')} />}
-            <Stat label="GMV (paid)" value={fmt(data.gmv_cents)} active={openCard === 'gmv'} onClick={() => toggleCard('gmv')} />
-            <Stat label="Paid orders" value={String(data.orders.paid)} active={openCard === 'paid_orders'} onClick={() => toggleCard('paid_orders')} />
-            <Stat label="Refunded orders" value={String(data.orders.refunded)} active={openCard === 'refunded_orders'} onClick={() => toggleCard('refunded_orders')} />
-            <Stat label="Refunded fees" value={fmt(data.refunded_fee_cents)} active={openCard === 'refunded_fees'} onClick={() => toggleCard('refunded_fees')} />
+            <Stat
+              label="Platform fees (gross)"
+              value={fmt(data.platform_fee_cents)}
+              active={openCard === 'fees'}
+              onClick={() => toggleCard('fees')}
+            />
+            <Stat
+              label="Partner residual paid"
+              value={fmt(residual.paid)}
+              active={openCard === 'residual_paid'}
+              onClick={() => toggleCard('residual_paid')}
+            />
+            {hasOverride && (
+              <Stat
+                label="Hub overrides (owed)"
+                value={fmt(override.owed)}
+                active={openCard === 'hub_owed'}
+                onClick={() => toggleCard('hub_owed')}
+              />
+            )}
+            {hasOverride && (
+              <Stat
+                label="Hub overrides (paid)"
+                value={fmt(override.paid)}
+                active={openCard === 'hub_paid'}
+                onClick={() => toggleCard('hub_paid')}
+              />
+            )}
+            <Stat
+              label="GMV (paid)"
+              value={fmt(data.gmv_cents)}
+              active={openCard === 'gmv'}
+              onClick={() => toggleCard('gmv')}
+            />
+            <Stat
+              label="Paid orders"
+              value={String(data.orders.paid)}
+              active={openCard === 'paid_orders'}
+              onClick={() => toggleCard('paid_orders')}
+            />
+            <Stat
+              label="Refunded orders"
+              value={String(data.orders.refunded)}
+              active={openCard === 'refunded_orders'}
+              onClick={() => toggleCard('refunded_orders')}
+            />
+            <Stat
+              label="Refunded fees"
+              value={fmt(data.refunded_fee_cents)}
+              active={openCard === 'refunded_fees'}
+              onClick={() => toggleCard('refunded_fees')}
+            />
           </div>
 
           {/* Drill-down panel for the open card. */}
@@ -384,12 +461,15 @@ export default function RevenuePage() {
                   {card.kind === 'commissions' ? (
                     <CommissionsTable rows={commissionRows ?? []} />
                   ) : (
-                    <OrdersTable rows={payload.rows as OrderRow[]} emphasizeFee={openCard === 'fees' || openCard === 'refunded_fees'} />
+                    <OrdersTable
+                      rows={payload.rows as OrderRow[]}
+                      emphasizeFee={openCard === 'fees' || openCard === 'refunded_fees'}
+                    />
                   )}
                   {payload.truncated && (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Showing the {payload.rows.length} most recent of {payload.total} rows — narrow the window with
-                      “Since” to see the rest.
+                      Showing the {payload.rows.length} most recent of {payload.total} rows — narrow
+                      the window with “Since” to see the rest.
                     </p>
                   )}
                 </>
@@ -398,15 +478,20 @@ export default function RevenuePage() {
           )}
 
           <p className="mt-3 text-xs text-muted-foreground">
-            Net take = gross platform fees on paid orders minus the partner share (owed + paid){hasOverride ? ' and any hub override (owed + paid)' : ''} accrued
-            against them{hasOverride ? '. Both the partner residual and the hub override come out of QuickSites’ share.' : '. Unattributed orders have no residual, so QuickSites keeps the full fee.'}
+            Net take = gross platform fees on paid orders minus the partner share (owed + paid)
+            {hasOverride ? ' and any hub override (owed + paid)' : ''} accrued against them
+            {hasOverride
+              ? '. Both the partner residual and the hub override come out of QuickSites’ share.'
+              : '. Unattributed orders have no residual, so QuickSites keeps the full fee.'}
           </p>
 
           {stripeRec && (
             <div className="mt-6">
               <h2 className="mb-2 text-sm font-semibold">Stripe cross-check</h2>
               {stripeRec.error ? (
-                <div className="rounded-xl border p-4 text-sm text-red-500">Stripe lookup failed: {stripeRec.error}</div>
+                <div className="rounded-xl border p-4 text-sm text-red-500">
+                  Stripe lookup failed: {stripeRec.error}
+                </div>
               ) : (
                 <div
                   className={`rounded-xl border p-4 ${stripeRec.matched ? 'border-green-600/40' : 'border-amber-500/50'}`}
@@ -424,22 +509,32 @@ export default function RevenuePage() {
                     </li>
                     <li className="flex justify-between border-b py-1">
                       <span className="text-muted-foreground">Stripe fees reversed (refunds)</span>
-                      <span className="tabular-nums">−{fmt(stripeRec.stripe_fee_refunded_cents)}</span>
+                      <span className="tabular-nums">
+                        −{fmt(stripeRec.stripe_fee_refunded_cents)}
+                      </span>
                     </li>
                     <li className="flex justify-between border-b py-1">
                       <span className="font-medium">Stripe fees net</span>
-                      <span className="tabular-nums font-medium">{fmt(stripeRec.stripe_fee_net_cents)}</span>
+                      <span className="tabular-nums font-medium">
+                        {fmt(stripeRec.stripe_fee_net_cents)}
+                      </span>
                     </li>
                     <li className="flex justify-between border-b py-1">
-                      <span className="text-muted-foreground">Our recorded gross (paid orders)</span>
+                      <span className="text-muted-foreground">
+                        Our recorded gross (paid orders)
+                      </span>
                       <span className="tabular-nums">{fmt(stripeRec.db_fee_gross_cents)}</span>
                     </li>
                   </ul>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Compares {stripeRec.fee_count} Stripe application_fee object(s) for this window against our
-                    ledger. Stripe net should ≈ our recorded gross (a refunded order drops from both). Small deltas
-                    can come from proportional refund-reversal rounding; a large Δ warrants a per-order look via{' '}
-                    <code className="rounded bg-muted px-1">/api/admin/commerce/reconcile?stripe=1</code>.
+                    Compares {stripeRec.fee_count} Stripe application_fee object(s) for this window
+                    against our ledger. Stripe net should ≈ our recorded gross (a refunded order
+                    drops from both). Small deltas can come from proportional refund-reversal
+                    rounding; a large Δ warrants a per-order look via{' '}
+                    <code className="rounded bg-muted px-1">
+                      /api/admin/commerce/reconcile?stripe=1
+                    </code>
+                    .
                   </p>
                 </div>
               )}

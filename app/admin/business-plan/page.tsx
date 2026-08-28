@@ -59,9 +59,17 @@ export default async function BusinessPlanPage({
         <div className="text-[11px] font-medium uppercase tracking-wider text-neutral-500">
           Point Seven Studio LLC · Business plan
         </div>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">
-          How QuickSites makes money
-        </h1>
+        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-3">
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            How QuickSites makes money
+          </h1>
+          <Link
+            href="/admin/business-plan/deck"
+            className="rounded-md border border-sky-500/50 bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-sky-300 transition-colors hover:border-sky-400 hover:text-sky-200"
+          >
+            ▶ Present
+          </Link>
+        </div>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-neutral-400">
           One site builder and one money path, sold six different ways. Each line below shares the
           same checkout, ledger and payout machinery — which is why a new vertical costs a pitch

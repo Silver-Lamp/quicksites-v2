@@ -7,6 +7,14 @@ import { join } from 'path';
 import { VERTICALS, STAGE_LABEL } from '@/lib/business/verticals';
 
 const PAGE = readFileSync(join(process.cwd(), 'app/admin/business-plan/page.tsx'), 'utf8');
+const DECK = readFileSync(
+  join(process.cwd(), 'components/admin/business-plan/deck-client.tsx'),
+  'utf8'
+);
+const DECK_PAGE = readFileSync(
+  join(process.cwd(), 'app/admin/business-plan/deck/page.tsx'),
+  'utf8'
+);
 const LIB = readFileSync(join(process.cwd(), 'lib/business/verticals.ts'), 'utf8');
 
 describe('business plan', () => {
@@ -47,5 +55,28 @@ describe('business plan', () => {
     // $99/$399 are product facts; changing a price should be one edit, not a search.
     expect(LIB).toContain('$99');
     expect(LIB).toContain('$399');
+  });
+
+  it('builds the deck from the same verticals, not a second copy', () => {
+    // A deck maintained separately drifts from the plan, and then the room is told one thing
+    // while the database says another.
+    expect(DECK_PAGE).toContain('VERTICALS');
+    expect(DECK_PAGE).toContain('loadPlanEvidence');
+    expect(DECK).toContain("from '@/lib/business/verticals'");
+  });
+
+  it('gates the deck route too — it is a separate page, not a mode of a gated one', () => {
+    expect(DECK_PAGE).toContain('getAdminUser()');
+    expect(DECK_PAGE).toMatch(/if \(!admin\) return/);
+  });
+
+  it('hardcodes no dollar figure in the deck either', () => {
+    const hardcodedMoney = /\$[\d,]+(\.\d{2})?(?![\d)])/g;
+    expect(DECK.match(hardcodedMoney) || []).toEqual([]);
+  });
+
+  it('renders every vertical as a slide rather than a curated subset', () => {
+    // Dropping the weak ones for a pitch is the exact edit this guard exists to catch.
+    expect(DECK).toContain('verticals.map');
   });
 });

@@ -90,8 +90,11 @@ type NavItem =
       label: string;
       href?: string;
       icon: React.ReactNode;
-      children?: { label: string; href: string; adminOnly?: boolean }[];
+      children?: { label: string; href: string; adminOnly?: boolean; keywords?: string[] }[];
       adminOnly?: boolean;
+      /** Extra search terms. The sidebar search matches label + group only, so a page
+       *  nobody thinks to call by its label is unfindable without these. */
+      keywords?: string[];
     };
 
 /* ---------------- Loading Overlay ---------------- */
@@ -281,6 +284,23 @@ const NAV_ADMIN: NavItem[] = [
     href: '/admin/splits',
     icon: <DollarSign size={18} />,
     adminOnly: true,
+    keywords: [
+      'commission',
+      'commissions',
+      'split',
+      'splits',
+      'override',
+      'closer',
+      'manager',
+      'rep',
+      'sales',
+      'residual',
+      'who gets paid',
+      'owed',
+      'geo',
+      'domain rental',
+      '50/15/35',
+    ],
   },
   {
     type: 'item',
@@ -448,7 +468,13 @@ const NAV_ADMIN: NavItem[] = [
 
 /* Flatten the nav into searchable leaves (each item + each child), tagged with its
    section, for the quick-find filter. */
-type NavLeaf = { label: string; href: string; icon: React.ReactNode; group: string };
+type NavLeaf = {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+  group: string;
+  keywords?: string[];
+};
 function flattenNavLeaves(list: NavItem[]): NavLeaf[] {
   const out: NavLeaf[] = [];
   let group = '';
@@ -457,10 +483,17 @@ function flattenNavLeaves(list: NavItem[]): NavLeaf[] {
       group = it.label;
       continue;
     }
-    if (it.href) out.push({ label: it.label, href: it.href, icon: it.icon, group });
+    if (it.href)
+      out.push({ label: it.label, href: it.href, icon: it.icon, group, keywords: it.keywords });
     for (const c of it.children ?? []) {
       if (c.label.startsWith('__')) continue; // skip inline tool slots
-      out.push({ label: `${it.label}: ${c.label}`, href: c.href, icon: it.icon, group });
+      out.push({
+        label: `${it.label}: ${c.label}`,
+        href: c.href,
+        icon: it.icon,
+        group,
+        keywords: [...(it.keywords ?? []), ...(c.keywords ?? [])],
+      });
     }
   }
   return out;
@@ -976,7 +1009,10 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
     () =>
       q
         ? leaves.filter(
-            (l) => l.label.toLowerCase().includes(q) || l.group.toLowerCase().includes(q)
+            (l) =>
+              l.label.toLowerCase().includes(q) ||
+              l.group.toLowerCase().includes(q) ||
+              (l.keywords ?? []).some((k) => k.toLowerCase().includes(q))
           )
         : [],
     [leaves, q]

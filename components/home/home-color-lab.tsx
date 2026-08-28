@@ -65,7 +65,10 @@ export default function HomeColorLab({ show = false }: { show?: boolean }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open color scheme tool"
-        className="fixed bottom-4 left-4 z-[60] h-12 w-12 rounded-full border border-white/15 bg-zinc-900/90 text-xl shadow-2xl backdrop-blur transition hover:border-white/40"
+        // Hidden below sm: a floating control in the corner of a phone screen sits over
+        // the content it is meant to decorate, and the panel it opens is wider than the
+        // viewport it would open on.
+        className="fixed bottom-4 left-4 z-[60] hidden h-12 w-12 rounded-full border border-white/15 bg-zinc-900/90 text-xl shadow-2xl backdrop-blur transition hover:border-white/40 sm:block"
       >
         🎨
       </button>
@@ -73,7 +76,9 @@ export default function HomeColorLab({ show = false }: { show?: boolean }) {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-[60] w-72 rounded-2xl border border-white/10 bg-zinc-900/95 p-4 shadow-2xl backdrop-blur">
+    // Also hidden below sm, not just the launcher: opening it on a wide window and then
+    // narrowing leaves an open panel no button can dismiss.
+    <div className="fixed bottom-4 left-4 z-[60] hidden w-72 rounded-2xl border border-white/10 bg-zinc-900/95 p-4 shadow-2xl backdrop-blur sm:block">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-white">🎨 Color scheme</span>
         <button
@@ -122,7 +127,9 @@ export default function HomeColorLab({ show = false }: { show?: boolean }) {
           className="mt-1.5 w-full cursor-pointer accent-white"
           aria-label="Background glow opacity"
         />
-        <p className="mt-1 text-[11px] text-zinc-500">0% keeps the section background images crisp.</p>
+        <p className="mt-1 text-[11px] text-zinc-500">
+          0% keeps the section background images crisp.
+        </p>
       </div>
 
       <p className="mt-3 text-[11px] leading-snug text-zinc-500">

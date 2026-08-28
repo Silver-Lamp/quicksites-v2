@@ -303,8 +303,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
     recommend it. **The working publish is `public.publish_template_demo(uuid)`** — a misnomer: it
     is the generic helper (fresh `template_versions` snapshot → upsert `published_sites` → set the
     bypass → flip `published`), stamps nothing demo-specific, and is granted to `service_role`.
-  - ✅ **DIAGNOSED AND FIXED 2026-08-28 — the admin Publish button WAS broken, for everyone.**
-    `app/api/templates/[id]/publish/route.ts` performed exactly the write the guard rejects; running
+  - ⚠️ **The admin Publish button WORKS — verified by a real click 2026-08-28.** `Save & Publish`
+    calls **`/api/admin/sites/publish`**, which upserts `published_sites` (what the renderer serves);
+    the site goes live. The long-standing suspicion that it was broken was **wrong**, and the check
+    that "confirmed" it was pointed at the wrong route — a §9 wrong-instance failure that read
+    exactly like an all-clear. The tell was in the data: the snapshot a real click produced had
+    `commit_message: null`, which neither publish function writes.
+    The one real gap was that this path never set `templates.published` — read by the showcase,
+    three paths in `site-routing`, `countBillableSites` and the SEO coach — so a site could be live
+    to visitors and invisible to us. Fixed (#866) via the RPC below. **Scope was 3 of 141**, not
+    systemic; the "17 of 439" figure is NOT explained by this and that guess should not be repeated.
+  - ✅ **`app/api/templates/[id]/publish` was genuinely broken AND has ZERO callers (dead route).**
+    It performed exactly the write the guard rejects; running
     that statement in a rolled-back transaction raises
     `Direct updates to templates are blocked. Use app.commit_template().` It was **not** silent —
     the route returns `upErr.message` as a 400 — so the button failed loudly with a raw Postgres

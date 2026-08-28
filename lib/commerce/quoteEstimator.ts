@@ -51,9 +51,12 @@ export type TradeDef = {
 };
 
 const MATERIAL = (options: [string, string][], def?: string): FieldDef => ({
-  key: 'material', label: 'Material', type: 'select',
+  key: 'material',
+  label: 'Material',
+  type: 'select',
   options: options.map(([value, label]) => ({ value, label })),
-  ...(def ? { default: def } : {}), required: true,
+  ...(def ? { default: def } : {}),
+  required: true,
 });
 
 // Faithful to the contract's per-trade field table. Materials-only pricing (per the
@@ -61,97 +64,185 @@ const MATERIAL = (options: [string, string][], def?: string): FieldDef => ({
 // bump, not a shape change here).
 export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
   deck: {
-    key: 'deck', label: 'Deck', live: true, area: true,
+    key: 'deck',
+    label: 'Deck',
+    live: true,
+    area: true,
     fields: [
-      { key: 'height_ft', label: 'Height', type: 'number', unit: 'ft', default: 2, required: true, min: 0 },
-      { key: 'attached', label: 'Attached to the house', type: 'boolean', default: true, required: true },
-      { key: 'material_tier', label: 'Material', type: 'select', required: true, default: 'pressure_treated',
+      {
+        key: 'height_ft',
+        label: 'Height',
+        type: 'number',
+        unit: 'ft',
+        default: 2,
+        required: true,
+        min: 0,
+      },
+      {
+        key: 'attached',
+        label: 'Attached to the house',
+        type: 'boolean',
+        default: true,
+        required: true,
+      },
+      {
+        key: 'material_tier',
+        label: 'Material',
+        type: 'select',
+        required: true,
+        default: 'pressure_treated',
         options: [
           { value: 'pressure_treated', label: 'Pressure-treated' },
           { value: 'cedar', label: 'Cedar' },
           { value: 'composite', label: 'Composite' },
-        ] },
+        ],
+      },
       { key: 'stairs', label: 'Stairs', type: 'boolean' },
       { key: 'railing_ft', label: 'Railing', type: 'number', unit: 'ft', min: 0 },
     ],
   },
   fence: {
-    key: 'fence', label: 'Fence', live: true, area: false,
+    key: 'fence',
+    label: 'Fence',
+    live: true,
+    area: false,
     fields: [
       { key: 'linear_ft', label: 'Length', type: 'number', unit: 'ft', required: true, min: 0 },
-      MATERIAL([['wood_pt', 'Wood (pressure-treated)'], ['cedar', 'Cedar'], ['vinyl', 'Vinyl'], ['chain_link', 'Chain link'], ['aluminum', 'Aluminum']]),
+      MATERIAL([
+        ['wood_pt', 'Wood (pressure-treated)'],
+        ['cedar', 'Cedar'],
+        ['vinyl', 'Vinyl'],
+        ['chain_link', 'Chain link'],
+        ['aluminum', 'Aluminum'],
+      ]),
       { key: 'height_ft', label: 'Height', type: 'number', unit: 'ft', default: 6, min: 0 },
       { key: 'gates', label: 'Gates', type: 'number', min: 0 },
     ],
   },
   concrete_patio: {
-    key: 'concrete_patio', label: 'Concrete patio', live: true, area: true,
+    key: 'concrete_patio',
+    label: 'Concrete patio',
+    live: true,
+    area: true,
     fields: [
       { key: 'thickness_in', label: 'Thickness', type: 'number', unit: 'in', default: 4, min: 0 },
-      { key: 'finish', label: 'Finish', type: 'select', default: 'broom',
+      {
+        key: 'finish',
+        label: 'Finish',
+        type: 'select',
+        default: 'broom',
         options: [
           { value: 'broom', label: 'Broom' },
           { value: 'colored', label: 'Colored' },
           { value: 'exposed_aggregate', label: 'Exposed aggregate' },
           { value: 'stamped', label: 'Stamped' },
-        ] },
+        ],
+      },
     ],
   },
   turf: {
-    key: 'turf', label: 'Artificial turf', live: true, area: true,
+    key: 'turf',
+    label: 'Artificial turf',
+    live: true,
+    area: true,
     fields: [
-      { key: 'pile', label: 'Pile', type: 'select', default: 'standard',
+      {
+        key: 'pile',
+        label: 'Pile',
+        type: 'select',
+        default: 'standard',
         options: [
           { value: 'standard', label: 'Standard' },
           { value: 'premium', label: 'Premium' },
           { value: 'putting', label: 'Putting green' },
-        ] },
+        ],
+      },
     ],
   },
   epoxy_floor: {
-    key: 'epoxy_floor', label: 'Epoxy floor', live: true, area: true,
+    key: 'epoxy_floor',
+    label: 'Epoxy floor',
+    live: true,
+    area: true,
     fields: [
-      { key: 'system', label: 'System', type: 'select', default: 'standard',
+      {
+        key: 'system',
+        label: 'System',
+        type: 'select',
+        default: 'standard',
         options: [
           { value: 'standard', label: 'Standard' },
           { value: 'flake', label: 'Flake' },
           { value: 'metallic', label: 'Metallic' },
-        ] },
+        ],
+      },
       { key: 'grind_prep', label: 'Grind prep', type: 'boolean' },
     ],
   },
   paving: {
-    key: 'paving', label: 'Paving', live: true, area: true,
+    key: 'paving',
+    label: 'Paving',
+    live: true,
+    area: true,
     fields: [
-      { key: 'material', label: 'Material', type: 'select', default: 'concrete',
+      {
+        key: 'material',
+        label: 'Material',
+        type: 'select',
+        default: 'concrete',
         options: [
           { value: 'gravel', label: 'Gravel' },
           { value: 'asphalt', label: 'Asphalt' },
           { value: 'concrete', label: 'Concrete' },
           { value: 'pavers', label: 'Pavers' },
-        ] },
+        ],
+      },
       { key: 'depth_in', label: 'Depth', type: 'number', unit: 'in', min: 0 },
     ],
   },
   roofing: {
-    key: 'roofing', label: 'Roofing', live: true, area: false, requiresOneOf: ['squares', 'roof_sqft'],
+    key: 'roofing',
+    label: 'Roofing',
+    live: true,
+    area: false,
+    requiresOneOf: ['squares', 'roof_sqft'],
     fields: [
       { key: 'squares', label: 'Roofing squares', type: 'number', min: 0 },
       { key: 'roof_sqft', label: 'Roof area', type: 'number', unit: 'sq ft', min: 0 },
-      MATERIAL([['asphalt_shingle', 'Asphalt shingle'], ['architectural_shingle', 'Architectural shingle'], ['metal', 'Metal'], ['tile', 'Tile'], ['flat_membrane', 'Flat membrane']]),
-      { key: 'pitch', label: 'Pitch', type: 'select', default: 'medium',
+      MATERIAL([
+        ['asphalt_shingle', 'Asphalt shingle'],
+        ['architectural_shingle', 'Architectural shingle'],
+        ['metal', 'Metal'],
+        ['tile', 'Tile'],
+        ['flat_membrane', 'Flat membrane'],
+      ]),
+      {
+        key: 'pitch',
+        label: 'Pitch',
+        type: 'select',
+        default: 'medium',
         options: [
           { value: 'low', label: 'Low' },
           { value: 'medium', label: 'Medium' },
           { value: 'steep', label: 'Steep' },
-        ] },
+        ],
+      },
       { key: 'tear_off', label: 'Tear off the old roof', type: 'boolean' },
     ],
   },
   siding: {
-    key: 'siding', label: 'Siding', live: true, area: true,
+    key: 'siding',
+    label: 'Siding',
+    live: true,
+    area: true,
     fields: [
-      MATERIAL([['vinyl', 'Vinyl'], ['wood', 'Wood'], ['fiber_cement', 'Fiber cement'], ['stucco', 'Stucco'], ['brick_veneer', 'Brick veneer']]),
+      MATERIAL([
+        ['vinyl', 'Vinyl'],
+        ['wood', 'Wood'],
+        ['fiber_cement', 'Fiber cement'],
+        ['stucco', 'Stucco'],
+        ['brick_veneer', 'Brick veneer'],
+      ]),
       { key: 'stories', label: 'Stories', type: 'number', default: 1, min: 0 },
       { key: 'trim_lf', label: 'Trim', type: 'number', unit: 'ft', min: 0 },
     ],
@@ -159,24 +250,35 @@ export const TRADE_REGISTRY: Record<TradeKey, TradeDef> = {
   retaining_wall: {
     // Above 4 ft, DeckSketch auto-adds an engineering + drainage factor (surfaced in
     // `assumptions`) — the honest handling of the "swings 2-3×" concern. QS just renders it.
-    key: 'retaining_wall', label: 'Retaining wall', live: true, area: false,
+    key: 'retaining_wall',
+    label: 'Retaining wall',
+    live: true,
+    area: false,
     fields: [
       { key: 'length_ft', label: 'Length', type: 'number', unit: 'ft', required: true, min: 0 },
       { key: 'height_ft', label: 'Height', type: 'number', unit: 'ft', required: true, min: 0 },
-      MATERIAL([['timber', 'Timber'], ['block_concrete', 'Concrete block'], ['poured_concrete', 'Poured concrete'], ['natural_stone', 'Natural stone']]),
+      MATERIAL([
+        ['timber', 'Timber'],
+        ['block_concrete', 'Concrete block'],
+        ['poured_concrete', 'Poured concrete'],
+        ['natural_stone', 'Natural stone'],
+      ]),
     ],
   },
 };
 
 export const ALL_TRADES = Object.keys(TRADE_REGISTRY) as TradeKey[];
-export const isTradeKey = (v: unknown): v is TradeKey => typeof v === 'string' && v in TRADE_REGISTRY;
+export const isTradeKey = (v: unknown): v is TradeKey =>
+  typeof v === 'string' && v in TRADE_REGISTRY;
 export const tradeDef = (k: TradeKey): TradeDef => TRADE_REGISTRY[k];
 export const isLiveTrade = (k: string): boolean => isTradeKey(k) && TRADE_REGISTRY[k].live;
 /** Trades whose DeckSketch model is deployed — the only ones we ever offer/estimate. */
-export const liveTrades = (): TradeDef[] => ALL_TRADES.map((k) => TRADE_REGISTRY[k]).filter((t) => t.live);
+export const liveTrades = (): TradeDef[] =>
+  ALL_TRADES.map((k) => TRADE_REGISTRY[k]).filter((t) => t.live);
 
 const num = (v: unknown): number | undefined => {
-  const n = typeof v === 'string' ? Number(v.replace(/[^0-9.]/g, '')) : typeof v === 'number' ? v : NaN;
+  const n =
+    typeof v === 'string' ? Number(v.replace(/[^0-9.]/g, '')) : typeof v === 'number' ? v : NaN;
   return Number.isFinite(n) && n > 0 ? n : undefined;
 };
 
@@ -191,8 +293,12 @@ export function normalizeTradeInput(trade: TradeKey, raw: any): Record<string, a
     const l = num(raw?.length_ft);
     const w = num(raw?.width_ft);
     const sqft = num(raw?.sqft);
-    if (l && w) { out.length_ft = l; out.width_ft = w; }
-    else if (sqft) { out.sqft = sqft; }
+    if (l && w) {
+      out.length_ft = l;
+      out.width_ft = w;
+    } else if (sqft) {
+      out.sqft = sqft;
+    }
   }
   for (const f of def.fields) {
     const v = raw?.[f.key];
@@ -248,7 +354,7 @@ export async function requestQuoteEstimate(
   trade: TradeKey,
   input: Record<string, any>,
   siteRef: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<QuoteEstimateResponse> {
   const url = `${DECK_ESTIMATE_BASE_URL}/api/estimate`;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -260,7 +366,11 @@ export async function requestQuoteEstimate(
     const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal });
     const j: any = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { ok: false, status: res.status, error: typeof j?.error === 'string' ? j.error : 'estimate_failed' };
+      return {
+        ok: false,
+        status: res.status,
+        error: typeof j?.error === 'string' ? j.error : 'estimate_failed',
+      };
     }
     return { ok: true, estimate: j as QuoteEstimateResult };
   } catch {

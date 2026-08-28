@@ -1,5 +1,11 @@
 // lib/commerce/__tests__/fees.test.ts
-import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, computePhysicalShippingCents, parseStripeTaxTotals } from '../fees';
+import {
+  computeSubtotalCents,
+  computePlatformFeeCents,
+  flatShippingCents,
+  computePhysicalShippingCents,
+  parseStripeTaxTotals,
+} from '../fees';
 import {
   partnerCommissionCents,
   clampPlatformFeePercent,
@@ -19,7 +25,7 @@ describe('computeSubtotalCents', () => {
       computeSubtotalCents([
         { unitAmount: 500, quantity: 2 }, // 1000
         { unitAmount: 250, quantity: 3 }, // 750
-      ]),
+      ])
     ).toBe(1750);
   });
 
@@ -56,26 +62,47 @@ describe('computePlatformFeeCents', () => {
 
   it('applies the minimum when the percentage fee is lower', () => {
     expect(
-      computePlatformFeeCents({ collectFee: true, totalCents: 100, feePercent: 0.05, feeMinCents: 50 }),
+      computePlatformFeeCents({
+        collectFee: true,
+        totalCents: 100,
+        feePercent: 0.05,
+        feeMinCents: 50,
+      })
     ).toBe(50); // 5% = 5, min 50 wins
   });
 
   it('never charges the minimum on a zero basis', () => {
     expect(
-      computePlatformFeeCents({ collectFee: true, totalCents: 0, feePercent: 0.05, feeMinCents: 50 }),
+      computePlatformFeeCents({
+        collectFee: true,
+        totalCents: 0,
+        feePercent: 0.05,
+        feeMinCents: 50,
+      })
     ).toBe(0);
   });
 
   it('excludes print-on-demand base cost from the fee basis', () => {
     // total 1000, POD base 400 -> basis 600 -> 10% = 60
     expect(
-      computePlatformFeeCents({ collectFee: true, totalCents: 1000, podBaseCents: 400, feePercent: 0.1 }),
+      computePlatformFeeCents({
+        collectFee: true,
+        totalCents: 1000,
+        podBaseCents: 400,
+        feePercent: 0.1,
+      })
     ).toBe(60);
   });
 
   it('is 0 when POD base cost meets or exceeds the total', () => {
     expect(
-      computePlatformFeeCents({ collectFee: true, totalCents: 500, podBaseCents: 500, feePercent: 0.1, feeMinCents: 30 }),
+      computePlatformFeeCents({
+        collectFee: true,
+        totalCents: 500,
+        podBaseCents: 500,
+        feePercent: 0.1,
+        feeMinCents: 30,
+      })
     ).toBe(0);
   });
 });
@@ -111,10 +138,21 @@ describe('flatShippingCents', () => {
 describe('computePhysicalShippingCents', () => {
   const KEYS = ['QS_SHIPPING_CENTS_PER_KG', 'QS_SHIPPING_BASE_CENTS'] as const;
   const OLD: Record<string, string | undefined> = {};
-  beforeEach(() => { for (const k of KEYS) { OLD[k] = process.env[k]; delete process.env[k]; } });
-  afterEach(() => { for (const k of KEYS) { if (OLD[k] === undefined) delete process.env[k]; else process.env[k] = OLD[k]!; } });
+  beforeEach(() => {
+    for (const k of KEYS) {
+      OLD[k] = process.env[k];
+      delete process.env[k];
+    }
+  });
+  afterEach(() => {
+    for (const k of KEYS) {
+      if (OLD[k] === undefined) delete process.env[k];
+      else process.env[k] = OLD[k]!;
+    }
+  });
 
-  const ship = (grams?: number) => new Map([['cat_1', { requires_shipping: true, ...(grams ? { grams } : {}) }]]);
+  const ship = (grams?: number) =>
+    new Map([['cat_1', { requires_shipping: true, ...(grams ? { grams } : {}) }]]);
   const line = (qty = 1) => [{ catalogItemId: 'cat_1', quantity: qty }];
 
   it('is 0 by default (no rate configured), even for a shippable cart', () => {
@@ -123,7 +161,9 @@ describe('computePhysicalShippingCents', () => {
 
   it('is 0 when nothing in the cart requires shipping', () => {
     process.env.QS_SHIPPING_CENTS_PER_KG = '500';
-    expect(computePhysicalShippingCents([{ catalogItemId: 'other', quantity: 1 }], ship(544))).toBe(0);
+    expect(computePhysicalShippingCents([{ catalogItemId: 'other', quantity: 1 }], ship(544))).toBe(
+      0
+    );
   });
 
   it('charges base + weight × per-kg rate, scaled by quantity', () => {
@@ -148,11 +188,19 @@ describe('computePhysicalShippingCents', () => {
 describe('shipping is excluded from the platform-fee basis', () => {
   it('fee is computed on the product subtotal, not subtotal + shipping', () => {
     // A $50 product at 8% → $4.00 fee, whether or not $6.99 shipping is added.
-    const feeOnProduct = computePlatformFeeCents({ collectFee: true, totalCents: 5000, feePercent: 0.08 });
+    const feeOnProduct = computePlatformFeeCents({
+      collectFee: true,
+      totalCents: 5000,
+      feePercent: 0.08,
+    });
     expect(feeOnProduct).toBe(400);
     // createDraftOrder passes the product subtotal (not the shipped total) to the
     // fee calc, so adding shipping must not change the fee.
-    const feeIfShippingIncluded = computePlatformFeeCents({ collectFee: true, totalCents: 5000 + 699, feePercent: 0.08 });
+    const feeIfShippingIncluded = computePlatformFeeCents({
+      collectFee: true,
+      totalCents: 5000 + 699,
+      feePercent: 0.08,
+    });
     expect(feeIfShippingIncluded).not.toBe(feeOnProduct); // proves the basis matters
   });
 });
@@ -176,7 +224,10 @@ describe('parseStripeTaxTotals', () => {
   it('is null-safe for malformed/empty input', () => {
     expect(parseStripeTaxTotals(undefined)).toEqual({ taxCents: null, totalCents: null });
     expect(parseStripeTaxTotals({})).toEqual({ taxCents: null, totalCents: null });
-    expect(parseStripeTaxTotals({ data: { object: null } })).toEqual({ taxCents: null, totalCents: null });
+    expect(parseStripeTaxTotals({ data: { object: null } })).toEqual({
+      taxCents: null,
+      totalCents: null,
+    });
   });
 
   it('floors and clamps to non-negative integer cents', () => {
@@ -192,7 +243,9 @@ describe('tax is excluded from the platform-fee basis', () => {
     expect(fee).toBe(432);
     // The tax parsed from the event is only recorded on the order — it is not fed
     // back into computePlatformFeeCents, so the take-rate stays on margin.
-    const { taxCents } = parseStripeTaxTotals({ data: { object: { amount_total: 5750, total_details: { amount_tax: 350 } } } });
+    const { taxCents } = parseStripeTaxTotals({
+      data: { object: { amount_total: 5750, total_details: { amount_tax: 350 } } },
+    });
     expect(taxCents).toBe(350);
     expect(fee).toBe(432); // unchanged by the presence of tax
   });

@@ -1,5 +1,12 @@
 // lib/commerce/__tests__/inventory.test.ts
-import { normalizeStock, readItemStock, readItemStockCompat, checkStock, readInventoryPolicy, effectiveItemStock } from '../inventory';
+import {
+  normalizeStock,
+  readItemStock,
+  readItemStockCompat,
+  checkStock,
+  readInventoryPolicy,
+  effectiveItemStock,
+} from '../inventory';
 
 describe('normalizeStock', () => {
   it('treats null/undefined/empty as untracked (null)', () => {

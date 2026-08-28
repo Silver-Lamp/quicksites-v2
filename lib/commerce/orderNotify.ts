@@ -38,7 +38,10 @@ export type OrderAlertInput = {
 export function money(cents: number, currency = 'usd'): string {
   const n = (cents || 0) / 100;
   try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: (currency || 'usd').toUpperCase() }).format(n);
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: (currency || 'usd').toUpperCase(),
+    }).format(n);
   } catch {
     return `$${n.toFixed(2)}`;
   }
@@ -59,7 +62,7 @@ export function alertHtml(input: OrderAlertInput): string {
     .map(
       (l) =>
         `<tr><td style="padding:6px 0;">${escapeHtml(String(l.quantity))}× ${escapeHtml(l.title)}</td>` +
-        `<td style="padding:6px 0;text-align:right;white-space:nowrap;">${money(l.totalCents, input.currency ?? 'usd')}</td></tr>`,
+        `<td style="padding:6px 0;text-align:right;white-space:nowrap;">${money(l.totalCents, input.currency ?? 'usd')}</td></tr>`
     )
     .join('');
 
@@ -69,18 +72,22 @@ export function alertHtml(input: OrderAlertInput): string {
   return [
     '<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;">',
     `<h2 style="margin:0 0 4px;font-size:20px;">New order — ${money(input.totalCents, input.currency ?? 'usd')}</h2>`,
-    input.siteSlug ? `<p style="margin:0 0 14px;color:#555;">${escapeHtml(input.siteSlug)}</p>` : '',
+    input.siteSlug
+      ? `<p style="margin:0 0 14px;color:#555;">${escapeHtml(input.siteSlug)}</p>`
+      : '',
     '<table style="width:100%;border-collapse:collapse;font-size:15px;">',
     rows || '<tr><td style="padding:6px 0;color:#777;">(no line items recorded)</td></tr>',
     '</table>',
     `<p style="margin:14px 0 0;padding-top:10px;border-top:1px solid #e5e5e5;font-size:16px;"><strong>Total ${money(
       input.totalCents,
-      input.currency ?? 'usd',
+      input.currency ?? 'usd'
     )}</strong></p>`,
-    input.customerName ? `<p style="margin:10px 0 0;">Customer: ${escapeHtml(input.customerName)}</p>` : '',
+    input.customerName
+      ? `<p style="margin:10px 0 0;">Customer: ${escapeHtml(input.customerName)}</p>`
+      : '',
     input.customerPhone
       ? `<p style="margin:2px 0 0;">Phone: <a href="tel:${escapeHtml(input.customerPhone)}">${escapeHtml(
-          input.customerPhone,
+          input.customerPhone
         )}</a></p>`
       : '',
     `<p style="margin:18px 0 0;"><a href="${escapeHtml(input.ordersUrl)}" style="background:#111;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block;">View the order</a></p>`,
@@ -110,7 +117,7 @@ function escapeHtml(s: string): string {
  */
 export async function resolveAlertRecipient(
   supabase: any,
-  merchantId: string | null,
+  merchantId: string | null
 ): Promise<string | null> {
   if (!merchantId) return null;
   const { data: m } = await supabase
@@ -158,7 +165,7 @@ export function alertSms(input: OrderAlertInput): string {
 async function trySms(
   supabase: any,
   input: OrderAlertInput,
-  merchantId: string | null,
+  merchantId: string | null
 ): Promise<void> {
   if (!merchantId) return;
   const { data: m } = await supabase
@@ -175,7 +182,7 @@ async function trySms(
     .update(
       res.ok
         ? { sms_sent_at: new Date().toISOString(), sms_recipient: to }
-        : { sms_error: String(res.error ?? 'send_failed').slice(0, 300), sms_recipient: to },
+        : { sms_error: String(res.error ?? 'send_failed').slice(0, 300), sms_recipient: to }
     )
     .eq('order_id', input.orderId);
 }
@@ -191,10 +198,7 @@ export type AlertResult =
  * deliveries both pass a `select` and both send. The insert happens FIRST and a duplicate-key error
  * means someone else already owns this alert.
  */
-export async function sendOrderAlert(
-  supabase: any,
-  input: OrderAlertInput,
-): Promise<AlertResult> {
+export async function sendOrderAlert(supabase: any, input: OrderAlertInput): Promise<AlertResult> {
   const recipient = await resolveAlertRecipient(supabase, input.merchantId);
 
   // Claim the alert before sending. On a duplicate key, another delivery already has it.
@@ -202,7 +206,8 @@ export async function sendOrderAlert(
     .from('order_alerts')
     .insert({ order_id: input.orderId, channel: 'email', recipient });
   if (claimErr) {
-    const dup = String(claimErr.code) === '23505' || /duplicate|unique/i.test(String(claimErr.message));
+    const dup =
+      String(claimErr.code) === '23505' || /duplicate|unique/i.test(String(claimErr.message));
     if (dup) return { sent: false, reason: 'already_alerted' };
     // Ledger unavailable (migration not applied). Do NOT send: an un-ledgered alert is one we
     // cannot stop repeating on the next retry.
@@ -210,7 +215,10 @@ export async function sendOrderAlert(
   }
 
   if (!recipient) {
-    await supabase.from('order_alerts').update({ error: 'no_recipient' }).eq('order_id', input.orderId);
+    await supabase
+      .from('order_alerts')
+      .update({ error: 'no_recipient' })
+      .eq('order_id', input.orderId);
     return { sent: false, reason: 'no_recipient' };
   }
 
@@ -230,7 +238,10 @@ export async function sendOrderAlert(
     return { sent: true, recipient };
   } catch (e: any) {
     const detail = e?.message || String(e);
-    await supabase.from('order_alerts').update({ error: detail.slice(0, 500) }).eq('order_id', input.orderId);
+    await supabase
+      .from('order_alerts')
+      .update({ error: detail.slice(0, 500) })
+      .eq('order_id', input.orderId);
     return { sent: false, reason: 'send_failed', detail };
   }
 }

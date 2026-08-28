@@ -1,5 +1,11 @@
 // lib/commerce/checkoutItems.ts
-import { readItemStock, checkStock, normalizeStock, readInventoryPolicy, effectiveItemStock } from './inventory';
+import {
+  readItemStock,
+  checkStock,
+  normalizeStock,
+  readInventoryPolicy,
+  effectiveItemStock,
+} from './inventory';
 //
 // Server-side price authority for the public storefront checkout. The client
 // posts catalog item ids + quantities, but the PRICE must come from the DB, never
@@ -54,7 +60,11 @@ export function readAddons(metadata: unknown): CatalogAddon[] {
   if (!Array.isArray(a)) return [];
   return a
     .filter((x) => x && typeof x.id === 'string' && Number.isFinite(Number(x.price_cents)))
-    .map((x) => ({ id: String(x.id), label: String(x.label ?? ''), price_cents: Math.max(0, Math.round(Number(x.price_cents))) }));
+    .map((x) => ({
+      id: String(x.id),
+      label: String(x.label ?? ''),
+      price_cents: Math.max(0, Math.round(Number(x.price_cents))),
+    }));
 }
 
 /**
@@ -78,7 +88,7 @@ export function readVariantOptions(metadata: unknown): VariantAxis[] {
  */
 export function resolveVariantByOptions(
   variants: CatalogVariant[],
-  selected: Record<string, string>,
+  selected: Record<string, string>
 ): CatalogVariant | undefined {
   const axes = Object.keys(selected);
   if (!axes.length) return undefined;
@@ -124,13 +134,25 @@ export function authorizeCheckoutItems(input: {
   for (const req of requested) {
     const row = req.catalogItemId ? byId.get(req.catalogItemId) : undefined;
     if (!row) {
-      return { ok: false, error: 'One or more items are no longer available.', badItemId: req.catalogItemId };
+      return {
+        ok: false,
+        error: 'One or more items are no longer available.',
+        badItemId: req.catalogItemId,
+      };
     }
     if (row.merchant_id !== merchantId) {
-      return { ok: false, error: 'An item does not belong to this store.', badItemId: req.catalogItemId };
+      return {
+        ok: false,
+        error: 'An item does not belong to this store.',
+        badItemId: req.catalogItemId,
+      };
     }
     if (row.status !== PURCHASABLE_STATUS) {
-      return { ok: false, error: `"${row.title ?? 'An item'}" is not available for purchase.`, badItemId: req.catalogItemId };
+      return {
+        ok: false,
+        error: `"${row.title ?? 'An item'}" is not available for purchase.`,
+        badItemId: req.catalogItemId,
+      };
     }
 
     // Resolve the priced entity: a selected variant if the item has any, else the
@@ -143,10 +165,18 @@ export function authorizeCheckoutItems(input: {
     if (variants.length) {
       variant = req.variantId ? variants.find((v) => v.id === req.variantId) : undefined;
       if (!variant) {
-        return { ok: false, error: `Please choose an option for "${row.title ?? 'an item'}".`, badItemId: req.catalogItemId };
+        return {
+          ok: false,
+          error: `Please choose an option for "${row.title ?? 'an item'}".`,
+          badItemId: req.catalogItemId,
+        };
       }
       if ((variant.status ?? 'active') !== PURCHASABLE_STATUS) {
-        return { ok: false, error: `"${variant.label}" is not available.`, badItemId: req.catalogItemId };
+        return {
+          ok: false,
+          error: `"${variant.label}" is not available.`,
+          badItemId: req.catalogItemId,
+        };
       }
       priceSource = variant.price_cents;
       title = `${row.title ?? 'Item'} — ${variant.label}`;
@@ -166,7 +196,11 @@ export function authorizeCheckoutItems(input: {
       return { ok: false, error: 'Invalid quantity.', badItemId: req.catalogItemId };
     }
     if (quantity > MAX_QUANTITY_PER_LINE) {
-      return { ok: false, error: `Quantity for "${title}" exceeds the per-order limit.`, badItemId: req.catalogItemId };
+      return {
+        ok: false,
+        error: `Quantity for "${title}" exceeds the per-order limit.`,
+        badItemId: req.catalogItemId,
+      };
     }
 
     // Stock gate: reject overselling a tracked item/variant (untracked ⇒ unlimited),
@@ -178,7 +212,10 @@ export function authorizeCheckoutItems(input: {
     if (!stock.ok) {
       return {
         ok: false,
-        error: stock.reason === 'sold_out' ? `"${title}" is sold out.` : `Only ${available} of "${title}" left.`,
+        error:
+          stock.reason === 'sold_out'
+            ? `"${title}" is sold out.`
+            : `Only ${available} of "${title}" left.`,
         badItemId: req.catalogItemId,
       };
     }
@@ -191,7 +228,11 @@ export function authorizeCheckoutItems(input: {
     for (const id of Array.isArray(req.addonIds) ? req.addonIds : []) {
       const a = availableAddons.find((x) => x.id === id);
       if (!a) {
-        return { ok: false, error: `An add-on for "${title}" is unavailable.`, badItemId: req.catalogItemId };
+        return {
+          ok: false,
+          error: `An add-on for "${title}" is unavailable.`,
+          badItemId: req.catalogItemId,
+        };
       }
       chosenAddons.push(a);
     }
@@ -199,7 +240,10 @@ export function authorizeCheckoutItems(input: {
     const unitAmount = price + addonsTotal;
     if (chosenAddons.length) title = `${title} (+ ${chosenAddons.map((a) => a.label).join(', ')})`;
 
-    const baseMeta = row.metadata && typeof row.metadata === 'object' ? { ...(row.metadata as Record<string, unknown>) } : {};
+    const baseMeta =
+      row.metadata && typeof row.metadata === 'object'
+        ? { ...(row.metadata as Record<string, unknown>) }
+        : {};
     if (variant) {
       baseMeta.variant_id = variant.id;
       baseMeta.variant_label = variant.label;

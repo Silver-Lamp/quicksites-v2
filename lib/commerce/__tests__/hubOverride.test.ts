@@ -4,7 +4,12 @@
 // load-bearing property: it can never exceed QS_FEE_SHARE (so QS net can't go
 // negative and the reseller's 80% is never touched).
 
-import { hubOverrideCents, clampOverrideShare, QS_FEE_SHARE, PARTNER_FEE_SHARE } from '@/lib/commerce/partner-terms';
+import {
+  hubOverrideCents,
+  clampOverrideShare,
+  QS_FEE_SHARE,
+  PARTNER_FEE_SHARE,
+} from '@/lib/commerce/partner-terms';
 
 describe('clampOverrideShare', () => {
   it('clamps to [0, QS_FEE_SHARE]', () => {

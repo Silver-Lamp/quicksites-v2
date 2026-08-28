@@ -13,10 +13,18 @@
 //   paid                -> paid  (transferred to the partner)
 //   void                -> reversed on refund (excluded from what QS owes/keeps)
 
-export type OrderRow = { status?: string | null; total_cents?: number | null; platform_fee_cents?: number | null };
+export type OrderRow = {
+  status?: string | null;
+  total_cents?: number | null;
+  platform_fee_cents?: number | null;
+};
 // `subject` distinguishes a partner residual ('order_platform_fee') from a hub
 // override ('order_platform_fee_override'). Absent = treated as a partner residual.
-export type CommissionRow = { status?: string | null; amount_cents?: number | null; subject?: string | null };
+export type CommissionRow = {
+  status?: string | null;
+  amount_cents?: number | null;
+  subject?: string | null;
+};
 
 const OVERRIDE_SUBJECT = 'order_platform_fee_override';
 
@@ -56,7 +64,10 @@ export type StripeFeeReconciliation = {
  * A small nonzero delta can come from proportional refund-reversal flooring; a
  * large one means real drift worth investigating.
  */
-export function reconcileStripeFees(fees: StripeFeeObject[], dbGrossFeeCents: number): StripeFeeReconciliation {
+export function reconcileStripeFees(
+  fees: StripeFeeObject[],
+  dbGrossFeeCents: number
+): StripeFeeReconciliation {
   let gross = 0;
   let refunded = 0;
   for (const f of fees ?? []) {

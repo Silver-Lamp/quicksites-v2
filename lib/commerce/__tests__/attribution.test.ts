@@ -7,7 +7,10 @@
 
 let mockRefValue: string | undefined;
 jest.mock('next/headers', () => ({
-  cookies: async () => ({ get: (name: string) => (name === 'qs_ref' && mockRefValue ? { value: mockRefValue } : undefined) }),
+  cookies: async () => ({
+    get: (name: string) =>
+      name === 'qs_ref' && mockRefValue ? { value: mockRefValue } : undefined,
+  }),
 }));
 
 const mockGetServerSupabase = jest.fn();
@@ -24,8 +27,16 @@ function makeDb(existing: any, error: any = null) {
   const db = {
     from: () => ({
       select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: existing }) }) }),
-      insert: async (row: any) => { calls.insert.push(row); return { error }; },
-      update: (row: any) => ({ eq: async () => { calls.update.push(row); return { error }; } }),
+      insert: async (row: any) => {
+        calls.insert.push(row);
+        return { error };
+      },
+      update: (row: any) => ({
+        eq: async () => {
+          calls.update.push(row);
+          return { error };
+        },
+      }),
     }),
   };
   return { db, calls };

@@ -54,8 +54,22 @@ describe('shapeOrderDetailRows', () => {
 describe('shapeCommissionDetailRows', () => {
   it('splits residual vs hub override by subject', () => {
     const rows = shapeCommissionDetailRows([
-      { id: 'c1', referral_code: 'REP1', subject: 'order_platform_fee', subject_id: 'o1', amount_cents: 640, status: 'pending' },
-      { id: 'c2', referral_code: 'HUB1', subject: 'order_platform_fee_override', subject_id: 'o1', amount_cents: 32, status: 'paid' },
+      {
+        id: 'c1',
+        referral_code: 'REP1',
+        subject: 'order_platform_fee',
+        subject_id: 'o1',
+        amount_cents: 640,
+        status: 'pending',
+      },
+      {
+        id: 'c2',
+        referral_code: 'HUB1',
+        subject: 'order_platform_fee_override',
+        subject_id: 'o1',
+        amount_cents: 32,
+        status: 'paid',
+      },
     ]);
     expect(rows[0].kind).toBe('residual');
     expect(rows[1].kind).toBe('override');

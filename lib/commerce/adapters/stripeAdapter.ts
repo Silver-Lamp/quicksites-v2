@@ -6,7 +6,9 @@ import Stripe from 'stripe';
 import { stripeOnBehalfOfEnabled } from '@/lib/payments/onBehalfOf';
 
 export class StripeAdapter implements PaymentsAdapter {
-  provider() { return 'stripe' as const; }
+  provider() {
+    return 'stripe' as const;
+  }
 
   async createCheckout(p: CreateCheckoutParams): Promise<CheckoutResult> {
     // Build PI data so we can include both transfer + capture_method when needed
@@ -29,7 +31,9 @@ export class StripeAdapter implements PaymentsAdapter {
 
     // Physical/POD carts need a shipping address for fulfillment (Lulu/Gelato).
     const SHIP_COUNTRIES = (process.env.QS_SHIP_COUNTRIES || 'US,CA,GB,AU,IE,NZ')
-      .split(',').map((c) => c.trim().toUpperCase()).filter(Boolean) as any[];
+      .split(',')
+      .map((c) => c.trim().toUpperCase())
+      .filter(Boolean) as any[];
 
     // Stripe Tax for physical/POD orders — off unless QS_STRIPE_TAX_ENABLED=true
     // (requires Stripe Tax to be set up on the account).
@@ -41,11 +45,14 @@ export class StripeAdapter implements PaymentsAdapter {
       cancel_url: p.cancelUrl,
       allow_promotion_codes: true,
       ...(p.collectShipping
-        ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES }, phone_number_collection: { enabled: true } }
+        ? {
+            shipping_address_collection: { allowed_countries: SHIP_COUNTRIES },
+            phone_number_collection: { enabled: true },
+          }
         : {}),
       ...(taxOn ? { automatic_tax: { enabled: true } } : {}),
       line_items: [
-        ...p.lineItems.map(li => ({
+        ...p.lineItems.map((li) => ({
           quantity: li.quantity,
           price_data: {
             currency: p.currency.toLowerCase(),
@@ -56,15 +63,17 @@ export class StripeAdapter implements PaymentsAdapter {
         })),
         // Flat shipping as its own line item (not part of the platform-fee basis).
         ...(p.shippingCents && p.shippingCents > 0
-          ? [{
-              quantity: 1,
-              price_data: {
-                currency: p.currency.toLowerCase(),
-                unit_amount: p.shippingCents,
-                product_data: { name: 'Shipping' },
-                ...(taxOn ? { tax_behavior: 'exclusive' as const } : {}),
+          ? [
+              {
+                quantity: 1,
+                price_data: {
+                  currency: p.currency.toLowerCase(),
+                  unit_amount: p.shippingCents,
+                  product_data: { name: 'Shipping' },
+                  ...(taxOn ? { tax_behavior: 'exclusive' as const } : {}),
+                },
               },
-            }]
+            ]
           : []),
       ],
       // Keep a copy on the session too
@@ -104,7 +113,14 @@ export class StripeAdapter implements PaymentsAdapter {
         const orderId = (s.metadata as any)?.orderId ?? undefined;
         // amount_total can be null on very old API versions; guard it
         const amount = typeof s.amount_total === 'number' ? s.amount_total : undefined;
-        return { id: event.id, type: 'payment_succeeded', orderId, amountCents: amount, paymentId: piId(s), raw: event };
+        return {
+          id: event.id,
+          type: 'payment_succeeded',
+          orderId,
+          amountCents: amount,
+          paymentId: piId(s),
+          raw: event,
+        };
       }
 
       // Async payment methods finishing later (e.g., bank redirects)
@@ -112,7 +128,14 @@ export class StripeAdapter implements PaymentsAdapter {
         const s = event.data.object as Stripe.Checkout.Session;
         const orderId = (s.metadata as any)?.orderId ?? undefined;
         const amount = typeof s.amount_total === 'number' ? s.amount_total : undefined;
-        return { id: event.id, type: 'payment_succeeded', orderId, amountCents: amount, paymentId: piId(s), raw: event };
+        return {
+          id: event.id,
+          type: 'payment_succeeded',
+          orderId,
+          amountCents: amount,
+          paymentId: piId(s),
+          raw: event,
+        };
       }
       case 'checkout.session.async_payment_failed': {
         const s = event.data.object as Stripe.Checkout.Session;
@@ -125,13 +148,27 @@ export class StripeAdapter implements PaymentsAdapter {
         const pi = event.data.object as Stripe.PaymentIntent;
         const orderId = (pi.metadata as any)?.orderId ?? undefined;
         const amount = typeof pi.amount === 'number' ? pi.amount : undefined;
-        return { id: event.id, type: 'payment_succeeded', orderId, amountCents: amount, paymentId: piId(pi), raw: event };
+        return {
+          id: event.id,
+          type: 'payment_succeeded',
+          orderId,
+          amountCents: amount,
+          paymentId: piId(pi),
+          raw: event,
+        };
       }
       case 'payment_intent.payment_failed': {
         const pi = event.data.object as Stripe.PaymentIntent;
         const orderId = (pi.metadata as any)?.orderId ?? undefined;
         const amount = typeof pi.amount === 'number' ? pi.amount : undefined;
-        return { id: event.id, type: 'payment_failed', orderId, amountCents: amount, paymentId: piId(pi), raw: event };
+        return {
+          id: event.id,
+          type: 'payment_failed',
+          orderId,
+          amountCents: amount,
+          paymentId: piId(pi),
+          raw: event,
+        };
       }
 
       // Refunds
@@ -152,7 +189,13 @@ export class StripeAdapter implements PaymentsAdapter {
         const ch = event.data.object as Stripe.Charge;
         const orderId = (ch.metadata as any)?.orderId ?? undefined;
         const refunded = typeof ch.amount_refunded === 'number' ? ch.amount_refunded : undefined;
-        return { id: event.id, type: 'refund_succeeded', orderId, amountCents: refunded, raw: event };
+        return {
+          id: event.id,
+          type: 'refund_succeeded',
+          orderId,
+          amountCents: refunded,
+          raw: event,
+        };
       }
 
       // Ignore (treat as no-op rather than a failure)

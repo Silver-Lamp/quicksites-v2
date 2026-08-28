@@ -60,7 +60,7 @@ export function effectiveItemStock(metadata: unknown): number | null {
 export function checkStock(
   available: number | null,
   requested: number,
-  policy: InventoryPolicy = 'deny',
+  policy: InventoryPolicy = 'deny'
 ): { ok: boolean; reason?: 'sold_out' | 'insufficient' } {
   if (available === null) return { ok: true };
   if (policy === 'continue') return { ok: true }; // backorder: sell past zero

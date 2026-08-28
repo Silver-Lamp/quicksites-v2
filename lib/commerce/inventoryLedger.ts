@@ -34,7 +34,7 @@ export type AdjustmentInput = {
  */
 export function resolveManualAdjustment(
   current: number,
-  input: { delta?: unknown; setTo?: unknown; reason?: AdjustmentReason },
+  input: { delta?: unknown; setTo?: unknown; reason?: AdjustmentReason }
 ): { delta: number; reason: AdjustmentReason } | null {
   let delta: number;
   let reason: AdjustmentReason;

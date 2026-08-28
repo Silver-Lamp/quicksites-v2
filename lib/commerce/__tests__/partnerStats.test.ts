@@ -21,7 +21,11 @@ describe('aggregatePartnerLedger', () => {
   it('sums totals by status and derives owed = pending + approved', () => {
     const r = aggregatePartnerLedger({
       ledgerRows: [led('pending', 100, 'o1'), led('approved', 200, 'o2'), led('paid', 300, 'o3')],
-      orderToMerchant: o2m([['o1', 'm1'], ['o2', 'm1'], ['o3', 'm1']]),
+      orderToMerchant: o2m([
+        ['o1', 'm1'],
+        ['o2', 'm1'],
+        ['o3', 'm1'],
+      ]),
       attributedMerchantIds: ['m1'],
     });
     expect(r.totals).toEqual({ pending: 100, approved: 200, paid: 300 });
@@ -30,7 +34,11 @@ describe('aggregatePartnerLedger', () => {
   it('keeps approved in the per-merchant owed bucket (not just lifetime earned)', () => {
     const r = aggregatePartnerLedger({
       ledgerRows: [led('pending', 100, 'o1'), led('approved', 250, 'o2'), led('paid', 50, 'o3')],
-      orderToMerchant: o2m([['o1', 'm1'], ['o2', 'm1'], ['o3', 'm1']]),
+      orderToMerchant: o2m([
+        ['o1', 'm1'],
+        ['o2', 'm1'],
+        ['o3', 'm1'],
+      ]),
       attributedMerchantIds: ['m1'],
     });
     const m1 = r.perMerchant.find((m) => m.merchantId === 'm1')!;
@@ -49,13 +57,19 @@ describe('aggregatePartnerLedger', () => {
       attributedMerchantIds: ['m1', 'm2'],
     });
     expect(r.perMerchant).toHaveLength(2);
-    expect(r.perMerchant.every((m) => m.earned === 0 && m.owed === 0 && m.orderCount === 0)).toBe(true);
+    expect(r.perMerchant.every((m) => m.earned === 0 && m.owed === 0 && m.orderCount === 0)).toBe(
+      true
+    );
   });
 
   it('splits earnings across merchants and sorts by earned desc', () => {
     const r = aggregatePartnerLedger({
       ledgerRows: [led('paid', 100, 'o1'), led('pending', 900, 'o2'), led('approved', 400, 'o3')],
-      orderToMerchant: o2m([['o1', 'm1'], ['o2', 'm2'], ['o3', 'm2']]),
+      orderToMerchant: o2m([
+        ['o1', 'm1'],
+        ['o2', 'm2'],
+        ['o3', 'm2'],
+      ]),
       attributedMerchantIds: ['m1', 'm2'],
     });
     expect(r.perMerchant.map((m) => m.merchantId)).toEqual(['m2', 'm1']); // m2 earned 1300 > m1 100

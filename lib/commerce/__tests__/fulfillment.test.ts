@@ -73,7 +73,9 @@ describe('timestamps', () => {
   });
 
   it('writes only the status when the state has no milestone', () => {
-    expect(transitionPatch('new', '2026-08-13T18:00:00.000Z')).toEqual({ fulfillment_status: 'new' });
+    expect(transitionPatch('new', '2026-08-13T18:00:00.000Z')).toEqual({
+      fulfillment_status: 'new',
+    });
   });
 
   // ⚠️ Overwrite, not first-touch. ready → preparing → ready: the SECOND stamp is when the food was

@@ -8,7 +8,11 @@
 
 export type RevenueDetailKind = 'paid_orders' | 'refunded_orders' | 'commissions';
 
-export const REVENUE_DETAIL_KINDS: RevenueDetailKind[] = ['paid_orders', 'refunded_orders', 'commissions'];
+export const REVENUE_DETAIL_KINDS: RevenueDetailKind[] = [
+  'paid_orders',
+  'refunded_orders',
+  'commissions',
+];
 
 export function isRevenueDetailKind(v: string | null | undefined): v is RevenueDetailKind {
   return !!v && (REVENUE_DETAIL_KINDS as string[]).includes(v);

@@ -14,9 +14,13 @@ import { EVENTS } from '@/lib/analytics/events';
 // `any` client: the trimmed types/supabase.ts omits the commerce tables, so the
 // typed client resolves them to `never`. The rest of lib/commerce does the same.
 function admin(): any {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!, {
-    auth: { persistSession: false },
-  });
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!,
+    {
+      auth: { persistSession: false },
+    }
+  );
 }
 
 /** Move 'pending' commissions to 'approved' once older than the refund window. */
@@ -111,7 +115,10 @@ export async function runPayouts(opts: {
   if (!approved?.length) return { dryRun: !!opts.dryRun, totalCents: 0, partners: [] };
 
   const codes = Array.from(new Set(approved.map((a: any) => a.referral_code as string)));
-  const { data: codeRows } = await db.from('referral_codes').select('code, owner_id').in('code', codes);
+  const { data: codeRows } = await db
+    .from('referral_codes')
+    .select('code, owner_id')
+    .in('code', codes);
   const ownerByCode = new Map<string, string>(
     (codeRows ?? []).map((r: any) => [r.code as string, r.owner_id as string] as [string, string])
   );
@@ -121,7 +128,12 @@ export async function runPayouts(opts: {
   for (const a of approved as any[]) {
     const owner = ownerByCode.get(a.referral_code);
     if (!owner) continue; // orphan code (no owner) — skip
-    const g: G = byOwner.get(owner) ?? { amountCents: 0, currency: a.currency || 'USD', rowIds: [], codes: new Set<string>() };
+    const g: G = byOwner.get(owner) ?? {
+      amountCents: 0,
+      currency: a.currency || 'USD',
+      rowIds: [],
+      codes: new Set<string>(),
+    };
     g.amountCents += a.amount_cents;
     g.rowIds.push(a.id);
     g.codes.add(a.referral_code);
@@ -157,7 +169,11 @@ export async function runPayouts(opts: {
       .select('id')
       .single();
     if (insErr || !payout?.id) {
-      failures.push({ affiliateUserId: owner, amountCents: g.amountCents, error: insErr?.message || 'payout insert failed' });
+      failures.push({
+        affiliateUserId: owner,
+        amountCents: g.amountCents,
+        error: insErr?.message || 'payout insert failed',
+      });
       continue;
     }
     const payoutId = payout.id as string;
@@ -176,7 +192,10 @@ export async function runPayouts(opts: {
 
     if (claimedAmount <= 0) {
       // Nothing actually claimed (already paid elsewhere) — void the empty payout.
-      await db.from('affiliate_payouts').update({ status: 'cancelled', amount_cents: 0 }).eq('id', payoutId);
+      await db
+        .from('affiliate_payouts')
+        .update({ status: 'cancelled', amount_cents: 0 })
+        .eq('id', payoutId);
       continue;
     }
     if (claimedAmount !== g.amountCents) {
@@ -190,8 +209,14 @@ export async function runPayouts(opts: {
       await db
         .from('commission_ledger')
         .update({ status: 'approved', payout_id: null })
-        .in('id', claimedRows.map((r) => r.id));
-      await db.from('affiliate_payouts').update({ status: 'failed', error: outcome.error }).eq('id', payoutId);
+        .in(
+          'id',
+          claimedRows.map((r) => r.id)
+        );
+      await db
+        .from('affiliate_payouts')
+        .update({ status: 'failed', error: outcome.error })
+        .eq('id', payoutId);
       failures.push({ affiliateUserId: owner, amountCents: claimedAmount, error: outcome.error });
       continue;
     }
@@ -203,17 +228,33 @@ export async function runPayouts(opts: {
       .eq('id', payoutId);
     totalPaid += claimedAmount;
     rowsMarkedPaid += claimedRows.length;
-    partners.push({ affiliateUserId: owner, amountCents: claimedAmount, codes: [...g.codes], method, txRef: outcome.txRef, payoutId });
+    partners.push({
+      affiliateUserId: owner,
+      amountCents: claimedAmount,
+      codes: [...g.codes],
+      method,
+      txRef: outcome.txRef,
+      payoutId,
+    });
 
     // Funnel (Model B): partner residual paid out. Best-effort; keyed to the
     // affiliate so it stitches to their accrued commissions. (MODEL_A_PLAN A7)
     try {
       await captureServer(
         EVENTS.COMMISSION_PAID,
-        { affiliate_user_id: owner, payout_id: payoutId, amount_cents: claimedAmount, currency: g.currency, method, codes: [...g.codes] },
+        {
+          affiliate_user_id: owner,
+          payout_id: payoutId,
+          amount_cents: claimedAmount,
+          currency: g.currency,
+          method,
+          codes: [...g.codes],
+        },
         owner
       );
-    } catch { /* analytics never blocks a payout */ }
+    } catch {
+      /* analytics never blocks a payout */
+    }
   }
 
   const totalCents = opts.dryRun ? totalAttempted : totalPaid;

@@ -34,7 +34,9 @@ export function summarizeInventoryRow(item: any): InventoryRow {
   let onHand: number | null;
   let tracked: boolean;
   if (variants.length) {
-    const stocks = variants.map((v) => normalizeStock(v?.stock)).filter((n): n is number => n !== null);
+    const stocks = variants
+      .map((v) => normalizeStock(v?.stock))
+      .filter((n): n is number => n !== null);
     tracked = stocks.length > 0;
     onHand = tracked ? stocks.reduce((a, b) => a + b, 0) : null;
   } else {

@@ -26,12 +26,18 @@ export async function ensureAttributionForMerchant(merchantId: string) {
   if (existing?.locked_at) return; // already locked by first revenue — never rebind
 
   const { error } = existing
-    ? await supabase.from('attributions').update({ referral_code: ref }).eq('merchant_id', merchantId)
+    ? await supabase
+        .from('attributions')
+        .update({ referral_code: ref })
+        .eq('merchant_id', merchantId)
     : await supabase.from('attributions').insert({ merchant_id: merchantId, referral_code: ref });
 
   // Don't throw (attribution must never block checkout/merchant creation), but do
   // surface failures — a silent miss here means an unpaid partner.
   if (error) {
-    console.warn(`ensureAttributionForMerchant failed for merchant ${merchantId}, ref ${ref}:`, error.message);
+    console.warn(
+      `ensureAttributionForMerchant failed for merchant ${merchantId}, ref ${ref}:`,
+      error.message
+    );
   }
 }

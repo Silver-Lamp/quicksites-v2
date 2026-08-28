@@ -24,13 +24,19 @@ export function isLuluSandbox(): boolean {
 let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
-  if (!isLuluConfigured()) throw new Error('Lulu is not configured (set LULU_CLIENT_KEY + LULU_CLIENT_SECRET).');
+  if (!isLuluConfigured())
+    throw new Error('Lulu is not configured (set LULU_CLIENT_KEY + LULU_CLIENT_SECRET).');
   if (cachedToken && cachedToken.expiresAt - 60_000 > Date.now()) return cachedToken.accessToken;
 
-  const basic = Buffer.from(`${process.env.LULU_CLIENT_KEY}:${process.env.LULU_CLIENT_SECRET}`).toString('base64');
+  const basic = Buffer.from(
+    `${process.env.LULU_CLIENT_KEY}:${process.env.LULU_CLIENT_SECRET}`
+  ).toString('base64');
   const res = await fetch(`${luluApiBase()}/auth/realms/glasstree/protocol/openid-connect/token`, {
     method: 'POST',
-    headers: { Authorization: `Basic ${basic}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      Authorization: `Basic ${basic}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
     body: 'grant_type=client_credentials',
   });
   if (!res.ok) {
@@ -38,7 +44,10 @@ async function getAccessToken(): Promise<string> {
     throw new Error(`Lulu auth failed (${res.status}): ${text.slice(0, 300)}`);
   }
   const json = (await res.json()) as { access_token: string; expires_in: number };
-  cachedToken = { accessToken: json.access_token, expiresAt: Date.now() + (json.expires_in || 3600) * 1000 };
+  cachedToken = {
+    accessToken: json.access_token,
+    expiresAt: Date.now() + (json.expires_in || 3600) * 1000,
+  };
   return cachedToken.accessToken;
 }
 
@@ -62,7 +71,9 @@ async function luluFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   if (!res.ok) {
     const detail = body?.detail || body?.errors || body?.raw || JSON.stringify(body);
-    throw new Error(`Lulu ${init.method || 'GET'} ${path} failed (${res.status}): ${String(detail).slice(0, 400)}`);
+    throw new Error(
+      `Lulu ${init.method || 'GET'} ${path} failed (${res.status}): ${String(detail).slice(0, 400)}`
+    );
   }
   return body as T;
 }
@@ -119,7 +130,10 @@ export async function calculatePrintCost(opts: {
     shipping_address: opts.shippingAddress,
     shipping_option: opts.shippingLevel,
   };
-  const r = await luluFetch<any>('/print-job-cost-calculations/', { method: 'POST', body: JSON.stringify(body) });
+  const r = await luluFetch<any>('/print-job-cost-calculations/', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
   const num = (v: any) => (v === null || v === undefined ? 0 : Number(v));
   return {
     currency: r.currency || 'USD',
@@ -152,7 +166,8 @@ export interface LuluPrintJob {
 
 export async function createPrintJob(input: CreatePrintJobInput): Promise<LuluPrintJob> {
   const body = {
-    contact_email: input.contactEmail || process.env.LULU_CONTACT_EMAIL || input.shippingAddress.email,
+    contact_email:
+      input.contactEmail || process.env.LULU_CONTACT_EMAIL || input.shippingAddress.email,
     external_id: input.externalId,
     line_items: [
       {
@@ -179,7 +194,9 @@ export async function getPrintJob(id: number | string): Promise<LuluPrintJob> {
 }
 
 /** Best-effort cancel — only works before the job enters production. */
-export async function cancelPrintJob(id: number | string): Promise<{ ok: boolean; status?: string }> {
+export async function cancelPrintJob(
+  id: number | string
+): Promise<{ ok: boolean; status?: string }> {
   try {
     const r = await luluFetch<any>(`/print-jobs/${id}/status/`, {
       method: 'PUT',

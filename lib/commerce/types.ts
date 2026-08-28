@@ -11,19 +11,19 @@ export type LineItemInput = {
 };
 
 export type CreateCheckoutParams = {
-    orderId: string;
-    currency: string;
-    lineItems: LineItemInput[];
-    successUrl: string;
-    cancelUrl: string;
-    captureMethod?: 'automatic' | 'manual';
-    platformFeeCents?: Money;       // computed per config
-    connectAccountId?: string | null; // Stripe Connect destination (acct_...)
-    metadata?: Record<string, string>;
-    collectShipping?: boolean;      // POD/physical carts → collect a shipping address
-    shippingCents?: Money;          // flat shipping fee, charged as its own line item
-  };
-  
+  orderId: string;
+  currency: string;
+  lineItems: LineItemInput[];
+  successUrl: string;
+  cancelUrl: string;
+  captureMethod?: 'automatic' | 'manual';
+  platformFeeCents?: Money; // computed per config
+  connectAccountId?: string | null; // Stripe Connect destination (acct_...)
+  metadata?: Record<string, string>;
+  collectShipping?: boolean; // POD/physical carts → collect a shipping address
+  shippingCents?: Money; // flat shipping fee, charged as its own line item
+};
+
 export type CheckoutResult = { url: string; providerRef: string };
 
 export type WebhookEvent = {

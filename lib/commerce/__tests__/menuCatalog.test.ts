@@ -40,14 +40,20 @@ describe('centsToDisplay', () => {
 
 describe('buildCatalogRowsFromMenu', () => {
   const sections = [
-    { name: 'Breakfast', items: [
-      { name: 'Pancakes', description: 'Fluffy', price_cents: 1000 },
-      { name: 'Market Fish', price_cents: null }, // unpriced → skipped
-    ] },
-    { name: 'Lunch', items: [
-      { name: 'Pancakes', price_cents: 1200 }, // same name, different section → unique slug
-      { name: 'Nothing', price_cents: 0 }, // zero → skipped
-    ] },
+    {
+      name: 'Breakfast',
+      items: [
+        { name: 'Pancakes', description: 'Fluffy', price_cents: 1000 },
+        { name: 'Market Fish', price_cents: null }, // unpriced → skipped
+      ],
+    },
+    {
+      name: 'Lunch',
+      items: [
+        { name: 'Pancakes', price_cents: 1200 }, // same name, different section → unique slug
+        { name: 'Nothing', price_cents: 0 }, // zero → skipped
+      ],
+    },
   ];
 
   it('emits only priced items, with unique slugs', () => {
@@ -55,28 +61,42 @@ describe('buildCatalogRowsFromMenu', () => {
     expect(rows).toHaveLength(2);
     expect(rows.map((r) => r.name)).toEqual(['Pancakes', 'Pancakes']);
     expect(rows.map((r) => r.slug)).toEqual(['breakfast-pancakes', 'lunch-pancakes']);
-    expect(rows[0]).toMatchObject({ section: 'Breakfast', price_cents: 1000, description: 'Fluffy' });
+    expect(rows[0]).toMatchObject({
+      section: 'Breakfast',
+      price_cents: 1000,
+      description: 'Fluffy',
+    });
   });
 
   it('suffixes a slug collision within the batch', () => {
     const rows = buildCatalogRowsFromMenu([
-      { name: 'Specials', items: [
-        { name: 'Combo', price_cents: 900 },
-        { name: 'Combo', price_cents: 900 }, // identical → -2
-      ] },
+      {
+        name: 'Specials',
+        items: [
+          { name: 'Combo', price_cents: 900 },
+          { name: 'Combo', price_cents: 900 }, // identical → -2
+        ],
+      },
     ]);
     expect(rows.map((r) => r.slug)).toEqual(['specials-combo', 'specials-combo-2']);
   });
 
   it('turns choose-one options into row variants (base = cheapest); ignores unpriced options', () => {
     const rows = buildCatalogRowsFromMenu([
-      { name: 'Mains', items: [
-        { name: 'Wings', price_cents: 0, options: [
-          { label: 'Small', price_cents: 800 },
-          { label: 'Large', price_cents: 1200 },
-          { label: 'MP', price_cents: null }, // unpriced option → dropped
-        ] },
-      ] },
+      {
+        name: 'Mains',
+        items: [
+          {
+            name: 'Wings',
+            price_cents: 0,
+            options: [
+              { label: 'Small', price_cents: 800 },
+              { label: 'Large', price_cents: 1200 },
+              { label: 'MP', price_cents: null }, // unpriced option → dropped
+            ],
+          },
+        ],
+      },
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0].price_cents).toBe(800); // cheapest option
@@ -88,12 +108,19 @@ describe('buildCatalogRowsFromMenu', () => {
 
   it('builds add-ons with unique ids (free add-ons allowed)', () => {
     const rows = buildCatalogRowsFromMenu([
-      { name: 'Mains', items: [
-        { name: 'Burger', price_cents: 1400, addons: [
-          { label: 'Extra cheese', price_cents: 100 },
-          { label: 'No onions' }, // free add-on (no price) → 0
-        ] },
-      ] },
+      {
+        name: 'Mains',
+        items: [
+          {
+            name: 'Burger',
+            price_cents: 1400,
+            addons: [
+              { label: 'Extra cheese', price_cents: 100 },
+              { label: 'No onions' }, // free add-on (no price) → 0
+            ],
+          },
+        ],
+      },
     ]);
     expect(rows[0].addons).toEqual([
       { id: 'extra-cheese', label: 'Extra cheese', price_cents: 100 },
@@ -103,7 +130,10 @@ describe('buildCatalogRowsFromMenu', () => {
 
   it('carries an item image_url through to the row', () => {
     const rows = buildCatalogRowsFromMenu([
-      { name: 'Mains', items: [{ name: 'Steak', price_cents: 2500, image_url: 'https://x/steak.jpg' }] },
+      {
+        name: 'Mains',
+        items: [{ name: 'Steak', price_cents: 2500, image_url: 'https://x/steak.jpg' }],
+      },
     ]);
     expect(rows[0].image_url).toBe('https://x/steak.jpg');
   });
@@ -119,7 +149,13 @@ describe('applyCatalogLinks', () => {
     const content = {
       title: 'Our Menu',
       sections: [
-        { name: 'Breakfast', items: [{ name: 'Pancakes', price: '$10' }, { name: 'Toast', price: '' }] },
+        {
+          name: 'Breakfast',
+          items: [
+            { name: 'Pancakes', price: '$10' },
+            { name: 'Toast', price: '' },
+          ],
+        },
       ],
     };
     const out = applyCatalogLinks(content, [
@@ -136,13 +172,20 @@ describe('applyCatalogLinks', () => {
 
   it('does not mutate the input content', () => {
     const content = { sections: [{ name: 'A', items: [{ name: 'X' }] }] };
-    applyCatalogLinks(content, [{ section: 'A', name: 'X', catalog_item_id: 'c', price_cents: 500 }]);
+    applyCatalogLinks(content, [
+      { section: 'A', name: 'X', catalog_item_id: 'c', price_cents: 500 },
+    ]);
     expect((content.sections[0].items[0] as any).catalog_item_id).toBeUndefined();
   });
 
   it('maps option labels to their created variant ids', () => {
     const content = {
-      sections: [{ name: 'Mains', items: [{ name: 'Wings', options: [{ label: 'Small' }, { label: 'Large' }] }] }],
+      sections: [
+        {
+          name: 'Mains',
+          items: [{ name: 'Wings', options: [{ label: 'Small' }, { label: 'Large' }] }],
+        },
+      ],
     };
     const out = applyCatalogLinks(content, [
       {
@@ -164,10 +207,22 @@ describe('applyCatalogLinks', () => {
   });
 
   it('replaces item add-ons with the published set (stable ids for the renderer)', () => {
-    const content = { sections: [{ name: 'Mains', items: [{ name: 'Burger', addons: [{ label: 'Extra cheese' }] }] }] };
+    const content = {
+      sections: [
+        { name: 'Mains', items: [{ name: 'Burger', addons: [{ label: 'Extra cheese' }] }] },
+      ],
+    };
     const out = applyCatalogLinks(content, [
-      { section: 'Mains', name: 'Burger', catalog_item_id: 'cat_1', price_cents: 1400, addons: [{ id: 'extra-cheese', label: 'Extra cheese', price_cents: 100 }] },
+      {
+        section: 'Mains',
+        name: 'Burger',
+        catalog_item_id: 'cat_1',
+        price_cents: 1400,
+        addons: [{ id: 'extra-cheese', label: 'Extra cheese', price_cents: 100 }],
+      },
     ]);
-    expect(out.sections[0].items[0].addons).toEqual([{ id: 'extra-cheese', label: 'Extra cheese', price_cents: 100 }]);
+    expect(out.sections[0].items[0].addons).toEqual([
+      { id: 'extra-cheese', label: 'Extra cheese', price_cents: 100 },
+    ]);
   });
 });

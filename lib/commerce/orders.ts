@@ -13,7 +13,13 @@ import {
   AFFILIATE_FEE_SHARE,
 } from './partner-terms';
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
-import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, computePhysicalShippingCents, parseStripeTaxTotals } from './fees';
+import {
+  computeSubtotalCents,
+  computePlatformFeeCents,
+  flatShippingCents,
+  computePhysicalShippingCents,
+  parseStripeTaxTotals,
+} from './fees';
 import { recordAdjustment } from './inventoryLedger';
 import { sendOrderAlert } from '@/lib/commerce/orderNotify';
 import { recordCustomerForPaidOrder, recordCustomerForAlreadyPaidOrder } from './customers';
@@ -53,22 +59,31 @@ export async function createDraftOrder(opts: {
   if (catIds.length) {
     try {
       const { data: cis } = await (supabase as any)
-        .from('catalog_items').select('id, metadata').in('id', catIds);
+        .from('catalog_items')
+        .select('id, metadata')
+        .in('id', catIds);
       const baseById = new Map<string, number>(
         (cis ?? []).map((c: any) => [c.id, Number(c?.metadata?.pod_spec?.base_cost_cents) || 0])
       );
-      hasShippable = (cis ?? []).some((c: any) => ['lulu', 'gelato'].includes(c?.metadata?.fulfillment_provider));
+      hasShippable = (cis ?? []).some((c: any) =>
+        ['lulu', 'gelato'].includes(c?.metadata?.fulfillment_provider)
+      );
       for (const c of cis ?? []) {
         const s = c?.metadata?.shipping;
         if (s?.requires_shipping) {
-          shippingByItem.set(c.id, { requires_shipping: true, grams: Number(s.grams) || undefined });
+          shippingByItem.set(c.id, {
+            requires_shipping: true,
+            grams: Number(s.grams) || undefined,
+          });
         }
       }
       for (const li of opts.items) {
         const base = li.catalogItemId ? baseById.get(li.catalogItemId) || 0 : 0;
         podBaseCents += base * Math.max(1, Number(li.quantity || 1));
       }
-    } catch { /* fee falls back to full total */ }
+    } catch {
+      /* fee falls back to full total */
+    }
   }
 
   // The platform fee is computed on the product subtotal (excluding shipping, and
@@ -108,7 +123,11 @@ export async function createDraftOrder(opts: {
   let { data: order, error } = await supabase.from('orders').insert(orderRow).select('id').single();
   // Forward-safe: if the customer_note column isn't present yet (migration not
   // applied), drop it and retry — an order is never lost over an optional note.
-  if (error && customerNote && (error.code === '42703' || /customer_note/i.test(error.message || ''))) {
+  if (
+    error &&
+    customerNote &&
+    (error.code === '42703' || /customer_note/i.test(error.message || ''))
+  ) {
     delete orderRow.customer_note;
     ({ data: order, error } = await supabase.from('orders').insert(orderRow).select('id').single());
   }
@@ -140,7 +159,12 @@ export async function createDraftOrder(opts: {
 
   await captureServer(
     EVENTS.ORDER_CREATED,
-    { merchant_id: opts.merchantId, order_id: order.id, total_cents: total, platform_fee_cents: platformFeeCents },
+    {
+      merchant_id: opts.merchantId,
+      order_id: order.id,
+      total_cents: total,
+      platform_fee_cents: platformFeeCents,
+    },
     opts.merchantId
   );
 
@@ -206,7 +230,10 @@ export async function markOrderPaid(
     }
   } catch (e) {
     console.warn('Tax record step failed:', (e as any)?.message || e);
-    Sentry.captureException(e, { tags: { area: 'commerce.markOrderPaid.tax' }, extra: { order_id: orderId } } as any);
+    Sentry.captureException(e, {
+      tags: { area: 'commerce.markOrderPaid.tax' },
+      extra: { order_id: orderId },
+    } as any);
   }
 
   // 2c) Settle inventory for this order (once — guarded by the paid transition).
@@ -225,53 +252,79 @@ export async function markOrderPaid(
     if (heldRes && heldRes.length) {
       await (supabase as any).rpc('consume_order_reservations', { p_order: orderId });
     } else {
-    const { data: lines } = await supabase
-      .from('order_items')
-      .select('catalog_item_id, title, quantity, metadata')
-      .eq('order_id', orderId);
-    const oversold: Array<{ title: string; variant_label: string | null; requested: number; remaining: number | null }> = [];
-    for (const li of lines ?? []) {
-      if (!li.catalog_item_id) continue;
-      const qty = Number(li.quantity) || 0;
-      if (qty <= 0) continue;
-      const variantId = (li.metadata as any)?.variant_id ?? null;
-      const { data: res, error } = await (supabase as any).rpc('decrement_catalog_stock', {
-        p_item: li.catalog_item_id,
-        p_variant: variantId,
-        p_qty: qty,
-      });
-      if (error) { console.warn('decrement_catalog_stock failed:', error.message); continue; }
-      // History: record the sale draw-down (only when the line was actually tracked —
-      // remaining is null for untracked/unlimited items).
-      if (res && (res as any).ok !== false && (res as any).remaining !== null && (res as any).remaining !== undefined) {
-        await recordAdjustment(supabase, {
-          catalogItemId: li.catalog_item_id, variantId, delta: -qty,
-          newOnHand: (res as any).remaining, reason: 'sale', orderId,
+      const { data: lines } = await supabase
+        .from('order_items')
+        .select('catalog_item_id, title, quantity, metadata')
+        .eq('order_id', orderId);
+      const oversold: Array<{
+        title: string;
+        variant_label: string | null;
+        requested: number;
+        remaining: number | null;
+      }> = [];
+      for (const li of lines ?? []) {
+        if (!li.catalog_item_id) continue;
+        const qty = Number(li.quantity) || 0;
+        if (qty <= 0) continue;
+        const variantId = (li.metadata as any)?.variant_id ?? null;
+        const { data: res, error } = await (supabase as any).rpc('decrement_catalog_stock', {
+          p_item: li.catalog_item_id,
+          p_variant: variantId,
+          p_qty: qty,
         });
+        if (error) {
+          console.warn('decrement_catalog_stock failed:', error.message);
+          continue;
+        }
+        // History: record the sale draw-down (only when the line was actually tracked —
+        // remaining is null for untracked/unlimited items).
+        if (
+          res &&
+          (res as any).ok !== false &&
+          (res as any).remaining !== null &&
+          (res as any).remaining !== undefined
+        ) {
+          await recordAdjustment(supabase, {
+            catalogItemId: li.catalog_item_id,
+            variantId,
+            delta: -qty,
+            newOnHand: (res as any).remaining,
+            reason: 'sale',
+            orderId,
+          });
+        }
+        if (res && (res as any).ok === false && (res as any).reason === 'insufficient') {
+          oversold.push({
+            title: li.title ?? 'Item',
+            variant_label: (li.metadata as any)?.variant_label ?? null,
+            requested: qty,
+            remaining: (res as any).remaining ?? null,
+          });
+        }
       }
-      if (res && (res as any).ok === false && (res as any).reason === 'insufficient') {
-        oversold.push({
-          title: li.title ?? 'Item',
-          variant_label: (li.metadata as any)?.variant_label ?? null,
-          requested: qty,
-          remaining: (res as any).remaining ?? null,
-        });
+      if (oversold.length) {
+        // Paid but couldn't be fully fulfilled from stock (a race won by another
+        // order). Record it on the order + log so the merchant can reconcile.
+        console.warn(
+          `Order ${orderId} oversold — paid beyond available stock:`,
+          JSON.stringify(oversold)
+        );
+        Sentry.captureMessage('Order oversold — paid beyond available stock', {
+          level: 'warning',
+          extra: { order_id: orderId, oversold },
+        } as any);
+        await supabase
+          .from('orders')
+          .update({ oversold_lines: oversold } as any)
+          .eq('id', orderId);
       }
-    }
-    if (oversold.length) {
-      // Paid but couldn't be fully fulfilled from stock (a race won by another
-      // order). Record it on the order + log so the merchant can reconcile.
-      console.warn(`Order ${orderId} oversold — paid beyond available stock:`, JSON.stringify(oversold));
-      Sentry.captureMessage('Order oversold — paid beyond available stock', {
-        level: 'warning',
-        extra: { order_id: orderId, oversold },
-      } as any);
-      await supabase.from('orders').update({ oversold_lines: oversold } as any).eq('id', orderId);
-    }
     }
   } catch (e) {
     console.warn('Stock settle step failed:', (e as any)?.message || e);
-    Sentry.captureException(e, { tags: { area: 'commerce.markOrderPaid.stock' }, extra: { order_id: orderId } } as any);
+    Sentry.captureException(e, {
+      tags: { area: 'commerce.markOrderPaid.stock' },
+      extra: { order_id: orderId },
+    } as any);
   }
 
   // 3) Fetch order context once
@@ -315,7 +368,10 @@ export async function markOrderPaid(
       .select('title, quantity, total_cents')
       .eq('order_id', orderId);
 
-    const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.quicksites.ai').replace(/\/+$/, '');
+    const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.quicksites.ai').replace(
+      /\/+$/,
+      ''
+    );
     await sendOrderAlert(supabase, {
       orderId,
       merchantId: orderRow.merchant_id ?? null,
@@ -397,7 +453,13 @@ export async function markOrderPaid(
           console.warn('commission_ledger upsert error:', up.error.message);
           Sentry.captureMessage('commission_ledger upsert failed (partner residual)', {
             level: 'error',
-            extra: { order_id: orderId, referral_code: attr.referral_code, amount_cents: partnerCents, code: up.error.code, message: up.error.message },
+            extra: {
+              order_id: orderId,
+              referral_code: attr.referral_code,
+              amount_cents: partnerCents,
+              code: up.error.code,
+              message: up.error.message,
+            },
           } as any);
         } else {
           // Funnel (Model B): partner residual accrued. This block only runs once
@@ -420,7 +482,10 @@ export async function markOrderPaid(
         //     (clamped to QS_FEE_SHARE), so the reseller residual above is untouched.
         //     (codeRow was already fetched above with parent_code + override_share.)
         if ((codeRow as any)?.parent_code && Number((codeRow as any).override_share) > 0) {
-          const overrideCents = hubOverrideCents(orderRow.platform_fee_cents, Number((codeRow as any).override_share));
+          const overrideCents = hubOverrideCents(
+            orderRow.platform_fee_cents,
+            Number((codeRow as any).override_share)
+          );
           if (overrideCents > 0) {
             const ov = await supabase.from('commission_ledger').upsert(
               {
@@ -443,7 +508,13 @@ export async function markOrderPaid(
               console.warn('hub override upsert error:', ov.error.message);
               Sentry.captureMessage('commission_ledger upsert failed (hub override)', {
                 level: 'error',
-                extra: { order_id: orderId, referral_code: (codeRow as any).parent_code, amount_cents: overrideCents, code: ov.error.code, message: ov.error.message },
+                extra: {
+                  order_id: orderId,
+                  referral_code: (codeRow as any).parent_code,
+                  amount_cents: overrideCents,
+                  code: ov.error.code,
+                  message: ov.error.message,
+                },
               } as any);
             } else {
               await captureServer(
@@ -464,7 +535,10 @@ export async function markOrderPaid(
     }
   } catch (e) {
     console.warn('Platform-fee commission step failed:', (e as any)?.message || e);
-    Sentry.captureException(e, { tags: { area: 'commerce.markOrderPaid.commission' }, extra: { order_id: orderId } } as any);
+    Sentry.captureException(e, {
+      tags: { area: 'commerce.markOrderPaid.commission' },
+      extra: { order_id: orderId },
+    } as any);
   }
 
   await captureServer(
@@ -475,7 +549,11 @@ export async function markOrderPaid(
   if (orderRow.platform_fee_cents && orderRow.platform_fee_cents > 0) {
     await captureServer(
       EVENTS.PLATFORM_FEE_COLLECTED,
-      { merchant_id: orderRow.merchant_id, order_id: orderId, platform_fee_cents: orderRow.platform_fee_cents },
+      {
+        merchant_id: orderRow.merchant_id,
+        order_id: orderId,
+        platform_fee_cents: orderRow.platform_fee_cents,
+      },
       orderRow.merchant_id
     );
   }
@@ -488,7 +566,10 @@ export async function markOrderPaid(
       await fulfillOrderPodItems(orderId, raw);
     } catch (e: any) {
       console.warn('POD fulfillment step failed:', e?.message || e);
-      Sentry.captureException(e, { tags: { area: 'commerce.markOrderPaid.pod' }, extra: { order_id: orderId } } as any);
+      Sentry.captureException(e, {
+        tags: { area: 'commerce.markOrderPaid.pod' },
+        extra: { order_id: orderId },
+      } as any);
     }
   }
 }
@@ -554,11 +635,18 @@ export async function markOrderRefunded(
           p_variant: variantId,
           p_qty: qty,
         });
-        if (error) { console.warn('increment_catalog_stock (restock) failed:', error.message); continue; }
+        if (error) {
+          console.warn('increment_catalog_stock (restock) failed:', error.message);
+          continue;
+        }
         if (res && (res as any).remaining !== null && (res as any).remaining !== undefined) {
           await recordAdjustment(supabase, {
-            catalogItemId: li.catalog_item_id, variantId, delta: qty,
-            newOnHand: (res as any).remaining, reason: 'refund', orderId,
+            catalogItemId: li.catalog_item_id,
+            variantId,
+            delta: qty,
+            newOnHand: (res as any).remaining,
+            reason: 'refund',
+            orderId,
           });
         }
       }
@@ -616,10 +704,17 @@ export async function markOrderRefunded(
     }
   } catch (e: any) {
     console.warn('clawback step failed:', e?.message || e);
-    Sentry.captureException(e, { tags: { area: 'commerce.markOrderRefunded.clawback' }, extra: { order_id: orderId } } as any);
+    Sentry.captureException(e, {
+      tags: { area: 'commerce.markOrderRefunded.clawback' },
+      extra: { order_id: orderId },
+    } as any);
   }
 
-  await captureServer(EVENTS.ORDER_REFUNDED, { order_id: orderId, amount_cents: refundedCents, provider });
+  await captureServer(EVENTS.ORDER_REFUNDED, {
+    order_id: orderId,
+    amount_cents: refundedCents,
+    provider,
+  });
   await captureServer(EVENTS.PLATFORM_FEE_REVERSED, { order_id: orderId });
 
   // Cancel any cancelable print-on-demand jobs for this order (gated, best-effort).

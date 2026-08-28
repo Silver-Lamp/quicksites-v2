@@ -36,7 +36,7 @@ export function computeFeeReversalDeltaCents(input: {
 
   const target = Math.min(
     feeAmountCents,
-    Math.floor((feeAmountCents * chargeRefundedCents) / chargeAmountCents),
+    Math.floor((feeAmountCents * chargeRefundedCents) / chargeAmountCents)
   );
   const already = feeAlreadyRefundedCents > 0 ? feeAlreadyRefundedCents : 0;
   const delta = target - already;

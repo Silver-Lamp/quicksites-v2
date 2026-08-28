@@ -1,6 +1,7 @@
 // app/api/admin/sites/publish/route.ts
 export const dynamic = 'force-dynamic';
 
+import * as Sentry from '@sentry/nextjs';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
@@ -22,7 +23,9 @@ function x(err: any) {
 }
 
 function canonSlug(v?: string | null) {
-  const raw = String(v ?? '').trim().toLowerCase();
+  const raw = String(v ?? '')
+    .trim()
+    .toLowerCase();
   if (!raw) return null;
   const slug = raw
     .replace(/[^a-z0-9-_.]/g, '-') // keep letters, digits, dash, underscore, dot
@@ -63,13 +66,24 @@ async function handle(req: Request) {
     // Accept ids via POST body or GET query
     let body: any = {};
     if (req.method === 'POST') {
-      try { body = await req.json(); } catch {}
+      try {
+        body = await req.json();
+      } catch {}
     }
-    const templateId =
-      (body?.templateId || body?.tid || url.searchParams.get('templateId') || url.searchParams.get('tid'))?.trim();
-    let snapshotId =
-      (body?.snapshotId || body?.versionId || body?.sid ||
-       url.searchParams.get('snapshotId') || url.searchParams.get('versionId') || url.searchParams.get('sid'))?.trim();
+    const templateId = (
+      body?.templateId ||
+      body?.tid ||
+      url.searchParams.get('templateId') ||
+      url.searchParams.get('tid')
+    )?.trim();
+    let snapshotId = (
+      body?.snapshotId ||
+      body?.versionId ||
+      body?.sid ||
+      url.searchParams.get('snapshotId') ||
+      url.searchParams.get('versionId') ||
+      url.searchParams.get('sid')
+    )?.trim();
 
     note('incoming', { method: req.method, templateId, snapshotId });
 
@@ -84,7 +98,10 @@ async function handle(req: Request) {
 
     if (tplRes.error || !tplRes.data) {
       return j(
-        { error: tplRes.error?.message || 'template not found', debug: debug ? { step: 'template', err: x(tplRes.error) } : undefined },
+        {
+          error: tplRes.error?.message || 'template not found',
+          debug: debug ? { step: 'template', err: x(tplRes.error) } : undefined,
+        },
         404
       );
     }
@@ -111,7 +128,17 @@ async function handle(req: Request) {
 
     if (!snapshotId) {
       note('noop publish (no snapshotId)');
-      return j({ ok: true, templateId, snapshotId: null, storedVia: 'noop', why: 'no snapshotId', debug: debug ? { trace } : undefined }, 200);
+      return j(
+        {
+          ok: true,
+          templateId,
+          snapshotId: null,
+          storedVia: 'noop',
+          why: 'no snapshotId',
+          debug: debug ? { trace } : undefined,
+        },
+        200
+      );
     }
 
     // Verify version exists (don’t hard-fail)
@@ -177,19 +204,67 @@ async function handle(req: Request) {
       }
     }
 
+    // Flip templates.published to match reality.
+    //
+    // This route upserts published_sites — which is what the renderer serves, so the site
+    // genuinely goes live — but it never set the flag, and templates.published is read by
+    // the homepage showcase, three paths in site routing, agency billing's billable-site
+    // count and the SEO coach's recipient list. So an editor-published site was live to
+    // visitors and invisible to our own systems. That is the shape of "17 of 439 published"
+    // in CLAUDE.md: the count reads a flag the working publish path never wrote.
+    //
+    // Done through the RPC because a direct UPDATE on templates is rejected outright by
+    // trg_guard_templates_update. Best-effort: the site is already live by this point, so a
+    // failure here must not report the publish as failed — but it is recorded, because
+    // "best-effort and silent" is how the flag came to be missing in the first place.
+    let pointerSet = false;
+    try {
+      const { error: ptrErr } = await pub.rpc('publish_template', {
+        p_template_id: templateId,
+        p_version_id: snapshotId ?? null,
+        p_actor: null,
+      });
+      if (ptrErr) {
+        note('publish pointer not set', { err: x(ptrErr) });
+        Sentry.captureMessage('publish pointer not set', {
+          level: 'error',
+          extra: { template_id: templateId, snapshot_id: snapshotId, message: ptrErr.message },
+        } as any);
+      } else {
+        pointerSet = true;
+        note('publish pointer set');
+      }
+    } catch (e: any) {
+      note('publish pointer threw', { err: String(e?.message || e) });
+    }
+
     // Best-effort event log
     try {
       await logTemplateEvent({
         templateId,
         type: 'publish',
-        meta: { snapshot: { id: snapshotId }, domain: finalDomain, storedVia, attempt, lastError: debug ? lastError : undefined },
+        meta: {
+          snapshot: { id: snapshotId },
+          domain: finalDomain,
+          storedVia,
+          attempt,
+          lastError: debug ? lastError : undefined,
+        },
       } as any);
     } catch (e: any) {
       note('logTemplateEvent failed', { err: String(e?.message || e) });
     }
 
     return j(
-      { ok: true, templateId, snapshotId, domain: finalDomain, storedVia, debug: debug ? { attempt, lastError, trace } : undefined },
+      {
+        ok: true,
+        templateId,
+        snapshotId,
+        domain: finalDomain,
+        storedVia,
+        pointerSet,
+        debug: debug ? { attempt, lastError, trace } : undefined,
+      },
       200
     );
   } catch (e: any) {
@@ -197,5 +272,9 @@ async function handle(req: Request) {
   }
 }
 
-export async function GET(req: Request)  { return handle(req); }
-export async function POST(req: Request) { return handle(req); }
+export async function GET(req: Request) {
+  return handle(req);
+}
+export async function POST(req: Request) {
+  return handle(req);
+}

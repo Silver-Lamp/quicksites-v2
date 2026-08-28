@@ -3,9 +3,13 @@
 import { createClient } from '@supabase/supabase-js';
 
 function db(): any {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!, {
-    auth: { persistSession: false },
-  });
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!,
+    {
+      auth: { persistSession: false },
+    }
+  );
 }
 
 /**
@@ -17,7 +21,11 @@ function db(): any {
  * conflict, we return true and let processing proceed — dedup is best-effort
  * hardening and must never drop a real event because the ledger hiccuped.
  */
-export async function claimWebhookEvent(provider: string, eventId: string, eventType?: string | null): Promise<boolean> {
+export async function claimWebhookEvent(
+  provider: string,
+  eventId: string,
+  eventType?: string | null
+): Promise<boolean> {
   if (!eventId) return true; // nothing to dedup on; process it
   const { error } = await db()
     .from('webhook_events')

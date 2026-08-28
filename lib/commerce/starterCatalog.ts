@@ -18,12 +18,17 @@ export function collectReferencedProductIds(data: any): string[] {
   const ids = new Set<string>();
   const pages: any[] = Array.isArray(data?.pages) ? data.pages : [];
   for (const p of pages) {
-    const blocks: any[] = Array.isArray(p?.blocks) ? p.blocks : Array.isArray(p?.content_blocks) ? p.content_blocks : [];
+    const blocks: any[] = Array.isArray(p?.blocks)
+      ? p.blocks
+      : Array.isArray(p?.content_blocks)
+        ? p.content_blocks
+        : [];
     for (const b of blocks) {
       const c: any = b?.content ?? {};
       if (b?.type === 'products_grid' || b?.type === 'products-grid') {
         for (const key of ['product_ids', 'productIds', 'ids']) {
-          if (Array.isArray(c[key])) c[key].forEach((x: any) => typeof x === 'string' && x && ids.add(x));
+          if (Array.isArray(c[key]))
+            c[key].forEach((x: any) => typeof x === 'string' && x && ids.add(x));
         }
       }
       if (b?.type === 'service_offer' && typeof c.productId === 'string' && c.productId) {
@@ -116,7 +121,11 @@ export async function cloneCatalogForOwner(opts: {
  * unique, so this is exact) and meta.ecom points at the new merchant. Ids with no
  * clone (source item vanished) are dropped from grids so nothing dangles.
  */
-export function remapCommerceIds(data: any, merchantId: string, idMap: Record<string, string>): any {
+export function remapCommerceIds(
+  data: any,
+  merchantId: string,
+  idMap: Record<string, string>
+): any {
   let text = JSON.stringify(data ?? {});
   for (const [oldId, newId] of Object.entries(idMap)) {
     text = text.split(oldId).join(newId);
@@ -127,7 +136,11 @@ export function remapCommerceIds(data: any, merchantId: string, idMap: Record<st
   const validIds = new Set(Object.values(idMap));
   const pages: any[] = Array.isArray(next?.pages) ? next.pages : [];
   for (const p of pages) {
-    const blocks: any[] = Array.isArray(p?.blocks) ? p.blocks : Array.isArray(p?.content_blocks) ? p.content_blocks : [];
+    const blocks: any[] = Array.isArray(p?.blocks)
+      ? p.blocks
+      : Array.isArray(p?.content_blocks)
+        ? p.content_blocks
+        : [];
     for (const b of blocks) {
       const c: any = b?.content ?? {};
       if (b?.type === 'products_grid' || b?.type === 'products-grid') {
@@ -135,13 +148,21 @@ export function remapCommerceIds(data: any, merchantId: string, idMap: Record<st
           if (Array.isArray(c[key])) c[key] = c[key].filter((x: any) => validIds.has(x));
         }
       }
-      if (b?.type === 'service_offer' && typeof c.productId === 'string' && c.productId && !validIds.has(c.productId)) {
+      if (
+        b?.type === 'service_offer' &&
+        typeof c.productId === 'string' &&
+        c.productId &&
+        !validIds.has(c.productId)
+      ) {
         delete c.productId;
       }
     }
   }
 
-  next.meta = { ...(next.meta ?? {}), ecom: { ...(next.meta?.ecom ?? {}), merchant_id: merchantId } };
+  next.meta = {
+    ...(next.meta ?? {}),
+    ecom: { ...(next.meta?.ecom ?? {}), merchant_id: merchantId },
+  };
   return next;
 }
 
@@ -150,7 +171,11 @@ export function stripCommerceWiring(data: any): any {
   const next = JSON.parse(JSON.stringify(data ?? {}));
   const pages: any[] = Array.isArray(next?.pages) ? next.pages : [];
   for (const p of pages) {
-    const blocks: any[] = Array.isArray(p?.blocks) ? p.blocks : Array.isArray(p?.content_blocks) ? p.content_blocks : [];
+    const blocks: any[] = Array.isArray(p?.blocks)
+      ? p.blocks
+      : Array.isArray(p?.content_blocks)
+        ? p.content_blocks
+        : [];
     for (const b of blocks) {
       const c: any = b?.content ?? {};
       if (b?.type === 'products_grid' || b?.type === 'products-grid') {

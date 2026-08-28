@@ -48,7 +48,12 @@ import {
 const base = { campaignId: 'camp-1', invoiceId: 'in_123', currency: 'usd' };
 
 beforeEach(() => {
-  state.campaign = { id: 'camp-1', domain: 'boston-plumbing.com', sold_by_code: 'shelly', manager_code: 'amy' };
+  state.campaign = {
+    id: 'camp-1',
+    domain: 'boston-plumbing.com',
+    sold_by_code: 'shelly',
+    manager_code: 'amy',
+  };
   state.codeParent = null;
   state.upserted = null;
   state.upsertOpts = null;

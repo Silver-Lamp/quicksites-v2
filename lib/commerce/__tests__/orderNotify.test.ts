@@ -6,7 +6,13 @@
 // The properties under test are about WHO gets told and HOW OFTEN — not formatting. A duplicate
 // alert teaches a kitchen to distrust the first one, and a wrong recipient sends a stranger's order
 // details to whoever asked.
-import { alertSubject, alertHtml, money, resolveAlertRecipient, sendOrderAlert } from '../orderNotify';
+import {
+  alertSubject,
+  alertHtml,
+  money,
+  resolveAlertRecipient,
+  sendOrderAlert,
+} from '../orderNotify';
 
 jest.mock('@/lib/email', () => ({ sendEmail: jest.fn(async () => ({ id: 'e1' })) }));
 jest.mock('@/lib/sms/sendSms', () => ({ sendSms: jest.fn(async () => ({ ok: true })) }));
@@ -38,7 +44,11 @@ function db(opts: { merchant?: any; email?: string | null; insertError?: any } =
         select() {
           return {
             eq() {
-              return { maybeSingle: async () => ({ data: table === 'merchants' ? opts.merchant ?? null : null }) };
+              return {
+                maybeSingle: async () => ({
+                  data: table === 'merchants' ? (opts.merchant ?? null) : null,
+                }),
+              };
             },
           };
         },
@@ -47,15 +57,26 @@ function db(opts: { merchant?: any; email?: string | null; insertError?: any } =
           return { error: opts.insertError ?? null };
         },
         update(patch: any) {
-          return { eq: async () => { updated.push({ table, patch }); return { error: null }; } };
+          return {
+            eq: async () => {
+              updated.push({ table, patch });
+              return { error: null };
+            },
+          };
         },
       };
     },
-    auth: { admin: { getUserById: async () => ({ data: { user: { email: opts.email ?? null } } }) } },
+    auth: {
+      admin: { getUserById: async () => ({ data: { user: { email: opts.email ?? null } } }) },
+    },
   } as any;
 }
 
-beforeEach(() => { sendEmail.mockClear(); sendSms.mockClear(); sendSms.mockResolvedValue({ ok: true }); });
+beforeEach(() => {
+  sendEmail.mockClear();
+  sendSms.mockClear();
+  sendSms.mockResolvedValue({ ok: true });
+});
 
 describe('the subject line', () => {
   // A phone lockscreen shows ~40 characters. An alert whose useful content is in the body is a
@@ -90,7 +111,10 @@ describe('the body', () => {
   });
 
   it('escapes a business name that contains markup', () => {
-    const html = alertHtml({ ...input, lines: [{ title: '<script>x</script>', quantity: 1, totalCents: 100 }] } as any);
+    const html = alertHtml({
+      ...input,
+      lines: [{ title: '<script>x</script>', quantity: 1, totalCents: 100 }],
+    } as any);
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
   });
@@ -102,14 +126,20 @@ describe('the body', () => {
 
 describe('who gets told', () => {
   it('prefers the merchant override', async () => {
-    const s = db({ merchant: { order_notify_email: 'kitchen@rays.com', user_id: 'u1' }, email: 'owner@rays.com' });
+    const s = db({
+      merchant: { order_notify_email: 'kitchen@rays.com', user_id: 'u1' },
+      email: 'owner@rays.com',
+    });
     expect(await resolveAlertRecipient(s, 'm1')).toBe('kitchen@rays.com');
   });
 
   // The person who signs up is often not the person standing at the counter — but with no override
   // set, alerting must still work with zero setup.
   it('falls back to the account email', async () => {
-    const s = db({ merchant: { order_notify_email: null, user_id: 'u1' }, email: 'owner@rays.com' });
+    const s = db({
+      merchant: { order_notify_email: null, user_id: 'u1' },
+      email: 'owner@rays.com',
+    });
     expect(await resolveAlertRecipient(s, 'm1')).toBe('owner@rays.com');
   });
 
@@ -132,8 +162,14 @@ describe('exactly once', () => {
   // ⚠️ Stripe retries webhooks and markOrderPaid is deliberately re-runnable. A second buzz for an
   // order already cooked is worse than none — it teaches the kitchen to distrust the first.
   it('does not send twice when the ledger row already exists', async () => {
-    const s = db({ merchant: { order_notify_email: 'k@r.com' }, insertError: { code: '23505', message: 'duplicate key' } });
-    expect(await sendOrderAlert(s, input as any)).toEqual({ sent: false, reason: 'already_alerted' });
+    const s = db({
+      merchant: { order_notify_email: 'k@r.com' },
+      insertError: { code: '23505', message: 'duplicate key' },
+    });
+    expect(await sendOrderAlert(s, input as any)).toEqual({
+      sent: false,
+      reason: 'already_alerted',
+    });
     expect(sendEmail).not.toHaveBeenCalled();
   });
 
@@ -148,7 +184,10 @@ describe('exactly once', () => {
   // If the ledger is unavailable (migration unapplied) we must NOT send — an un-ledgered alert is
   // one nothing can stop repeating on the next retry.
   it('refuses to send when the ledger cannot be written', async () => {
-    const s = db({ merchant: { order_notify_email: 'k@r.com' }, insertError: { code: '42P01', message: 'no such table' } });
+    const s = db({
+      merchant: { order_notify_email: 'k@r.com' },
+      insertError: { code: '42P01', message: 'no such table' },
+    });
     const res = await sendOrderAlert(s, input as any);
     expect(res.sent).toBe(false);
     expect(sendEmail).not.toHaveBeenCalled();
@@ -168,7 +207,6 @@ describe('exactly once', () => {
     expect(s.updated.some((u: any) => /resend down/.test(u.patch.error ?? ''))).toBe(true);
   });
 });
-
 
 // ── SMS: the second channel ────────────────────────────────────────────────────────────────────
 import { alertSms } from '../orderNotify';

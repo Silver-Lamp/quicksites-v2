@@ -30,8 +30,23 @@ export const SPLIT = {
   managerRecruit: 0.25,
 } as const;
 
-/** Months a departed rep keeps collecting before the residual stops. */
-export const RESIDUAL_TAIL_MONTHS = 12;
+/**
+ * The residual follows the ROLE, not tenure.
+ *
+ * A rep is paid for as long as they are the rep on that account — the person the business
+ * calls about renewals, changes and questions. That is why it can run for the life of the
+ * account without becoming a pension: they are still doing something, and the something is
+ * the support conversation that would otherwise land on us.
+ *
+ * It ends when the role ends — the account is handed back, or the rep goes unreachable —
+ * at which point it transfers to whoever picks it up, or to the house if nobody does.
+ *
+ * An earlier draft of this said "12 months after they leave". That was a number I chose
+ * rather than one anyone agreed to, and it contradicted /for-shelly, which had already
+ * promised the life of the account in three separate places. Two surfaces disagreeing about
+ * what a person is owed is worse than either rule.
+ */
+export const RESIDUAL_BASIS = 'role' as const;
 
 /** A refund inside this window reverses the commission for that payment. */
 export const CLAWBACK_WINDOW_DAYS = 120;

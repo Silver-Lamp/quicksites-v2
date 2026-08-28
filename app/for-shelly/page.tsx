@@ -11,7 +11,9 @@
 //   • 0 rented, checkout never run live — stated plainly in "Straight talk", not buried.
 //   • 0 replies of 19 on SMS — stated, because she will find out on call ~40 anyway and it is
 //     better she hears it from us first.
-// The split is 50/50 on anything she brings on, for the life of the account — Sandon's call,
+// The split is 50/50 on anything she brings on, for the life of the account so long as she stays
+// the rep on it — the residual follows the ROLE, not tenure (lib/commerce/rentalSplits.ts).
+// Sandon's call,
 // 2026-08-24, replacing an earlier "first month 100% + 15%" proposal of mine. Two consequences are
 // spelled out on the page rather than left to be discovered: her half follows the $99 → $399
 // step-up (so $199.50/mo on a ranked domain), and it survives her stopping work.
@@ -463,9 +465,13 @@ export default function ForShellyPage() {
                 Worth us both saying it out loud rather than discovering it later.
               </li>
               <li>
-                <span className="text-zinc-200">What if you stop calling?</span> My answer is the
-                accounts you closed keep paying you — that is what &ldquo;life of the account&rdquo;
-                means. Better said now than wondered about in six months.
+                <span className="text-zinc-200">What keeps the money coming?</span> You stay the rep
+                on the accounts you close — the person that business calls about renewals, changes
+                and questions. That&apos;s what makes &ldquo;life of the account&rdquo; work:
+                you&apos;re still doing something, so it isn&apos;t a pension and I&apos;m not
+                fielding their support. Hand one back whenever you want and the residual goes with
+                it to whoever picks it up. Worth agreeing out loud — it&apos;s money, but it&apos;s
+                also a small ongoing job.
               </li>
             </ul>
           </div>

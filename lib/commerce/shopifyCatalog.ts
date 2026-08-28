@@ -16,18 +16,20 @@ import { normalizeVariants } from '@/lib/commerce/variants';
 import type { ProductSpec } from '@/lib/rebuild/importShopify';
 
 function slugify(s: string): string {
-  return (s || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 48) || 'item';
+  return (
+    (s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      .slice(0, 48) || 'item'
+  );
 }
 
 /** One merchant per owner (matches ensureMerchantForUser in publish-catalog): reuse
  *  the owner's earliest merchant, else create one. Returns the merchant id. */
 export async function ensureMerchantForOwner(
   supabase: any,
-  opts: { ownerId: string; businessName: string; siteSlug: string },
+  opts: { ownerId: string; businessName: string; siteSlug: string }
 ): Promise<string> {
   const { data: existing } = await supabase
     .from('merchants')
@@ -85,7 +87,7 @@ function buildVariantMetadata(product: ProductSpec): {
         ? Object.fromEntries(
             axisNames
               .map((n, i) => [n, v.options?.[i]] as [string, string | undefined])
-              .filter(([, val]) => val),
+              .filter(([, val]) => val)
           )
         : undefined,
     })),
@@ -153,7 +155,12 @@ export async function provisionShopifyCatalog(opts: {
       // Physical-goods shipping: weight (for weight-based rates) + a flag the fee
       // computation reads. Inert until an operator opts into shipping rates.
       ...(product.requiresShipping
-        ? { shipping: { requires_shipping: true, ...(product.grams ? { grams: product.grams } : {}) } }
+        ? {
+            shipping: {
+              requires_shipping: true,
+              ...(product.grams ? { grams: product.grams } : {}),
+            },
+          }
         : {}),
     };
 

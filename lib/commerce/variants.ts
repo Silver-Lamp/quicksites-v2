@@ -15,7 +15,16 @@
 import { normalizeStock } from './inventory';
 
 export type InputAxis = { name?: string; values?: unknown };
-export type InputVariant = { label?: string; priceCents?: number; status?: string; options?: Record<string, unknown> | null; stock?: number | null; image?: string | null; sku?: string | null; barcode?: string | null };
+export type InputVariant = {
+  label?: string;
+  priceCents?: number;
+  status?: string;
+  options?: Record<string, unknown> | null;
+  stock?: number | null;
+  image?: string | null;
+  sku?: string | null;
+  barcode?: string | null;
+};
 
 export type NormalizedVariant = {
   id: string;
@@ -37,7 +46,11 @@ export type NormalizedVariants = {
 };
 
 const slug = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
 
 const centsOf = (v: unknown) => Math.max(0, Math.round(Number(v) || 0));
 
@@ -51,7 +64,10 @@ function normalizeAxes(axes: InputAxis[]): NormalizedAxis[] {
     const seen = new Set<string>();
     for (const raw of Array.isArray(a?.values) ? a!.values! : []) {
       const val = String(raw).trim();
-      if (val && !seen.has(val)) { seen.add(val); values.push(val); }
+      if (val && !seen.has(val)) {
+        seen.add(val);
+        values.push(val);
+      }
     }
     if (values.length) out.push({ name, values });
   }
@@ -86,20 +102,38 @@ export function normalizeVariants(input: {
     }
 
     // Label: explicit → else joined option values (axis order) → else fallback.
-    const optLabel = options ? axisNames.map((n) => options![n]).filter(Boolean).join(' / ') : '';
+    const optLabel = options
+      ? axisNames
+          .map((n) => options![n])
+          .filter(Boolean)
+          .join(' / ')
+      : '';
     const label = String(v?.label ?? '').trim() || optLabel;
     if (!label) continue; // a variant with no label and no options is meaningless
 
     // Stable id from the option combo (axis order) else the label; deduped.
-    const idBase = (options ? axisNames.map((n) => options![n]).filter(Boolean).map(slug).join('-') : '') || slug(label) || 'opt';
+    const idBase =
+      (options
+        ? axisNames
+            .map((n) => options![n])
+            .filter(Boolean)
+            .map(slug)
+            .join('-')
+        : '') ||
+      slug(label) ||
+      'opt';
     let id = idBase;
     for (let i = 2; seenIds.has(id); i++) id = `${idBase}-${i}`;
     seenIds.add(id);
 
     const stock = normalizeStock(v?.stock);
     const image = String(v?.image ?? '').trim();
-    const sku = String(v?.sku ?? '').trim().slice(0, 64);
-    const barcode = String(v?.barcode ?? '').trim().slice(0, 64);
+    const sku = String(v?.sku ?? '')
+      .trim()
+      .slice(0, 64);
+    const barcode = String(v?.barcode ?? '')
+      .trim()
+      .slice(0, 64);
     variants.push({
       id,
       label,
@@ -129,7 +163,7 @@ export function normalizeVariants(input: {
  */
 export function mergeVariantMetadata(
   existing: Record<string, any> | null | undefined,
-  norm: NormalizedVariants,
+  norm: NormalizedVariants
 ): { metadata: Record<string, any>; priceCents: number } {
   const metadata: Record<string, any> = { ...(existing || {}) };
   if (norm.variants.length) {

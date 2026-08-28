@@ -7,7 +7,6 @@ import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { getRentalLedger } from '@/lib/commerce/rentalLedger';
 import {
   SPLIT,
-  RESIDUAL_TAIL_MONTHS,
   CLAWBACK_WINDOW_DAYS,
   splitRentalPayment,
   splitOnGrossForComparison,
@@ -313,8 +312,8 @@ export default async function SplitsPage() {
             },
             {
               n: '03',
-              h: `Residuals run while active, then ${RESIDUAL_TAIL_MONTHS} months`,
-              p: `A rep keeps their share for as long as the rental pays and they are engaged, then a ${RESIDUAL_TAIL_MONTHS}-month tail after they leave, then it stops. Long enough to be worth selling hard for; bounded, so a departed rep does not become permanent overhead.`,
+              h: 'The residual follows the role, not tenure',
+              p: 'A rep is paid for as long as they are the rep on that account — the person the business calls about renewals, changes and questions. That is what keeps a life-of-the-account residual from becoming a pension: they are still doing the support work that would otherwise land on us. It ends when the role ends — handed back, or unreachable — and transfers to whoever picks it up.',
             },
             {
               n: '04',

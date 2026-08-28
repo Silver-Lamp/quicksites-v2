@@ -1,5 +1,9 @@
 // lib/commerce/__tests__/customers.test.ts
-import { normalizeEmail, extractBuyerFromStripeEvent, recordCustomerForAlreadyPaidOrder } from '../customers';
+import {
+  normalizeEmail,
+  extractBuyerFromStripeEvent,
+  recordCustomerForAlreadyPaidOrder,
+} from '../customers';
 
 describe('normalizeEmail', () => {
   it('lowercases + trims valid emails, rejects junk', () => {
@@ -29,15 +33,21 @@ describe('extractBuyerFromStripeEvent', () => {
   });
 
   it('falls back to customer_email and omits empty fields', () => {
-    expect(extractBuyerFromStripeEvent({ data: { object: { customer_email: 'x@y.com' } } })).toEqual({ email: 'x@y.com' });
+    expect(
+      extractBuyerFromStripeEvent({ data: { object: { customer_email: 'x@y.com' } } })
+    ).toEqual({ email: 'x@y.com' });
   });
 
   it('accepts a bare session object (not wrapped in an event)', () => {
-    expect(extractBuyerFromStripeEvent({ customer_details: { email: 'a@b.com' } })).toEqual({ email: 'a@b.com' });
+    expect(extractBuyerFromStripeEvent({ customer_details: { email: 'a@b.com' } })).toEqual({
+      email: 'a@b.com',
+    });
   });
 
   it('returns null without a usable email', () => {
-    expect(extractBuyerFromStripeEvent({ data: { object: { customer_details: { name: 'No Email' } } } })).toBeNull();
+    expect(
+      extractBuyerFromStripeEvent({ data: { object: { customer_details: { name: 'No Email' } } } })
+    ).toBeNull();
     expect(extractBuyerFromStripeEvent(null)).toBeNull();
   });
 });
@@ -175,10 +185,16 @@ describe('recordCustomerForAlreadyPaidOrder (the late-event recovery)', () => {
 
   it('never throws when the query fails — the paid transition must not depend on it', async () => {
     const supabase: any = {
-      from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => Promise.reject(new Error('boom')) }) }) }),
+      from: () => ({
+        select: () => ({ eq: () => ({ maybeSingle: () => Promise.reject(new Error('boom')) }) }),
+      }),
     };
     await expect(
-      recordCustomerForAlreadyPaidOrder(supabase, { orderId: 'o_1', amountCents: 400, raw: CHECKOUT_SESSION_EVENT }),
+      recordCustomerForAlreadyPaidOrder(supabase, {
+        orderId: 'o_1',
+        amountCents: 400,
+        raw: CHECKOUT_SESSION_EVENT,
+      })
     ).resolves.toBeUndefined();
   });
 });
@@ -188,12 +204,16 @@ describe('recordCustomerForAlreadyPaidOrder (the late-event recovery)', () => {
 describe('markOrderPaid wires the recovery into its duplicate-event return', () => {
   const src = require('node:fs').readFileSync(
     require('node:path').join(process.cwd(), 'lib/commerce/orders.ts'),
-    'utf8',
+    'utf8'
   );
 
   it('imports and calls recordCustomerForAlreadyPaidOrder', () => {
-    expect(src).toMatch(/import \{[^}]*recordCustomerForAlreadyPaidOrder[^}]*\} from '\.\/customers'/);
-    expect(src).toMatch(/await recordCustomerForAlreadyPaidOrder\(supabase, \{ orderId, amountCents, raw \}\)/);
+    expect(src).toMatch(
+      /import \{[^}]*recordCustomerForAlreadyPaidOrder[^}]*\} from '\.\/customers'/
+    );
+    expect(src).toMatch(
+      /await recordCustomerForAlreadyPaidOrder\(supabase, \{ orderId, amountCents, raw \}\)/
+    );
   });
 
   it('does not return bare on a failed transition', () => {

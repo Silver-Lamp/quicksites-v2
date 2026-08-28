@@ -31,15 +31,30 @@ describe('normalizeVariants', () => {
 
   it('builds a multi-axis grid with combo ids/labels from the option values', () => {
     const r = normalizeVariants({
-      variantOptions: [{ name: 'Size', values: ['S', 'M'] }, { name: 'Color', values: ['Red', 'Blue'] }],
+      variantOptions: [
+        { name: 'Size', values: ['S', 'M'] },
+        { name: 'Color', values: ['Red', 'Blue'] },
+      ],
       variants: [
         { priceCents: 2000, options: { Size: 'S', Color: 'Red' } },
         { priceCents: 2200, options: { Size: 'M', Color: 'Blue' } },
       ],
     });
     expect(r.variants).toEqual([
-      { id: 's-red', label: 'S / Red', price_cents: 2000, status: 'active', options: { Size: 'S', Color: 'Red' } },
-      { id: 'm-blue', label: 'M / Blue', price_cents: 2200, status: 'active', options: { Size: 'M', Color: 'Blue' } },
+      {
+        id: 's-red',
+        label: 'S / Red',
+        price_cents: 2000,
+        status: 'active',
+        options: { Size: 'S', Color: 'Red' },
+      },
+      {
+        id: 'm-blue',
+        label: 'M / Blue',
+        price_cents: 2200,
+        status: 'active',
+        options: { Size: 'M', Color: 'Blue' },
+      },
     ]);
     expect(r.basePriceCents).toBe(2000);
   });
@@ -60,7 +75,13 @@ describe('normalizeVariants', () => {
     const r = normalizeVariants({
       variantOptions: [{ name: 'Size', values: ['S', 'M'] }],
       variants: [
-        { label: 'S', priceCents: 100, options: { Size: 'S' }, sku: ' SKU-S ', barcode: '012345678905' },
+        {
+          label: 'S',
+          priceCents: 100,
+          options: { Size: 'S' },
+          sku: ' SKU-S ',
+          barcode: '012345678905',
+        },
         { label: 'M', priceCents: 200, options: { Size: 'M' } }, // no sku/barcode
       ],
     });
@@ -81,7 +102,9 @@ describe('normalizeVariants', () => {
   it('coerces prices to non-negative integer cents and honors inactive status', () => {
     const r = normalizeVariants({
       variantOptions: [{ name: 'Size', values: ['S'] }],
-      variants: [{ label: 'S', priceCents: -50.9 as any, status: 'inactive', options: { Size: 'S' } }],
+      variants: [
+        { label: 'S', priceCents: -50.9 as any, status: 'inactive', options: { Size: 'S' } },
+      ],
     });
     expect(r.variants[0].price_cents).toBe(0);
     expect(r.variants[0].status).toBe('inactive');
@@ -116,7 +139,7 @@ describe('mergeVariantMetadata (edit)', () => {
     });
     const { metadata, priceCents } = mergeVariantMetadata(
       { site_slug: 'shop', fulfillment_provider: 'lulu', pod_spec: { x: 1 } },
-      norm,
+      norm
     );
     expect(metadata.site_slug).toBe('shop');
     expect(metadata.fulfillment_provider).toBe('lulu'); // untouched
@@ -128,7 +151,9 @@ describe('mergeVariantMetadata (edit)', () => {
   it('CLEARS variants AND variant_options when the edit removes all variants', () => {
     const existing = {
       site_slug: 'shop',
-      variants: [{ id: 's', label: 'S', price_cents: 1000, status: 'active', options: { Size: 'S' } }],
+      variants: [
+        { id: 's', label: 'S', price_cents: 1000, status: 'active', options: { Size: 'S' } },
+      ],
       variant_options: [{ name: 'Size', values: ['S'] }],
     };
     const norm = normalizeVariants({ variants: [], fallbackBaseCents: 2500 });
@@ -143,7 +168,10 @@ describe('mergeVariantMetadata (edit)', () => {
     const norm = normalizeVariants({
       variants: [{ label: 'Deluxe', priceCents: 3000 }], // no axes
     });
-    const { metadata } = mergeVariantMetadata({ variant_options: [{ name: 'Size', values: ['S'] }] }, norm);
+    const { metadata } = mergeVariantMetadata(
+      { variant_options: [{ name: 'Size', values: ['S'] }] },
+      norm
+    );
     expect(metadata.variants).toHaveLength(1);
     expect(metadata.variant_options).toBeUndefined();
   });

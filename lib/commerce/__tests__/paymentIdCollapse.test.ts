@@ -22,7 +22,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const adapter = readFileSync(join(process.cwd(), 'lib/commerce/adapters/stripeAdapter.ts'), 'utf8');
-const route = readFileSync(join(process.cwd(), 'app/api/commerce/webhooks/stripe/route.ts'), 'utf8');
+const route = readFileSync(
+  join(process.cwd(), 'app/api/commerce/webhooks/stripe/route.ts'),
+  'utf8'
+);
 const types = readFileSync(join(process.cwd(), 'lib/commerce/types.ts'), 'utf8');
 
 /** Body of one `case '<type>': { … }` block in the adapter's switch. */
@@ -52,18 +55,22 @@ describe('the ledger key is the payment, not the event object', () => {
 
   // The two events that fought over one $4 payment. Both must resolve a payment id, and both
   // must resolve it through the SAME helper — that is what makes them collapse to one row.
-  it.each(['checkout.session.completed', 'payment_intent.succeeded', 'checkout.session.async_payment_succeeded'])(
-    '%s carries a paymentId derived from the payment_intent',
-    (eventType) => {
-      expect(caseBlock(eventType)).toMatch(/paymentId: piId\(/);
-    },
-  );
+  it.each([
+    'checkout.session.completed',
+    'payment_intent.succeeded',
+    'checkout.session.async_payment_succeeded',
+  ])('%s carries a paymentId derived from the payment_intent', (eventType) => {
+    expect(caseBlock(eventType)).toMatch(/paymentId: piId\(/);
+  });
 
   it('the helper prefers payment_intent over the object own id', () => {
     // The fallback to `o.id` is for zero-amount/setup-mode sessions, where the object id IS
     // the payment's identity. It must remain a FALLBACK — if it became the first choice the
     // original bug returns.
-    const helper = adapter.slice(adapter.indexOf('const piId ='), adapter.indexOf('switch (event.type)'));
+    const helper = adapter.slice(
+      adapter.indexOf('const piId ='),
+      adapter.indexOf('switch (event.type)')
+    );
     expect(helper).toMatch(/o\?\.payment_intent/);
     expect(helper.indexOf('payment_intent')).toBeLessThan(helper.indexOf('typeof o?.id'));
   });

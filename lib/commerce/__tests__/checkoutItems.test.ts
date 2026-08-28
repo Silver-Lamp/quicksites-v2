@@ -119,7 +119,9 @@ describe('authorizeCheckoutItems', () => {
     const res = authorizeCheckoutItems({
       merchantId: M,
       requested: [{ catalogItemId: 'ci-1', quantity: 1, addonIds: ['not-a-real-addon'] }],
-      catalogRows: [row({ metadata: { addons: [{ id: 'cheese', label: 'Extra cheese', price_cents: 100 }] } })],
+      catalogRows: [
+        row({ metadata: { addons: [{ id: 'cheese', label: 'Extra cheese', price_cents: 100 }] } }),
+      ],
     });
     expect(res.ok).toBe(false);
   });
@@ -128,7 +130,9 @@ describe('authorizeCheckoutItems', () => {
     const res = authorizeCheckoutItems({
       merchantId: M,
       requested: [{ catalogItemId: 'ci-1', quantity: 1 }],
-      catalogRows: [row({ metadata: { addons: [{ id: 'cheese', label: 'Extra cheese', price_cents: 100 }] } })],
+      catalogRows: [
+        row({ metadata: { addons: [{ id: 'cheese', label: 'Extra cheese', price_cents: 100 }] } }),
+      ],
     });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
@@ -175,9 +179,25 @@ describe('authorizeCheckoutItems', () => {
   });
 
   it('floors quantity and rejects <1 or absurd quantities', () => {
-    expect(authorizeCheckoutItems({ merchantId: M, requested: [{ catalogItemId: 'ci-1', quantity: 0 }], catalogRows: [row()] }).ok).toBe(false);
-    expect(authorizeCheckoutItems({ merchantId: M, requested: [{ catalogItemId: 'ci-1', quantity: 100000 }], catalogRows: [row()] }).ok).toBe(false);
-    const ok = authorizeCheckoutItems({ merchantId: M, requested: [{ catalogItemId: 'ci-1', quantity: 3.9 as any }], catalogRows: [row()] });
+    expect(
+      authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 0 }],
+        catalogRows: [row()],
+      }).ok
+    ).toBe(false);
+    expect(
+      authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 100000 }],
+        catalogRows: [row()],
+      }).ok
+    ).toBe(false);
+    const ok = authorizeCheckoutItems({
+      merchantId: M,
+      requested: [{ catalogItemId: 'ci-1', quantity: 3.9 as any }],
+      catalogRows: [row()],
+    });
     expect(ok.ok).toBe(true);
     if (ok.ok) expect(ok.items[0].quantity).toBe(3); // floored
   });
@@ -200,7 +220,9 @@ describe('authorizeCheckoutItems', () => {
   });
 
   it('fails closed on an empty cart', () => {
-    expect(authorizeCheckoutItems({ merchantId: M, requested: [], catalogRows: [row()] }).ok).toBe(false);
+    expect(authorizeCheckoutItems({ merchantId: M, requested: [], catalogRows: [row()] }).ok).toBe(
+      false
+    );
   });
 
   it('enforces item-level stock on a plain (variant-less) item', () => {
@@ -220,17 +242,18 @@ describe('authorizeCheckoutItems', () => {
   });
 
   describe('variants', () => {
-    const withVariants = (variants: any[]) =>
-      row({ price_cents: null, metadata: { variants } });
+    const withVariants = (variants: any[]) => row({ price_cents: null, metadata: { variants } });
 
     it('prices from the selected variant, not the base item or the client', () => {
       const res = authorizeCheckoutItems({
         merchantId: M,
         requested: [{ catalogItemId: 'ci-1', quantity: 1, variantId: 'lg', unitAmount: 1 }],
-        catalogRows: [withVariants([
-          { id: 'sm', label: 'Small', price_cents: 1000 },
-          { id: 'lg', label: 'Large', price_cents: 1500 },
-        ])],
+        catalogRows: [
+          withVariants([
+            { id: 'sm', label: 'Small', price_cents: 1000 },
+            { id: 'lg', label: 'Large', price_cents: 1500 },
+          ]),
+        ],
       });
       expect(res.ok).toBe(true);
       if (!res.ok) return;
@@ -259,7 +282,9 @@ describe('authorizeCheckoutItems', () => {
       const inactive = authorizeCheckoutItems({
         merchantId: M,
         requested: [{ catalogItemId: 'ci-1', quantity: 1, variantId: 'sm' }],
-        catalogRows: [withVariants([{ id: 'sm', label: 'Small', price_cents: 1000, status: 'inactive' }])],
+        catalogRows: [
+          withVariants([{ id: 'sm', label: 'Small', price_cents: 1000, status: 'inactive' }]),
+        ],
       });
       expect(inactive.ok).toBe(false);
     });
@@ -313,16 +338,31 @@ describe('authorizeCheckoutItems', () => {
       const res = authorizeCheckoutItems({
         merchantId: M,
         requested: [{ catalogItemId: 'ci-1', quantity: 1, variantId: 'm-red', unitAmount: 1 }],
-        catalogRows: [row({
-          price_cents: null,
-          metadata: {
-            variant_options: [{ name: 'Size', values: ['S', 'M'] }, { name: 'Color', values: ['Red', 'Blue'] }],
-            variants: [
-              { id: 'm-red', label: 'M / Red', price_cents: 2200, options: { Size: 'M', Color: 'Red' } },
-              { id: 'm-blue', label: 'M / Blue', price_cents: 2000, options: { Size: 'M', Color: 'Blue' } },
-            ],
-          },
-        })],
+        catalogRows: [
+          row({
+            price_cents: null,
+            metadata: {
+              variant_options: [
+                { name: 'Size', values: ['S', 'M'] },
+                { name: 'Color', values: ['Red', 'Blue'] },
+              ],
+              variants: [
+                {
+                  id: 'm-red',
+                  label: 'M / Red',
+                  price_cents: 2200,
+                  options: { Size: 'M', Color: 'Red' },
+                },
+                {
+                  id: 'm-blue',
+                  label: 'M / Blue',
+                  price_cents: 2000,
+                  options: { Size: 'M', Color: 'Blue' },
+                },
+              ],
+            },
+          }),
+        ],
       });
       expect(res.ok).toBe(true);
       if (!res.ok) return;

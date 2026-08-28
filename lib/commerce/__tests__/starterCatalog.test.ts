@@ -19,8 +19,16 @@ const data = () => ({
       slug: 'index',
       blocks: [
         { _id: 'h1', type: 'hero', content: { headline: 'Wildflower Candle Co.' } },
-        { _id: 'g1', type: 'products_grid', content: { product_ids: ['item-a', 'item-b'], productIds: ['item-a', 'item-b'] } },
-        { _id: 's1', type: 'service_offer', content: { title: 'Custom pour', productId: 'item-c' } },
+        {
+          _id: 'g1',
+          type: 'products_grid',
+          content: { product_ids: ['item-a', 'item-b'], productIds: ['item-a', 'item-b'] },
+        },
+        {
+          _id: 's1',
+          type: 'service_offer',
+          content: { title: 'Custom pour', productId: 'item-c' },
+        },
       ],
     },
   ],

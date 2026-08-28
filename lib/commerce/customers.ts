@@ -11,7 +11,9 @@ import { ATTRIBUTION_WINDOW_DAYS } from '@/lib/crm/attribution';
 
 /** Lowercased/trimmed email if it looks valid, else null. */
 export function normalizeEmail(email: unknown): string | null {
-  const s = String(email ?? '').trim().toLowerCase();
+  const s = String(email ?? '')
+    .trim()
+    .toLowerCase();
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s) ? s : null;
 }
 
@@ -45,7 +47,7 @@ export function extractBuyerFromStripeEvent(raw: any): Buyer | null {
  */
 export async function recordCustomerForPaidOrder(
   supabase: any,
-  opts: { orderId: string; merchantId: string; totalCents: number; raw: any; occurredAtIso: string },
+  opts: { orderId: string; merchantId: string; totalCents: number; raw: any; occurredAtIso: string }
 ): Promise<void> {
   const buyer = extractBuyerFromStripeEvent(opts.raw);
   if (!buyer || !opts.merchantId) return;
@@ -59,8 +61,14 @@ export async function recordCustomerForPaidOrder(
       p_total: Math.max(0, Math.trunc(opts.totalCents || 0)),
       p_at: opts.occurredAtIso,
     });
-    if (error) { console.warn('[customers] upsert failed:', error.message); return; }
-    await supabase.from('orders').update({ customer_id: customerId ?? null, customer_email: buyer.email }).eq('id', opts.orderId);
+    if (error) {
+      console.warn('[customers] upsert failed:', error.message);
+      return;
+    }
+    await supabase
+      .from('orders')
+      .update({ customer_id: customerId ?? null, customer_email: buyer.email })
+      .eq('id', opts.orderId);
 
     // Buyer-level analytics (best-effort; distinctId = customer, so events stitch to
     // the buyer rather than the merchant). Never let instrumentation break the path.
@@ -105,7 +113,7 @@ export async function recordCustomerForPaidOrder(
  */
 export async function recordCustomerForAlreadyPaidOrder(
   supabase: any,
-  opts: { orderId: string; amountCents: number; raw: any },
+  opts: { orderId: string; amountCents: number; raw: any }
 ): Promise<void> {
   try {
     // Nothing to learn from this event — don't spend a query on it.
@@ -139,7 +147,7 @@ export async function recordCustomerForAlreadyPaidOrder(
  */
 async function emitBuyerEvents(
   supabase: any,
-  opts: { customerId: string; merchantId: string; totalCents: number },
+  opts: { customerId: string; merchantId: string; totalCents: number }
 ): Promise<void> {
   const { data: cust } = await supabase
     .from('customers')
@@ -149,9 +157,26 @@ async function emitBuyerEvents(
   const ordersCount = Number(cust?.orders_count ?? 0);
 
   if (ordersCount <= 1) {
-    await captureServer(EVENTS.CUSTOMER_CREATED, { merchant_id: opts.merchantId, customer_id: opts.customerId, first_order_cents: opts.totalCents }, opts.customerId);
+    await captureServer(
+      EVENTS.CUSTOMER_CREATED,
+      {
+        merchant_id: opts.merchantId,
+        customer_id: opts.customerId,
+        first_order_cents: opts.totalCents,
+      },
+      opts.customerId
+    );
   } else {
-    await captureServer(EVENTS.REPEAT_PURCHASE, { merchant_id: opts.merchantId, customer_id: opts.customerId, orders_count: ordersCount, lifetime_cents: Number(cust?.lifetime_cents ?? 0) }, opts.customerId);
+    await captureServer(
+      EVENTS.REPEAT_PURCHASE,
+      {
+        merchant_id: opts.merchantId,
+        customer_id: opts.customerId,
+        orders_count: ordersCount,
+        lifetime_cents: Number(cust?.lifetime_cents ?? 0),
+      },
+      opts.customerId
+    );
   }
 
   // Last-touch attribution: the most recent campaign that reached this customer
@@ -169,8 +194,13 @@ async function emitBuyerEvents(
   if (send?.campaign_id) {
     await captureServer(
       EVENTS.CAMPAIGN_ORDER_ATTRIBUTED,
-      { merchant_id: opts.merchantId, customer_id: opts.customerId, campaign_id: send.campaign_id, order_cents: opts.totalCents },
-      opts.customerId,
+      {
+        merchant_id: opts.merchantId,
+        customer_id: opts.customerId,
+        campaign_id: send.campaign_id,
+        order_cents: opts.totalCents,
+      },
+      opts.customerId
     );
   }
 }

@@ -13,8 +13,16 @@ const LINKS: CatalogLink[] = [
     catalog_item_id: 'cat-1',
     price_cents: 300,
     addons: [
-      { id: 'strawberry-juice-freshly-pressed', label: 'Strawberry Juice - Freshly Pressed', price_cents: 100 },
-      { id: 'blueberry-juice-freshly-pressed', label: 'Blueberry Juice - Freshly Pressed', price_cents: 100 },
+      {
+        id: 'strawberry-juice-freshly-pressed',
+        label: 'Strawberry Juice - Freshly Pressed',
+        price_cents: 100,
+      },
+      {
+        id: 'blueberry-juice-freshly-pressed',
+        label: 'Blueberry Juice - Freshly Pressed',
+        price_cents: 100,
+      },
     ],
   },
 ];
@@ -42,7 +50,9 @@ const itemOf = (bag: any) => bag.sections[0].items[0];
 
 describe('linkCatalogIntoTemplateData', () => {
   it('links the catalog id onto a content-shaped menu block', () => {
-    const data = { pages: [{ content_blocks: [{ type: 'hero' }, { type: 'menu', content: menuContent() }] }] };
+    const data = {
+      pages: [{ content_blocks: [{ type: 'hero' }, { type: 'menu', content: menuContent() }] }],
+    };
     const out = linkCatalogIntoTemplateData(data, LINKS, 'merch-1');
 
     expect(out.linkedBlocks).toBe(1);
@@ -100,6 +110,8 @@ describe('linkCatalogIntoTemplateData', () => {
   it('does not mutate the input', () => {
     const data = { pages: [{ content_blocks: [{ type: 'menu', content: menuContent() }] }] };
     linkCatalogIntoTemplateData(data, LINKS, 'merch-1');
-    expect(itemOf((data.pages[0].content_blocks[0] as any).content).catalog_item_id).toBeUndefined();
+    expect(
+      itemOf((data.pages[0].content_blocks[0] as any).content).catalog_item_id
+    ).toBeUndefined();
   });
 });

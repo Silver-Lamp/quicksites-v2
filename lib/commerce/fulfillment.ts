@@ -40,7 +40,9 @@ export const FULFILLMENT_LABEL: Record<FulfillmentStatus, string> = {
  * retracted milestone would quietly flatter us, and the whole reason for these columns is to find
  * out how long orders really take.
  */
-export function stampFor(status: FulfillmentStatus): 'accepted_at' | 'ready_at' | 'completed_at' | null {
+export function stampFor(
+  status: FulfillmentStatus
+): 'accepted_at' | 'ready_at' | 'completed_at' | null {
   if (status === 'preparing') return 'accepted_at';
   if (status === 'ready') return 'ready_at';
   if (status === 'completed') return 'completed_at';
@@ -97,10 +99,7 @@ export function minutesBetween(a?: string | null, b?: string | null): number | n
 }
 
 /** The patch to apply for a transition. Pure — the caller owns the write. */
-export function transitionPatch(
-  to: FulfillmentStatus,
-  nowIso: string,
-): Record<string, string> {
+export function transitionPatch(to: FulfillmentStatus, nowIso: string): Record<string, string> {
   const patch: Record<string, string> = { fulfillment_status: to };
   const stamp = stampFor(to);
   if (stamp) patch[stamp] = nowIso;

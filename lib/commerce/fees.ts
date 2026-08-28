@@ -5,7 +5,9 @@
 // Keep these free of I/O and framework imports.
 
 /** Sum of line items: Σ max(0, unitAmount) × max(1, quantity), in cents. */
-export function computeSubtotalCents(items: Array<{ quantity?: number | null; unitAmount?: number | null }>): number {
+export function computeSubtotalCents(
+  items: Array<{ quantity?: number | null; unitAmount?: number | null }>
+): number {
   return (items ?? []).reduce((sum, li) => {
     const qty = Math.max(1, Number(li?.quantity ?? 1) || 1);
     const unit = Math.max(0, Number(li?.unitAmount ?? 0) || 0);
@@ -78,7 +80,7 @@ export type ItemShipping = { requires_shipping?: boolean; grams?: number };
  */
 export function computePhysicalShippingCents(
   items: ShippableLine[],
-  shippingByItem: Map<string, ItemShipping>,
+  shippingByItem: Map<string, ItemShipping>
 ): number {
   const perKg = Math.floor(Number(process.env.QS_SHIPPING_CENTS_PER_KG ?? '0')) || 0;
   const baseCents = Math.floor(Number(process.env.QS_SHIPPING_BASE_CENTS ?? '0')) || 0;
@@ -110,7 +112,10 @@ export function computePhysicalShippingCents(
  * government's tax) — this helper only surfaces what the buyer actually paid so
  * the order row, receipt, and reconciliation stay truthful.
  */
-export function parseStripeTaxTotals(rawEvent: any): { taxCents: number | null; totalCents: number | null } {
+export function parseStripeTaxTotals(rawEvent: any): {
+  taxCents: number | null;
+  totalCents: number | null;
+} {
   const obj = rawEvent?.data?.object ?? null;
   const amountTax = obj?.total_details?.amount_tax;
   const amountTotal = obj?.amount_total;

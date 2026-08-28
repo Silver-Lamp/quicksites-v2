@@ -12,8 +12,9 @@
 // in the contract's "Open items".
 
 /** Single source of truth for the DeckSketch host. One env edit = full cutover. */
-export const DECK_ESTIMATE_BASE_URL =
-  (process.env.DECK_ESTIMATE_BASE_URL || 'https://decksketch-preview.vercel.app').replace(/\/+$/, '');
+export const DECK_ESTIMATE_BASE_URL = (
+  process.env.DECK_ESTIMATE_BASE_URL || 'https://decksketch-preview.vercel.app'
+).replace(/\/+$/, '');
 
 export const MATERIAL_TIERS = ['pressure_treated', 'cedar', 'composite'] as const;
 export type MaterialTier = (typeof MATERIAL_TIERS)[number];
@@ -48,7 +49,8 @@ export type DeckEstimateResponse =
   | { ok: false; status: number; error: string };
 
 const num = (v: unknown): number | undefined => {
-  const n = typeof v === 'string' ? Number(v.replace(/[^0-9.]/g, '')) : typeof v === 'number' ? v : NaN;
+  const n =
+    typeof v === 'string' ? Number(v.replace(/[^0-9.]/g, '')) : typeof v === 'number' ? v : NaN;
   return Number.isFinite(n) && n > 0 ? n : undefined;
 };
 
@@ -67,7 +69,8 @@ export function normalizeEstimateInput(body: any): DeckEstimateInput {
   const height_ft = num(body?.height_ft);
   if (height_ft) out.height_ft = height_ft;
   if (typeof body?.attached === 'boolean') out.attached = body.attached;
-  if ((MATERIAL_TIERS as readonly string[]).includes(body?.material_tier)) out.material_tier = body.material_tier;
+  if ((MATERIAL_TIERS as readonly string[]).includes(body?.material_tier))
+    out.material_tier = body.material_tier;
   // refiners
   if (typeof body?.stairs === 'boolean') out.stairs = body.stairs;
   else if (num(body?.stairs) != null) out.stairs = num(body?.stairs);
@@ -91,7 +94,7 @@ export function hasMinimumInputs(i: DeckEstimateInput): boolean {
 export async function requestDeckEstimate(
   input: DeckEstimateInput,
   siteRef: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<DeckEstimateResponse> {
   const url = `${DECK_ESTIMATE_BASE_URL}/api/estimate`;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -105,7 +108,11 @@ export async function requestDeckEstimate(
     });
     const j: any = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { ok: false, status: res.status, error: typeof j?.error === 'string' ? j.error : 'estimate_failed' };
+      return {
+        ok: false,
+        status: res.status,
+        error: typeof j?.error === 'string' ? j.error : 'estimate_failed',
+      };
     }
     return { ok: true, estimate: j as DeckEstimateResult };
   } catch {

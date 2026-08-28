@@ -11,7 +11,10 @@ describe('resolveManualAdjustment', () => {
     expect(resolveManualAdjustment(9, { delta: -2 })).toEqual({ delta: -2, reason: 'manual' });
   });
   it('honors an explicit reason', () => {
-    expect(resolveManualAdjustment(0, { delta: 12, reason: 'receive' })).toEqual({ delta: 12, reason: 'receive' });
+    expect(resolveManualAdjustment(0, { delta: 12, reason: 'receive' })).toEqual({
+      delta: 12,
+      reason: 'receive',
+    });
   });
   it('is a no-op (null) when nothing changes or input is invalid', () => {
     expect(resolveManualAdjustment(5, { setTo: 5 })).toBeNull();

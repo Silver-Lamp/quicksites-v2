@@ -124,3 +124,34 @@ describe('formatCents', () => {
     expect(formatCents(undefined)).toBe('—');
   });
 });
+
+describe('the residual rule is stated the same way everywhere', () => {
+  // A rep's page promising "life of the account" while the operator's page says "12-month
+  // tail" is the worst kind of drift: two surfaces disagreeing about what a person is owed,
+  // discovered by that person. This pins them together.
+  // Collapse whitespace: prettier reflows prose across lines, and a phrase split by a line
+  // break is the same promise. Matching raw source would fail on formatting, not on meaning.
+  const read = (p: string) =>
+    require('fs').readFileSync(require('path').join(process.cwd(), p), 'utf8').replace(/\s+/g, ' ');
+
+  it('no surface promises a fixed post-departure tail', () => {
+    for (const p of [
+      'lib/commerce/rentalSplits.ts',
+      'app/admin/splits/page.tsx',
+      'app/for-shelly/page.tsx',
+    ]) {
+      expect(read(p)).not.toMatch(/RESIDUAL_TAIL_MONTHS|month tail|12-month tail/);
+    }
+  });
+
+  it('ties the residual to the role on both the operator and the rep surface', () => {
+    expect(read('lib/commerce/rentalSplits.ts')).toContain("RESIDUAL_BASIS = 'role'");
+    expect(read('app/admin/splits/page.tsx')).toMatch(/follows the role/i);
+    expect(read('app/for-shelly/page.tsx')).toMatch(/stay the\s+rep on the accounts/i);
+  });
+
+  it('would catch the old wording — this matcher is not inert', () => {
+    expect(/RESIDUAL_TAIL_MONTHS|month tail/.test('a 12-month tail after they leave')).toBe(true);
+    expect(/RESIDUAL_TAIL_MONTHS|month tail/.test('follows the role, not tenure')).toBe(false);
+  });
+});

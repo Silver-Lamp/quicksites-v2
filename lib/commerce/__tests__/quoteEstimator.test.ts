@@ -21,7 +21,11 @@ import {
 describe('trade gating', () => {
   it('all 9 trades are live (DeckSketch deployed the full set 2026-07-17)', () => {
     for (const t of ALL_TRADES) expect(isLiveTrade(t)).toBe(true);
-    expect(liveTrades().map((t) => t.key).sort()).toEqual([...ALL_TRADES].sort());
+    expect(
+      liveTrades()
+        .map((t) => t.key)
+        .sort()
+    ).toEqual([...ALL_TRADES].sort());
   });
   it('rejects unknown trades but keeps `live` as the kill switch', () => {
     expect(isTradeKey('solar')).toBe(false); // out of scope — never built
@@ -32,7 +36,13 @@ describe('trade gating', () => {
   it('registers all 9 trades (deck + 5 phase-1 + 3 v2) with contract-accurate enums', () => {
     expect(ALL_TRADES).toHaveLength(9);
     const fenceMat = TRADE_REGISTRY.fence.fields.find((f) => f.key === 'material');
-    expect(fenceMat?.options?.map((o) => o.value)).toEqual(['wood_pt', 'cedar', 'vinyl', 'chain_link', 'aluminum']);
+    expect(fenceMat?.options?.map((o) => o.value)).toEqual([
+      'wood_pt',
+      'cedar',
+      'vinyl',
+      'chain_link',
+      'aluminum',
+    ]);
   });
 });
 
@@ -43,25 +53,45 @@ describe('roofing requiresOneOf (squares | roof_sqft)', () => {
     expect(hasRequiredInputs('roofing', { material: 'metal' })).toBe(false); // neither dimension
   });
   it('retaining_wall needs length + height + material', () => {
-    expect(hasRequiredInputs('retaining_wall', { length_ft: 40, height_ft: 6, material: 'natural_stone' })).toBe(true);
-    expect(hasRequiredInputs('retaining_wall', { length_ft: 40, material: 'natural_stone' })).toBe(false);
+    expect(
+      hasRequiredInputs('retaining_wall', {
+        length_ft: 40,
+        height_ft: 6,
+        material: 'natural_stone',
+      })
+    ).toBe(true);
+    expect(hasRequiredInputs('retaining_wall', { length_ft: 40, material: 'natural_stone' })).toBe(
+      false
+    );
   });
 });
 
 describe('normalizeTradeInput', () => {
   it('whitelists fence fields + coerces, dropping junk', () => {
     const body = normalizeTradeInput('fence', {
-      linear_ft: '150', material: 'cedar', height_ft: 6, gates: 2,
-      evil: 'DROP ME', sqft: 999, // fence isn't an area trade → sqft ignored
+      linear_ft: '150',
+      material: 'cedar',
+      height_ft: 6,
+      gates: 2,
+      evil: 'DROP ME',
+      sqft: 999, // fence isn't an area trade → sqft ignored
     });
     expect(body).toEqual({ linear_ft: 150, material: 'cedar', height_ft: 6, gates: 2 });
     expect((body as any).evil).toBeUndefined();
     expect((body as any).sqft).toBeUndefined();
   });
   it('accepts sqft OR length×width for area trades and rejects bad enums', () => {
-    const a = normalizeTradeInput('concrete_patio', { sqft: 400, finish: 'stamped', thickness_in: 6 });
+    const a = normalizeTradeInput('concrete_patio', {
+      sqft: 400,
+      finish: 'stamped',
+      thickness_in: 6,
+    });
     expect(a).toEqual({ sqft: 400, finish: 'stamped', thickness_in: 6 });
-    const b = normalizeTradeInput('concrete_patio', { length_ft: 20, width_ft: 20, finish: 'not_a_finish' });
+    const b = normalizeTradeInput('concrete_patio', {
+      length_ft: 20,
+      width_ft: 20,
+      finish: 'not_a_finish',
+    });
     expect(b).toEqual({ length_ft: 20, width_ft: 20 }); // bad enum dropped
   });
 });

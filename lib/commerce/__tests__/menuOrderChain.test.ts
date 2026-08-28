@@ -12,7 +12,18 @@ import { authorizeCheckoutItems } from '@/lib/commerce/checkoutItems';
 function seed() {
   const rows = buildCatalogRowsFromMenu([
     { name: 'Lunch', items: [{ name: 'House Salad', price_cents: 900 }] },
-    { name: 'Shareables', items: [{ name: 'Wings', options: [{ label: 'Small', price_cents: 800 }, { label: 'Large', price_cents: 1200 }] }] },
+    {
+      name: 'Shareables',
+      items: [
+        {
+          name: 'Wings',
+          options: [
+            { label: 'Small', price_cents: 800 },
+            { label: 'Large', price_cents: 1200 },
+          ],
+        },
+      ],
+    },
   ]);
   const wingsRow = rows.find((r) => r.name === 'Wings')!;
   const norm = normalizeVariants({
@@ -21,8 +32,27 @@ function seed() {
   });
   // Catalog rows as they'd be inserted by publish-catalog.
   const catalogRows = [
-    { id: 'salad', merchant_id: 'm1', title: 'House Salad', price_cents: 900, status: 'active', metadata: { site_slug: 's', category: 'Lunch' } },
-    { id: 'wings', merchant_id: 'm1', title: 'Wings', price_cents: norm.basePriceCents, status: 'active', metadata: { site_slug: 's', category: 'Shareables', variants: norm.variants, variant_options: norm.variant_options } },
+    {
+      id: 'salad',
+      merchant_id: 'm1',
+      title: 'House Salad',
+      price_cents: 900,
+      status: 'active',
+      metadata: { site_slug: 's', category: 'Lunch' },
+    },
+    {
+      id: 'wings',
+      merchant_id: 'm1',
+      title: 'Wings',
+      price_cents: norm.basePriceCents,
+      status: 'active',
+      metadata: {
+        site_slug: 's',
+        category: 'Shareables',
+        variants: norm.variants,
+        variant_options: norm.variant_options,
+      },
+    },
   ];
   return { wingsRow, norm, catalogRows };
 }

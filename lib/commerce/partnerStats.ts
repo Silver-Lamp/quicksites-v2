@@ -22,7 +22,12 @@ export type PartnerMerchantRow = {
   paid: number;
 };
 
-type LedgerRow = { amount_cents?: number | null; status?: string | null; currency?: string | null; subject_id?: string | null };
+type LedgerRow = {
+  amount_cents?: number | null;
+  status?: string | null;
+  currency?: string | null;
+  subject_id?: string | null;
+};
 
 /**
  * Pure reducer: fold a partner's commission_ledger rows into totals + per-merchant
@@ -46,7 +51,16 @@ export function aggregatePartnerLedger(input: {
   const rows = new Map<string, PartnerMerchantRow>();
   const seed = (id: string) => {
     if (!rows.has(id)) {
-      rows.set(id, { merchantId: id, name: nameFor(id), orderCount: 0, earned: 0, pending: 0, approved: 0, owed: 0, paid: 0 });
+      rows.set(id, {
+        merchantId: id,
+        name: nameFor(id),
+        orderCount: 0,
+        earned: 0,
+        pending: 0,
+        approved: 0,
+        owed: 0,
+        paid: 0,
+      });
     }
     return rows.get(id)!;
   };
@@ -67,9 +81,13 @@ export function aggregatePartnerLedger(input: {
     const row = seed(merchantId);
     row.orderCount += 1;
     row.earned += amt;
-    if (r.status === 'pending') { row.pending += amt; row.owed += amt; }
-    else if (r.status === 'approved') { row.approved += amt; row.owed += amt; }
-    else if (r.status === 'paid') row.paid += amt;
+    if (r.status === 'pending') {
+      row.pending += amt;
+      row.owed += amt;
+    } else if (r.status === 'approved') {
+      row.approved += amt;
+      row.owed += amt;
+    } else if (r.status === 'paid') row.paid += amt;
   }
 
   const perMerchant = Array.from(rows.values()).sort((a, b) => b.earned - a.earned);
@@ -98,14 +116,37 @@ export type PartnerStats = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getPartnerStats(db: any, codes: string[], userId: string): Promise<PartnerStats> {
+export async function getPartnerStats(
+  db: any,
+  codes: string[],
+  userId: string
+): Promise<PartnerStats> {
   if (!codes.length) {
-    return { currency: 'USD', totals: { pending: 0, approved: 0, paid: 0 }, lifetime: 0, owed: 0, referredCount: 0, overrideEarned: 0, downlineCount: 0, perMerchant: [], payouts: [] };
+    return {
+      currency: 'USD',
+      totals: { pending: 0, approved: 0, paid: 0 },
+      lifetime: 0,
+      owed: 0,
+      referredCount: 0,
+      overrideEarned: 0,
+      downlineCount: 0,
+      perMerchant: [],
+      payouts: [],
+    };
   }
 
-  const [{ data: attrs }, { data: ledger }, { data: payouts }, { data: overrideRows }, { count: downlineCount }] = await Promise.all([
+  const [
+    { data: attrs },
+    { data: ledger },
+    { data: payouts },
+    { data: overrideRows },
+    { count: downlineCount },
+  ] = await Promise.all([
     db.from('attributions').select('merchant_id').in('referral_code', codes),
-    db.from('commission_ledger').select('amount_cents, status, currency, subject_id').in('referral_code', codes),
+    db
+      .from('commission_ledger')
+      .select('amount_cents, status, currency, subject_id')
+      .in('referral_code', codes),
     db
       .from('affiliate_payouts')
       .select('paid_at, amount_cents, currency, method, status, tx_ref')
@@ -113,9 +154,16 @@ export async function getPartnerStats(db: any, codes: string[], userId: string):
       .order('paid_at', { ascending: false })
       .limit(20),
     // Hub override earnings (a breakout of the ledger above — already in totals).
-    db.from('commission_ledger').select('amount_cents').in('referral_code', codes).eq('subject', 'order_platform_fee_override'),
+    db
+      .from('commission_ledger')
+      .select('amount_cents')
+      .in('referral_code', codes)
+      .eq('subject', 'order_platform_fee_override'),
     // Downline: resellers this partner recruited.
-    db.from('referral_codes').select('code', { count: 'exact', head: true }).in('parent_code', codes),
+    db
+      .from('referral_codes')
+      .select('code', { count: 'exact', head: true })
+      .in('parent_code', codes),
   ]);
 
   const ledgerRows: any[] = ledger ?? [];
@@ -133,7 +181,10 @@ export async function getPartnerStats(db: any, codes: string[], userId: string):
   const merchantIds = Array.from(new Set([...attrMerchantIds, ...orderToMerchant.values()]));
   const nameById = new Map<string, string>();
   if (merchantIds.length) {
-    const { data: merchants } = await db.from('merchants').select('id, name, display_name, site_slug').in('id', merchantIds);
+    const { data: merchants } = await db
+      .from('merchants')
+      .select('id, name, display_name, site_slug')
+      .in('id', merchantIds);
     for (const m of merchants ?? []) {
       nameById.set(m.id, m.display_name || m.name || m.site_slug || m.id.slice(0, 8));
     }
@@ -155,7 +206,10 @@ export async function getPartnerStats(db: any, codes: string[], userId: string):
     txRef: p.tx_ref ?? null,
   }));
 
-  const overrideEarned = (overrideRows ?? []).reduce((sum: number, r: any) => sum + (Number(r.amount_cents) || 0), 0);
+  const overrideEarned = (overrideRows ?? []).reduce(
+    (sum: number, r: any) => sum + (Number(r.amount_cents) || 0),
+    0
+  );
 
   return {
     currency,

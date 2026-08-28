@@ -34,9 +34,9 @@ describe('computeFeeReversalDeltaCents', () => {
 
   it('reverses proportionally on a partial refund', () => {
     // 40% of the charge refunded -> 40% of the $1.00 fee.
-    expect(
-      computeFeeReversalDeltaCents({ ...base, chargeRefundedCents: 400 }),
-    ).toEqual({ deltaCents: 40 });
+    expect(computeFeeReversalDeltaCents({ ...base, chargeRefundedCents: 400 })).toEqual({
+      deltaCents: 40,
+    });
   });
 
   it('floors the reversal to whole cents (never over-reverses)', () => {
@@ -47,14 +47,15 @@ describe('computeFeeReversalDeltaCents', () => {
         feeAlreadyRefundedCents: 0,
         chargeAmountCents: 999,
         chargeRefundedCents: 333,
-      }),
+      })
     ).toEqual({ deltaCents: 33 });
   });
 
   it('is idempotent: a full-refund fee already fully reversed owes nothing', () => {
-    expect(
-      computeFeeReversalDeltaCents({ ...base, feeAlreadyRefundedCents: 100 }),
-    ).toEqual({ deltaCents: 0, reason: 'already_reversed' });
+    expect(computeFeeReversalDeltaCents({ ...base, feeAlreadyRefundedCents: 100 })).toEqual({
+      deltaCents: 0,
+      reason: 'already_reversed',
+    });
   });
 
   it('only reverses the incremental slice across successive partial refunds', () => {
@@ -65,42 +66,50 @@ describe('computeFeeReversalDeltaCents', () => {
         feeAlreadyRefundedCents: 40,
         chargeAmountCents: 1000,
         chargeRefundedCents: 700,
-      }),
+      })
     ).toEqual({ deltaCents: 30 });
   });
 
   it('collapses to 0 when a refund_application_fee:true refund already bumped the fee', () => {
     // Stripe reversed the fee alongside the refund; our webhook must not stack another.
     expect(
-      computeFeeReversalDeltaCents({ ...base, chargeRefundedCents: 500, feeAlreadyRefundedCents: 50 }),
+      computeFeeReversalDeltaCents({
+        ...base,
+        chargeRefundedCents: 500,
+        feeAlreadyRefundedCents: 50,
+      })
     ).toEqual({ deltaCents: 0, reason: 'already_reversed' });
   });
 
   it('caps the reversal at the fee even if refunded somehow exceeds the charge', () => {
-    expect(
-      computeFeeReversalDeltaCents({ ...base, chargeRefundedCents: 5000 }),
-    ).toEqual({ deltaCents: 100 });
+    expect(computeFeeReversalDeltaCents({ ...base, chargeRefundedCents: 5000 })).toEqual({
+      deltaCents: 100,
+    });
   });
 
   it('owes nothing when nothing has been refunded', () => {
-    expect(
-      computeFeeReversalDeltaCents({ ...base, chargeRefundedCents: 0 }),
-    ).toEqual({ deltaCents: 0, reason: 'nothing_refunded' });
+    expect(computeFeeReversalDeltaCents({ ...base, chargeRefundedCents: 0 })).toEqual({
+      deltaCents: 0,
+      reason: 'nothing_refunded',
+    });
   });
 
   it('owes nothing on a non-positive or invalid charge amount', () => {
-    expect(
-      computeFeeReversalDeltaCents({ ...base, chargeAmountCents: 0 }),
-    ).toEqual({ deltaCents: 0, reason: 'nothing_refunded' });
-    expect(
-      computeFeeReversalDeltaCents({ ...base, chargeAmountCents: NaN }),
-    ).toEqual({ deltaCents: 0, reason: 'nothing_refunded' });
+    expect(computeFeeReversalDeltaCents({ ...base, chargeAmountCents: 0 })).toEqual({
+      deltaCents: 0,
+      reason: 'nothing_refunded',
+    });
+    expect(computeFeeReversalDeltaCents({ ...base, chargeAmountCents: NaN })).toEqual({
+      deltaCents: 0,
+      reason: 'nothing_refunded',
+    });
   });
 
   it('owes nothing when the fee itself is zero', () => {
-    expect(
-      computeFeeReversalDeltaCents({ ...base, feeAmountCents: 0 }),
-    ).toEqual({ deltaCents: 0, reason: 'fee_zero' });
+    expect(computeFeeReversalDeltaCents({ ...base, feeAmountCents: 0 })).toEqual({
+      deltaCents: 0,
+      reason: 'fee_zero',
+    });
   });
 });
 
@@ -117,7 +126,7 @@ describe('reverseApplicationFeeForCharge', () => {
     mockCreateRefund.mockResolvedValue({ id: 'fr_1' });
 
     const res = await reverseApplicationFeeForCharge(
-      chargeEvent({ amount: 1000, amount_refunded: 400, application_fee: 'fee_1' }),
+      chargeEvent({ amount: 1000, amount_refunded: 400, application_fee: 'fee_1' })
     );
 
     expect(res).toEqual({ reversed: true, amountCents: 40 });
@@ -129,7 +138,7 @@ describe('reverseApplicationFeeForCharge', () => {
     mockCreateRefund.mockResolvedValue({ id: 'fr_1' });
 
     const res = await reverseApplicationFeeForCharge(
-      chargeEvent({ amount: 1000, amount_refunded: 1000, application_fee: { id: 'fee_9' } }),
+      chargeEvent({ amount: 1000, amount_refunded: 1000, application_fee: { id: 'fee_9' } })
     );
 
     expect(res).toEqual({ reversed: true, amountCents: 100 });
@@ -140,7 +149,7 @@ describe('reverseApplicationFeeForCharge', () => {
     mockRetrieve.mockResolvedValue({ amount: 100, amount_refunded: 100 });
 
     const res = await reverseApplicationFeeForCharge(
-      chargeEvent({ amount: 1000, amount_refunded: 1000, application_fee: 'fee_1' }),
+      chargeEvent({ amount: 1000, amount_refunded: 1000, application_fee: 'fee_1' })
     );
 
     expect(res).toEqual({ reversed: false, reason: 'already_reversed' });
@@ -149,7 +158,7 @@ describe('reverseApplicationFeeForCharge', () => {
 
   it('short-circuits before hitting Stripe when the charge has no application fee', async () => {
     const res = await reverseApplicationFeeForCharge(
-      chargeEvent({ amount: 1000, amount_refunded: 1000, application_fee: null }),
+      chargeEvent({ amount: 1000, amount_refunded: 1000, application_fee: null })
     );
 
     expect(res).toEqual({ reversed: false, reason: 'no_application_fee' });
@@ -158,7 +167,7 @@ describe('reverseApplicationFeeForCharge', () => {
 
   it('short-circuits when nothing has been refunded yet', async () => {
     const res = await reverseApplicationFeeForCharge(
-      chargeEvent({ amount: 1000, amount_refunded: 0, application_fee: 'fee_1' }),
+      chargeEvent({ amount: 1000, amount_refunded: 0, application_fee: 'fee_1' })
     );
 
     expect(res).toEqual({ reversed: false, reason: 'nothing_refunded' });
@@ -174,7 +183,7 @@ describe('reverseApplicationFeeForCharge', () => {
     mockRetrieve.mockRejectedValue(new Error('stripe down'));
 
     const res = await reverseApplicationFeeForCharge(
-      chargeEvent({ amount: 1000, amount_refunded: 1000, application_fee: 'fee_1' }),
+      chargeEvent({ amount: 1000, amount_refunded: 1000, application_fee: 'fee_1' })
     );
 
     expect(res).toEqual({ reversed: false, reason: 'error' });

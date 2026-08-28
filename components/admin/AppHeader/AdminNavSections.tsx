@@ -280,6 +280,17 @@ const NAV_ADMIN: NavItem[] = [
   },
   {
     type: 'item',
+    label: 'Business Plan',
+    href: '/admin/business-plan',
+    icon: <DollarSign size={18} />,
+    adminOnly: true,
+    keywords: [
+      'business plan', 'plan', 'strategy', 'verticals', 'monetization', 'monetisation',
+      'revenue lines', 'investor', 'partner', 'pitch', 'unit economics', 'roadmap',
+    ],
+  },
+  {
+    type: 'item',
     label: 'Rental Splits',
     href: '/admin/splits',
     icon: <DollarSign size={18} />,

@@ -327,6 +327,11 @@ export default async function SplitsPage() {
             },
             {
               n: '06',
+              h: 'The override follows the role too',
+              p: 'A manager earns the override for as long as they are the manager on that account — supporting the closer, covering them when unreachable, being the second name the business can call. Stop managing it and the override stops with the role; the house keeps that share until someone else takes it on. The 25% recruit rate exists to make building a team worth doing, not to pay a one-off bounty forever to someone who has stopped.',
+            },
+            {
+              n: '07',
               h: 'The recruit raise is funded by the house',
               p: `When a manager recruited the closer their override rises ${pct(SPLIT.managerStandard)} → ${pct(SPLIT.managerRecruit)}, entirely out of the house share. The closer's 50% is never touched, so recruiting never competes with selling.`,
             },

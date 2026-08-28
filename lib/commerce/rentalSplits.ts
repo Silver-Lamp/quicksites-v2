@@ -48,6 +48,25 @@ export const SPLIT = {
  */
 export const RESIDUAL_BASIS = 'role' as const;
 
+/**
+ * The manager override follows the same rule, for the same reason.
+ *
+ * Amy earns it for as long as she is the manager on that account — supporting the closer,
+ * covering them when they are unreachable, and being the second name the business can call.
+ * If she stops managing that rep, or the account moves out from under her, the override
+ * stops with the role and the house keeps that share until someone else takes it on.
+ *
+ * Stated because it was not. The closer's residual was written down in three places and the
+ * override in none, which is how a rep discovers the terms of their own pay by asking an
+ * awkward question six months in.
+ *
+ * ⚠️ This is deliberately NOT a rule that the recruiter keeps earning on someone they
+ * recruited and then stopped supporting. The 25% recruit rate exists to make building a
+ * team worth doing; paying it to someone who has stopped doing it turns recruiting into a
+ * one-off bounty collected forever, which is the incentive we were avoiding.
+ */
+export const OVERRIDE_BASIS = 'role' as const;
+
 /** A refund inside this window reverses the commission for that payment. */
 export const CLAWBACK_WINDOW_DAYS = 120;
 

@@ -154,4 +154,12 @@ describe('the residual rule is stated the same way everywhere', () => {
     expect(/RESIDUAL_TAIL_MONTHS|month tail/.test('a 12-month tail after they leave')).toBe(true);
     expect(/RESIDUAL_TAIL_MONTHS|month tail/.test('follows the role, not tenure')).toBe(false);
   });
+
+  it('states the override rule too, not just the closer residual', () => {
+    // The closer's residual was written down in three places and the override in none —
+    // which is how a manager discovers the terms of their own pay by asking an awkward
+    // question six months in.
+    expect(read('lib/commerce/rentalSplits.ts')).toContain("OVERRIDE_BASIS = 'role'");
+    expect(read('app/admin/splits/page.tsx')).toMatch(/override follows the role/i);
+  });
 });

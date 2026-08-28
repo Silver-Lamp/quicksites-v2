@@ -303,12 +303,23 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
     recommend it. **The working publish is `public.publish_template_demo(uuid)`** — a misnomer: it
     is the generic helper (fresh `template_versions` snapshot → upsert `published_sites` → set the
     bypass → flip `published`), stamps nothing demo-specific, and is granted to `service_role`.
-  - ⚠️ **`app/api/templates/[id]/publish/route.ts` performs exactly the write the guard rejects**
-    (`supabaseAdmin.from('templates').update({ published: true, … })`). Either it publishes through
-    a path a plain service-role key lacks, or **publishing from the admin UI is silently broken**.
-    Fleet-wide **17 of 439** templates with a `custom_domain` are published, which fits the second.
-    **Not diagnosed** — it needs a real session to exercise. Flagged, not asserted; do not trust
-    that button until someone checks.
+  - ✅ **DIAGNOSED AND FIXED 2026-08-28 — the admin Publish button WAS broken, for everyone.**
+    `app/api/templates/[id]/publish/route.ts` performed exactly the write the guard rejects; running
+    that statement in a rolled-back transaction raises
+    `Direct updates to templates are blocked. Use app.commit_template().` It was **not** silent —
+    the route returns `upErr.message` as a 400 — so the button failed loudly with a raw Postgres
+    string, and every published site in the fleet got there via `publish_template_demo` from a
+    script. It took three days to check because "the button is broken" reads as implausible.
+    The fix is **`public.publish_template(p_template_id, p_version_id, p_actor)`**
+    (migration `20260833`, service-role only), which the route now calls.
+    ⚠️ **Flipping `templates.published` would NOT have been enough on its own.** The public render
+    serves the snapshot in `published_sites`, so a route that only set the flag yields a site marked
+    published with nothing to serve — a *worse* failure than the 400, because it looks like success.
+    The RPC mints (or validates) the snapshot, upserts `published_sites`, then flips the pointer
+    inside the bypass. A caller-supplied `p_version_id` is checked to belong to that template:
+    publishing another template's snapshot would serve one site's content at another site's address.
+    Pinned by `app/api/templates/__tests__/publishGuard.test.ts`, which fails if the route ever goes
+    back to a direct `.update()` — invisible in TypeScript, since only the database objects.
 - **⚠️ NEVER EDIT TEMPLATE `data` BY PATH — the same content lives in three places.**
   `.pages[].content_blocks[].content` · `.pages[].blocks[].content` · `.pages[].blocks[].props`.
   A path-specific edit updates one copy, reports success, and leaves the renderer possibly reading

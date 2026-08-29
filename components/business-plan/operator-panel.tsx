@@ -12,7 +12,7 @@
 // Pinned by app/business-plan/__tests__/planHonesty.test.ts, which asserts the plan body
 // gates exactly one thing (this) and that this file names nothing from the unproven column.
 import Link from 'next/link';
-import type { PlanEvidence } from '@/lib/business/verticals';
+import type { PlanEvidence } from '@/lib/business/planEvidence';
 import { formatCents } from '@/lib/commerce/rentalSplits';
 
 function Stat({ k, v, s }: { k: string; v: string; s?: string }) {

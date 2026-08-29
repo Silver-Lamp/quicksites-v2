@@ -12,7 +12,8 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import type { Vertical, PlanEvidence } from '@/lib/business/verticals';
+import type { Vertical } from '@/lib/business/verticals';
+import type { PlanEvidence } from '@/lib/business/planEvidence';
 import { STAGE_LABEL, type Stage } from '@/lib/business/verticals';
 
 const STAGE_TONE: Record<Stage, string> = {

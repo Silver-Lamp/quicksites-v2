@@ -7,7 +7,8 @@
 // gets retyped into an email by someone working from memory. It carries no operator panel;
 // every slide is content a reader is meant to see.
 import type { Metadata } from 'next';
-import { VERTICALS, loadPlanEvidence } from '@/lib/business/verticals';
+import { VERTICALS } from '@/lib/business/verticals';
+import { loadPlanEvidence } from '@/lib/business/planEvidence';
 import DeckClient from '@/components/business-plan/deck-client';
 
 export const dynamic = 'force-dynamic';

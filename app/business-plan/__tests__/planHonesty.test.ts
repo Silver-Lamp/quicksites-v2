@@ -126,6 +126,50 @@ describe('business plan', () => {
     expect(operatorMarkup).not.toContain('STAGE_LABEL');
   });
 
+  it('keeps the database out of everything the deck bundles into the browser', () => {
+    // The deck is a client component and imports STAGE_LABEL as a *value*, so every module it
+    // reaches is shipped to the browser. When lib/business/verticals.ts still imported
+    // `supabaseAdmin`, a Supabase client was constructed on page load with an undefined key and
+    // the deck threw "supabaseKey is required" before rendering a slide — while the server-side
+    // page returned a clean 200, so nothing upstream noticed. No credential ever leaked (Next
+    // inlines only NEXT_PUBLIC_* vars, which is exactly why it failed loudly), but the page was
+    // broken from the day it shipped.
+    const root = process.cwd();
+    const resolve = (spec: string) => {
+      const base = join(root, spec.replace(/^@\//, ''));
+      for (const ext of ['.ts', '.tsx', '/index.ts', '/index.tsx']) {
+        try {
+          return { path: spec + ext, src: readFileSync(base + ext, 'utf8') };
+        } catch {
+          /* try the next extension */
+        }
+      }
+      return null;
+    };
+
+    // Value imports only — `import type` is erased and never reaches the bundle.
+    const valueImports = (src: string) =>
+      Array.from(src.matchAll(/^import\s+(?!type\s)[^;]*?from\s+'(@\/[^']+)'/gm)).map(
+        (m) => m[1]
+      );
+
+    const seen = new Set<string>();
+    const queue = valueImports(DECK);
+    const offenders: string[] = [];
+    while (queue.length) {
+      const spec = queue.shift()!;
+      if (seen.has(spec)) continue;
+      seen.add(spec);
+      const mod = resolve(spec);
+      if (!mod) continue;
+      if (/from '[^']*supabase[^']*'/.test(mod.src)) offenders.push(spec);
+      queue.push(...valueImports(mod.src));
+    }
+
+    expect(seen.size).toBeGreaterThan(0); // a walk that reaches nothing proves nothing
+    expect(offenders).toEqual([]);
+  });
+
   it('leaves no second copy of the plan behind at the old admin routes', () => {
     // Two pages rendering the same plan drift, and the admin one is the copy nobody proofreads
     // because everyone reads the shared link.

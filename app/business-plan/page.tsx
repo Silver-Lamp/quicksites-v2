@@ -15,7 +15,8 @@ import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import PlanBody from '@/components/business-plan/plan-body';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
-import { getVertical, loadPlanEvidence } from '@/lib/business/verticals';
+import { getVertical } from '@/lib/business/verticals';
+import { loadPlanEvidence } from '@/lib/business/planEvidence';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

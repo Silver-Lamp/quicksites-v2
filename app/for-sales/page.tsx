@@ -1,22 +1,29 @@
-// app/for-shelly/page.tsx
-// Personal, UNLISTED orientation page for Shelly Pritchard — a cold-call salesperson evaluating
-// commission work on QuickSites. Public URL, noindex, linked from nowhere. Follows the
-// /for-ryan · /for-daryle · /for-daniel pattern.
+// app/for-sales/page.tsx
+// UNLISTED brief for anyone considering commission sales on QuickSites — what the product is,
+// what a call sounds like, what it pays, and what is not proven. Public URL, noindex, linked
+// from nowhere; hand the link to one person at a time. Follows the /for-ryan · /for-daryle ·
+// /for-daniel pattern.
+//
+// Was /for-shelly, written for one named rep (Shelly Pritchard, 2026-08-24). She bowed out
+// 2026-08-28 after four calls, so the page was generalised rather than deleted: everything on
+// it except her name applied to the next person too, and her four calls are now the only real
+// data any candidate has. /for-shelly is gone; the outbound record moved into "what isn't
+// proven", which is where it belongs.
 //
 // ⚠️ HONESTY RULES FOR THIS PAGE, AND THEY ARE THE POINT.
-// She is being asked to spend her time on an unproven product. Every number here is either
-// measured or labelled as a proposal:
+// A candidate is being asked to spend their time on an unproven product. Every number here is
+// either measured or labelled as a proposal:
 //   • 32 live domains — verified by fetching each one (32/32 HTTP 200, 2026-08-19).
 //   • $99 → $399 — lib/outreach/geoPricing.ts TIER_PREMIUM, the real configured price.
-//   • 0 rented, checkout never run live — stated plainly in "Straight talk", not buried.
-//   • 0 replies of 19 on SMS — stated, because she will find out on call ~40 anyway and it is
-//     better she hears it from us first.
-// The split is 50/50 on anything she brings on, for the life of the account so long as she stays
+//   • 0 rented — stated plainly in "Straight talk", not buried. One trial from four calls never
+//     billed, and a trial is not a rental until it does.
+//   • 0 replies of 19 on SMS — stated, because they will find out around call forty anyway and
+//     it is better they hear it here first.
+// The split is 50/50 on anything they bring on, for the life of the account so long as they stay
 // the rep on it — the residual follows the ROLE, not tenure (lib/commerce/rentalSplits.ts).
-// Sandon's call,
-// 2026-08-24, replacing an earlier "first month 100% + 15%" proposal of mine. Two consequences are
-// spelled out on the page rather than left to be discovered: her half follows the $99 → $399
-// step-up (so $199.50/mo on a ranked domain), and it survives her stopping work.
+// Sandon's call, 2026-08-24, replacing an earlier "first month 100% + 15%" proposal of mine. Two
+// consequences are spelled out rather than left to be discovered: their half follows the
+// $99 → $399 step-up (so $199.50/mo on a ranked domain), and it survives them stopping work.
 //
 // ⚠️ The "what not to say" card is load-bearing, not filler. We spent 2026-08-19 stripping
 // invented promises off these exact sites ("fully licensed and insured", "we respond within the
@@ -27,7 +34,7 @@ import SiteHeader from '@/components/site/site-header';
 import EarningsLines from '@/components/charts/earnings-lines';
 
 export const metadata: Metadata = {
-  title: 'QuickSites — for Shelly',
+  title: 'QuickSites — commission sales',
   description: 'What you would be selling, what a call looks like, and what it pays.',
   robots: { index: false, follow: false }, // unlisted: public URL, invisible to search
 };
@@ -151,7 +158,7 @@ const SAMPLE_DOMAINS = [
   'seatac-towing.com',
 ];
 
-export default function ForShellyPage() {
+export default function ForSalesPage() {
   return (
     <>
       <SiteHeader sticky />
@@ -162,13 +169,15 @@ export default function ForShellyPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1 text-xs font-medium text-zinc-400">
-              Unlisted — just for you
+              Unlisted — sent to you directly
             </span>
             <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
-              For today
+              Commission sales
             </span>
           </div>
-          <h1 className="mt-6 text-4xl font-extrabold tracking-tight md:text-5xl">Hey Shelly 👋</h1>
+          <h1 className="mt-6 text-4xl font-extrabold tracking-tight md:text-5xl">
+            Selling a domain, not a website
+          </h1>
           <p className="mt-4 text-lg leading-relaxed text-zinc-400">
             <span className="text-zinc-200">
               I own 32 city-and-trade domains that are live right now. The product is renting one of
@@ -177,9 +186,10 @@ export default function ForShellyPage() {
             You get half of that, every month, for as long as they stay.
           </p>
           <p className="mt-3 text-sm text-zinc-500">
-            You&apos;ve already made calls, so you know more about the hard part than this page
-            does. What&apos;s here is the mechanics, the numbers, and the parts that aren&apos;t
-            proven — everything is expandable, so read the headline and open only what you want.
+            This is the whole brief: the mechanics, the numbers, the script, and the parts that
+            aren&apos;t proven. Everything is expandable, so read the headlines and open only what
+            you want. If you take this on, the last section is the one that matters most —
+            it&apos;s what I can&apos;t yet promise you.
           </p>
         </section>
 
@@ -297,7 +307,7 @@ export default function ForShellyPage() {
           <FoldSection label="The script, line by line" hint="and the four objections">
             <div className="mt-4 space-y-2">
               <Say who="you">
-                &ldquo;Hi — is this the owner? My name&apos;s Shelly, I&apos;m calling from
+                &ldquo;Hi — is this the owner? My name&apos;s [your name], I&apos;m calling from
                 QuickSites. This&apos;ll take a minute and it&apos;s not a website pitch. Do you
                 have a browser in front of you?&rdquo;
               </Say>
@@ -457,12 +467,20 @@ export default function ForShellyPage() {
           </div>
 
           <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
-            <h3 className="text-base font-semibold text-white">Two things to nail down today</h3>
+            <h3 className="text-base font-semibold text-white">
+              Two things to agree before you start
+            </h3>
             <ul className="mt-2 space-y-2 text-sm leading-relaxed text-zinc-400">
               <li>
                 <span className="text-zinc-200">Does your half follow the step-up?</span> Written
                 above as yes — you closed the account, and the price rising isn&apos;t your doing.
                 Worth us both saying it out loud rather than discovering it later.
+              </li>
+              <li>
+                <span className="text-zinc-200">Who sends the checkout link.</span> Today I generate
+                every one by hand, which makes me the bottleneck the moment you start closing. Say
+                early whether you want your own operator login — it is a small change and a bad
+                surprise in week two.
               </li>
               <li>
                 <span className="text-zinc-200">What keeps the money coming?</span> You stay the rep
@@ -480,7 +498,7 @@ export default function ForShellyPage() {
         {/* Straight talk */}
         <section className="mx-auto max-w-3xl px-6 pb-2 pt-8">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
-            Settled since we last spoke
+            What is settled
           </h2>
           <div className="mt-3">
             <Card
@@ -496,8 +514,9 @@ export default function ForShellyPage() {
                     Stripe&apos;s.
                   </p>
                   <p>
-                    When I first sent you this, it had never taken a live payment — which I
-                    shouldn&apos;t have let stand next to a page telling you it worked. It has now.
+                    An earlier version of this page said the checkout worked while it had never
+                    taken a live payment. That was wrong to leave standing and it was fixed on
+                    2026-08-28 by running real money through it rather than by rewording the page.
                   </p>
                 </>
               }
@@ -514,9 +533,32 @@ export default function ForShellyPage() {
           </h2>
           <div className="mt-3 space-y-3">
             <Card title="Nobody has rented one of these yet" tag="0 rented" tone="rose">
-              Still zero paid rentals as of today. The price is set, the sites are live, and your
-              calls this week are the first real test it has ever had — a trial isn&apos;t a rental
-              until it bills.
+              Zero paid rentals to date. The price is set and the sites are live; what has never
+              happened is a stranger putting a card in. The one live subscription in our records is
+              my own card, run to prove the billing works.
+            </Card>
+            <Card
+              title="One salesperson has tried this. Four calls, no sale."
+              tag="4 calls"
+              tone="rose"
+              more={
+                <>
+                  <p>
+                    She made four cold calls in a week and got one business interested enough to be
+                    called a trial. It never billed, and she stopped shortly after. Four calls is
+                    not a close rate — it is one afternoon and one person&apos;s manner — but it is
+                    the entire history of anyone selling this, and you should have it before you
+                    decide.
+                  </p>
+                  <p>
+                    What I take from it: nothing about demand yet, and one thing about me — a rep
+                    who cannot send their own checkout link is waiting on me to close their deal.
+                  </p>
+                </>
+              }
+            >
+              The only person to sell this before you made four calls, got one &ldquo;trial,&rdquo;
+              and it never became a payment. A trial isn&apos;t a rental until it bills.
             </Card>
             <Card
               title="I texted 19 businesses a free site and got 0 replies"
@@ -540,9 +582,9 @@ export default function ForShellyPage() {
         {/* Close */}
         <section className="mx-auto max-w-3xl px-6 pb-24 pt-8">
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-6 text-center">
-            <p className="text-lg font-semibold text-white">Today</p>
+            <p className="text-lg font-semibold text-white">If you want it</p>
             <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-              What I&apos;d like to agree: which cities and trades you work next, and the two open
+              What we&apos;d agree first: which cities and trades you work, and the two open
               questions above. The split isn&apos;t one of them — 50/50 is the offer, and I&apos;d
               rather start there than negotiate you down to something that stops being worth your
               time in week three.

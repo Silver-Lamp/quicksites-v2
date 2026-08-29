@@ -4,7 +4,7 @@
 //
 // ⚠️ THIS IS A MODEL, NOT DATA, AND THE CHART SAYS SO — twice, in the caption and on the plot.
 // Nobody has rented one of these yet. A line chart of a projection looks exactly like a line chart
-// of history, which is the whole risk of drawing it; the page's job is to help Shelly judge whether
+// of history, which is the whole risk of drawing it; the page's job is to help a rep judge whether
 // this is worth her time, and compounding is genuinely hard to read from a table. So it ships with
 // the assumption stated on the surface rather than in a footnote.
 //

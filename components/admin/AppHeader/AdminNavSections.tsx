@@ -281,7 +281,7 @@ const NAV_ADMIN: NavItem[] = [
   {
     type: 'item',
     label: 'Business Plan',
-    href: '/admin/business-plan',
+    href: '/business-plan',
     icon: <DollarSign size={18} />,
     adminOnly: true,
     keywords: [

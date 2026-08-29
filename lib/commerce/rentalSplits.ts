@@ -42,7 +42,8 @@ export const SPLIT = {
  * at which point it transfers to whoever picks it up, or to the house if nobody does.
  *
  * An earlier draft of this said "12 months after they leave". That was a number I chose
- * rather than one anyone agreed to, and it contradicted /for-shelly, which had already
+ * rather than one anyone agreed to, and it contradicted the rep-facing brief (/for-sales,
+ * then /for-shelly), which had already
  * promised the life of the account in three separate places. Two surfaces disagreeing about
  * what a person is owed is worse than either rule.
  */

@@ -1,6 +1,6 @@
 // app/proof/rankings/page.tsx
 // UNLISTED reference page: which domains we own actually rank on Google, from real Search Console
-// data. Built for two audiences — Shelly on a cold call, and the prospect she sends it to.
+// data. Built for two audiences — a rep on a cold call, and the prospect they send it to.
 //
 // ⚠️ THE SPLIT IS CITY+TRADE vs GENERIC, AND IT IS NOT THE SPLIT I FIRST BUILT. The first cut
 // called "grafton towing" a BRANDED query and discounted it as near-tautological — on the
@@ -193,7 +193,7 @@ export default function RankingsProofPage() {
             . Average position is across every query a domain surfaced for, so a site ranking #1 for
             its name and #60 for everything else shows a middling average — the per-query rows above
             are the meaningful view.{' '}
-            <Link href="/for-shelly" className="text-amber-400 underline underline-offset-4">
+            <Link href="/for-sales" className="text-amber-400 underline underline-offset-4">
               ← back
             </Link>
           </p>

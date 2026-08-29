@@ -138,7 +138,7 @@ describe('the residual rule is stated the same way everywhere', () => {
     for (const p of [
       'lib/commerce/rentalSplits.ts',
       'app/admin/splits/page.tsx',
-      'app/for-shelly/page.tsx',
+      'app/for-sales/page.tsx',
     ]) {
       expect(read(p)).not.toMatch(/RESIDUAL_TAIL_MONTHS|month tail|12-month tail/);
     }
@@ -147,7 +147,7 @@ describe('the residual rule is stated the same way everywhere', () => {
   it('ties the residual to the role on both the operator and the rep surface', () => {
     expect(read('lib/commerce/rentalSplits.ts')).toContain("RESIDUAL_BASIS = 'role'");
     expect(read('app/admin/splits/page.tsx')).toMatch(/follows the role/i);
-    expect(read('app/for-shelly/page.tsx')).toMatch(/stay the\s+rep on the accounts/i);
+    expect(read('app/for-sales/page.tsx')).toMatch(/stay the\s+rep on the accounts/i);
   });
 
   it('would catch the old wording — this matcher is not inert', () => {

@@ -12,8 +12,14 @@
 // The honest position today is that the rails are built and proven with live money, and
 // demand is almost entirely untested. Saying so is not modesty; it is the only version of
 // this document that survives someone doing diligence.
-
-import { supabaseAdmin } from '@/lib/supabase/admin';
+//
+// ⚠️ THIS MODULE MUST NOT TOUCH THE DATABASE. The deck is a client component and imports
+// STAGE_LABEL from here as a *value*, so anything this file imports is bundled into the
+// browser. It used to import `supabaseAdmin`, which instantiates a Supabase client at module
+// load — in the browser the service-role key is undefined (Next only inlines NEXT_PUBLIC_*),
+// so the deck died on load with "supabaseKey is required" and rendered nothing. The loader
+// lives in ./planEvidence instead. No key ever reached the bundle — verified by grepping the
+// deployed chunk — but the page was broken from the day it shipped.
 
 export type VerticalKey = 'rental' | 'commerce' | 'agency' | 'restaurant' | 'pod' | 'partners';
 
@@ -193,123 +199,4 @@ export const VERTICALS: Vertical[] = [
 
 export function getVertical(key: string | undefined): Vertical {
   return VERTICALS.find((v) => v.key === key) ?? VERTICALS[0];
-}
-
-/** Live counts, read at render. Never hardcode any of these into the prose. */
-export type PlanEvidence = {
-  geoCampaigns: number;
-  geoPublished: number;
-  geoRented: number;
-  rentalPaymentsTaken: number;
-  rentalCentsCollected: number;
-  templates: number;
-  templatesPublished: number;
-  merchants: number;
-  connectedMerchants: number;
-  paidOrders: number;
-  orderGrossCents: number;
-  platformFeeCents: number;
-  catalogItems: number;
-  printOrders: number;
-  commissionRows: number;
-  orgs: number;
-};
-
-async function countOf(table: string, apply?: (q: any) => any): Promise<number> {
-  try {
-    let q = (supabaseAdmin as any).from(table).select('*', { count: 'exact', head: true });
-    if (apply) q = apply(q);
-    const { count } = await q;
-    return count ?? 0;
-  } catch {
-    return 0;
-  }
-}
-
-export async function loadPlanEvidence(): Promise<PlanEvidence> {
-  const [
-    geoCampaigns,
-    geoRented,
-    templates,
-    templatesPublished,
-    merchants,
-    catalogItems,
-    printOrders,
-    commissionRows,
-    orgs,
-  ] = await Promise.all([
-    countOf('geo_industry_campaigns'),
-    countOf('geo_industry_campaigns', (q) => q.not('subscription_status', 'is', null)),
-    countOf('templates'),
-    countOf('templates', (q) => q.eq('published', true)),
-    countOf('merchants'),
-    countOf('catalog_items'),
-    countOf('print_orders'),
-    countOf('commission_ledger'),
-    countOf('organizations'),
-  ]);
-
-  let geoPublished = 0;
-  let rentalPaymentsTaken = 0;
-  let rentalCentsCollected = 0;
-  try {
-    const { data } = await (supabaseAdmin as any)
-      .from('geo_industry_campaigns')
-      .select('payment_count, last_payment_cents, template_id');
-    for (const r of data ?? []) {
-      const n = r.payment_count ?? 0;
-      rentalPaymentsTaken += n;
-      rentalCentsCollected += n * (r.last_payment_cents ?? 0);
-    }
-  } catch {
-    /* evidence degrades to zero rather than guessing */
-  }
-  try {
-    const { count } = await (supabaseAdmin as any)
-      .from('templates')
-      .select('*', { count: 'exact', head: true })
-      .eq('published', true)
-      .not('custom_domain', 'is', null);
-    geoPublished = count ?? 0;
-  } catch {
-    /* ignore */
-  }
-
-  let paidOrders = 0;
-  let orderGrossCents = 0;
-  let platformFeeCents = 0;
-  try {
-    const { data } = await (supabaseAdmin as any)
-      .from('orders')
-      .select('total_cents, platform_fee_cents')
-      .eq('status', 'paid');
-    paidOrders = (data ?? []).length;
-    for (const o of data ?? []) {
-      orderGrossCents += o.total_cents ?? 0;
-      platformFeeCents += o.platform_fee_cents ?? 0;
-    }
-  } catch {
-    /* ignore */
-  }
-
-  const connectedMerchants = await countOf('payment_accounts', (q) => q.eq('status', 'active'));
-
-  return {
-    geoCampaigns,
-    geoPublished,
-    geoRented,
-    rentalPaymentsTaken,
-    rentalCentsCollected,
-    templates,
-    templatesPublished,
-    merchants,
-    connectedMerchants,
-    paidOrders,
-    orderGrossCents,
-    platformFeeCents,
-    catalogItems,
-    printOrders,
-    commissionRows,
-    orgs,
-  };
 }

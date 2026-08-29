@@ -13,13 +13,8 @@
 // Exactly one thing on this page is hidden from a reader: <OperatorPanel>, which carries
 // operational detail only. See its header for the rule, and the test that enforces it.
 import Link from 'next/link';
-import {
-  VERTICALS,
-  STAGE_LABEL,
-  type Stage,
-  type Vertical,
-  type PlanEvidence,
-} from '@/lib/business/verticals';
+import { VERTICALS, STAGE_LABEL, type Stage, type Vertical } from '@/lib/business/verticals';
+import type { PlanEvidence } from '@/lib/business/planEvidence';
 import { formatCents } from '@/lib/commerce/rentalSplits';
 import OperatorPanel from '@/components/business-plan/operator-panel';
 

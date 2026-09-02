@@ -30,6 +30,7 @@ export const GEO_DOMAIN_RENTAL_LANE: LaneSpec = {
   label: 'Renting an exact-match city domain, by phone',
   sells: `One business per city and trade rents the exact domain people type — renton-towing.com — for ${FOUNDER_RATE}/month.`,
   goal: 'They give you a number and an email, and agree to receive a checkout link today.',
+  groundingLabel: 'what the rep can actually prove about this domain and its price',
 
   trueClaims: [
     'The domain exists, is live, and has a working site on it right now — they can open it while you talk.',

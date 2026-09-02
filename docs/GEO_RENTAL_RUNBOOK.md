@@ -139,8 +139,61 @@ another. Walk the whole tree (see `scripts/publish-geo-campaigns.mjs#walkStrings
 published snapshot, not `templates.data`:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' https://<domain>/
+curl -s -L https://<domain>/ | grep -o '<h[123][^>]*>[^<]*</h[123]>' | sed 's/<[^>]*>//g'
 ```
+
+Count **rendered headings**, not string occurrences. Next serialises the page payload into the
+HTML, so every heading appears about three times in `grep -c` — a count that does not move when
+you fix the page, and did not move when we fixed this one.
+
+### ⚠️ A custom domain can be served from a snapshot NO PUBLISH PATH WRITES
+
+The trap that cost an outage on 2026-09-02. `graftontowing.com` rendered its FAQ twice. The
+duplicate was removed from `templates.data`, committed through the sanctioned RPC, and
+republished — row correct, `template_versions` correct, `published_sites` correct — **and the
+live page did not change for hours.**
+
+The custom-domain route reads a different pointer into a different table:
+
+| route | reads |
+|---|---|
+| `app/host/[[...rest]]` (custom domains) | `sites.published_snapshot_id` → **`public.snapshots`** |
+| `publish_template_demo`, `/api/admin/sites/publish` | write `template_versions` + `published_sites` |
+
+**Nothing in the codebase writes `sites.published_snapshot_id`.** So a site with a legacy `sites`
+row serves whatever was frozen there — in this case a snapshot from three weeks earlier — while
+every publish reports success.
+
+Find the shadowed ones:
+
+```sql
+select domain,
+       case when published_snapshot_id is null
+            then 'serves current template' else 'FROZEN legacy snapshot' end
+from sites where domain is not null;
+```
+
+**Fix it additively. Do NOT null the pointer** — that path is labelled *"Backstop (dev)"* in the
+route and **404s the site in production**; we tried it on a domain holding position 1 and took it
+down. Mint a snapshot from the corrected template and repoint in one statement:
+
+```sql
+with fresh as (
+  insert into snapshots (template_id, data, rev, hash)
+  select t.id, t.data,
+         (select max(rev) + 1 from snapshots where template_id = t.id),
+         encode(sha256(convert_to(t.data::text, 'UTF8')), 'hex')
+  from templates t where t.id = '<template id>'
+  returning id
+)
+update sites set published_snapshot_id = (select id from fresh)
+where id = '<sites row id>';
+```
+
+Three details that each cost an attempt: `rev` and `hash` are **NOT NULL with no default**;
+`(template_id, rev)` is **unique** and `commit_template` does **not** bump `rev`, so reusing the
+template's own rev collides with the row you are replacing; and `data::text::bytea` raises
+*invalid input syntax* — use `convert_to(…, 'UTF8')`.
 
 ⚠️ **Scrub invented promises before anyone sees it.** Generated sites have shipped with "fully
 licensed and insured", "we respond within the hour" and fabricated five-star reviews **on pages
@@ -237,4 +290,6 @@ If it has not billed, the honest count is zero.
 | Path-specific `data` edits | "16 reworded", 15 still carried them | Walk the whole tree |
 | Invented promises | "licensed and insured" on a business that never said it | Read the live page before pitching |
 | Stripe ≠ our records | Money taken, campaign still reads unrented | `payment_count` on the row |
+| Legacy snapshot shadow | Commit + republish both succeed, page unchanged | `sites.published_snapshot_id` query above |
+| Counting strings, not headings | "×6 before, ×6 after" on a fixed page | `grep -o '<h[123]…'`, count rendered tags |
 | Trial counted as revenue | "1 trial customer" → 0 subscriptions | Count rows, not conversations |

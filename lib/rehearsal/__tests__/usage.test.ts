@@ -21,10 +21,29 @@ describe('rehearsal usage rows', () => {
     });
   });
 
+  it('keeps a FRACTIONAL cost, because that is what a turn actually costs', () => {
+    // The first real turn cost 0.03 cents. The first version of this mapper required an integer
+    // and would have written null — "unknown" — for every cost it was ever given, while the
+    // column rounded the same number to 0, "free". Both defences wrong, in opposite directions.
+    expect(toUsageRow({ lane: 'x', usage: { cost_cents: 0.03 } }).cost_cents).toBe(0.03);
+    expect(toUsageRow({ lane: 'x', usage: { cost_cents: 12.5 } }).cost_cents).toBe(12.5);
+  });
+
+  it('records what the honesty guard did, and only when told', () => {
+    expect(toUsageRow({ lane: 'x', usage: envelope, flagsRaised: 1, flagsDropped: 0 })).toMatchObject({
+      flags_raised: 1,
+      flags_dropped: 0,
+    });
+    // Not reported is not zero: "dropped nothing" and "nobody looked" must not be one value.
+    const silent = toUsageRow({ lane: 'x', usage: envelope });
+    expect(silent.flags_raised).toBeNull();
+    expect(silent.flags_dropped).toBeNull();
+  });
+
   it('never turns an unknown cost into a zero', () => {
     // $0.00 meaning "we never found out" is a number that sums into an invoice and looks like a
     // fact. Null means unknown; zero means free. They are different and only one is checkable.
-    for (const usage of [undefined, null, {}, { cost_cents: undefined }, { cost_cents: 1.5 }]) {
+    for (const usage of [undefined, null, {}, { cost_cents: undefined }, { cost_cents: -1 }, { cost_cents: NaN }, { cost_cents: '3' }]) {
       const row = toUsageRow({ lane: 'x', usage: usage as any });
       expect(row.cost_cents).toBeNull();
     }

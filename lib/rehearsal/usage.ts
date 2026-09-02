@@ -35,6 +35,8 @@ export type UsageRow = {
   grant_id: string | null;
   cost_cents: number | null;
   billed: boolean | null;
+  flags_raised: number | null;
+  flags_dropped: number | null;
   latency_ms: number | null;
   status: 'ok' | 'error';
   error: string | null;
@@ -43,9 +45,13 @@ export type UsageRow = {
 /**
  * Envelope → row. Pure, so the honesty rules above are testable without a database.
  *
- * Anything the envelope did not actually report stays null. In particular a non-integer or
- * missing `cost_cents` becomes null rather than 0 — we bill in integer cents, and a float here
- * means the far end changed shape, which is worth seeing as "unknown" rather than rounding away.
+ * Anything the envelope did not actually report stays null.
+ *
+ * ⚠️ `cost_cents` IS FRACTIONAL. The first real turn cost 0.03 cents. An earlier version of this
+ * function required Number.isInteger and would have written NULL — "unknown" — for every cost it
+ * was ever actually given, while the (then integer) column would have rounded the same value to
+ * 0, "genuinely free". Two defences, failing in opposite directions, on every row. What stays
+ * null now is only what is genuinely unreportable: a missing value, a non-number, or a negative.
  */
 export function toUsageRow(input: {
   lane: string;
@@ -53,11 +59,15 @@ export function toUsageRow(input: {
   userId?: string | null;
   orgId?: string | null;
   latencyMs?: number | null;
+  flagsRaised?: number | null;
+  flagsDropped?: number | null;
   error?: string | null;
 }): UsageRow {
   const failed = !!input.error;
   const u = input.usage ?? null;
-  const cost = u && Number.isInteger(u.cost_cents) ? (u.cost_cents as number) : null;
+  const rawCost = u?.cost_cents;
+  const cost =
+    typeof rawCost === 'number' && Number.isFinite(rawCost) && rawCost >= 0 ? rawCost : null;
 
   return {
     user_id: input.userId ?? null,
@@ -70,6 +80,12 @@ export function toUsageRow(input: {
     // so a future caller cannot record an error row carrying a confident number.
     cost_cents: failed ? null : cost,
     billed: typeof u?.billed === 'boolean' ? u.billed : null,
+    // ⚠️ flags_dropped only means something beside flags_raised. Zero dropped out of zero raised
+    // is "nothing happened"; zero out of five is the guard passing. HJ shipped this because the
+    // number was being computed and discarded — from outside, "dropped nothing" and "nobody
+    // looked" were the same output.
+    flags_raised: Number.isFinite(input.flagsRaised as number) ? input.flagsRaised! : null,
+    flags_dropped: Number.isFinite(input.flagsDropped as number) ? input.flagsDropped! : null,
     latency_ms: Number.isFinite(input.latencyMs as number) ? Math.round(input.latencyMs!) : null,
     status: failed ? 'error' : 'ok',
     error: input.error ? String(input.error).slice(0, 500) : null,

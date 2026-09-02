@@ -193,6 +193,14 @@ export const CONFIG_GATES: ConfigGate[] = [
       'Owner-voice audio cannot be provisioned. config.ts fails closed, so /merchant/audio looks present but every call is rejected. The shared secret must hold the SAME value in HiveJournal\'s env.',
   },
   {
+    key: 'rehearsal_practice',
+    label: 'Sales-call rehearsal engine (HiveJournal)',
+    enabledBy: 'REHEARSAL_PRACTICE_ENABLED',
+    requires: ['PARTNER_QUICKSITES_SECRET', 'HJ_REHEARSAL_GRANT'],
+    breaks:
+      'Practice turns cannot run. HiveJournal\'s route is partner-grant-only and fails closed on a missing or wrong-scope grant, so the practice surface would render and every turn would 401. The grant must be minted in HiveJournal with scope `rehearsal:practice` — an owner action there, not something a session can issue. The offline call sheet at /for-sales/call is unaffected and needs none of this.',
+  },
+  {
     key: 'backdrop_pool',
     label: 'Painterly backdrop pool (spends money)',
     enabledBy: 'BACKDROP_POOL_ENABLED',

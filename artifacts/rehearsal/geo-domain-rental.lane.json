@@ -5,6 +5,7 @@
     "sells": "One business per city and trade rents the exact domain people type — renton-towing.com — for $99/month.",
     "goal": "They give you a number and an email, and agree to receive a checkout link today."
   },
+  "grounding_label": "what the rep can actually prove about this domain and its price",
   "archetypes": [
     {
       "id": "towing-no-website",

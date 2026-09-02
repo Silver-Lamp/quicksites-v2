@@ -87,7 +87,17 @@ describe('geo domain rental lane', () => {
 describe('engine hand-off shape', () => {
   it('emits the snake_case contract shape, with no camelCase leaking through', () => {
     const spec = toEngineLaneSpec(LANE);
-    expect(Object.keys(spec).sort()).toEqual(['archetypes', 'honesty_rules', 'lane', 'objections']);
+    expect(Object.keys(spec).sort()).toEqual([
+      'archetypes',
+      'grounding_label',
+      'honesty_rules',
+      'lane',
+      'objections',
+    ]);
+    // grounding_label sits at the spec ROOT, not inside `lane` — HJ reads `r.grounding_label`.
+    // Put it one level in and nothing errors: every run silently uses their default instead.
+    expect(spec.grounding_label).toBeTruthy();
+    expect((spec.lane as any).grounding_label).toBeUndefined();
     expect(spec.objections[0]).toHaveProperty('good_move');
     expect(spec.honesty_rules[0]).toHaveProperty('violating_examples');
     expect(spec.archetypes[0]).toHaveProperty('opening_state');

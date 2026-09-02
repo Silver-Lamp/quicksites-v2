@@ -60,6 +60,18 @@ export type LaneSpec = {
   label: string;
   /** What is being sold, in one sentence, the way you would say it out loud. */
   sells: string;
+  /**
+   * Names what the `grounding` text IS, in the engine's own honesty sentence:
+   * "if the practiser states something that <groundingLabel> does not support ... flag it."
+   *
+   * ⚠️ Must be a phrase that reads grammatically in that slot — the default HJ falls back to is
+   * "what they can actually back up", so a singular "what …" clause fits and a plural noun does
+   * not. Capped at 120 chars their side.
+   *
+   * We set it rather than taking the default because the default is generic and this one names
+   * the three things a rep actually over-claims about.
+   */
+  groundingLabel: string;
   /** The single outcome that counts as a win on this call. */
   goal: string;
   /** Claims a rep may make because they are true and checkable. */
@@ -82,6 +94,10 @@ export type LaneSpec = {
 export function toEngineLaneSpec(lane: LaneSpec) {
   return {
     lane: { id: lane.id, label: lane.label, sells: lane.sells, goal: lane.goal },
+    // Read off the spec ROOT (their `r.grounding_label`), not from inside `lane`. HJ had this
+    // in the request envelope where nothing read it: every run silently used the default and
+    // nothing ever errored — it would have looked correct indefinitely.
+    grounding_label: lane.groundingLabel,
     archetypes: lane.archetypes.map((a) => ({
       id: a.id,
       label: a.label,

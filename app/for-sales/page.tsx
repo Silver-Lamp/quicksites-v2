@@ -304,6 +304,31 @@ export default function ForSalesPage() {
             starts being a thing they&apos;re looking at.
           </p>
 
+          {/* ⚠️ New tab on purpose, same reason as the rankings link below: the call sheet is
+              what she works FROM while the phone is ringing, and navigating away loses her
+              place in this page. It is deliberately a separate surface — everything here folds
+              away for a second read, and nothing folds away there. */}
+          <a
+            href="/for-sales/call"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 transition-colors hover:border-emerald-400/60"
+          >
+            <span>
+              <span className="block text-base font-semibold text-white">
+                The call sheet ↗
+              </span>
+              <span className="mt-1 block text-sm leading-relaxed text-zinc-400">
+                The one-page version to keep open — or printed — while you&apos;re actually on
+                the phone. Every objection and its answer, visible at once, no scrolling and no
+                internet needed once it&apos;s loaded.
+              </span>
+            </span>
+            <span aria-hidden className="shrink-0 text-2xl text-emerald-400">
+              ☎
+            </span>
+          </a>
+
           <FoldSection label="The script, line by line" hint="and the four objections">
             <div className="mt-4 space-y-2">
               <Say who="you">

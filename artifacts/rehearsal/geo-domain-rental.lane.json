@@ -1,0 +1,148 @@
+{
+  "lane": {
+    "id": "geo-domain-rental",
+    "label": "Renting an exact-match city domain, by phone",
+    "sells": "One business per city and trade rents the exact domain people type — renton-towing.com — for $99/month.",
+    "goal": "They give you a number and an email, and agree to receive a checkout link today."
+  },
+  "archetypes": [
+    {
+      "id": "towing-no-website",
+      "label": "Towing operator, no website",
+      "traits": [
+        "answers from the truck",
+        "prices by feel",
+        "gets ten spam calls a day"
+      ],
+      "mood": "busy",
+      "opening_state": "Expects a robocall. Will hang up on anything that sounds read."
+    },
+    {
+      "id": "burned-by-seo",
+      "label": "Burned by an SEO agency",
+      "traits": [
+        "paid a monthly retainer for a year",
+        "never saw a report he understood",
+        "now assumes everyone is that"
+      ],
+      "mood": "skeptical",
+      "opening_state": "Waiting for you to say the thing the last guy said, so he can hang up."
+    },
+    {
+      "id": "has-a-site-nephew-built",
+      "label": "Already has a website",
+      "traits": [
+        "someone in the family built it",
+        "quietly proud of it",
+        "not looking to replace it"
+      ],
+      "mood": "friendly",
+      "opening_state": "Hears \"website\" and starts composing a polite no."
+    },
+    {
+      "id": "gatekeeper",
+      "label": "Not the owner",
+      "traits": [
+        "dispatcher or spouse answering",
+        "protective of the owner’s time"
+      ],
+      "mood": "skeptical",
+      "opening_state": "Deciding in four seconds whether to pass you along."
+    }
+  ],
+  "objections": [
+    {
+      "id": "already_have_site",
+      "says": "I already have a website.",
+      "good_move": "Good — this is not a replacement. It is a second front door on the name people type, and it can point at the site they already have.",
+      "trap": "Arguing their site is bad. They built it, or someone in their family did."
+    },
+    {
+      "id": "does_it_rank",
+      "says": "Does it come up on Google?",
+      "good_move": "Not yet, it's new, and say so plainly — then the real close: $99 now, $399 once one reaches page one, and their rate is locked either way.",
+      "trap": "Any version of \"it will rank.\" You do not know that, and it is the promise that ends up in a complaint."
+    },
+    {
+      "id": "what_am_i_paying_for",
+      "says": "Ninety-nine for what, exactly?",
+      "good_move": "The name, exclusively, in their town — and let them do the one-job-pays-for-it math out loud themselves.",
+      "trap": "Doing that math for them, in calls per week. That is a result promise wearing arithmetic."
+    },
+    {
+      "id": "burned_before",
+      "says": "I paid an SEO guy for a year and got nothing.",
+      "good_move": "Agree — that is why this is rent on a specific name they can look at, not a retainer for work they cannot see. Month to month, cancel whenever.",
+      "trap": "Defending the industry, or implying the last guy was a crook. He might have been their brother-in-law."
+    },
+    {
+      "id": "competitor_too",
+      "says": "What stops you renting it to the guy across town?",
+      "good_move": "Nothing does, until they take it — one per city and trade is the product, and that is exactly why it is worth having.",
+      "trap": "Turning a true fact into a fake deadline. First-come is real; \"I have someone else on the line\" is not."
+    },
+    {
+      "id": "contract",
+      "says": "Am I locked into something?",
+      "good_move": "No. Month to month, cancel whenever — and their rate stays theirs for as long as they keep it.",
+      "trap": "Overselling the lock-in as a favour. It is simply true; say it and move on."
+    },
+    {
+      "id": "call_me_back",
+      "says": "Call me back later.",
+      "good_move": "Take it, name a time, write it down. Then actually call.",
+      "trap": "Inventing a deadline to stop them going. Never do this."
+    },
+    {
+      "id": "who_are_you",
+      "says": "Who are you people?",
+      "good_move": "A small studio that builds these — send them quicksites.ai and let them look while you are on the line.",
+      "trap": "Inflating the company. The site is small and honest; being caught padding it costs the call."
+    },
+    {
+      "id": "send_me_email",
+      "says": "Just send me an email.",
+      "good_move": "Fine — get the address, send it while still on the phone, and ask them to open it now so the domain is on their screen before you hang up.",
+      "trap": "Accepting the email as a win. An unopened email is a no with a delay."
+    },
+    {
+      "id": "not_the_owner",
+      "says": "I'm not the owner.",
+      "good_move": "Ask when the owner is around and whether it is worth a call back then — briefly, without pitching the gatekeeper.",
+      "trap": "Pitching anyway. They cannot buy, and a bad summary is what reaches the owner instead of you."
+    }
+  ],
+  "honesty_rules": [
+    {
+      "id": "no_ranking_promise",
+      "rule": "Never promise a ranking, a call volume, or a result.",
+      "why": "Nobody knows. A promise like that ends up in a complaint with the rep’s name on it, and it is the single rule the whole brief is strict about.",
+      "violating_examples": [
+        "this'll get you on page one",
+        "you'll get five calls a week",
+        "you will rank for towing in Renton",
+        "it pays for itself in the first month"
+      ]
+    },
+    {
+      "id": "no_invented_urgency",
+      "rule": "Never invent a deadline, a competing buyer, or a price that is about to expire.",
+      "why": "First-come is true; a countdown is not. A fake deadline is the fastest way to turn a real advantage into a lie.",
+      "violating_examples": [
+        "I have another towing company looking at this one right now",
+        "this price ends Friday",
+        "if you do not take it today I have to release it"
+      ]
+    },
+    {
+      "id": "no_claims_on_their_behalf",
+      "rule": "Never add claims about their business that they have not made — licensing, insurance, response times, reviews.",
+      "why": "We spent a day stripping exactly those invented lines off these sites. Saying them out loud puts them back where nothing can catch them.",
+      "violating_examples": [
+        "we'll put licensed and insured on there for you",
+        "it says you respond within the hour",
+        "I'll add some reviews to fill it out"
+      ]
+    }
+  ]
+}

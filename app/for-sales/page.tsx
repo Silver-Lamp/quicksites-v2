@@ -290,6 +290,25 @@ export default function ForSalesPage() {
               for the domains we&apos;ve had up longest. Honest version: several rank on page one,
               and the traffic is small. Worth reading before you quote numbers to anyone.
             </p>
+            {/* ⚠️ Added 2026-09-05 after re-measuring. The page-one figures on /proof/rankings are
+                per-QUERY positions; the GSC site averages for the same domains are 12-21. Both are
+                true and they answer different questions, and a rep quoting the first as "where the
+                domain ranks" is overstating by about ten positions. The distinction below is the
+                one that keeps a true claim from becoming a complaint. */}
+            <p className="mt-3">
+              One distinction to keep straight. What these domains win is their{' '}
+              <em>own exact-match name</em> — someone typing &ldquo;grafton towing&rdquo; finds
+              graftontowing.com. That is a real commercial search and it is worth selling. What they
+              do not win is the broad trade search: every &ldquo;towing near me&rdquo;-shaped query
+              we hold on page one has one or two impressions and zero clicks, and the whole
+              portfolio took three page-one clicks in twenty-eight days. So{' '}
+              <span className="text-zinc-200">&ldquo;type it in, that&apos;s us&rdquo;</span> is
+              true.{' '}
+              <span className="text-zinc-200">
+                &ldquo;Search for towing and you&apos;ll find us&rdquo;
+              </span>{' '}
+              is not.
+            </p>
           </Card>
         </section>
 

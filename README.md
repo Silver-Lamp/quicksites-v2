@@ -6,127 +6,94 @@
 >
 > **Quick start:** `nvm use && npm install && cp .env.example .env.local && npm run dev` → http://localhost:3000
 >
-> ⛔ **The rest of this README is stale** (it describes the old Pages Router; the app migrated to the App Router). It's kept for reference pending a rewrite — trust `CLAUDE.md` over anything below.
 
-Modern template engine + affiliate funnel automation, now powered by clean architecture and developer-friendly tooling.
+**QuickSites** is a site generator and commerce platform for local businesses. A schema-driven
+drag-and-drop builder produces sites published to subdomains or programmatically-provisioned custom
+domains; a multi-tenant commerce layer on top takes a per-order platform fee. Next.js App Router,
+Supabase, Stripe.
 
----
-
-## 📁 Project Structure   
-
-```
-.
-├── pages/
-│   ├── _app.tsx
-│   ├── index.tsx
-│   └── admin/              # Admin-specific routes (dashboard, logs, etc.)
-│       └── dashboard.tsx
-
-├── components/
-│   └── admin/              # Admin UI components (Sidebar, Layout, etc.)
-│   └── ui/                 # Generic reusable UI components
-│   └── analytics/          # Heatmaps, charts, widgets
-
-├── lib/
-│   ├── supabase.ts         # Supabase client
-│   ├── domainTracker.js
-│   ├── db.js
-│   ├── sdk/                # API wrappers
-│   └── admin/              # Dashboard logic and data hooks
-
-├── scripts/                # CLI + SQL tools
-│   ├── check-links.js      # Prevents bad <Link><a> usage
-│   └── *.sql               # DB setup, patch scripts
-
-├── tools/
-│   └── cli/                # Code generation, import/export, publishing
-
-├── public/
-│   └── sites/              # Static exports of generated sites
-
-├── tests/                 # Playwright, Jest
-│   ├── visual-regression/
-│   ├── mocks/
-│   └── *.spec.ts
-
-├── .husky/                 # Git hooks (lint:links in pre-commit)
-├── .github/                # CI workflows
-├── .gitignore              # Ignores /dist, /.next, etc.
-├── tsconfig.json           # Alias support
-├── next.config.mjs         # Path alias: @ = project root
-└── README.md               # You are here
-```
+Source is public. It is a working commercial product rather than a general-purpose template — the
+docs above describe the real system; this file is the short orientation.
 
 ---
 
-## 🧪 Testing
+## 📁 Project Structure
+
+```
+app/                  # Next App Router — pages + the entire backend (app/api/**/route.ts)
+  admin/              #   the builder / admin UI
+  sites/  host/       #   public rendered tenant sites (by slug, and by custom domain)
+  api/                #   ~500 route handlers; most business logic still lives inline here
+components/           # React components (admin/, sites/, ui/, cart/, ...)
+lib/                  # data access, integrations, business logic
+  commerce/ payments/ #   the money path
+  supabase/           #   client factories (server / admin / browser / middleware)
+  probe/              #   production content probe (asserts content, not status codes)
+supabase/migrations/  # the canonical schema — authoritative over any prose doc
+scripts/              # CLI + SQL tooling
+middleware.ts         # host → org/site routing, brand-host rewrites
+docs/                 # architecture, runbooks, and per-subsystem plans
+```
+
+> Counts drift, so they are not frozen here. Current numbers:
+> `git ls-files 'app/api/**/route.ts' | wc -l` · `git ls-files 'components/**/*.tsx' | wc -l`
+>
+> ⚠️ There is **no `pages/` directory**. This README described one until 2026-08-18, which is worth
+> knowing if you are reading an older copy — routing is entirely App Router. See
+> [`ROUTER_STRATEGY.md`](ROUTER_STRATEGY.md).
+
+---
+
+## 🧪 Tests and quality gates
 
 ```bash
-npm run test           # Runs unit tests and e2e
-npm run test:e2e       # Runs Playwright tests
-npx playwright test    # Local or CI
+npm run typecheck      # tsc --noEmit — kept green
+npm run lint           # eslint
+npx jest               # unit tests (Jest)
+npm run test           # end-to-end (Playwright)
+npm run build          # next build — the real gate before shipping infra changes
 ```
+
+⚠️ `npm run test` runs **Playwright only**. Jest is a separate command — running one is not running
+both, which is easy to assume from the name.
+
+### Pre-commit
+
+The hook runs **gitleaks** against staged changes and aborts on a suspected secret. Install with
+`npm run prepare`. A link-usage linter also exists (`npm run lint:links`) but is not wired into the
+hook.
 
 ---
 
-## 🧼 Code Quality
+## ⚙️ Environment
 
-```bash
-npm run lint           # Lints project
-npm run lint:fix       # Auto-fix safe issues
-npm run lint:links     # Custom script to detect <Link><a> misuse
-
-npm run format         # Runs Prettier
-```
-
-### 🧱 Husky
-
-Pre-commit hook runs `npm run lint:links`. To install manually:
-
-```bash
-npm run prepare
-chmod +x .husky/pre-commit
-```
-
----
-
-## ⚙️ Env Setup
-
-Copy `.env.example` → `.env.local` and fill in:
+Copy `.env.example` → `.env.local`. The minimum to boot is a Supabase URL, a public key, and a
+**server** key:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
+SUPABASE_SECRET_KEY=sb_secret_...        # or SUPABASE_SERVICE_ROLE_KEY (legacy, still honored)
 ```
+
+Commerce additionally needs `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`; AI features need
+`OPENAI_API_KEY`. `.env.example` documents the rest, grouped.
 
 ---
 
-## 🛠 Features
+## 🗺 Nightly sitemap snapshots
 
-- ✅ Drag-n-drop block dashboard
-- 📊 Analytics, heatmaps, filters
-- 🧩 Template versioning
-- 🧠 Per-user + role-based layouts
-- 🗂 Admin view tools + CSV exports
-- 🔁 Supabase-powered sync + restore
-- 🔒 Git hooks prevent accidental misuse
-- 🌱 Affiliate + referrer system built-in
+`.github/workflows/snapshot-sitemaps.yml` snapshots sitemaps nightly into `snapshots/` and uploads
+them to Supabase Storage, so changes to published domains and pages are diffable over time.
+
+> Earlier revisions of this README documented these as three separate sections of public links, each
+> telling the reader to "replace YOUR_PROJECT" — a placeholder that appeared nowhere and resolved to
+> nothing. The mechanism is real; the instructions were not.
 
 ---
 
 ## 🔗 Resources
 
-<!--
-  Every link in this section was dead as of 2026-08-18, and they were dead for two different
-  reasons worth keeping straight:
-
-  1. Three pointed at `Silver-Lamp/quicksites-core`, which is not this repo — this is
-     `quicksites-v2`. (The npm package IS named quicksites-core; the GitHub path never was.)
-  2. Two pointed at features that do not exist rather than at the wrong address: Discussions are
-     DISABLED on this repo, and there is no /demo route. Repointing those at the right repo would
-     have moved the 404 rather than fixed it, which is why each replacement below is a thing that
-     was checked to exist.
--->
 - [Report a bug or request a feature](https://github.com/Silver-Lamp/quicksites-v2/issues) — Issues are enabled; Discussions are not
 - [Plans and architecture](docs/) — the working planning docs. There is no public roadmap board
 - **A real site built with this:** [renton-lemonade.quicksites.ai](https://renton-lemonade.quicksites.ai) · more on the [homepage showcase](https://www.quicksites.ai)
@@ -153,37 +120,3 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key
 > (`NEXT_PUBLIC_SUPABASE_URL`, the anon key, and `SUPABASE_SERVICE_ROLE_KEY`). See
 > [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md). Saying so here because a deploy button that yields a
 > broken app is a worse first impression than no button.
-
-## 📦 Nightly Sitemap Snapshots
-
-Your latest sitemap snapshots are generated automatically every night and uploaded to Supabase Storage for transparency, debugging, and SEO tooling.
-
-🧭 Public Snapshot Links:
-📄 sitemap-index-latest.xml
-
-🌍 sitemap-hreflang-latest.xml
-Replace YOUR_PROJECT with your actual Supabase project ref or custom domain.
-
-## 🧾 Sitemap Diffs (Nightly)
-
-Compare changes between yesterday’s and today’s sitemaps:
-
-🔄 sitemap-index.diff
-
-🌍 sitemap-hreflang.diff
-
-These files update every night. Use them to track when new domains, languages, or pages are published.
-
-Replace YOUR_PROJECT with your Supabase project ref or custom domain.
-
-## 📘 Sitemap Diff Reports (Markdown)
-
-Compare changes between yesterday and today in a human-friendly format:
-
-🔄 sitemap-index.diff.md
-
-🌍 sitemap-hreflang.diff.md
-
-These files auto-update nightly via GitHub Actions.
-
-Just replace YOUR_PROJECT with your actual Supabase project ID or custom domain.

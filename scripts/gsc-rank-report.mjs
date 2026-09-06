@@ -17,6 +17,7 @@
 // they do not rank. Different thing, and the difference matters if it is ever shown to a customer.
 
 import fs from 'node:fs';
+import { classifyQuery } from '../lib/proof/queryKind.ts';
 
 const JSON_OUT = process.argv.includes('--json');
 const env = Object.fromEntries(
@@ -101,56 +102,11 @@ for (const t of tokens) {
   });
 }
 
-// ⚠️ `kind` USED TO BE HAND-ASSIGNED. lib/proof/rankingSnapshot.json carried a kind on every
-// query, /proof/rankings filters and colours by it — and NOTHING in the repo produced it. It was
-// typed once, by judgement, and could not be regenerated: running this script with --json emitted
-// a different shape with no kind at all, so "refresh the page" silently meant "write a file the
-// page cannot read". That is the §4 failure in miniature — a value survives only if something
-// re-derives it. These rules are that something. They will disagree with a few of the original
-// hand labels; the rules are the definition now, and a disagreement is a rule to argue with rather
-// than a memory to trust.
-const TRADE = [
-  'exteriorcleaning', 'roofcleaning', 'drivewayrepair', 'windowclean', 'pressurewashing',
-  'roadsideassistance', 'towtruck', 'towing', 'roadside', 'wrecker', 'tow',
-];
-const NEAR_ME = ['nearme', 'aroundme', 'cercademi', 'closetome'];
-// Words that carry no place/business identity — a query made only of these is a generic trade search.
-const FILLER = [
-  'a','the','and','of','for','my','me','i','is','are','in','to','service','services','company',
-  'companies','cost','price','prices','cheap','best','local','emergency','24','247','hour','hours',
-  '24hour','open','now','number','phone','call','truck','trucks','car','cars','vehicle','auto',
-  'motorcycle','flatbed','heavy','duty','accident','junk','free','quote','near','around','close',
-  'servicio','de','cerca','mi','gruas','grua',
-];
-const norm = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-
-function cityKeyFor(site) {
-  let h = norm(site.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/^sc-domain:/, ''))
-    .replace(/(com|net|org|ai|menu)$/, '');
-  // Strip the trade word out of the host to leave the place: graftontowing -> grafton.
-  for (const t of TRADE) if (h.includes(t)) { h = h.replace(t, ''); break; }
-  return h;
-}
-
-function classify(query, site) {
-  const q = norm(query);
-  const raw = String(query || '').toLowerCase();
-  if (raw.includes('inurl:') || raw.includes('http')) return 'other';
-  if (NEAR_ME.some((n) => q.includes(n))) return 'generic';
-  const city = cityKeyFor(site);
-  if (city && city.length >= 3 && q.includes(city)) return 'city_trade';
-  // A 5-digit token is a US ZIP, which is a PLACE, not filler. Caught by the hand labels
-  // disagreeing with a first version of these rules: "towing 53024" is Grafton WI's own ZIP and
-  // reads as generic to anything that treats bare digits as noise.
-  if (/(^|[^0-9])\d{5}([^0-9]|$)/.test(raw)) return 'city_trade';
-  // No place of ours in it. If what's left after removing trade + filler words is empty, it is a
-  // plain trade search; if a residual token survives, it names somebody or somewhere else.
-  const residual = raw
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean)
-    .filter((t) => !TRADE.includes(t) && !FILLER.includes(t) && !/^\d+$/.test(t));
-  return residual.length === 0 ? 'generic' : 'other';
-}
+// `kind` comes from lib/proof/queryKind.ts — the SAME module the internal rate card uses.
+// It lived here as a private copy for exactly one commit, which was already one too many: the
+// prospect-facing proof page and the rate card must never disagree about which domains qualify.
+// This file is .mjs importing .ts, so run it under tsx:
+//   npx tsx scripts/gsc-rank-report.mjs --json > lib/proof/rankingSnapshot.json
 
 if (JSON_OUT) {
   // Emit the shape /proof/rankings actually reads (lib/proof/rankingSnapshot.json), not a
@@ -165,7 +121,7 @@ if (JSON_OUT) {
         clicks: o.clicks,
         impressions: o.impressions,
         position: o.position,
-        queries: (o.topQueries || []).map((q) => ({ ...q, kind: classify(q.query, o.site) })),
+        queries: (o.topQueries || []).map((q) => ({ ...q, kind: classifyQuery(q.query, o.site) })),
       })),
     unreadable: out
       .filter((o) => o.error)

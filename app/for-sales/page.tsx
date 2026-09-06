@@ -290,6 +290,23 @@ export default function ForSalesPage() {
               for the domains we&apos;ve had up longest. Honest version: several rank on page one,
               and the traffic is small. Worth reading before you quote numbers to anyone.
             </p>
+            {/* ⚠️ Admin-gated today, and that is a known gap rather than a decision: the rate card
+                is FOR reps, but operator access is the same open question that makes
+                geo-campaign/rent `if (!operator) 403`. Settle both together. */}
+            <p className="mt-3">
+              Live pricing and which domains are provable right now:{' '}
+              <a
+                href="/for-sales/rate-card"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300"
+              >
+                the rate card ↗
+              </a>{' '}
+              — it reads Search Console at render and can be refreshed on the spot, so the position
+              you quote is today&apos;s rather than a number someone wrote down. Admin sign-in
+              required for now.
+            </p>
             {/* ⚠️ Added 2026-09-05 after re-measuring. The page-one figures on /proof/rankings are
                 per-QUERY positions; the GSC site averages for the same domains are 12-21. Both are
                 true and they answer different questions, and a rep quoting the first as "where the

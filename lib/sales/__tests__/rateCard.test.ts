@@ -4,7 +4,7 @@ import {
   sweepUrlFor,
   buildRateCardRow, buildRateCard, areaCodeMatchesState, PAGE_ONE,
 } from '../rateCard';
-import type { GscSite, SiteFacts } from '../rateCard';
+import type { GscSite, SiteFacts, RateCardRow } from '../rateCard';
 
 const site = (host: string, queries: Array<[string, number, number]>, position = 12): GscSite => ({
   host, clicks: 0, impressions: queries.reduce((a, q) => a + q[2], 0), position,

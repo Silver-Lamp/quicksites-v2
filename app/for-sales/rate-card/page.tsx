@@ -9,6 +9,7 @@
 import type { Metadata } from 'next';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { loadRateCard } from '@/lib/sales/rateCardData';
+import { valuePortfolio } from '@/lib/sales/portfolioValuation';
 import { formatCents } from '@/lib/outreach/geoPricing';
 import RefreshButton from './refresh-button';
 
@@ -24,8 +25,12 @@ export default async function RateCardPage() {
   const admin = await getAdminUser();
   if (!admin) return <div className="p-8 text-zinc-400">Forbidden.</div>;
 
-  const { rows, window, measuredAt, unreadable } = await loadRateCard();
+  const { rows, window, measuredAt, unreadable, rentedCount } = await loadRateCard();
   const proven = rows.filter((r) => r.qualifies);
+  // ⚠️ A CAPACITY figure, not a forecast. `rentedToday` is rendered beside every total below for
+  // exactly one reason: while it is zero, each of these numbers is a sentence about inventory and
+  // none of them is a sentence about money.
+  const val = valuePortfolio(rows, { rentedToday: rentedCount });
   const pitchable = proven.filter((r) => r.pitchable);
   const founder = rows.filter((r) => !r.qualifies);
 
@@ -127,6 +132,63 @@ export default async function RateCardPage() {
                 )}
               </article>
             ))}
+          </div>
+        </Section>
+
+        <Section title="Portfolio valuation" hint="what the provable inventory would bill if every domain rented">
+          <div className="rounded border border-zinc-800 bg-zinc-900/60 p-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <div className="font-mono text-2xl font-bold tabular-nums text-white">
+                  {formatCents(val.grossAtListCents)}
+                </div>
+                <div className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-500">
+                  per month at the page-one rate
+                </div>
+                <div className="mt-1 font-mono text-xs text-zinc-500">
+                  {formatCents(val.annualAtListCents)} / year
+                </div>
+              </div>
+              <div>
+                <div className="font-mono text-2xl font-bold tabular-nums text-zinc-300">
+                  {formatCents(val.grossAtFounderCents)}
+                </div>
+                <div className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-500">
+                  per month at the founder rate
+                </div>
+                <div className="mt-1 font-mono text-xs text-zinc-500">locked for life once signed</div>
+              </div>
+              <div>
+                <div className="font-mono text-2xl font-bold tabular-nums text-zinc-300">
+                  {formatCents(val.houseAtListCents)}
+                </div>
+                <div className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-500">
+                  reaches the house, at list
+                </div>
+                <div className="mt-1 font-mono text-xs text-zinc-500">
+                  after card fees and both commissions
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-4 border-t border-zinc-800 pt-3 text-sm leading-relaxed text-amber-400">
+              Rented today: <span className="font-mono font-bold">{val.rentedToday}</span> of{' '}
+              <span className="font-mono">{val.provenCount}</span>. Every figure above is what this
+              inventory <em>could</em> bill, not what anyone has agreed to pay — nobody outside the
+              company has rented one of these. It is a ceiling, and it is the number most likely to
+              be misread as revenue.
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+              {val.provenCount - val.pitchableCount > 0 && (
+                <>
+                  {val.provenCount - val.pitchableCount} of the {val.provenCount} cannot be pitched
+                  today — see the stop flags above; they are inventory, not sales.{' '}
+                </>
+              )}
+              The house share is the remainder after the closer and manager, taken from net of card
+              fees, split per rental — Stripe&apos;s fixed fee lands once per domain, not once per
+              portfolio.
+            </p>
           </div>
         </Section>
 

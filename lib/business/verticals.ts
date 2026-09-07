@@ -63,6 +63,7 @@ export const VERTICALS: Vertical[] = [
       'Two tiers, split by what can be proved on the call: a domain holding page one today is sold in the present tense — the prospect searches the phrase while the rep waits — and everything else is sold plainly as new, at the founder rate. No version of the pitch predicts a ranking.',
       'Commission on every payment: 50% closer, 15% manager, 35% house — taken from net of card fees.',
       'Exclusivity is the product. One business per city and trade, which is also why the price holds.',
+      'Ceiling of the provable inventory, measured 2026-09-06: if every domain that currently holds page one were rented at the page-one rate, the six of them bill $2,094/month — $25,128/year — of which roughly $711/month reaches the house after card fees and both commissions. Zero are rented. That is a capacity figure and it is the one most likely to be misread as revenue; the live version is at /for-sales/rate-card.',
     ],
     built: [
       'Stripe subscription checkout, webhook write-back, and commission accrual to the ledger the payout runner already pays from.',

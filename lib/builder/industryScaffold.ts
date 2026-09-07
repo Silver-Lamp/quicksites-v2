@@ -21,6 +21,7 @@ import {
 } from '@/lib/theme/curatedThemes';
 import { industryStyle } from '@/lib/builder/industryStyle';
 import { pickHeroCopy, pickFaqItems } from '@/lib/builder/industryCopy';
+import { SCAFFOLD_HIGHLIGHTS_HTML } from '@/lib/rebuild/liveClaimRewrites';
 
 export type StarterTheme = {
   colorMode: 'light' | 'dark';
@@ -765,10 +766,15 @@ export function buildIndustryStarter(opts: {
       ...aboutCol.content,
       value: `<h3>About ${bn}</h3><p>We're a local ${label.toLowerCase()} team dedicated to quality work and honest, dependable service. Share your story and what sets you apart here.</p>`,
     };
+    // ⚠️ These bullets ship on every split-layout site, including ones built for businesses we have
+    // never spoken to. They may not assert a fact only the owner knows: the old list said
+    // "Licensed & insured" and "Satisfaction guaranteed" and 31 live sites carried it (audited
+    // 2026-09-07). Anything true BY CONSTRUCTION (how to reach us, what we do before work) is fine.
+    // Pinned by lib/rebuild/__tests__/liveClaimRewrites.test.ts.
     const highlightsCol: any = createDefaultBlock('text');
     highlightsCol.content = {
       ...highlightsCol.content,
-      value: `<h3>Why choose us</h3><ul><li>Licensed &amp; insured</li><li>Fast, friendly service</li><li>Satisfaction guaranteed</li></ul>`,
+      value: SCAFFOLD_HIGHLIGHTS_HTML,
     };
     const splitSection: any = createDefaultBlock('section');
     splitSection.content = {

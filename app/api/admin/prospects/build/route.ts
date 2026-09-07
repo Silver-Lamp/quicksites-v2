@@ -84,7 +84,21 @@ export async function POST(req: Request) {
     }
     try {
       const listing = await listingForProspect(p);
-      const built = await buildDraftFromListing({ listing, operatorId: operator.id });
+      // ⚠️ PASS THE PROSPECT'S OWN INDUSTRY. It is the category the operator swept for, stored on
+      // the row, and authoritative. Omitting it makes buildDraftFromListing fall back to guessing
+      // from Google's place types — and that guess DEFAULTS TO 'restaurant', so a towing company
+      // gets the food scaffold: a menu block and an order bar under a real business's name.
+      //
+      // This is the second time that default has produced menus for real trades. The first was a
+      // space-vs-underscore mismatch in the type table (see the note in lib/places/typeToIndustry.ts,
+      // "five real auto shops... menu block, order bar and all"). Fixing the guess did not help
+      // here, because this caller never consulted the answer it already had. A guess is only safe
+      // as a last resort, and it was being used as a first one.
+      const built = await buildDraftFromListing({
+        listing,
+        operatorId: operator.id,
+        industryKey: (p.industry_key as any) || undefined,
+      });
       await markProspectBuilt(id, built.id);
       const hasMenu = built.summary.menuItems > 0;
       results.push({

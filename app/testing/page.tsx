@@ -266,7 +266,7 @@ export default function TestingPage() {
                 Where a rule arrives after the violations, we record the count and forbid growth,
                 rather than either failing the build or quietly excluding a directory. Our env-var
                 declaration test carries a frozen baseline of{' '}
-                <strong>109 known-undeclared keys</strong>, with a companion test asserting the
+                <strong>107 known-undeclared keys</strong>, with a companion test asserting the
                 baseline never grows — a baselined key that gets declared must be{' '}
                 <em>removed</em> from the list, or it rots into a permanent allowlist.
               </p>
@@ -280,7 +280,7 @@ export default function TestingPage() {
               <p>
                 A feature flag turned on with two of its three variables set is not off and not on
                 — it is silently broken. <code>CONFIG_GATES</code> declares{' '}
-                <strong>21 features</strong> with their required env, evaluated at startup, and a
+                <strong>22 features</strong> with their required env, evaluated at startup, and a
                 public <code>/status</code> endpoint answers &ldquo;is this actually live?&rdquo;
                 from the running process rather than from a config file.
               </p>

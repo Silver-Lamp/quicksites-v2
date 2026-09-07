@@ -225,6 +225,50 @@ export default function ForSalesPage() {
             for as long as they keep it.
           </Card>
 
+          {/* ⚠️ This card exists because the page used to contradict itself: it said these domains
+              "don't rank for anything" here and "several rank on page one" three cards later. Both
+              were true — of different populations — and a rep reading top to bottom could not tell
+              which. Naming the two tiers is the fix. */}
+          <Card
+            title="A few of them already rank. That is a different call."
+            tag="proven"
+            tone="emerald"
+            more={
+              <>
+                <p>
+                  The live list is the{' '}
+                  <a
+                    href="/for-sales/rate-card"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300"
+                  >
+                    rate card
+                  </a>
+                  , which reads Search Console when you open it. Check it before you dial —
+                  positions move, and a number you wrote down last week is a number you cannot
+                  defend when they type it.
+                </p>
+                <p>
+                  Why it closes differently: on a new domain you are asking someone to believe
+                  something might happen. On a proven one you are asking them to type three words
+                  and look. Nobody argues with their own screen.
+                </p>
+              </>
+            }
+          >
+            Most of the inventory is new and ranks for nothing yet. A handful already hold page one
+            for the exact phrase their customers type —{' '}
+            <code className="rounded bg-zinc-800 px-1 text-zinc-200">grafton towing</code>,{' '}
+            <code className="rounded bg-zinc-800 px-1 text-zinc-200">arab towing</code>,{' '}
+            <code className="rounded bg-zinc-800 px-1 text-zinc-200">south hill towing</code>. Those
+            sell in the present tense:{' '}
+            <span className="text-zinc-200">
+              &ldquo;Search it right now — go ahead, I&apos;ll wait.&rdquo;
+            </span>{' '}
+            Never in the future tense, which is a promise you cannot keep.
+          </Card>
+
           <Card
             title="The price goes up. Theirs doesn't."
             tag="$99 → $399"
@@ -239,8 +283,8 @@ export default function ForSalesPage() {
               </p>
             }
           >
-            Today these domains don&apos;t rank for anything — they&apos;re new. When one reaches
-            page one of Google, the list price becomes{' '}
+            Most of these domains don&apos;t rank yet — they&apos;re new, and you say so plainly.
+            When one reaches page one of Google, the list price becomes{' '}
             <span className="text-zinc-200">$399/month</span> for the next person. Whoever rented at
             $99 keeps paying $99.
           </Card>
@@ -325,6 +369,23 @@ export default function ForSalesPage() {
                 &ldquo;Search for towing and you&apos;ll find us&rdquo;
               </span>{' '}
               is not.
+            </p>
+            {/* The map results are the biggest single source of local clicks and we cannot sell
+                them — a Business Profile belongs to a real business at a real address, and we are
+                not going to create them. That makes this the honest version: it is advice the rep
+                gives away, and it happens to make the domain worth more to the renter. */}
+            <p className="mt-3">
+              If they already have a Google Business Profile — the listing that shows on the map —
+              pointing its website field at the rented domain is the most useful thing they can do
+              with it, and it costs you nothing to offer. We don&apos;t make those and never will:
+              a profile belongs to a real business at a real address. That is also why the map
+              results are not ours to promise.{' '}
+              <span className="text-zinc-200">
+                Say the trade-off out loud
+              </span>{' '}
+              — if they point their profile here and later stop renting, it points at a domain they
+              don&apos;t control. Raising it before they think of it is the difference between a
+              customer and a complaint.
             </p>
           </Card>
         </section>

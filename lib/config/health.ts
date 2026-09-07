@@ -88,6 +88,21 @@ export const CONFIG_GATES: ConfigGate[] = [
     // every refresh threw, a bare catch turned it into "no data", and the job reported ok. /status
     // could not report it because GSC had no gate — the same rule-7 hole that left partner audio
     // inert for five days. Either naming works, which is why this is requiresAnyOf.
+    key: 'gsc_auto_connect',
+    label: 'Search Console auto-connect (new domains become measurable)',
+    enabledBy: 'GSC_AUTO_CONNECT_ENABLED',
+    requires: [],
+    requiresAnyOf: [
+      ['GOOGLE_CLIENT_ID', 'GSC_CLIENT_ID'],
+      ['GOOGLE_CLIENT_SECRET', 'GSC_CLIENT_SECRET'],
+    ],
+    breaks:
+      'New geo-domains are never added to Search Console, so their rank can never be measured and ' +
+      'their campaigns keep the "unranked" default forever. The gsc-backfill cron no-ops while this ' +
+      'is off.',
+    degradeOnly: true,
+  },
+  {
     key: 'gsc',
     label: 'Search Console (rank sync)',
     requires: [],

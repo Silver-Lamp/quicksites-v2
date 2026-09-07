@@ -69,6 +69,10 @@
       "schedule": "0 13 * * *"
     },
     {
+      "path": "/api/cron/gsc-backfill",
+      "schedule": "0 7 * * *"
+    },
+    {
       "path": "/api/cron/geo-rank-sync",
       "schedule": "0 8 * * *"
     },

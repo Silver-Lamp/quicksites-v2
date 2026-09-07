@@ -83,6 +83,25 @@ export const CONFIG_GATES: ConfigGate[] = [
     breaks: 'Nothing works. Every page and API route that touches data fails with "supabaseUrl is required".',
   },
   {
+    // ⚠️ Added after geo-rank-sync ran daily for months syncing ZERO of 100 campaigns. The OAuth
+    // client was built from GSC_CLIENT_ID, which is not the name the credentials are stored under;
+    // every refresh threw, a bare catch turned it into "no data", and the job reported ok. /status
+    // could not report it because GSC had no gate — the same rule-7 hole that left partner audio
+    // inert for five days. Either naming works, which is why this is requiresAnyOf.
+    key: 'gsc',
+    label: 'Search Console (rank sync)',
+    requires: [],
+    requiresAnyOf: [
+      ['GOOGLE_CLIENT_ID', 'GSC_CLIENT_ID'],
+      ['GOOGLE_CLIENT_SECRET', 'GSC_CLIENT_SECRET'],
+    ],
+    breaks:
+      'Domain rank is never measured. Campaigns keep the "unranked" column DEFAULT, which surfaces ' +
+      'as "Not yet ranking" on the campaign banner and rate card — a default displayed as a finding, ' +
+      'for domains that may well be on page one.',
+    degradeOnly: true,
+  },
+  {
     key: 'commerce',
     label: 'Commerce (Stripe checkout + webhooks)',
     requires: ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'],

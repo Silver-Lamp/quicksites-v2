@@ -53,10 +53,18 @@ async function gscPosition(property: string): Promise<RankSnapshot | null> {
       clicks: Math.round(row?.clicks ?? 0),
       ctr: typeof row?.ctr === 'number' ? row.ctr : null,
     };
-  } catch {
+  } catch (err: any) {
+    // ⚠️ This used to be a bare `catch { return null }`. Every failure — an OAuth client built
+    // from an env var that does not exist, a revoked token, a 403 — became "no data", the loop
+    // skipped the campaign, and the job reported ok. It reported `synced: 0, campaigns: 100`
+    // every day for months and nobody could see why.
+    lastGscError = err?.message ? String(err.message).slice(0, 200) : 'unknown GSC error';
     return null;
   }
 }
+
+/** The most recent reason a lookup failed, surfaced in the cron result rather than discarded. */
+let lastGscError: string | null = null;
 
 /** Step a live subscription's price up to `fullCents`/mo (prorated). Best-effort. */
 async function stepSubscriptionUp(subId: string, fullCents: number, domain: string) {
@@ -154,7 +162,27 @@ async function handle(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, campaigns: campaigns.length, synced, steppedUp, recced });
+    // ⚠️ Syncing NOTHING out of a hundred campaigns is a failure, not a quiet success. Reporting
+    // ok:true here is why this ran daily for months writing no ranks at all, while every surface
+    // downstream displayed the column DEFAULT ('unranked') as though it were a measurement.
+    const noneSynced = campaigns.length > 0 && synced === 0;
+    return NextResponse.json(
+      {
+        ok: !noneSynced,
+        campaigns: campaigns.length,
+        synced,
+        steppedUp,
+        recced,
+        ...(noneSynced
+          ? {
+              error:
+                `Resolved ${campaigns.length} campaigns and synced none. ` +
+                (lastGscError ? `Last Search Console error: ${lastGscError}` : 'No campaign resolved to a connected property.'),
+            }
+          : {}),
+      },
+      { status: noneSynced ? 500 : 200 },
+    );
   });
 }
 

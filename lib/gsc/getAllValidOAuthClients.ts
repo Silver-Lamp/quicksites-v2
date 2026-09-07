@@ -1,5 +1,6 @@
 // lib/gsc/getAllValidOAuthClients.ts
 import { google } from 'googleapis';
+import { gscClientId, gscClientSecret } from '@/lib/gsc/oauthConfig';
 import { OAuth2Client } from 'google-auth-library'; 
 import { createClient } from '@supabase/supabase-js';
 
@@ -28,8 +29,8 @@ export async function getAllValidOAuthClients(): Promise<GSCClientEntry[]> {
   for (const token of tokens) {
     try {
       const oauth2Client = new google.auth.OAuth2(
-        process.env.GSC_CLIENT_ID!,
-        process.env.GSC_CLIENT_SECRET!
+        gscClientId(),
+        gscClientSecret()
       );
 
       oauth2Client.setCredentials({

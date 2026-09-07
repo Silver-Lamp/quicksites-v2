@@ -26,6 +26,10 @@ export type RateCardData = {
   rentedCount: number;
   /** host -> campaign id, so the UI can tell adopted inventory from inventory nobody can sell. */
   campaignIdByHost: Record<string, string>;
+  /** Set when the site-records lookup failed. Rendered loudly — see the note in loadRateCard. */
+  factsError: string | null;
+  /** host -> how many prospects are attached to its campaign. Zero is the common, important case. */
+  prospectCountByHost: Record<string, number>;
 };
 
 /** GSC property id -> bare host: "https://www.x.com/" and "sc-domain:x.com" both become "x.com". */
@@ -104,18 +108,30 @@ export async function loadRateCard(): Promise<RateCardData> {
     });
   }
 
-  const { data: tpls } = await supabaseAdmin
+  // ⚠️ SELECT THE CONTACT PATH, NOT THE WHOLE `data` BLOB, AND ONLY FOR THE HOSTS WE ASKED ABOUT.
+  // The first version of this fetched `data` for every site template: 242 rows averaging 307 kB,
+  // one of them 21 MB, ~72 MB in a single request. It failed — and because the error was
+  // destructured away, every domain silently lost its facts and the rate card reported "no city,
+  // no phone" and the LOWEST price tier for a domain that had all three. A wrong price that looks
+  // confident is worse than a page that says it is broken, which is why `factsError` is returned
+  // and rendered rather than logged.
+  const domainCandidates = sites.flatMap((s) => [s.host, `www.${s.host}`]);
+  const slugCandidates = sites.map((s) => s.host.replace(/\.[a-z]+$/, ''));
+  const { data: tpls, error: tplErr } = await supabaseAdmin
     .from('templates')
-    .select('slug, industry, custom_domain, data')
-    .eq('is_site', true)
-    .limit(2000);
+    .select('id, slug, industry, custom_domain, contact:data->identity->contact')
+    .or(`custom_domain.in.(${domainCandidates.join(',')}),slug.in.(${slugCandidates.join(',')})`)
+    .limit(500);
+
+  const factsError = tplErr ? `Could not load site records: ${tplErr.message}` : null;
 
   const facts: SiteFacts[] = [];
   for (const t of (tpls ?? []) as any[]) {
-    const contact = t?.data?.identity?.contact ?? {};
+    const contact = (t?.contact ?? {}) as Record<string, string | null | undefined>;
     const host = bareHost(t.custom_domain || '') || `${t.slug}.com`;
     facts.push({
       host,
+      templateId: t.id ?? null,
       slug: t.slug ?? null,
       city: contact.city ?? null,
       state: contact.state ?? null,
@@ -143,5 +159,28 @@ export async function loadRateCard(): Promise<RateCardData> {
   }
   const rentedCount = rateRows.filter((r) => rentedHosts.has(r.host)).length;
 
-  return { rows: rateRows, window, measuredAt, unreadable, rentedCount, campaignIdByHost };
+  // How many businesses are actually attached to each adopted domain. Adopting a domain feels like
+  // progress and changes nothing you can mail, so this number decides the next step shown.
+  const prospectCountByHost: Record<string, number> = {};
+  const campaignIds = Object.values(campaignIdByHost);
+  if (campaignIds.length) {
+    const { data: props } = await supabaseAdmin
+      .from('outreach_prospects')
+      .select('geo_campaign_id')
+      .in('geo_campaign_id', campaignIds)
+      .limit(5000);
+    const perCampaign = new Map<string, number>();
+    for (const r of (props ?? []) as any[]) {
+      const id = String(r.geo_campaign_id ?? '');
+      if (id) perCampaign.set(id, (perCampaign.get(id) ?? 0) + 1);
+    }
+    for (const [host, id] of Object.entries(campaignIdByHost)) {
+      prospectCountByHost[host] = perCampaign.get(id) ?? 0;
+    }
+  }
+
+  return {
+    rows: rateRows, window, measuredAt, unreadable, rentedCount, campaignIdByHost, factsError,
+    prospectCountByHost,
+  };
 }

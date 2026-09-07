@@ -15,6 +15,7 @@ const base: CoachInput = {
   top: null,
   channels: { mail: true, sms: true },
   readinessGate: false,
+  cohortlessCampaign: null,
 };
 
 const top = (over: Partial<CoachTop> = {}): CoachTop => ({
@@ -116,5 +117,43 @@ describe('computeRestaurantCoachState (restaurants playbook)', () => {
     expect(s.primary).toBeNull();
     expect(s.headline).toContain('sweep the next city');
     expect(s.steps.find((x) => x.key === 'demand')?.status).toBe('done');
+  });
+});
+
+describe('the attach step — the gap between a swept city and a mailable one', () => {
+  // ⚠️ Launching a campaign from a competition cluster links its cohort automatically, so this
+  // state only appears via the adopt path (#890): a campaign that looks finished, a screenful of
+  // prospects, and a mail step that finds no recipients. Without a step of its own it is invisible.
+  const withCohortless = (attachable: number) =>
+    computeCoachState({
+      ...base,
+      campaignCount: 1,
+      cohortlessCampaign: attachable ? { id: 'c-1', domain: 'arab-towing.com', attachable } : null,
+    });
+
+  it('surfaces a campaign with nobody attached, and offers the attach', () => {
+    const step = withCohortless(30).steps.find((s) => s.key === 'attach');
+    expect(step).toBeDefined();
+    expect(step!.status).toBe('active');
+    expect(step!.detail).toMatch(/arab-towing\.com has nobody attached/);
+    expect(step!.action).toMatchObject({ kind: 'attach-prospects', campaignId: 'c-1' });
+  });
+
+  it('says nothing when there is nobody to attach — no step for an unactionable state', () => {
+    expect(withCohortless(0).steps.find((s) => s.key === 'attach')).toBeUndefined();
+  });
+
+  it('carries the campaign id, so the action can preselect the picker', () => {
+    // Without this the step points at a control the operator still has to configure by hand,
+    // which is the complaint it exists to fix.
+    expect(withCohortless(5).steps.find((s) => s.key === 'attach')!.action!.campaignId).toBe('c-1');
+  });
+
+  it('places attach before the mail step, since mailing an empty cohort reaches nobody', () => {
+    const keys = withCohortless(5).steps.map((s) => s.key);
+    const a = keys.indexOf('attach');
+    const m = keys.indexOf('outreach');
+    expect(a).toBeGreaterThan(-1);
+    if (m > -1) expect(a).toBeLessThan(m);
   });
 });

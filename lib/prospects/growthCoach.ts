@@ -17,6 +17,7 @@ export type CoachActionKind =
   | 'refine'
   | 'mark-refined'
   | 'mail'
+  | 'attach-prospects'
   // Restaurants playbook (the vertical view's coach):
   | 'build-drafts'
   | 'launch-restaurant-comp'
@@ -60,6 +61,17 @@ export type CoachInput = {
   connectedRankCount: number;
   /** Campaigns actually ranking (page1 or ranking). */
   rankedCount: number;
+  /**
+   * A campaign that exists but has NOBODY attached, plus how many unattached no-website prospects
+   * are sitting there — the gap between "I swept a city" and "I can mail someone".
+   *
+   * ⚠️ This state is invisible in the funnel without a step of its own. Launching a campaign from a
+   * competition cluster links its cohort automatically, so for years the only way to get here was
+   * the happy path. Adopting an already-ranked domain does not link anything, which leaves a
+   * campaign that looks finished, a screenful of prospects, and a mail step that finds no
+   * recipients — with nothing on screen naming what is missing.
+   */
+  cohortlessCampaign: { id: string; domain: string; attachable: number } | null;
   top: CoachTop | null;
   channels: { mail: boolean; sms: boolean };
   readinessGate: boolean;
@@ -80,6 +92,21 @@ export function computeCoachState(i: CoachInput): CoachState {
     steps.push({ key: 'launch', title: 'Grab the domain', status: 'active', detail: `${i.openCompetitionGroups} competition cluster${i.openCompetitionGroups === 1 ? '' : 's'} ready to launch`, learn: 'A cluster of no-website competitors → one exact-match geo-domain you own, rank, and rent.', action: { kind: 'launch-geo', label: `Launch a geo-domain campaign` } });
   } else {
     steps.push({ key: 'launch', title: 'Grab the domain', status: i.campaignCount > 0 ? 'done' : 'todo', detail: i.campaignCount > 0 ? `${i.campaignCount} campaign${i.campaignCount === 1 ? '' : 's'} launched` : 'Sweep more to find ≥2 no-website competitors in one trade.', learn: 'A cluster of no-website competitors → one exact-match geo-domain you own, rank, and rent.' });
+  }
+
+  // 2b) Attach a cohort — only when a campaign has nobody and there are people to give it.
+  if (i.cohortlessCampaign && i.cohortlessCampaign.attachable > 0) {
+    const c = i.cohortlessCampaign;
+    steps.push({
+      key: 'attach',
+      title: 'Attach businesses',
+      status: 'active',
+      detail: `${c.domain} has nobody attached — ${c.attachable} no-website prospect${c.attachable === 1 ? '' : 's'} ready.`,
+      learn:
+        'A campaign is a domain plus the businesses competing for it. Until they are attached the ' +
+        'domain has no one to mail, however well it ranks.',
+      action: { kind: 'attach-prospects', label: `Attach ${c.attachable} to ${c.domain}`, campaignId: c.id },
+    });
   }
 
   // 3) Rank (mostly passive — connect GSC, then wait)

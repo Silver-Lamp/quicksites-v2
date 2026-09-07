@@ -502,15 +502,16 @@ export default function ProspectsClient({
   // flow ever linked a cohort, so a domain adopted via "make rentable" has nobody attached and
   // mail-postcards finds zero recipients while this list is full of businesses.
   const [attachTo, setAttachTo] = useState('');
-  const attachSelected = async (reassign = false) => {
-    if (!attachTo || !selected.size) return;
+  /** Attach a whole tier without selecting anything — the same shape as "Build all no-website". */
+  const attachIds = async (ids: string[], reassign = false) => {
+    if (!attachTo || !ids.length) return;
     setBusy('attach');
     setMsg(null);
     try {
       const res = await fetch('/api/admin/prospects/attach-to-campaign', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ campaignId: attachTo, prospectIds: [...selected], reassign }),
+        body: JSON.stringify({ campaignId: attachTo, prospectIds: ids, reassign }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -518,7 +519,7 @@ export default function ProspectsClient({
         // confirmation names the cost rather than asking a bare "are you sure?".
         if (j?.code === 'would_reassign' && !reassign) {
           const names = Array.isArray(j.names) && j.names.length ? ` (${j.names.join(', ')})` : '';
-          if (window.confirm(`${j.error}${names}\n\nMove them anyway?`)) return attachSelected(true);
+          if (window.confirm(`${j.error}${names}\n\nMove them anyway?`)) return attachIds(ids, true);
           setMsg('Nothing attached.');
           return;
         }
@@ -541,6 +542,7 @@ export default function ProspectsClient({
       setBusy(null);
     }
   };
+  const attachSelected = () => attachIds([...selected]);
 
   // One-click lead-list build: take EVERY discovered no-website prospect (the highest-
   // intent tier) and build claimable ordering-site drafts, no manual selection. The
@@ -1069,7 +1071,17 @@ export default function ProspectsClient({
           hasAddressBlocker: !!rd?.hard.some((b) => b.id === 'no-nap' || b.id === 'no-click-to-call'),
         }
       : null;
+    // A campaign nobody is attached to, plus the people who could be. Prefer one whose town
+    // matches prospects we actually have, so the coach does not point at an empty city.
+    const attachable = prospects.filter((p) => p.lead_tier === 'no_website' && !p.geo_campaign_id);
+    const cohortless = campaigns.find((cc) => !prospects.some((p) => p.geo_campaign_id === cc.id));
+    const cohortlessCampaign =
+      cohortless && attachable.length
+        ? { id: cohortless.id, domain: cohortless.domain, attachable: attachable.length }
+        : null;
+
     return computeCoachState({
+      cohortlessCampaign,
       prospectCount: prospects.length,
       noWebsiteCount,
       openCompetitionGroups,
@@ -1089,6 +1101,12 @@ export default function ProspectsClient({
       case 'discover':
         document.getElementById('discover-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         document.getElementById('discover-city')?.focus();
+        break;
+      case 'attach-prospects':
+        // Set the picker for them, then take them to the list — the step is only obvious if the
+        // control it points at arrives ready to press.
+        if (a.campaignId) setAttachTo(a.campaignId);
+        revealProspects();
         break;
       case 'launch-geo':
         document.getElementById('competition-cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2051,7 +2069,7 @@ export default function ProspectsClient({
                   onChange={(e) => setAttachTo(e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                   className="rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm text-white"
-                  title="Attach the selected prospects to a rentable domain, so they can be mailed"
+                  title="Attach prospects to a rentable domain, so they can be mailed"
                 >
                   <option value="">Attach to…</option>
                   {campaigns.map((c) => (
@@ -2060,16 +2078,35 @@ export default function ProspectsClient({
                     </option>
                   ))}
                 </select>
+                {/* ⚠️ The common case needs NO selection. After building sites for a tier the next
+                    move is "attach that tier", and requiring a per-row tick first left the button
+                    greyed out with nothing on screen explaining what was missing. Mirrors the
+                    "Build all no-website" action directly above it. */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    attachSelected(false);
+                    const ids = selected.size ? [...selected] : byTier.no_website.map((p) => p.id);
+                    attachIds(ids);
                   }}
-                  disabled={!attachTo || !selected.size || busy === 'attach'}
+                  disabled={!attachTo || busy === 'attach' || (!selected.size && !byTier.no_website.length)}
+                  title={
+                    !attachTo
+                      ? 'Pick a domain first'
+                      : selected.size
+                        ? `Attach the ${selected.size} selected`
+                        : `Attach all ${byTier.no_website.length} no-website prospects`
+                  }
                   className="rounded-lg border border-sky-600/60 px-3 py-2 text-sm font-medium text-sky-300 hover:bg-sky-600/10 disabled:opacity-40"
                 >
-                  {busy === 'attach' ? 'Attaching…' : `Attach ${selected.size || ''}`}
+                  {busy === 'attach'
+                    ? 'Attaching…'
+                    : selected.size
+                      ? `Attach ${selected.size} selected`
+                      : `Attach all no-website (${byTier.no_website.length})`}
                 </button>
+                {!attachTo && (
+                  <span className="text-xs text-neutral-500">← pick a domain</span>
+                )}
               </>
             )}
           </div>
@@ -2078,8 +2115,26 @@ export default function ProspectsClient({
         {(['no_website', 'dated', 'has_site'] as const).map((tier) =>
           byTier[tier].length ? (
             <div key={tier} className="mt-4 first:mt-0">
-            <div className="mb-1 text-xs font-medium text-neutral-500">
-              {TIER_META[tier].label} · {byTier[tier].length}
+            <div className="mb-1 flex items-center gap-2 text-xs font-medium text-neutral-500">
+              <span>
+                {TIER_META[tier].label} · {byTier[tier].length}
+              </span>
+              {/* Selection lived only in per-row checkboxes, which are easy to miss when the
+                  action that needs them sits in a header far above the rows. */}
+              <button
+                onClick={() => {
+                  const ids = byTier[tier].map((p) => p.id);
+                  const allOn = ids.every((id) => selected.has(id));
+                  setSelected((prev) => {
+                    const next = new Set(prev);
+                    for (const id of ids) (allOn ? next.delete(id) : next.add(id));
+                    return next;
+                  });
+                }}
+                className="rounded border border-neutral-700 px-1.5 py-0.5 text-[11px] text-neutral-400 hover:text-white"
+              >
+                {byTier[tier].every((p) => selected.has(p.id)) ? 'clear' : 'select all'}
+              </button>
             </div>
             <div className="max-h-[26rem] overflow-auto rounded-xl border border-neutral-800">
               <table className="min-w-full text-sm">

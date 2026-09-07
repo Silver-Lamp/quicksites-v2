@@ -359,6 +359,24 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   strings). The lesson is not "remember the second array": **walk the whole tree** (see
   `scripts/publish-geo-campaigns.mjs#walkStrings` / `stripTestimonialBlocks`), so a fourth copy
   appearing later cannot defeat the sweep.
+- **Live-claim hygiene (2026-09-07): three scripts, three buckets, zero real claims.** Auto-built
+  sites used to assert facts only an owner knows (24/7, "licensed & insured", 30-minute ETAs,
+  guarantees) under names of businesses we never spoke to. `scripts/audit-live-claims.mjs` (read-only)
+  reports **three buckets, not one number** — real claims / pricing *invitations* in marketing copy
+  ("Get a free quote", kept by #906's decision because it is the CTA button beside it) / reader advice
+  the regex cannot tell from a claim ("Battery Age Over 3 Years"), excused by name with a reason in
+  `lib/rebuild/liveClaimRewrites.ts` — and prints three of the strings each bucket counted. Fixes:
+  `scrub-live-claims.mjs` (#906) REPLACES FAQ answers and trims subheadlines; `rename-live-claims.mjs`
+  applies the hand-read rewrite map for what a filter cannot do — service names, headings, blog prose,
+  the scaffold's "Why choose us" bullets (**the scaffold itself emitted "Licensed & insured" for every
+  split-layout site**; fixed at source + 24 `starter-*` seeds), and a literal `[Your Company Name]`
+  that shipped inside blog posts on three live custom domains (filled only for slugs with a known name;
+  the script refuses to guess). Both write through `scripts/lib/republishTemplate.mjs`, which carries
+  the legacy `sites` snapshot repoint without which a custom domain never changes. ⚠️ Two traps: a
+  rewrite target must stop at a **tag boundary** — `for <strong>24/7 towing…` never contains
+  `for 24/7 towing…`, and the first apply missed 20 strings on 2 sites that only the re-audit caught;
+  and the script lists every map entry with its match count, because an entry that matches nothing is
+  a silent no-op. Re-derive, never remember: `npx tsx scripts/audit-live-claims.mjs`.
 - Stripe Connect onboarding is consolidated on `payment_accounts` (fee config = `platform_fee_percent`/`collect_platform_fee`/`platform_fee_min_cents`). The legacy `merchant_payment_accounts` table + bps fee columns (`merchants.default_platform_fee_bps`, `sites.platform_fee_bps`) were retired in `supabase/migrations/20260701_retire_legacy_connect_bps.sql`. See [`docs/MONETIZATION.md`](docs/MONETIZATION.md).
 - Large artifacts (`quicksites-export.zip`, `get-pip.py`, `.tsbuildinfo`, lint reports) and dead dirs (`_pages-legacy/`, `_deprecated__domains/`, `_deprecating_sites/`) were removed from git in the cleanup milestone — the tree is clean of them today.
 - Two `admin/` locations: `app/admin/` (UI) and a top-level `admin/` (libs/tooling, incl. the master block schema). Don't confuse them.

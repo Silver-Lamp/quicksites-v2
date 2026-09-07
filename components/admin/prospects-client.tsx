@@ -16,6 +16,7 @@ import { effectivePriceCents, formatCents, intervalSuffix } from '@/lib/outreach
 import { nextActionLabel } from '@/components/admin/templates/campaign-badge';
 import { scoreTerritories } from '@/lib/prospects/territoryScore';
 import { buildRankedOpportunities } from '@/lib/prospects/rankedOpportunities';
+import { matchesCampaign } from '@/lib/outreach/attachProspects';
 import DomainBuyListPlanner from '@/components/admin/domain-buy-list-planner';
 import CollapsibleSection, { openSection } from '@/components/admin/collapsible-section';
 import DomainCostSummary from '@/components/admin/domain-cost-summary';
@@ -1073,8 +1074,15 @@ export default function ProspectsClient({
       : null;
     // A campaign nobody is attached to, plus the people who could be. Prefer one whose town
     // matches prospects we actually have, so the coach does not point at an empty city.
-    const attachable = prospects.filter((p) => p.lead_tier === 'no_website' && !p.geo_campaign_id);
     const cohortless = campaigns.find((cc) => !prospects.some((p) => p.geo_campaign_id === cc.id));
+    // Count only those that FIT it — same trade, same town. Counting every no-website prospect
+    // would have the coach promise "30 ready" while the button offers 2, and the coach's number
+    // is the one that sets the expectation.
+    const attachable = cohortless
+      ? prospects.filter(
+          (p) => p.lead_tier === 'no_website' && !p.geo_campaign_id && matchesCampaign(p as any, cohortless as any),
+        )
+      : [];
     const cohortlessCampaign =
       cohortless && attachable.length
         ? { id: cohortless.id, domain: cohortless.domain, attachable: attachable.length }
@@ -1190,6 +1198,17 @@ export default function ProspectsClient({
     for (const p of prospects) (g[p.lead_tier] ?? g.has_site).push(p);
     return g;
   }, [prospects]);
+
+  // Who genuinely fits the domain in the Attach picker. Declared here because it reads byTier.
+  const attachCampaign = useMemo(() => campaigns.find((c) => c.id === attachTo) ?? null, [campaigns, attachTo]);
+  const attachMatching = useMemo(
+    () =>
+      attachCampaign
+        ? byTier.no_website.filter((p) => !p.geo_campaign_id && matchesCampaign(p as any, attachCampaign as any))
+        : [],
+    [attachCampaign, byTier],
+  );
+  const attachSkipped = attachCampaign ? byTier.no_website.length - attachMatching.length : 0;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 text-white">
@@ -2078,23 +2097,25 @@ export default function ProspectsClient({
                     </option>
                   ))}
                 </select>
-                {/* ⚠️ The common case needs NO selection. After building sites for a tier the next
-                    move is "attach that tier", and requiring a per-row tick first left the button
-                    greyed out with nothing on screen explaining what was missing. Mirrors the
-                    "Build all no-website" action directly above it. */}
+                {/* ⚠️ The bulk default is "everything that FITS this domain", not "everything with
+                    no website". The Arab sweep returned auto-repair shops, a moving company and a
+                    vegan kitchen in Washington; attaching those to arab-towing.com builds a cohort
+                    that looks mailable and is mostly a wrong pitch. A manual selection still wins,
+                    so a neighbouring town is a deliberate choice rather than a default. */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    const ids = selected.size ? [...selected] : byTier.no_website.map((p) => p.id);
-                    attachIds(ids);
+                    attachIds(selected.size ? [...selected] : attachMatching.map((p) => p.id));
                   }}
-                  disabled={!attachTo || busy === 'attach' || (!selected.size && !byTier.no_website.length)}
+                  disabled={!attachTo || busy === 'attach' || (!selected.size && !attachMatching.length)}
                   title={
                     !attachTo
                       ? 'Pick a domain first'
                       : selected.size
-                        ? `Attach the ${selected.size} selected`
-                        : `Attach all ${byTier.no_website.length} no-website prospects`
+                        ? `Attach the ${selected.size} you selected`
+                        : attachMatching.length
+                          ? `Attach the ${attachMatching.length} no-website ${attachCampaign?.industry_key ?? ''} prospect${attachMatching.length === 1 ? '' : 's'} in ${attachCampaign?.city ?? 'that town'}. ${attachSkipped} others are a different trade or town — tick them by hand if you want them.`
+                          : `No no-website prospects match ${attachCampaign?.domain ?? 'this domain'}'s trade and town. Tick rows by hand to attach anyway.`
                   }
                   className="rounded-lg border border-sky-600/60 px-3 py-2 text-sm font-medium text-sky-300 hover:bg-sky-600/10 disabled:opacity-40"
                 >
@@ -2102,11 +2123,15 @@ export default function ProspectsClient({
                     ? 'Attaching…'
                     : selected.size
                       ? `Attach ${selected.size} selected`
-                      : `Attach all no-website (${byTier.no_website.length})`}
+                      : `Attach ${attachMatching.length} matching`}
                 </button>
-                {!attachTo && (
+                {!attachTo ? (
                   <span className="text-xs text-neutral-500">← pick a domain</span>
-                )}
+                ) : !selected.size && attachSkipped > 0 ? (
+                  <span className="text-xs text-neutral-500">
+                    {attachSkipped} others are a different trade or town
+                  </span>
+                ) : null}
               </>
             )}
           </div>
@@ -2141,10 +2166,19 @@ export default function ProspectsClient({
                 <tbody className="divide-y divide-neutral-800">
                   {byTier[tier].map((p) => (
                     <tr key={p.id} className="[&>td]:px-4 [&>td]:py-2.5 align-middle">
+                      {/* ⚠️ Always rendered. This used to be gated on status === 'discovered',
+                          which was right when BUILD was the only bulk action — you cannot build a
+                          site twice. But attach applies to BUILT rows, which are precisely the ones
+                          worth attaching, so building a tier made its rows unselectable while
+                          "select all" went on selecting them: 30 selected, nothing to untick. */}
                       <td className="w-8">
-                        {p.status === 'discovered' && (
-                          <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSel(p.id)} />
-                        )}
+                        <input
+                          type="checkbox"
+                          checked={selected.has(p.id)}
+                          onChange={() => toggleSel(p.id)}
+                          aria-label={`Select ${p.business_name ?? 'prospect'}`}
+                          className="h-4 w-4 accent-sky-500"
+                        />
                       </td>
                       <td className="font-medium">
                         {p.business_name}

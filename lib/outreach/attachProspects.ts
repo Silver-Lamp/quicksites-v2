@@ -66,3 +66,27 @@ export function planAttachment(
 
   return { free, alreadyHere, elsewhere, offCity };
 }
+
+
+export type CampaignMatch = { industry_key?: string | null; city?: string | null };
+
+/**
+ * Is this prospect actually a candidate for THIS campaign — same trade, same town?
+ *
+ * ⚠️ The bulk "attach everything with no website" default was wrong in a way that only shows up
+ * when you read the list: a sweep for towing near Arab returned auto-repair shops, a moving
+ * company, and a vegan kitchen in Washington. Attaching those to arab-towing.com produces a cohort
+ * that looks mailable and is mostly a wrong pitch — an exact-match domain means nothing to a
+ * business in another trade, and less than nothing to one in another state.
+ *
+ * The trade comparison is exact because industry_key is a controlled value on both sides. The town
+ * comparison is loose, because an address is free text.
+ */
+export function matchesCampaign(
+  p: Pick<AttachProspect, 'address'> & { industry_key?: string | null },
+  campaign: CampaignMatch,
+): boolean {
+  const wantTrade = String(campaign.industry_key ?? '').trim();
+  if (wantTrade && String(p.industry_key ?? '').trim() !== wantTrade) return false;
+  return addressLooksLike(p.address, campaign.city);
+}

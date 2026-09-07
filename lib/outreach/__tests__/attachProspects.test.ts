@@ -69,3 +69,36 @@ describe('address matching does not invent verdicts', () => {
     expect(addressLooksLike('651 Sundown Dr NW, ARAB, AL', 'Arab')).toBe(true);
   });
 });
+
+describe('matchesCampaign — what "attach all" should actually mean', () => {
+  const { matchesCampaign } = require('../attachProspects');
+  const towingInArab = { industry_key: 'towing', address: '2317 N Brindlee Mountain Pkwy, Arab, AL 35016, USA' };
+  const campaign = { industry_key: 'towing', city: 'Arab' };
+
+  it('accepts the same trade in the same town', () => {
+    expect(matchesCampaign(towingInArab, campaign)).toBe(true);
+  });
+
+  it('rejects a different trade, however local', () => {
+    // Real rows from the Arab sweep: an auto-repair shop and a moving company were queued for
+    // arab-towing.com by "attach all no-website".
+    expect(matchesCampaign({ ...towingInArab, industry_key: 'auto_repair' }, campaign)).toBe(false);
+    expect(matchesCampaign({ ...towingInArab, industry_key: 'moving' }, campaign)).toBe(false);
+  });
+
+  it('rejects the right trade in the wrong town', () => {
+    expect(matchesCampaign({ industry_key: 'towing', address: 'Scottsboro, AL 35769, USA' }, campaign)).toBe(false);
+  });
+
+  it('rejects the thing that made this obvious — a vegan kitchen in another state', () => {
+    expect(matchesCampaign({ industry_key: 'restaurant', address: 'Marrowdale, WA' }, campaign)).toBe(false);
+  });
+
+  it('does not filter on trade when the campaign has none to compare', () => {
+    expect(matchesCampaign({ industry_key: 'anything', address: 'Arab, AL' }, { city: 'Arab' })).toBe(true);
+  });
+
+  it('rejects a prospect with no readable address rather than assuming it is local', () => {
+    expect(matchesCampaign({ industry_key: 'towing', address: null }, campaign)).toBe(false);
+  });
+});

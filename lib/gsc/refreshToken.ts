@@ -1,5 +1,6 @@
 // lib/gsc/refreshToken.ts
 import { createClient } from '@supabase/supabase-js';
+import { gscClientId, gscClientSecret } from '@/lib/gsc/oauthConfig';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,8 +35,8 @@ export async function refreshGSC(domain: string): Promise<string> {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+      client_id: gscClientId(),
+      client_secret: gscClientSecret(),
       refresh_token,
       grant_type: 'refresh_token',
     }),

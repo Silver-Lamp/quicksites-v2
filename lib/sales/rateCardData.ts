@@ -18,6 +18,12 @@ export type RateCardData = {
   measuredAt: string | null;
   /** Properties GSC returned an error for — surfaced, never silently dropped. */
   unreadable: { host: string; error: string }[];
+  /**
+   * How many of these domains are actually rented right now, derived from live subscriptions.
+   * ⚠️ Carried in the same payload as the valuation ON PURPOSE — a capacity figure without this
+   * number beside it reads as revenue, and this is the number that stops that happening.
+   */
+  rentedCount: number;
 };
 
 /** GSC property id -> bare host: "https://www.x.com/" and "sc-domain:x.com" both become "x.com". */
@@ -116,5 +122,17 @@ export async function loadRateCard(): Promise<RateCardData> {
     });
   }
 
-  return { rows: buildRateCard(sites, facts), window, measuredAt, unreadable };
+  const rateRows = buildRateCard(sites, facts);
+
+  // Rented = a campaign on one of these domains carrying a live subscription. Derived rather than
+  // assumed: the proven domains are not currently campaigns at all, so this SHOULD be zero — and a
+  // hardcoded zero would keep reading zero on the day one of them sells.
+  const { data: subs } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('domain, subscription_status')
+    .in('subscription_status', ['active', 'trialing', 'past_due']);
+  const rentedHosts = new Set((subs ?? []).map((c: any) => bareHost(String(c.domain ?? ''))));
+  const rentedCount = rateRows.filter((r) => rentedHosts.has(r.host)).length;
+
+  return { rows: rateRows, window, measuredAt, unreadable, rentedCount };
 }

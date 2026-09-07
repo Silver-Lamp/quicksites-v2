@@ -388,6 +388,52 @@ export default function ForSalesPage() {
               customer and a complaint.
             </p>
           </Card>
+
+          {/* ⚠️ This card exists to stop a rep spending calls on the wrong product. We also build
+              sites for businesses that have none, and that product is deliberately NOT theirs —
+              a commission on $19/month cannot pay for a phone call, so it is self-serve or it is
+              nothing. Naming it turns a "no" on the rental into somewhere to send them, instead of
+              a rep quietly inventing a cheaper offer to save a dead lead. */}
+          <Card
+            title="The other product — and why it isn’t a call"
+            tag="not yours"
+            tone="amber"
+            more={
+              <>
+                <p>
+                  We can build a working site for any business that has none, straight from their
+                  public listing, for pennies. It goes out free and watermarked until they claim it.
+                  Claimed, it costs them a small fraction of a rental — the tiers are on{' '}
+                  <a
+                    href="/business-plan"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300"
+                  >
+                    the business plan
+                  </a>
+                  , written as a proposal rather than a rate, because nobody has been asked to pay
+                  one yet.
+                </p>
+                <p>
+                  That price is why it isn’t yours to sell: half of it, monthly, would not cover the
+                  call that sold it. It is a claim link and a card on file, or it is nothing.
+                </p>
+                <p>
+                  <span className="text-zinc-200">What it’s good for on your call:</span> a prospect
+                  who won’t rent the exact-match domain but has no website at all is not a dead
+                  lead. Send them the claim link and move on — you keep the call short and they
+                  still end up a customer.
+                </p>
+              </>
+            }
+          >
+            Two different things get sold here. You sell the{' '}
+            <span className="text-zinc-200">exact-match domain</span> — exclusive, one per city and
+            trade, and worth a phone call. The{' '}
+            <span className="text-zinc-200">build-them-a-website</span> product is self-serve on
+            purpose, because a commission on it would not cover the call that sold it.
+          </Card>
         </section>
 
         {/* The call */}
@@ -518,10 +564,14 @@ export default function ForSalesPage() {
           </h2>
           <div className="mt-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6">
             <p className="text-lg font-semibold text-white">
-              Straight 50/50 on anything you bring on — for as long as it stays.
+              Straight 50/50 on every rental you bring on — for as long as it stays.
             </p>
             <p className="mt-2 text-sm leading-relaxed text-zinc-300">
-              Every account rents at{' '}
+              {/* ⚠️ "anything you bring on" used to be literally true and is now too broad: it
+                  would cover the $19/month self-serve site at $9.50 a month, which is not a
+                  product anyone should be making calls about. Scoped to rentals, with the open
+                  question named rather than answered by a page. */}
+              Every <span className="font-semibold text-zinc-200">rental</span> account rents at{' '}
               <span className="font-semibold text-emerald-200">$99/month</span> and{' '}
               <span className="font-semibold text-emerald-200">$49.50 of it is yours</span>, every
               month, for the life of the account. Not a first-month bonus, not a shrinking trail —

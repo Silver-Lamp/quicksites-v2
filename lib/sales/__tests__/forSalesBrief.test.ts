@@ -98,3 +98,33 @@ describe('the map results are described as not ours to sell', () => {
     expect(BRIEF).toMatch(/don\W*t make those|never will|belongs to a real business/i);
   });
 });
+
+describe('two products, and only one of them is the rep’s', () => {
+  // ⚠️ We now build sites for businesses that have none. That product is self-serve BECAUSE a
+  // commission on it cannot pay for the call that sold it. A rep brief that presents both as
+  // sellable sends someone to spend an hour closing nine dollars a month.
+  it('names the other product and says it is not a call', () => {
+    expect(BRIEF).toMatch(/other product/i);
+    expect(BRIEF).toMatch(/self-serve/i);
+  });
+
+  it('scopes the 50/50 to rentals rather than to "anything you bring on"', () => {
+    // The old wording was literally true when there was one product and is too broad now.
+    expect(BRIEF).not.toMatch(/50\/50 on anything you bring on/i);
+    expect(BRIEF).toMatch(/50\/50 on every rental/i);
+  });
+
+  it('quotes no price for the self-serve tiers, because none has been paid', () => {
+    // The business plan calls those numbers a proposal, not a rate. A rep page stating them as
+    // prices would make a guess look settled — and a rep would then quote it on a call.
+    const card = BRIEF.slice(BRIEF.indexOf('other product'), BRIEF.indexOf('other product') + 2500);
+    expect(card).not.toMatch(/\$\s?\d/);
+    expect(card).toMatch(/proposal rather than a rate/i);
+  });
+
+  it('gives the rep something to do with a prospect who wants only a website', () => {
+    // The point of naming it: a "no" on the rental stops being a dead lead, so nobody invents a
+    // cheaper offer on the spot to rescue one.
+    expect(BRIEF).toMatch(/not a dead lead|claim link and move on/i);
+  });
+});

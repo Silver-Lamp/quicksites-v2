@@ -12,6 +12,7 @@ import { loadRateCard } from '@/lib/sales/rateCardData';
 import { valuePortfolio } from '@/lib/sales/portfolioValuation';
 import { formatCents } from '@/lib/outreach/geoPricing';
 import RefreshButton from './refresh-button';
+import AdoptButton from './adopt-button';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -25,7 +26,7 @@ export default async function RateCardPage() {
   const admin = await getAdminUser();
   if (!admin) return <div className="p-8 text-zinc-400">Forbidden.</div>;
 
-  const { rows, window, measuredAt, unreadable, rentedCount } = await loadRateCard();
+  const { rows, window, measuredAt, unreadable, rentedCount, campaignIdByHost } = await loadRateCard();
   const proven = rows.filter((r) => r.qualifies);
   // ⚠️ A CAPACITY figure, not a forecast. `rentedToday` is rendered beside every total below for
   // exactly one reason: while it is zero, each of these numbers is a sentence about inventory and
@@ -109,11 +110,16 @@ export default async function RateCardPage() {
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <div className="font-mono text-xl font-bold text-white tabular-nums">
-                      {formatCents(r.fullCents)}
+                  <div className="flex flex-col items-end gap-2 text-right">
+                    <div>
+                      <div className="font-mono text-xl font-bold text-white tabular-nums">
+                        {formatCents(r.fullCents)}
+                      </div>
+                      <div className="text-[10px] uppercase tracking-wider text-zinc-600">page-one rate / mo</div>
                     </div>
-                    <div className="text-[10px] uppercase tracking-wider text-zinc-600">page-one rate / mo</div>
+                    {/* A domain that ranks but is not a campaign is inventory no rep can sell —
+                        which was the whole finding. This is the one click that fixes it. */}
+                    <AdoptButton host={r.host} campaignId={campaignIdByHost[r.host] ?? null} />
                   </div>
                 </div>
 

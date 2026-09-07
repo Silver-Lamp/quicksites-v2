@@ -11,6 +11,7 @@
 // OpenAI access goes through meterLLMCall so cost is budgeted + logged.
 
 import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
+import { scrubFaqs, scrubText } from '@/lib/rebuild/scrubInventedClaims';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { LABEL_TO_KEY, KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { ScrapedSite, MenuPage } from '@/lib/rebuild/scrapeSite';
@@ -90,7 +91,16 @@ export async function inferSiteSpec(
   const sys =
     'You are rebuilding a small business website. From the scraped signals of their ' +
     'CURRENT site, infer the business and write fresh, concise, conversion-oriented ' +
-    'copy for a new site. Return JSON ONLY with keys: ' +
+    'copy for a new site. ' +
+    // ⚠️ "Conversion-oriented" is exactly the instruction that produces "we're here for you 24/7"
+    // and "fully licensed and insured" when the source has little to say. Those are claims about a
+    // REAL business whose hours, insurance and pricing we do not know. Grounded copy only; the
+    // output is scrubbed regardless (scrubInventedClaims), because a prompt is a request.
+    'Only state a fact if it appears in the source content below. NEVER state hours, availability ' +
+    '("24/7", "around the clock"), response or arrival times, licensing, insurance, bonding, ' +
+    'guarantees, warranties, years in business, or prices unless the source says so verbatim. ' +
+    'Where a customer would want one and the source is silent, invite the question instead. ' +
+    'Return JSON ONLY with keys: ' +
     'business_name (string), industry (prefer one of the known labels when it fits, ' +
     'else a concise 1-3 word label), headline (<=8 words), subheadline (<=18 words), ' +
     'about (2-3 sentences), services (array of 5 short service names), ' +
@@ -277,7 +287,10 @@ export function parseOriginal(raw: any): RebuildSpec['original'] | undefined {
       }))
       .filter((f: { q: string }) => f.q)
       .slice(0, 8);
-    if (faqs.length) out.faqs = faqs;
+    // Drop any FAQ whose ANSWER asserts something only the owner knows. The question is never the
+    // problem — "Are you licensed and insured?" is a fine thing to be asked.
+    const clean = scrubFaqs(faqs).faqs.map((f) => ({ q: f.q ?? '', a: f.a ?? '' })).filter((f) => f.q);
+    if (clean.length) out.faqs = clean;
   }
   return Object.keys(out).length ? out : undefined;
 }

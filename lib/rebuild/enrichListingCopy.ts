@@ -19,6 +19,7 @@
 
 import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
+import { scrubText, scrubFaqs } from '@/lib/rebuild/scrubInventedClaims';
 import type { RebuildSpec } from '@/lib/rebuild/inferSiteSpec';
 import {
   buildDeterministicSeo,
@@ -89,7 +90,18 @@ async function runEnrich(spec: RebuildSpec, ctx: ListingCopyContext): Promise<Re
     'and SEO fields so it ranks for brand searches, and include the city/cuisine so it ' +
     'ranks for "<category> in <city>" searches. Only mention a city/state if one is ' +
     'provided below — NEVER invent, guess, or infer a location; if none is given, omit the ' +
-    'location entirely (do not write "City", "ST", or a placeholder). Never output ' +
+    'location entirely (do not write "City", "ST", or a placeholder). ' +
+    // ⚠️ The same NEVER-invent rule, applied to operational facts. We know this business's name,
+    // address, phone and Google category and NOTHING else — not their hours, response time,
+    // insurance, pricing or tenure. Asked for conversion copy from that, a model writes "we're
+    // here for you 24/7" and "fully licensed and insured" about a real third party. The output is
+    // scrubbed regardless (scrubInventedClaims); this is here so the model rarely has to be
+    // corrected, NOT because an instruction is a guard.
+    'NEVER state hours, availability ("24/7", "around the clock"), response or arrival times, ' +
+    'licensing, insurance, bonding, guarantees, warranties, years in business, or prices ' +
+    '(including "free estimate" or "free quote") — you do not know any of these, and they are ' +
+    'claims about a real business. Where a customer would want one, invite the question instead: ' +
+    '"Call and we\'ll tell you what we can do today." Never output ' +
     'underscores, snake_case, or raw category codes; write it the way a human would say it. ' +
     'Return JSON ONLY with keys: ' +
     'headline (<=8 words), subheadline (<=18 words), about (2-3 warm sentences), ' +
@@ -132,10 +144,13 @@ async function runEnrich(spec: RebuildSpec, ctx: ListingCopyContext): Promise<Re
         /* keep templated fallbacks below */
       }
 
+      // ⚠️ Enforced on the OUTPUT, not merely asked for. A model that ignores the instruction —
+      // or a future model, or an edited prompt — must still be unable to put "fully licensed and
+      // insured" on a real business's page.
       const faqs = Array.isArray(parsed.faqs)
-        ? parsed.faqs
-            .map((f: any) => ({ q: cap(f?.q ?? '', 160), a: cap(f?.a ?? '', 400) }))
-            .filter((f: { q: string }) => f.q)
+        ? scrubFaqs(parsed.faqs.map((f: any) => ({ q: cap(f?.q ?? '', 160), a: cap(f?.a ?? '', 400) })))
+            .faqs.map((f) => ({ q: f.q ?? '', a: f.a ?? '' }))
+            .filter((f) => f.q)
             .slice(0, 3)
         : [];
 
@@ -145,10 +160,12 @@ async function runEnrich(spec: RebuildSpec, ctx: ListingCopyContext): Promise<Re
       // location. With a real place, trust the (grounded) LLM SEO.
       const hasPlace = !!place;
       const value: Partial<RebuildSpec> = {
-        headline: stripPlaceholderLocale(cap(parsed.headline || spec.headline, 80)) || spec.headline,
+        headline:
+          scrubText(stripPlaceholderLocale(cap(parsed.headline || spec.headline, 80))).text || spec.headline,
         subheadline:
-          stripPlaceholderLocale(cap(parsed.subheadline || spec.subheadline, 160)) || spec.subheadline,
-        about: cap(parsed.about || spec.about, 600) || spec.about,
+          scrubText(stripPlaceholderLocale(cap(parsed.subheadline || spec.subheadline, 160))).text ||
+          spec.subheadline,
+        about: scrubText(cap(parsed.about || spec.about, 600)).text || spec.about,
         ...(faqs.length ? { faqs } : {}),
         seoTitle: hasPlace ? cap(parsed.seo_title || spec.seoTitle || '', 70) || spec.seoTitle : spec.seoTitle,
         seoDescription: hasPlace

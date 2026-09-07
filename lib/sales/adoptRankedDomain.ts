@@ -14,6 +14,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createGeoCampaign } from '@/lib/outreach/geoCampaigns';
+import { connectDomainToGsc, gscAutoConnectEnabled } from '@/lib/gsc/connectDomain';
 import { resolveIndustryKey } from '@/lib/industries';
 import { bareHost } from '@/lib/sales/rateCardData';
 import type { IndustryKey } from '@/lib/industries';
@@ -218,5 +219,30 @@ export async function adoptRankedDomain(host: string, operatorId: string): Promi
   if (!plan.ok) return { ok: false, reason: plan.reason, detail: plan.detail, existingCampaignId: plan.existingCampaignId };
 
   const campaign = await createGeoCampaign({ ...plan.row, createdBy: operatorId });
-  return { ok: true, campaignId: campaign.id, domain: plan.row.domain, notes: plan.notes };
+
+  // Make it measurable straight away. A campaign that is not a Search Console property keeps the
+  // `unranked` default forever, and every surface then reports that default as a finding — which is
+  // exactly what "Not yet ranking" was on a domain sitting at position 7.2.
+  //
+  // Best-effort and never fatal: DNS propagation is asynchronous, so this often lands `pending`,
+  // and the nightly gsc-backfill retries. Adopting a domain must not fail because DNS is slow.
+  const notes = [...plan.notes];
+  if (gscAutoConnectEnabled()) {
+    try {
+      const r = await connectDomainToGsc(plan.row.domain, operatorId);
+      notes.push(
+        r.verified && !r.pending
+          ? 'Connected to Search Console — rank will be measured tonight.'
+          : r.ok
+            ? 'Search Console verification is pending DNS; the nightly backfill will retry.'
+            : `Search Console connect did not run: ${r.reason ?? 'unknown'}. The nightly backfill will retry.`,
+      );
+    } catch (err: any) {
+      notes.push(`Search Console connect threw: ${err?.message ?? 'unknown'}. The nightly backfill will retry.`);
+    }
+  } else {
+    notes.push('Search Console auto-connect is off, so rank cannot be measured yet (GSC_AUTO_CONNECT_ENABLED).');
+  }
+
+  return { ok: true, campaignId: campaign.id, domain: plan.row.domain, notes };
 }

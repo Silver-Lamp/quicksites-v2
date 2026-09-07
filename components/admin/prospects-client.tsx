@@ -316,6 +316,53 @@ export default function ProspectsClient({
     setViewMode(v);
     try { localStorage.setItem(VIEW_MODE_KEY, v); } catch {}
   };
+  // ── Deep link from the rate card ──────────────────────────────────────────────
+  // /admin/growth?tab=prospects&city=Arab&region=AL&industry=towing#discover-panel
+  //
+  // The rate card knows the city, the state and the trade for a domain it just made rentable;
+  // making the operator retype all three onto a very long page is where the next step gets lost.
+  //
+  // ⚠️ IT MUST SET THE VERTICAL TOGGLE TOO, and that is the whole reason this is more than three
+  // setState calls. `viewMode` is restored from localStorage and `effectivePicked` lets it SCOPE
+  // THE SWEEP, not merely filter the lists — so a towing link opened while the toggle happens to
+  // sit on Restaurants would show Arab, AL in the form and sweep Arab for restaurants. Prefilled,
+  // plausible, and wrong. An explicit link beats a remembered toggle.
+  //
+  // Read from window.location rather than useSearchParams() so no Suspense boundary is required.
+  const [prefillNote, setPrefillNote] = useState<string | null>(null);
+  useEffect(() => {
+    let params: URLSearchParams;
+    try {
+      params = new URLSearchParams(window.location.search);
+    } catch {
+      return;
+    }
+    const c = (params.get('city') ?? '').trim();
+    const r = (params.get('region') ?? '').trim();
+    const ind = (params.get('industry') ?? '').trim().toLowerCase();
+    if (!c && !ind) return;
+
+    if (c) setCity(c);
+    if (r) setRegion(r);
+    const cat = ind ? CATEGORIES.find((x) => x.industry === ind) : null;
+    if (cat) setPicked(new Set([cat.label]));
+    if (ind) setView(ind === 'restaurant' ? 'restaurants' : 'services');
+
+    const where = [c, r].filter(Boolean).join(', ');
+    setPrefillNote(
+      cat ? `Prefilled for ${cat.label.toLowerCase()} in ${where || 'this city'}.`
+          : `Prefilled for ${where}.`,
+    );
+
+    // After paint, so the panel is at its final position before we scroll to it.
+    requestAnimationFrame(() => {
+      document.getElementById('discover-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const el = document.getElementById('discover-city') as HTMLInputElement | null;
+      el?.focus();
+      el?.select();
+    });
+  }, []);
+
   const isRestaurantCampaign = (c: GeoCampaign) =>
     c.kind === 'restaurant_competition' || c.industry_key === 'restaurant';
 
@@ -1123,6 +1170,14 @@ export default function ProspectsClient({
 
       {/* Discover panel */}
       <div id="discover-panel" className="mt-6 scroll-mt-24 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
+        {prefillNote && (
+          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-emerald-800/60 bg-emerald-950/30 px-3 py-2">
+            <span className="text-sm text-emerald-300">{prefillNote}</span>
+            <span className="text-xs text-neutral-400">
+              Press Discover to sweep for businesses with no website.
+            </span>
+          </div>
+        )}
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col text-xs text-neutral-400">
             City

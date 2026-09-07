@@ -9,7 +9,7 @@
 import type { Metadata } from 'next';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { loadRateCard } from '@/lib/sales/rateCardData';
-import { nextStepForRow } from '@/lib/sales/rateCard';
+import { nextStepForRow, sweepUrlFor } from '@/lib/sales/rateCard';
 import { valuePortfolio } from '@/lib/sales/portfolioValuation';
 import { formatCents } from '@/lib/outreach/geoPricing';
 import RefreshButton from './refresh-button';
@@ -212,7 +212,7 @@ export default async function RateCardPage() {
                       postcard preview ↗
                     </a>
                   )}
-                  <a href="/admin/growth?tab=prospects" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300">
+                  <a href={sweepUrlFor(r)} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300">
                     sweep {r.city ?? 'the city'} for prospects ↗
                   </a>
                   <span className="text-zinc-600">

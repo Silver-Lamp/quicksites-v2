@@ -1,9 +1,10 @@
 // lib/sales/__tests__/rateCard.test.ts
 import {
   nextStepForRow,
+  sweepUrlFor,
   buildRateCardRow, buildRateCard, areaCodeMatchesState, PAGE_ONE,
 } from '../rateCard';
-import type { GscSite, SiteFacts } from '../rateCard';
+import type { GscSite, SiteFacts, RateCardRow } from '../rateCard';
 
 const site = (host: string, queries: Array<[string, number, number]>, position = 12): GscSite => ({
   host, clicks: 0, impressions: queries.reduce((a, q) => a + q[2], 0), position,
@@ -194,7 +195,9 @@ describe('the next step is one thing, in the order the work has to happen', () =
     // mail. arab-towing had 2 prospects in the whole city.
     const step = nextStepForRow(good(), { campaignId: 'c-1', prospectCount: 0 });
     expect(step.label).toMatch(/find businesses/i);
-    expect(step.href).toBe('/admin/growth?tab=prospects');
+    // Prefilled, not a bare link to a very long page — see sweepUrlFor.
+    expect(step.href).toContain('tab=prospects');
+    expect(step.href).toContain('#discover-panel');
   });
 
   it('only offers the postcard once there is a cohort and the domain is clean', () => {
@@ -202,5 +205,41 @@ describe('the next step is one thing, in the order the work has to happen', () =
     expect(step.label).toMatch(/postcard/i);
     expect(step.href).toBe('/admin/prospects/poster/c-1');
     expect(step.why).toMatch(/6 prospects/);
+  });
+});
+
+describe('the sweep link arrives with the tool already set up', () => {
+  const r = (over: Partial<RateCardRow> = {}) =>
+    ({ city: 'Arab', state: 'AL', industryKey: 'towing', ...over }) as RateCardRow;
+
+  it('carries city, state and trade, and lands on the discover panel', () => {
+    const url = sweepUrlFor(r());
+    expect(url).toContain('tab=prospects');
+    expect(url).toContain('city=Arab');
+    expect(url).toContain('region=AL');
+    expect(url).toContain('industry=towing');
+    expect(url.endsWith('#discover-panel')).toBe(true);
+  });
+
+  it('encodes a two-word city rather than breaking the query string', () => {
+    expect(sweepUrlFor(r({ city: 'South Hill', state: 'WA' }))).toContain('city=South+Hill');
+  });
+
+  it('omits what it does not know instead of sending empty params', () => {
+    // An empty `industry` would match no category and silently leave the form on its default.
+    const url = sweepUrlFor(r({ city: null, state: null, industryKey: null }));
+    expect(url).not.toContain('city=');
+    expect(url).not.toContain('industry=');
+    expect(url).toContain('tab=prospects');
+  });
+
+  it('the next step for an empty campaign uses that prefilled link', () => {
+    const row = buildRateCardRow(
+      site('arab-towing.com', [['arab towing', 3.9, 71]]),
+      facts({ host: 'arab-towing.com', city: 'Arab', state: 'AL', phone: '2565595273', templateId: 't-1' }),
+    );
+    const step = nextStepForRow(row, { campaignId: 'c-1', prospectCount: 0 });
+    expect(step.href).toContain('city=Arab');
+    expect(step.href).toContain('industry=towing');
   });
 });

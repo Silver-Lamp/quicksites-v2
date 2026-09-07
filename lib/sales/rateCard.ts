@@ -26,6 +26,7 @@ export type GscSite = {
 
 export type SiteFacts = {
   host: string;
+  templateId?: string | null;
   slug?: string | null;
   city?: string | null;
   state?: string | null;
@@ -34,13 +35,25 @@ export type SiteFacts = {
 };
 
 export type Blocker = {
-  id: 'no-service-area' | 'no-phone' | 'thin-volume' | 'area-code-mismatch';
+  id: 'no-service-area' | 'no-phone' | 'thin-volume' | 'area-code-mismatch' | 'facts-unavailable';
   severity: 'stop' | 'warn';
   label: string;
 };
 
 export type RateCardRow = {
   host: string;
+  templateId: string | null;
+  slug: string | null;
+  /**
+   * Whether we actually found this domain's site record.
+   *
+   * ⚠️ THIS EXISTS BECAUSE ITS ABSENCE SHIPPED A WRONG PRICE. When the facts lookup failed, every
+   * field defaulted to empty and the card confidently reported "no city, no phone" and the LOWEST
+   * price tier for a domain that had all three — a lookup failure wearing the costume of a data
+   * problem on the site. "We looked and the site has no city" and "we could not look" must never
+   * render the same.
+   */
+  factsFound: boolean;
   qualifies: boolean;
   /** The phrase to have the prospect type. Chosen by APPEARANCES, not best position — see below. */
   proofQuery: string | null;
@@ -103,6 +116,38 @@ export function buildRateCardRow(site: GscSite, facts: SiteFacts | undefined): R
   const phone = facts?.phone?.trim() || null;
 
   const blockers: Blocker[] = [];
+
+  // No record at all: say exactly that, and refuse to imply anything about the site itself.
+  if (!facts) {
+    return {
+      host: site.host,
+      templateId: null,
+      slug: null,
+      factsFound: false,
+      qualifies: Boolean(proof),
+      proofQuery: proof?.query ?? null,
+      proofPosition: proof ? Math.round(proof.position * 10) / 10 : null,
+      proofAppearances: proof?.impressions ?? 0,
+      otherPageOneQueries: [],
+      city: null,
+      state: null,
+      phone: null,
+      fullCents: tier.fullCents,
+      lockedCents: tier.lockedCents,
+      siteAveragePosition: site.position ?? null,
+      blockers: [
+        {
+          id: 'facts-unavailable',
+          severity: 'stop',
+          label:
+            'Could not load this site’s record — the price and the flags here are not trustworthy. ' +
+            'This is our lookup failing, not a problem with the site.',
+        },
+      ],
+      pitchable: false,
+    };
+  }
+
   if (!city || !state) {
     blockers.push({
       id: 'no-service-area',
@@ -131,6 +176,9 @@ export function buildRateCardRow(site: GscSite, facts: SiteFacts | undefined): R
   const qualifies = Boolean(proof);
   return {
     host: site.host,
+    templateId: facts?.templateId ?? null,
+    slug: facts?.slug ?? null,
+    factsFound: true,
     qualifies,
     proofQuery: proof?.query ?? null,
     proofPosition: proof ? Math.round(proof.position * 10) / 10 : null,
@@ -156,4 +204,63 @@ export function buildRateCard(sites: GscSite[], facts: SiteFacts[]): RateCardRow
     .map((s) => buildRateCardRow(s, byHost.get(s.host.replace(/^www\./, ''))))
     // Strongest proof first — by appearances, the same honesty ordering pickProof uses.
     .sort((a, b) => Number(b.qualifies) - Number(a.qualifies) || b.proofAppearances - a.proofAppearances);
+}
+
+/**
+ * The single next thing to do with this domain, given where it actually is.
+ *
+ * Deliberately ONE step rather than a checklist: the operator reading this is mid-call or about to
+ * be, and a list of five things is a list nobody starts. The order below is the order the work has
+ * to happen in — a site with no phone cannot be pitched however well it ranks, and a campaign with
+ * no cohort has nobody to mail.
+ */
+export type NextStep = {
+  label: string;
+  why: string;
+  href?: string;
+  /** 'blocked' = something is wrong; 'go' = the next real move. */
+  tone: 'blocked' | 'go';
+};
+
+export function nextStepForRow(
+  row: RateCardRow,
+  opts: { campaignId?: string | null; prospectCount?: number | null } = {},
+): NextStep {
+  if (!row.factsFound) {
+    return {
+      label: 'Reload the page',
+      why: 'This domain’s site record did not load, so nothing here can be trusted yet.',
+      tone: 'blocked',
+    };
+  }
+  const stops = row.blockers.filter((b) => b.severity === 'stop');
+  if (stops.length) {
+    return {
+      label: 'Fix the site',
+      why: stops[0].label,
+      href: row.templateId ? `/admin/templates/${row.templateId}` : undefined,
+      tone: 'blocked',
+    };
+  }
+  if (!opts.campaignId) {
+    return {
+      label: 'Make it rentable',
+      why: 'It ranks, but it is not inventory yet — no rep can sell it until it is a campaign.',
+      tone: 'go',
+    };
+  }
+  if ((opts.prospectCount ?? 0) === 0) {
+    return {
+      label: 'Find businesses to pitch',
+      why: 'It is rentable and nobody is attached to it. Sweep the city for businesses with no website.',
+      href: '/admin/growth?tab=prospects',
+      tone: 'go',
+    };
+  }
+  return {
+    label: 'Preview the postcard',
+    why: `${opts.prospectCount} prospect${opts.prospectCount === 1 ? '' : 's'} attached and the domain proves out.`,
+    href: `/admin/prospects/poster/${opts.campaignId}`,
+    tone: 'go',
+  };
 }

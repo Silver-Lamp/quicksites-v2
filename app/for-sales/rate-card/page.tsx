@@ -9,6 +9,7 @@
 import type { Metadata } from 'next';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { loadRateCard } from '@/lib/sales/rateCardData';
+import { nextStepForRow } from '@/lib/sales/rateCard';
 import { valuePortfolio } from '@/lib/sales/portfolioValuation';
 import { formatCents } from '@/lib/outreach/geoPricing';
 import RefreshButton from './refresh-button';
@@ -26,7 +27,8 @@ export default async function RateCardPage() {
   const admin = await getAdminUser();
   if (!admin) return <div className="p-8 text-zinc-400">Forbidden.</div>;
 
-  const { rows, window, measuredAt, unreadable, rentedCount, campaignIdByHost } = await loadRateCard();
+  const { rows, window, measuredAt, unreadable, rentedCount, campaignIdByHost, factsError, prospectCountByHost } =
+    await loadRateCard();
   const proven = rows.filter((r) => r.qualifies);
   // ⚠️ A CAPACITY figure, not a forecast. `rentedToday` is rendered beside every total below for
   // exactly one reason: while it is zero, each of these numbers is a sentence about inventory and
@@ -60,6 +62,18 @@ export default async function RateCardPage() {
           </div>
           <div className="mt-4"><RefreshButton /></div>
         </header>
+
+        {factsError && (
+          <div className="mt-6 rounded border border-red-800 bg-red-950/40 p-4">
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-red-400">
+              Site records did not load
+            </div>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+              {factsError} Prices and site flags below are unreliable until this succeeds — do not
+              quote anything from this page.
+            </p>
+          </div>
+        )}
 
         <section className="mt-8 grid grid-cols-3 gap-3">
           <Stat n={String(pitchable.length)} label="pitchable now" tone="emerald" />
@@ -136,6 +150,75 @@ export default async function RateCardPage() {
                     ))}
                   </ul>
                 )}
+
+                {/* One next step, not a checklist — whoever reads this is about to be on a call. */}
+                {(() => {
+                  const step = nextStepForRow(r, {
+                    campaignId: campaignIdByHost[r.host] ?? null,
+                    prospectCount: prospectCountByHost[r.host] ?? 0,
+                  });
+                  return (
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-zinc-800 pt-2.5">
+                      <span
+                        className={`font-mono text-[10px] uppercase tracking-wider ${
+                          step.tone === 'blocked' ? 'text-red-400' : 'text-emerald-400'
+                        }`}
+                      >
+                        Next
+                      </span>
+                      {step.href ? (
+                        <a
+                          href={step.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-semibold text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+                        >
+                          {step.label} ↗
+                        </a>
+                      ) : (
+                        <span className="text-sm font-semibold text-zinc-200">{step.label}</span>
+                      )}
+                      <span className="text-xs text-zinc-500">{step.why}</span>
+                    </div>
+                  );
+                })()}
+
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-zinc-500">
+                  {r.templateId && (
+                    <a
+                      href={`/admin/templates/${r.templateId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-emerald-300"
+                    >
+                      edit the site ↗
+                    </a>
+                  )}
+                  <a
+                    href={`https://${r.host}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-emerald-300"
+                  >
+                    view it live ↗
+                  </a>
+                  {campaignIdByHost[r.host] && (
+                    <a
+                      href={`/admin/prospects/poster/${campaignIdByHost[r.host]}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-emerald-300"
+                    >
+                      postcard preview ↗
+                    </a>
+                  )}
+                  <a href="/admin/growth?tab=prospects" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300">
+                    sweep {r.city ?? 'the city'} for prospects ↗
+                  </a>
+                  <span className="text-zinc-600">
+                    {prospectCountByHost[r.host] ?? 0} prospect{(prospectCountByHost[r.host] ?? 0) === 1 ? '' : 's'} attached
+                  </span>
+                </div>
               </article>
             ))}
           </div>

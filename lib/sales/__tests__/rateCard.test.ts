@@ -1,5 +1,6 @@
 // lib/sales/__tests__/rateCard.test.ts
 import {
+  nextStepForRow,
   buildRateCardRow, buildRateCard, areaCodeMatchesState, PAGE_ONE,
 } from '../rateCard';
 import type { GscSite, SiteFacts } from '../rateCard';
@@ -128,5 +129,78 @@ describe('ordering puts the strongest proof first', () => {
     );
     expect(rows.map((r) => r.host)).toEqual(['arab-towing.com', 'covingtontow.com', 'bonneylake-towing.com']);
     expect(rows[2].qualifies).toBe(false);
+  });
+});
+
+describe('a lookup failure must not wear the costume of a data problem', () => {
+  // ⚠️ This shipped. When the site-records query failed, every field defaulted to empty and the
+  // card reported "no city on the site", "no phone on the site" and the LOWEST price tier — for
+  // arab-towing.com, which has a city, a state, a phone and is a $399 towing domain. Every word on
+  // screen was wrong and none of it looked like an error.
+  const noFacts = buildRateCardRow(site('arab-towing.com', [['arab towing', 3.9, 71]]), undefined);
+
+  it('says the record could not be loaded, not that the site is missing fields', () => {
+    expect(noFacts.factsFound).toBe(false);
+    const ids = noFacts.blockers.map((b) => b.id);
+    expect(ids).toEqual(['facts-unavailable']);
+    expect(ids).not.toContain('no-service-area');
+    expect(ids).not.toContain('no-phone');
+  });
+
+  it('admits the price is untrustworthy rather than quoting the bottom tier as fact', () => {
+    expect(noFacts.blockers[0].label).toMatch(/not trustworthy/i);
+    expect(noFacts.blockers[0].severity).toBe('stop');
+    expect(noFacts.pitchable).toBe(false);
+  });
+
+  it('still reports the ranking, which came from Search Console and is unaffected', () => {
+    // The GSC half of the row is independent of the template lookup — losing one must not
+    // silently discard the other.
+    expect(noFacts.qualifies).toBe(true);
+    expect(noFacts.proofQuery).toBe('arab towing');
+  });
+});
+
+describe('rows carry the ids the operator needs to act', () => {
+  it('exposes the template id so the card can link to the editor', () => {
+    const r = buildRateCardRow(site('arab-towing.com', [['arab towing', 3.9, 71]]), facts({ host: 'arab-towing.com', templateId: 'tpl-7' }));
+    expect(r.templateId).toBe('tpl-7');
+    expect(r.factsFound).toBe(true);
+  });
+});
+
+describe('the next step is one thing, in the order the work has to happen', () => {
+  const good = () => buildRateCardRow(site('arab-towing.com', [['arab towing', 3.9, 71]]), facts({ host: 'arab-towing.com', templateId: 'tpl-7' }));
+
+  it('a broken lookup outranks everything — do not send anyone to fix a site that may be fine', () => {
+    const r = buildRateCardRow(site('a.com', [['a towing', 4, 20]]), undefined);
+    expect(nextStepForRow(r).label).toMatch(/reload/i);
+  });
+
+  it('a stop blocker comes before making it rentable, and links to the editor', () => {
+    const r = buildRateCardRow(site('a.com', [['a towing', 4, 20]]), facts({ host: 'a.com', templateId: 'tpl-1', phone: null }));
+    const step = nextStepForRow(r, { campaignId: null });
+    expect(step.label).toMatch(/fix the site/i);
+    expect(step.href).toBe('/admin/templates/tpl-1');
+    expect(step.tone).toBe('blocked');
+  });
+
+  it('a clean domain that is not a campaign should be made rentable', () => {
+    expect(nextStepForRow(good(), { campaignId: null }).label).toMatch(/rentable/i);
+  });
+
+  it('a campaign with nobody attached needs a sweep, not a postcard', () => {
+    // The trap this encodes: adopting a domain feels like progress and changes nothing you can
+    // mail. arab-towing had 2 prospects in the whole city.
+    const step = nextStepForRow(good(), { campaignId: 'c-1', prospectCount: 0 });
+    expect(step.label).toMatch(/find businesses/i);
+    expect(step.href).toBe('/admin/growth?tab=prospects');
+  });
+
+  it('only offers the postcard once there is a cohort and the domain is clean', () => {
+    const step = nextStepForRow(good(), { campaignId: 'c-1', prospectCount: 6 });
+    expect(step.label).toMatch(/postcard/i);
+    expect(step.href).toBe('/admin/prospects/poster/c-1');
+    expect(step.why).toMatch(/6 prospects/);
   });
 });

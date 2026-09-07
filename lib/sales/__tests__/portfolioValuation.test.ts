@@ -3,7 +3,7 @@ import { splitRentalPayment, stripeFeeCents } from '@/lib/commerce/rentalSplits'
 import type { RateCardRow } from '../rateCard';
 
 const row = (host: string, over: Partial<RateCardRow> = {}): RateCardRow => ({
-  host, qualifies: true, proofQuery: 'x towing', proofPosition: 4, proofAppearances: 20,
+  host, templateId: 't-1', slug: host.replace(/\.[a-z]+$/, ''), factsFound: true, qualifies: true, proofQuery: 'x towing', proofPosition: 4, proofAppearances: 20,
   otherPageOneQueries: [], city: 'X', state: 'WA', phone: '2535551212',
   fullCents: 39900, lockedCents: 9900, siteAveragePosition: 12, blockers: [], pitchable: true,
   ...over,

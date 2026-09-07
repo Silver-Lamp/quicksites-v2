@@ -24,6 +24,8 @@ export type RateCardData = {
    * number beside it reads as revenue, and this is the number that stops that happening.
    */
   rentedCount: number;
+  /** host -> campaign id, so the UI can tell adopted inventory from inventory nobody can sell. */
+  campaignIdByHost: Record<string, string>;
 };
 
 /** GSC property id -> bare host: "https://www.x.com/" and "sc-domain:x.com" both become "x.com". */
@@ -127,12 +129,19 @@ export async function loadRateCard(): Promise<RateCardData> {
   // Rented = a campaign on one of these domains carrying a live subscription. Derived rather than
   // assumed: the proven domains are not currently campaigns at all, so this SHOULD be zero — and a
   // hardcoded zero would keep reading zero on the day one of them sells.
-  const { data: subs } = await supabaseAdmin
+  const { data: camps } = await supabaseAdmin
     .from('geo_industry_campaigns')
-    .select('domain, subscription_status')
-    .in('subscription_status', ['active', 'trialing', 'past_due']);
-  const rentedHosts = new Set((subs ?? []).map((c: any) => bareHost(String(c.domain ?? ''))));
+    .select('id, domain, subscription_status')
+    .limit(2000);
+  const campaignIdByHost: Record<string, string> = {};
+  const rentedHosts = new Set<string>();
+  for (const c of (camps ?? []) as any[]) {
+    const h = bareHost(String(c.domain ?? ''));
+    if (!h) continue;
+    campaignIdByHost[h] = c.id;
+    if (['active', 'trialing', 'past_due'].includes(String(c.subscription_status ?? ''))) rentedHosts.add(h);
+  }
   const rentedCount = rateRows.filter((r) => rentedHosts.has(r.host)).length;
 
-  return { rows: rateRows, window, measuredAt, unreadable, rentedCount };
+  return { rows: rateRows, window, measuredAt, unreadable, rentedCount, campaignIdByHost };
 }

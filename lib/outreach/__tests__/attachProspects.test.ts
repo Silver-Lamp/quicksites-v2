@@ -102,3 +102,57 @@ describe('matchesCampaign — what "attach all" should actually mean', () => {
     expect(matchesCampaign({ industry_key: 'towing', address: null }, campaign)).toBe(false);
   });
 });
+
+describe('tradeEvidence — an auto-repair shop whose name says it tows', () => {
+  const { tradeEvidence, matchesCampaign: mc } = require('../attachProspects');
+  // ⚠️ Every name and key below was read from the live Arab sweep, not invented. All four of these
+  // carry industry_key='auto_repair' and Google categories of exactly car_repair/store/
+  // point_of_interest/service/establishment — so the NAME is the only signal there is.
+  const arabCampaign = { industry_key: 'towing', city: 'Arab' };
+  const row = (business_name: string, industry_key: string, address = 'Arab, AL') => ({
+    business_name, industry_key, address, categories: ['car_repair', 'store', 'point_of_interest'],
+  });
+
+  it.each([
+    ['Arab Towing, Muffler & Auto Service', 'auto_repair'],
+    ['Lake City Auto Repair & Towing', 'auto_repair'],
+    ['Perfect Choice Towing & Recovery, LLC', 'auto_repair'],
+    ['Uni Towing and Roadside Services', 'auto_repair'],
+    ['Bama Pro Tow, LLC', 'moving'],
+  ])('includes %s (key says %s)', (name, key) => {
+    expect(tradeEvidence(row(name, key), 'towing')).toBe('name');
+    expect(mc(row(name, key), arabCampaign)).toBe(true);
+  });
+
+  it('still excludes a genuine auto shop with no towing in its name', () => {
+    // The control. Without this the rule is "include everything", which is where we started.
+    expect(tradeEvidence(row('J & H Automotive', 'auto_repair'), 'towing')).toBeNull();
+    expect(mc(row('J & H Automotive', 'auto_repair'), arabCampaign)).toBe(false);
+  });
+
+  it('reports HOW it matched, so an inference is never shown as a fact', () => {
+    expect(tradeEvidence(row('Dirty South Towing', 'towing'), 'towing')).toBe('industry');
+    expect(tradeEvidence(row('Arab Towing, Muffler & Auto Service', 'auto_repair'), 'towing')).toBe('name');
+  });
+
+  it('matches whole words only — "Towne Auto" is not a tow truck', () => {
+    expect(tradeEvidence(row('Towne Auto Center', 'auto_repair'), 'towing')).toBeNull();
+    expect(tradeEvidence(row('Old Town Motors', 'auto_repair'), 'towing')).toBeNull();
+    expect(tradeEvidence(row('Bama Pro Tow, LLC', 'moving'), 'towing')).toBe('name');
+  });
+
+  it('does not treat "recovery" or "auto" as towing words', () => {
+    // 'Recovery' is also rehab clinics; 'auto' is every car business alive. A keyword that pulls in
+    // the wrong trade costs more than one that misses a right one.
+    expect(tradeEvidence(row('Sunrise Recovery Center', 'other'), 'towing')).toBeNull();
+    expect(tradeEvidence(row('AMG Auto Repair', 'auto_repair'), 'towing')).toBeNull();
+  });
+
+  it('never invents evidence for a trade it has no words for', () => {
+    expect(tradeEvidence(row('Anything At All', 'other'), 'author')).toBeNull();
+  });
+
+  it('a name match still has to be in the right town', () => {
+    expect(mc(row('Perfect Choice Towing & Recovery, LLC', 'auto_repair', 'Cullman, AL'), arabCampaign)).toBe(false);
+  });
+});

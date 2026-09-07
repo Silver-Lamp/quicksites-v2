@@ -16,7 +16,7 @@ import { effectivePriceCents, formatCents, intervalSuffix } from '@/lib/outreach
 import { nextActionLabel } from '@/components/admin/templates/campaign-badge';
 import { scoreTerritories } from '@/lib/prospects/territoryScore';
 import { buildRankedOpportunities } from '@/lib/prospects/rankedOpportunities';
-import { matchesCampaign } from '@/lib/outreach/attachProspects';
+import { matchesCampaign, tradeEvidence } from '@/lib/outreach/attachProspects';
 import DomainBuyListPlanner from '@/components/admin/domain-buy-list-planner';
 import CollapsibleSection, { openSection } from '@/components/admin/collapsible-section';
 import DomainCostSummary from '@/components/admin/domain-cost-summary';
@@ -1209,6 +1209,14 @@ export default function ProspectsClient({
     [attachCampaign, byTier],
   );
   const attachSkipped = attachCampaign ? byTier.no_website.length - attachMatching.length : 0;
+  /** Of those, how many we believe do the trade because of their NAME rather than their key. */
+  const attachByName = useMemo(
+    () =>
+      attachCampaign
+        ? attachMatching.filter((p) => tradeEvidence(p as any, (attachCampaign as any).industry_key) === 'name').length
+        : 0,
+    [attachMatching, attachCampaign],
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 text-white">
@@ -2114,7 +2122,9 @@ export default function ProspectsClient({
                       : selected.size
                         ? `Attach the ${selected.size} you selected`
                         : attachMatching.length
-                          ? `Attach the ${attachMatching.length} no-website ${attachCampaign?.industry_key ?? ''} prospect${attachMatching.length === 1 ? '' : 's'} in ${attachCampaign?.city ?? 'that town'}. ${attachSkipped} others are a different trade or town — tick them by hand if you want them.`
+                          ? `Attach the ${attachMatching.length} no-website prospect${attachMatching.length === 1 ? '' : 's'} in ${attachCampaign?.city ?? 'that town'} that do ${attachCampaign?.industry_key ?? 'this trade'}` +
+                            (attachByName ? `, ${attachByName} of them judged by their business name rather than their category` : '') +
+                            `. ${attachSkipped} others are a different trade or town — tick them by hand if you want them.`
                           : `No no-website prospects match ${attachCampaign?.domain ?? 'this domain'}'s trade and town. Tick rows by hand to attach anyway.`
                   }
                   className="rounded-lg border border-sky-600/60 px-3 py-2 text-sm font-medium text-sky-300 hover:bg-sky-600/10 disabled:opacity-40"
@@ -2127,9 +2137,14 @@ export default function ProspectsClient({
                 </button>
                 {!attachTo ? (
                   <span className="text-xs text-neutral-500">← pick a domain</span>
-                ) : !selected.size && attachSkipped > 0 ? (
+                ) : !selected.size && (attachSkipped > 0 || attachByName > 0) ? (
                   <span className="text-xs text-neutral-500">
-                    {attachSkipped} others are a different trade or town
+                    {attachByName > 0 && (
+                      // An inference shown as a fact is how a cohort fills with businesses nobody
+                      // checked. Say which ones we guessed at.
+                      <span className="text-amber-400/80">{attachByName} matched on name · </span>
+                    )}
+                    {attachSkipped > 0 && `${attachSkipped} others are a different trade or town`}
                   </span>
                 ) : null}
               </>

@@ -64,6 +64,13 @@ async function operatorOAuthClient(userId: string) {
     .select('access_token, refresh_token, expiry')
     .eq('user_id', userId)
     .not('refresh_token', 'is', null)
+    // ⚠️ ORDER MATTERS. There are 22 token rows sharing 3 refresh tokens — one per consent event —
+    // and this used to take whichever row the database happened to return. The scopes differ
+    // between grants: the older ones are webmasters.readonly, which cannot verify a site or add a
+    // property. Picking one of those fails with "insufficient authentication scopes" AFTER an
+    // operator has just re-consented, which reads as the re-consent not having worked.
+    // Freshest expiry = most recently refreshed credential = the newest grant.
+    .order('expiry', { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();
   if (!data?.refresh_token) return null;

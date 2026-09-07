@@ -124,3 +124,41 @@ describe('both copy generators forbid operational claims and scrub their own out
     expect(/licensing, insurance, bonding/.test(planted)).toBe(false);
   });
 });
+
+describe('an answer is replaced, never emptied', () => {
+  const { honestAnswerFor, claimKind } = require('@/lib/rebuild/scrubInventedClaims');
+
+  // ⚠️ The dry run over 140 live sites showed sentence-removal leaving 114 EMPTY answer fields and
+  // one fragment — "Yes — Restock Resale Co." A blank FAQ answer is worse than a dishonest one:
+  // now the page is broken as well as unhelpful. #857 called this "ungrammatical honesty is not
+  // honesty" and it is the reason answers are replaced wholesale.
+  it.each([
+    ['Yes — Hearth & Harbor is fully licensed and insured, so you’re covered every step of the way.', /confirm our current license/],
+    ['Usually within 30 minutes.', /honest ETA/],
+    ['Reach out through the contact form — we’ll get back to you quickly with a free, no-obligation quote.', /Ask about pricing/],
+    ['We are available 24/7 for any emergency.', /what we can do today/],
+  ])('replaces %s', (before, expected) => {
+    const after = honestAnswerFor(before);
+    expect(after).toMatch(expected);
+    expect(after!.length).toBeGreaterThan(20); // never empty, never a fragment
+    expect(after).not.toMatch(/24\/7|licensed and insured|within 30 minutes/i);
+  });
+
+  it('returns null for an answer that claims nothing, so it is left alone', () => {
+    expect(honestAnswerFor('We tow cars, trucks and motorcycles across Pierce County.')).toBeNull();
+  });
+
+  it('names the kind of claim, so the replacement can answer the right question', () => {
+    expect(claimKind('Usually within 30 minutes.')).toBe('response-time');
+    expect(claimKind('We are fully licensed and insured.')).toBe('licensing');
+    expect(claimKind('Open 24/7.')).toBe('availability');
+    expect(claimKind('We tow motorcycles.')).toBeNull();
+  });
+
+  it('every replacement is itself clean — a fix that reintroduces a claim is not a fix', () => {
+    for (const src of ['licensed and insured', 'within 30 minutes', '24/7', 'free quote', 'guaranteed', 'over 20 years']) {
+      const out = honestAnswerFor(`We are ${src}.`);
+      if (out) expect(makesOperationalClaim(out)).toBe(false);
+    }
+  });
+});

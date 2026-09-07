@@ -81,3 +81,37 @@ export function scrubFaqs(faqs: Faq[] | null | undefined): { faqs: Faq[]; hits: 
 export function makesOperationalClaim(text: string | null | undefined): boolean {
   return CLAIM_PATTERNS.some((p) => p.re.test(String(text ?? '')));
 }
+
+
+/** Which kind of claim this text makes, or null. Used to pick an honest replacement. */
+export function claimKind(text: string | null | undefined): string | null {
+  const t = String(text ?? '');
+  return CLAIM_PATTERNS.find((p) => p.re.test(t))?.id ?? null;
+}
+
+/**
+ * An honest answer to the question the dishonest one was answering.
+ *
+ * ⚠️ REPLACE, DO NOT EMPTY. Removing the offending sentence works for a subheadline, where the rest
+ * of the line still reads. For an FAQ ANSWER it produces a blank answer — worse than a dishonest
+ * one, because now the page is broken as well as unhelpful — or a fragment: scrubbing "Yes — Acme
+ * is fully licensed and insured, so you're covered" leaves "Yes — Acme.", which is #857's
+ * "ungrammatical honesty is not honesty" in one line.
+ *
+ * These mirror the wording industryCopy already uses, so a scrubbed site reads like a scaffolded
+ * one rather than like something that has been edited around.
+ */
+const HONEST_ANSWER: Record<string, string> = {
+  licensing: 'Ask us and we’ll confirm our current license and insurance details before any work starts.',
+  'response-time': 'Call and we’ll give you an honest ETA for your address.',
+  availability: 'Call us and we’ll tell you what we can do today.',
+  pricing: 'Ask about pricing and payment when you get in touch and we’ll walk you through it.',
+  guarantee: 'Ask us what we can commit to for your job before the work starts.',
+  tenure: 'Ask us about our experience with jobs like yours.',
+};
+
+/** The honest replacement for a claiming answer, or null when the answer claims nothing. */
+export function honestAnswerFor(answer: string | null | undefined): string | null {
+  const kind = claimKind(answer);
+  return kind ? (HONEST_ANSWER[kind] ?? HONEST_ANSWER.availability) : null;
+}

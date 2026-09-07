@@ -498,6 +498,50 @@ export default function ProspectsClient({
 
   const buildSelected = () => buildProspects([...selected]);
 
+  // Attach the selected prospects to a campaign. Building a site does NOT do this: only the launch
+  // flow ever linked a cohort, so a domain adopted via "make rentable" has nobody attached and
+  // mail-postcards finds zero recipients while this list is full of businesses.
+  const [attachTo, setAttachTo] = useState('');
+  const attachSelected = async (reassign = false) => {
+    if (!attachTo || !selected.size) return;
+    setBusy('attach');
+    setMsg(null);
+    try {
+      const res = await fetch('/api/admin/prospects/attach-to-campaign', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ campaignId: attachTo, prospectIds: [...selected], reassign }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Moving a prospect off another city's campaign takes a recipient away from it, so the
+        // confirmation names the cost rather than asking a bare "are you sure?".
+        if (j?.code === 'would_reassign' && !reassign) {
+          const names = Array.isArray(j.names) && j.names.length ? ` (${j.names.join(', ')})` : '';
+          if (window.confirm(`${j.error}${names}\n\nMove them anyway?`)) return attachSelected(true);
+          setMsg('Nothing attached.');
+          return;
+        }
+        setMsg(j?.error ?? `Attach failed (${res.status}).`);
+        return;
+      }
+      const off = Array.isArray(j.offCity) ? j.offCity.length : 0;
+      setMsg(
+        `Attached ${j.attached} to ${j.campaign?.domain ?? 'the campaign'}` +
+          (j.alreadyHere ? `, ${j.alreadyHere} already there` : '') +
+          (off
+            ? ` — ⚠️ ${off} are not in ${j.campaign?.city ?? 'that town'}, and an exact-match domain is worth little to them.`
+            : '.'),
+      );
+      setSelected(new Set());
+      router.refresh();
+    } catch (e: any) {
+      setMsg(e?.message ?? 'Attach failed.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   // One-click lead-list build: take EVERY discovered no-website prospect (the highest-
   // intent tier) and build claimable ordering-site drafts, no manual selection. The
   // server caps each request at SERVER_BATCH, so drive it in sequential chunks and
@@ -2000,6 +2044,34 @@ export default function ProspectsClient({
             >
               {busy === 'build' ? 'Building…' : `Build ${selected.size || ''} draft${selected.size === 1 ? '' : 's'}`}
             </button>
+            {campaigns.length > 0 && (
+              <>
+                <select
+                  value={attachTo}
+                  onChange={(e) => setAttachTo(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="rounded-lg border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm text-white"
+                  title="Attach the selected prospects to a rentable domain, so they can be mailed"
+                >
+                  <option value="">Attach to…</option>
+                  {campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.domain}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    attachSelected(false);
+                  }}
+                  disabled={!attachTo || !selected.size || busy === 'attach'}
+                  className="rounded-lg border border-sky-600/60 px-3 py-2 text-sm font-medium text-sky-300 hover:bg-sky-600/10 disabled:opacity-40"
+                >
+                  {busy === 'attach' ? 'Attaching…' : `Attach ${selected.size || ''}`}
+                </button>
+              </>
+            )}
           </div>
         }
       >

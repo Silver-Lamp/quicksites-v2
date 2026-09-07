@@ -63,6 +63,8 @@ export type RateCardRow = {
   city: string | null;
   state: string | null;
   phone: string | null;
+  /** Carried so a deep link can prefill the sweep form with the right trade, not just the city. */
+  industryKey: string | null;
   fullCents: number;
   lockedCents: number;
   siteAveragePosition: number | null;
@@ -132,6 +134,7 @@ export function buildRateCardRow(site: GscSite, facts: SiteFacts | undefined): R
       city: null,
       state: null,
       phone: null,
+      industryKey: null,
       fullCents: tier.fullCents,
       lockedCents: tier.lockedCents,
       siteAveragePosition: site.position ?? null,
@@ -190,6 +193,7 @@ export function buildRateCardRow(site: GscSite, facts: SiteFacts | undefined): R
     city,
     state,
     phone,
+    industryKey: (facts?.industryKey as string | null) ?? null,
     fullCents: tier.fullCents,
     lockedCents: tier.lockedCents,
     siteAveragePosition: site.position ?? null,
@@ -253,7 +257,7 @@ export function nextStepForRow(
     return {
       label: 'Find businesses to pitch',
       why: 'It is rentable and nobody is attached to it. Sweep the city for businesses with no website.',
-      href: '/admin/growth?tab=prospects',
+      href: sweepUrlFor(row),
       tone: 'go',
     };
   }
@@ -263,4 +267,20 @@ export function nextStepForRow(
     href: `/admin/prospects/poster/${opts.campaignId}`,
     tone: 'go',
   };
+}
+
+
+/**
+ * Deep link into the sweep form on /admin/growth with this domain's city, state and trade already
+ * filled in — and the vertical toggle set to match, which the form handles on the other end.
+ *
+ * A bare link to that page lands the operator on a very long workspace with nothing selected, which
+ * is where a next step stops being one.
+ */
+export function sweepUrlFor(row: Pick<RateCardRow, 'city' | 'state' | 'industryKey'>): string {
+  const q = new URLSearchParams({ tab: 'prospects' });
+  if (row.city) q.set('city', row.city);
+  if (row.state) q.set('region', row.state);
+  if (row.industryKey) q.set('industry', row.industryKey);
+  return `/admin/growth?${q.toString()}#discover-panel`;
 }

@@ -4,6 +4,13 @@
 //
 // A section with a clickable header that collapses its body. Open/closed state is
 // persisted per-section in localStorage so an operator's layout survives reloads.
+//
+// ⚠️ Sections start CLOSED. The workspace this is used in stacks several long lists, and opening
+// everything by default produced a page an operator had to scroll past rather than read — a sweep
+// would report "20 businesses found" and the results were several screens below the fold. A closed
+// header still shows its title and its count, so the page reads as an index of what is there and
+// the operator opens the one they want. Anything that needs a section visible should say so
+// explicitly via openSection(id) rather than relying on the default.
 // Long bodies can opt into an internal scroll region (`scroll` + `bodyMaxClass`) so a
 // growing list caps its height instead of stretching the whole page. Other code can
 // force a section open (e.g. before scrolling to a row inside it) via `openSection(id)`.
@@ -27,7 +34,7 @@ export default function CollapsibleSection({
   subtitle,
   count,
   right,
-  defaultOpen = true,
+  defaultOpen = false,
   scroll = false,
   bodyMaxClass = 'max-h-[32rem]',
   className = '',

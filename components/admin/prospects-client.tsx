@@ -363,6 +363,17 @@ export default function ProspectsClient({
     });
   }, []);
 
+  // A sweep reports what it found and then leaves the operator to go and find it: the results
+  // render in the Prospects section near the bottom of a very long workspace. Reporting a result
+  // out of sight of the result is the same complaint as a next-step link that lands on a page with
+  // nothing selected — so the sweep takes you to what it did.
+  const revealProspects = () => {
+    openSection('prospects-list');
+    requestAnimationFrame(() => {
+      document.getElementById('prospects-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   const isRestaurantCampaign = (c: GeoCampaign) =>
     c.kind === 'restaurant_competition' || c.industry_key === 'restaurant';
 
@@ -444,6 +455,9 @@ export default function ProspectsClient({
       setApexQuery(effectivePicked.has('Restaurants') ? { city: city.trim(), region: region.trim() } : null);
       rememberLocation({ city: city.trim(), region: region.trim(), radiusKm, categories: [...effectivePicked] });
       router.refresh();
+      // The refreshed rows paint into this section when they arrive; going there now means the
+      // operator is already looking at the right place rather than scrolling to find it.
+      revealProspects();
     } catch (e: any) {
       setMsg(e.message);
     } finally {
@@ -1286,7 +1300,21 @@ export default function ProspectsClient({
         )}
       </div>
 
-      {msg && <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-sm text-neutral-200">{msg}</div>}
+      {msg && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-sm text-neutral-200">
+          <span>{msg}</span>
+          {/* Present whenever the message describes a sweep, so the count and the way to see what
+              it counted are never separated. */}
+          {msg.startsWith('Swept') && (
+            <button
+              onClick={revealProspects}
+              className="rounded border border-emerald-700 px-2 py-0.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/10"
+            >
+              Show them ↓
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Apex-domain check for the just-swept city — is <city>-restaurant.com ours/buyable? */}
       {apexQuery && (

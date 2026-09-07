@@ -60,6 +60,7 @@ export const VERTICALS: Vertical[] = [
     mechanics: [
       'We own the domain, so the asset never leaves. The renter leases exclusivity, not a website.',
       '$99/month locked for life before the domain ranks; $399/month for new customers once it reaches page one.',
+      'Two tiers, split by what can be proved on the call: a domain holding page one today is sold in the present tense — the prospect searches the phrase while the rep waits — and everything else is sold plainly as new, at the founder rate. No version of the pitch predicts a ranking.',
       'Commission on every payment: 50% closer, 15% manager, 35% house — taken from net of card fees.',
       'Exclusivity is the product. One business per city and trade, which is also why the price holds.',
     ],
@@ -71,11 +72,14 @@ export const VERTICALS: Vertical[] = [
     unproven: [
       'Nobody outside the company has ever rented one. The only live subscription is the owner’s own card.',
       'Churn is completely unmeasured — no customer has renewed, so none has cancelled. It decides lifetime value more than close rate does.',
-      'Not one of 99 domains has reached page one, so the $399 tier currently has zero qualifying inventory.',
+      'None of the 99 campaign domains has reached page one. Six other domains we own do hold it — and not one of those six is a campaign, so the only proof we own is the one thing no rep can currently sell. Making them rentable is about a day of data work.',
+      'What ranks is each domain’s own exact-match name — “grafton towing” — which is real commercial intent but a small pool. They do not rank for the broad trade search: the handful of generic page-one queries carry one or two appearances a month and no clicks at all. Positions move, so every figure here is dated where it appears.',
+      'Traffic is the weakest part of the case and the easiest to overstate. Measured 2026-09-06 over the preceding 28 days: three page-one clicks across the entire portfolio, and the qualifying positions worth roughly $116/month of equivalent ad spend across all six domains. Those two numbers are a dated observation, not a standing fact — re-read them at /proof/rankings before quoting them. The product is an exclusive address and a working site, not traffic.',
+      'The map results, where most local search clicks go, require a Google Business Profile — which belongs to a real business at a real address, and we will not create those. That channel is only reachable through a renter who already has one, which caps what any unrented domain can do.',
       'The founder rate is locked for life, so every early sale caps its own upside permanently.',
     ],
     decisiveTest:
-      'Ten businesses pitched by phone, and the count that say yes. One trial from four calls is not a close rate — it is one afternoon and one person’s manner.',
+      'Postcards to the no-website businesses in one city where the domain provably holds page one, and the count that call back. The card tells them to search a phrase and see for themselves, so it tests the offer rather than a salesperson’s manner — which the phone attempt could not separate. Current record: zero replies from 24 touches, so the honest prior is low.',
     costToTest: 'Roughly two weeks of one salesperson. No new spend; the inventory already exists.',
   },
   {

@@ -260,3 +260,74 @@ describe('posterBackdropCss', () => {
     expect(posterBackdropCss('towing' as any).backgroundImage).toContain('linear-gradient');
   });
 });
+
+// ── The proven-domain postcard ────────────────────────────────────────────────────────────────
+//
+// ⚠️ A postcard cannot be caveated, corrected or recalled once it is in a mailbox. It is therefore
+// the most conservative surface we own, and the two failures below both shipped on it:
+// the benefit bullets promised a Google ranking, and nothing distinguished a domain that ranks
+// today from one that does not.
+
+/** Future-tense ranking claims — matched by SHAPE, since a promise is grammar, not a fixed string. */
+const RANKING_PROMISE = [
+  /(?:will|'ll|’ll|gonna|going to|guarantee\w*|promise\w*)[^.!?]{0,60}(?:page\s*one|page\s*1|first\s+page|rank\w*|top\s+of\s+google)/i,
+  /(?:find|found|see)\s+you\s+first\s+when[^.!?]{0,30}(?:search|google)/i,
+  /\bfound on google\b/i,
+];
+
+describe('the postcard never prints a claim a rep may not say out loud', () => {
+  it('has no ranking promise in any vertical’s benefit bullets', () => {
+    const industries = ['towing', 'plumbing', 'restaurant', 'auto_repair', 'roof_cleaning'] as const;
+    const offenders: string[] = [];
+    for (const ind of industries) {
+      for (const line of postcardBenefits(ind as any)) {
+        if (RANKING_PROMISE.some((re) => re.test(line))) offenders.push(`${ind}: ${line}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it.each([
+    'Customers find you first when they search Google',
+    'Found on Google when locals search nearby',
+    'We will get you on page one',
+  ])('would catch the claim — the matcher is not inert: %s', (planted) => {
+    // The first two are the exact lines this card used to print.
+    expect(RANKING_PROMISE.some((re) => re.test(planted))).toBe(true);
+  });
+
+  it('makes NO ranking claim at all when there is no proof', () => {
+    const html = renderPosterHtml(base) + renderPosterBackHtml(base);
+    expect(RANKING_PROMISE.some((re) => re.test(html))).toBe(false);
+    expect(html).not.toMatch(/page\s*one/i);
+  });
+});
+
+describe('with proof, the card asks the reader to check rather than believe', () => {
+  const proven: PosterModel = {
+    ...base,
+    proof: { query: 'grafton towing', position: 1.7, measuredAt: '2026-09-06' },
+  };
+
+  it('leads with the phrase to search, in the present tense', () => {
+    const html = renderPosterHtml(proven);
+    expect(html).toContain('grafton towing');
+    expect(html).toMatch(/on page one today/i);
+    // Present tense only — the claim is about now, never about what will happen.
+    expect(RANKING_PROMISE.some((re) => re.test(html))).toBe(false);
+  });
+
+  it('still says the domain goes to exactly one business', () => {
+    // Scarcity is what closes; proof is what makes scarcity worth acting on. Losing either
+    // leaves a card that is honest but has no reason to be read.
+    expect(renderPosterHtml(proven)).toMatch(/<b>one<\/b>/i);
+  });
+
+  it('escapes the proof phrase — it is data, and it reaches print', () => {
+    const nasty: PosterModel = {
+      ...base,
+      proof: { query: '<script>alert(1)</script>', position: 2, measuredAt: '2026-09-06' },
+    };
+    expect(renderPosterHtml(nasty)).not.toContain('<script>alert(1)</script>');
+  });
+});

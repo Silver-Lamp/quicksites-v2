@@ -92,6 +92,13 @@ export type PosterModel = {
   /** Restaurant domain-competition: the domain is a diner-traffic PRIZE won by claiming the
    *  restaurant's own ordering site, not the site itself. Switches the copy to that framing. */
   restaurantComp?: boolean;
+  /**
+   * Present-tense proof: this domain holds page one TODAY for `query`, at `position`, as of
+   * `measuredAt`. Set ONLY from a live Search Console read (see the rate card) — never typed.
+   * When present the card leads with something the recipient can check on their phone before
+   * they finish reading it; when null the card makes no ranking claim of any kind.
+   */
+  proof?: { query: string; position: number; measuredAt: string } | null;
   /** Talking Demo watch page for the pitch site — a "🔊 see it in action" line on the back.
    *  Populated (flag-gated) by ensureTalkingDemo; null → the line is omitted (default). */
   watchUrl?: string | null;
@@ -114,14 +121,14 @@ export function postcardBenefits(industry: IndustryKey): string[] {
     return [
       'Customers order online right from their phone',
       'Your full menu, always current — edit it anytime',
-      'Show up on Google when locals search nearby',
+      'Your own web address, not a listing on someone else’s app',
     ];
   }
   if (RETAIL_MAKER.has(industry)) {
     return [
       'Sell your products online — no storefront needed',
       'Secure checkout, you keep the sale',
-      'Found on Google when locals search nearby',
+      'Your own web address — not a marketplace page',
     ];
   }
   // Estimator-trade verticals — the free instant estimate is the hook that turns a
@@ -133,7 +140,7 @@ export function postcardBenefits(industry: IndustryKey): string[] {
     return [
       'A free instant estimate turns visitors into real leads',
       'Homeowners get a ballpark price on the spot — before they call',
-      'Found on Google when locals search for you nearby',
+      'A real website at your own address, live in minutes',
     ];
   }
   // Auto-service verticals — the SecondSet transparency wedge: the tech captures the
@@ -144,13 +151,18 @@ export function postcardBenefits(industry: IndustryKey): string[] {
     return [
       'Show customers the actual problem — a photo and the tech’s note, on their phone',
       'They approve the work before you turn a wrench — fewer disputes, more trust',
-      'Found on Google when drivers search for a shop they can trust',
+      'A web address of your own, not a review-site profile',
     ];
   }
+  // ⚠️ The first line here used to read "Customers find you first when they search Google".
+  // That is a future-tense ranking claim — the exact shape /for-sales forbids a rep from saying
+  // out loud, printed on a card and mailed to a stranger. A postcard cannot be walked back or
+  // caveated in conversation, so it must be the most conservative surface we own, not the least.
+  // What replaced it is what the site actually does the day they claim it.
   return [
-    'Customers find you first when they search Google',
+    'A real website at your own address — live in minutes',
     'Request a quote or call you in one tap',
-    'Live in minutes — nothing to install or maintain',
+    'Nothing to install, nothing to maintain',
   ];
 }
 
@@ -222,7 +234,7 @@ export function claimDeadlineLabel(days = 14, from: Date = new Date()): string {
 export async function buildPosterModel(
   campaign: GeoCampaign,
   prospects: Prospect[],
-  opts?: { baseUrl?: string; brandName?: string | null },
+  opts?: { baseUrl?: string; brandName?: string | null; proof?: PosterModel['proof'] },
 ): Promise<PosterModel | null> {
   // Restaurant competitions have no shared pitch site (each restaurant has its own
   // delivered.menu site) — they're still postcard-able; the personalized send below
@@ -275,6 +287,7 @@ export async function buildPosterModel(
     sender: senderFromProfile(profile, brandName),
     localLine,
     restaurantComp: isRestaurantComp,
+    proof: opts?.proof ?? null,
     watchUrl,
   };
 }
@@ -372,12 +385,19 @@ export function renderPosterHtml(m: PosterModel): string {
 
   // Restaurant competitions frame the domain as a diner-traffic PRIZE (won by claiming the
   // restaurant's own ordering site), not as the site itself.
-  const headlineHtml = m.restaurantComp
-    ? `Own restaurant orders<br/>in ${esc(place)}`
-    : `Own ${esc(place)}<br/>${esc(m.industryLabel)} online`;
-  const subHtml = m.restaurantComp
-    ? `A premium address diners search — it goes to <b>one</b> restaurant.`
-    : `This premium local domain is available to <b>one</b> business.`;
+  // With proof, the card asks the recipient to CHECK something rather than believe something.
+  // "Search this" beats any adjective we could print, and it is the same present-tense move the
+  // rep makes on the phone — the postcard and the call now say the same thing.
+  const headlineHtml = m.proof
+    ? `Search<br/>&ldquo;${esc(m.proof.query)}&rdquo;`
+    : m.restaurantComp
+      ? `Own restaurant orders<br/>in ${esc(place)}`
+      : `Own ${esc(place)}<br/>${esc(m.industryLabel)} online`;
+  const subHtml = m.proof
+    ? `That is this domain, on page one today. It goes to <b>one</b> ${esc(m.industryLabel.toLowerCase())} business in ${esc(place)}.`
+    : m.restaurantComp
+      ? `A premium address diners search — it goes to <b>one</b> restaurant.`
+      : `This premium local domain is available to <b>one</b> business.`;
   const scanLabel = m.restaurantComp
     ? 'Scan to preview &amp; claim your free ordering site'
     : 'Scan to preview &amp; claim your free site';

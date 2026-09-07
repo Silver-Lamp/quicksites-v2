@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { listProspectsByCampaign, markOutreachSent } from '@/lib/outreach/prospects';
+import { proofForDomain } from '@/lib/outreach/postcardProof';
 import { buildPosterModel, renderPersonalizedPostcard, claimDeadlineLabel } from '@/lib/outreach/competitionPoster';
 import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
 import { getTestRecipient } from '@/lib/outreach/mail/testRecipient';
@@ -53,11 +54,37 @@ export async function POST(req: Request) {
     );
   }
 
-  const prospects = await listProspectsByCampaign(campaignId);
+  // ⚠️ PROVEN-DOMAIN TRIAL GATE. A card may only go out claiming page one when the domain holds
+  // it TODAY, read live at send time from the same data the rate card reads. Founder-tier copy
+  // (no ranking claim at all) is a deliberate opt-in via allowFounderTier, so the default cannot
+  // quietly become "mail anything" — the failure that matters here is a claim in someone's
+  // mailbox that was true when a spreadsheet was written and is not true when it is read.
+  const proofLookup = await proofForDomain(campaign.domain);
+  const allowFounderTier = body.allowFounderTier === true;
+  if (!proofLookup.proven && !allowFounderTier && body.test !== true) {
+    return NextResponse.json(
+      {
+        error: proofLookup.detail,
+        code: `proof_${proofLookup.reason.replace(/-/g, '_')}`,
+        hint: 'Send founder-tier copy with allowFounderTier:true — it makes no ranking claim.',
+      },
+      { status: 409 },
+    );
+  }
+
+  // Unmailed only, so consecutive sends work THROUGH the list rather than re-picking its head.
+  const prospects = await listProspectsByCampaign(campaignId, { unmailedOn: 'postcard' });
+  if (prospects.length === 0) {
+    return NextResponse.json(
+      { error: 'Every prospect on this campaign has already been mailed a postcard.', code: 'all_mailed' },
+      { status: 409 },
+    );
+  }
   const brand = await resolveCampaignBrand(campaign.org_id);
   const model = await buildPosterModel(campaign, prospects, {
     baseUrl: brand.baseUrl,
     brandName: brand.orgId ? brand.name : null,
+    proof: proofLookup.proven ? proofLookup.proof : null,
   });
   if (!model) return NextResponse.json({ error: 'Campaign has no pitch site.' }, { status: 400 });
 

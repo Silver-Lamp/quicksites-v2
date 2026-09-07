@@ -138,14 +138,37 @@ export async function listProspects(filter: ListProspectsFilter = {}): Promise<P
   return (data ?? []) as Prospect[];
 }
 
-export async function listProspectsByCampaign(campaignId: string): Promise<Prospect[]> {
-  const { data, error } = await supabaseAdmin
+export type ListProspectsOptions = {
+  /**
+   * Skip prospects already contacted on this channel, so consecutive sends WORK THROUGH the list
+   * instead of re-picking its head.
+   *
+   * ⚠️ Why this exists: the senders take `.slice(0, MAX_PIECES)` of this result, ordered newest
+   * first. With no filter, a second send re-selects the SAME 25 prospects — Lob's idempotency key
+   * quietly prevents a duplicate charge, so nothing errors, nothing is billed twice, and prospect
+   * 26 simply never receives a card. A campaign with 60 targets would mail 25 of them forever and
+   * every dashboard would call it a success.
+   */
+  unmailedOn?: 'postcard' | 'sms';
+};
+
+export async function listProspectsByCampaign(
+  campaignId: string,
+  opts: ListProspectsOptions = {},
+): Promise<Prospect[]> {
+  let q = supabaseAdmin
     .from('outreach_prospects')
     .select(
       'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id, rating, review_count',
     )
-    .eq('geo_campaign_id', campaignId)
-    .order('created_at', { ascending: false });
+    .eq('geo_campaign_id', campaignId);
+
+  if (opts.unmailedOn === 'postcard') q = q.is('postcard_sent_at', null);
+  if (opts.unmailedOn === 'sms') q = q.is('sms_sent_at', null);
+
+  // Oldest first when working through a list: a prospect that has waited longest goes next.
+  // (Unfiltered callers keep the original newest-first order so previews are unchanged.)
+  const { data, error } = await q.order('created_at', { ascending: Boolean(opts.unmailedOn) });
   if (error) throw new Error(`listProspectsByCampaign failed: ${error.message}`);
   return (data ?? []) as Prospect[];
 }

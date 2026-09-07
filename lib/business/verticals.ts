@@ -21,7 +21,8 @@
 // lives in ./planEvidence instead. No key ever reached the bundle — verified by grepping the
 // deployed chunk — but the page was broken from the day it shipped.
 
-export type VerticalKey = 'rental' | 'commerce' | 'agency' | 'restaurant' | 'pod' | 'partners';
+export type VerticalKey =
+  | 'rental' | 'commerce' | 'agency' | 'restaurant' | 'pod' | 'partners' | 'trade_sites';
 
 export type Stage = 'proven' | 'live-untested' | 'built-inert' | 'planned';
 
@@ -82,6 +83,35 @@ export const VERTICALS: Vertical[] = [
     decisiveTest:
       'Postcards to the no-website businesses in one city where the domain provably holds page one, and the count that call back. The card tells them to search a phrase and see for themselves, so it tests the offer rather than a salesperson’s manner — which the phone attempt could not separate. Current record: zero replies from 24 touches, so the honest prior is low.',
     costToTest: 'Roughly two weeks of one salesperson. No new spend; the inventory already exists.',
+  },
+  {
+    key: 'trade_sites',
+    name: 'Auto-built Trade Sites',
+    oneLiner:
+      'Build a working website for a local trade business from its public listing — for the ones that have none — and sell it to them for the price of a phone plan.',
+    stage: 'built-inert',
+    mechanics: [
+      'Their own name and their own site, not one of our geo domains. Nothing is exclusive and nothing is scarce, so this is a subscription rather than a rental.',
+      'Free until claimed: an unclaimed draft renders watermarked and noindex behind a "claim this site" bar. The claim is the conversion event, not the site.',
+      'Three tiers once claimed — the site on a QuickSites subdomain, the same site on a custom domain we register and manage, and a managed tier where we keep it current.',
+      'Self-serve by necessity. A salesperson costs more to acquire a customer than this earns in a year, so it is a claim link and a card on file or it is nothing. Reps sell the geo rental instead.',
+    ],
+    built: [
+      'The whole production line already exists for restaurants: listing import, draft assembly, watermark-and-noindex until claimed, tokenised claim links, ownership transfer on claim.',
+      'Marginal cost is cents — 1,379 metered AI calls cost $25 across a month, and a subdomain costs nothing.',
+      'Generated copy no longer invents hours, response times, licensing, guarantees or prices about a business we have never spoken to (#903).',
+    ],
+    unproven: [
+      'Nobody has ever paid for one. There is no checkout for these tiers — the price is a proposal, not a thing anyone has been asked for.',
+      'The restaurant model funds itself with a take-rate on orders. A towing company has no transaction to tax, so the free-site-plus-commission logic does not carry over and this has to be sold.',
+      'The claim rate is completely unknown. Everything downstream is a fraction of a number nobody has measured, and the only cold-outreach evidence we own is 0 replies from 24 touches.',
+      'A subdomain has no SEO story: our own page-one geo domains are worth roughly $116/month of equivalent traffic between them, and this is worth less. It sells on existing, being findable by name, and not looking defunct.',
+      'Volume is the whole model and there is not much of it yet — 60 no-website towing prospects, 30 restaurant, 14 concrete. At $19/month and a generous 10% claim-to-paid that is about $114/month.',
+    ],
+    decisiveTest:
+      'Send the claim link to every no-website business in one trade and count two numbers: how many claim a free site, and how many of those pay for a domain. The first tests whether the site is wanted; the second tests whether it is worth money. They are different questions and the first is cheap.',
+    costToTest:
+      'Production is already paid for. The real spend is the outreach and building a checkout for the tier — call it a week, plus postage.',
   },
   {
     key: 'commerce',

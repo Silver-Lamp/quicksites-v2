@@ -38,6 +38,11 @@ export const EVENTS = {
   COMMISSION_ACCRUED: 'commission_accrued',
   COMMISSION_PAID: 'commission_paid',
 
+  // Auto-built trade sites (claim is the conversion; the domain tier is the money)
+  TRADE_SITE_CLAIMED: 'trade_site_claimed', // a business claimed the site we built from its listing
+  TRADE_SITE_CHECKOUT_CREATED: 'trade_site_checkout_created', // the owner asked to buy a custom domain
+  TRADE_SITE_PAID: 'trade_site_paid', // invoice.paid on that subscription — money moved
+
   // Demand capture on unclaimed outreach drafts (distinctId = the template/draft)
   MENU_DEMAND_CAPTURED: 'menu_demand_captured', // a visitor logged order-intent on a draft
   MENU_DEMAND_NOTIFIED: 'menu_demand_notified', // demand crossed threshold → restaurant texted

@@ -93,10 +93,23 @@ export async function claimPendingSiteDraft(
 
     // The RPC only transfers a row that's still an unclaimed listing_import draft, so
     // this is safe + idempotent (a leaked link no-ops after the first claim).
-    await supabaseAdmin.rpc('claim_operator_draft', {
+    const { data: transferred } = await supabaseAdmin.rpc('claim_operator_draft', {
       p_template_id: payload.templateId,
       p_to_owner: user.id,
     });
+
+    // ⚠️ Claiming used to make the site vanish: the public route renders only UNOWNED drafts, so
+    // the moment owner_id was set the preview URL 404'd for everyone but the owner, while the
+    // welcome page said "Your site is live". Publish on claim so that sentence is true, and record
+    // the claim on the prospect (the claim rate is this vertical's decisive number).
+    if (transferred === true) {
+      try {
+        const { activateClaimedSite } = await import('@/lib/tradeSites/activate');
+        await activateClaimedSite(payload.templateId, user.id);
+      } catch (e) {
+        console.error('[claim] activate after claim failed:', (e as any)?.message || e);
+      }
+    }
 
     // If this draft is part of a restaurant domain-competition, first-claim wins the apex.
     // Best-effort + idempotent (no-op when it isn't a competition or one's already decided).

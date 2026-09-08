@@ -27,6 +27,10 @@ export type PlanEvidence = {
   printOrders: number;
   commissionRows: number;
   orgs: number;
+  /** Auto-built trade sites: drafts we built, businesses that claimed one, domains paid for. */
+  tradeDrafts: number;
+  tradeClaimed: number;
+  tradePaid: number;
 };
 
 async function countOf(table: string, apply?: (q: any) => any): Promise<number> {
@@ -51,6 +55,9 @@ export async function loadPlanEvidence(): Promise<PlanEvidence> {
     printOrders,
     commissionRows,
     orgs,
+    tradeDrafts,
+    tradeClaimed,
+    tradePaid,
   ] = await Promise.all([
     countOf('geo_industry_campaigns'),
     countOf('geo_industry_campaigns', (q) => q.not('subscription_status', 'is', null)),
@@ -61,6 +68,11 @@ export async function loadPlanEvidence(): Promise<PlanEvidence> {
     countOf('print_orders'),
     countOf('commission_ledger'),
     countOf('organizations'),
+    // "Trade" = a listing-built site that is not a restaurant (the food model is a take-rate).
+    countOf('templates', (q) => q.eq('claim_source', 'listing_import').neq('industry', 'restaurant')),
+    countOf('templates', (q) => q.eq('claim_source', 'claimed').neq('industry', 'restaurant')),
+    // Paid = at least one invoice.paid, never a status word (memory: a trial is not a rental until it bills).
+    countOf('trade_site_subscriptions', (q) => q.gt('payment_count', 0)),
   ]);
 
   let geoPublished = 0;
@@ -125,5 +137,8 @@ export async function loadPlanEvidence(): Promise<PlanEvidence> {
     printOrders,
     commissionRows,
     orgs,
+    tradeDrafts,
+    tradeClaimed,
+    tradePaid,
   };
 }

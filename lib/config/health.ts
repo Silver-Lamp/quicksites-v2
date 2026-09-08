@@ -131,6 +131,14 @@ export const CONFIG_GATES: ConfigGate[] = [
       'A renter completes Stripe checkout and is charged every month, but nothing is written back: the campaign still reads unrented, no subscription id is stored, and renewals and failed payments are invisible. The money moves and our records do not. This gate exists because that was the live state — commerce showed "ready" while the rental webhook answered "not configured", and the one money path that had never taken a payment was the one path no gate watched.',
   },
   {
+    key: 'trade_site_billing',
+    label: 'Auto-built trade sites — custom-domain subscriptions',
+    enabledBy: 'TRADE_SITE_BILLING_ENABLED',
+    requires: ['STRIPE_SECRET_KEY', 'STRIPE_GEO_WEBHOOK_SECRET'],
+    breaks:
+      'The post-claim page sells a custom domain, Stripe charges for it monthly, and nothing is written back: no subscription row, no payment count, no domain provisioned. Events for this rail arrive on the geo-rental webhook endpoint, so the geo secret is the one that must be set.',
+  },
+  {
     key: 'ai',
     label: 'AI (copy, hero images, backdrops)',
     requires: ['OPENAI_API_KEY'],

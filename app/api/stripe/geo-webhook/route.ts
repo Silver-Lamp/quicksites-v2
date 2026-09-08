@@ -15,6 +15,11 @@ import {
   recordCampaignPayment,
 } from '@/lib/outreach/geoCampaigns';
 import { recordRentalCommissions, voidRentalCommissions } from '@/lib/commerce/rentalCommissions';
+import {
+  applyCheckoutCompleted as applyTradeSiteCheckoutCompleted,
+  applySubscriptionStatus as applyTradeSiteSubscriptionStatus,
+  applyInvoicePaid as applyTradeSiteInvoicePaid,
+} from '@/lib/tradeSites/subscriptions';
 import * as Sentry from '@sentry/nextjs';
 import type Stripe from 'stripe';
 
@@ -43,6 +48,10 @@ export async function POST(req: Request) {
   try {
     if (event.type === 'checkout.session.completed') {
       const s = event.data.object as Stripe.Checkout.Session;
+      // Trade-site custom-domain subscriptions share this endpoint (one Stripe endpoint + one
+      // secret to configure, not two). Their metadata carries trade_site_template_id; a geo rental
+      // never does, so the branch is unambiguous.
+      if (await applyTradeSiteCheckoutCompleted(s)) return NextResponse.json({ received: true });
       const campaignId = s.metadata?.geo_campaign_id || s.client_reference_id;
       if (campaignId) {
         await setCampaignSubscription(campaignId, {
@@ -59,6 +68,9 @@ export async function POST(req: Request) {
       event.type === 'customer.subscription.deleted'
     ) {
       const sub = event.data.object as Stripe.Subscription;
+      if (await applyTradeSiteSubscriptionStatus(sub, event.type === 'customer.subscription.deleted')) {
+        return NextResponse.json({ received: true });
+      }
       const campaignId = sub.metadata?.geo_campaign_id;
       if (campaignId) {
         await setCampaignSubscription(campaignId, {
@@ -73,6 +85,16 @@ export async function POST(req: Request) {
       const inv = event.data.object as Stripe.Invoice;
       const subId = subscriptionIdOf(inv);
       const campaign = subId ? await getGeoCampaignBySubscriptionId(subId) : null;
+      if (!campaign && subId) {
+        // Not a rental → maybe a trade-site domain subscription. Same proof rule: only
+        // invoice.paid counts as money, and only a count tells a renewal from a first payment.
+        await applyTradeSiteInvoicePaid({
+          subscriptionId: subId,
+          invoiceId: inv.id!,
+          amountCents: inv.amount_paid ?? null,
+          paidAt: new Date((inv.status_transitions?.paid_at ?? event.created) * 1000).toISOString(),
+        });
+      }
       if (campaign) {
         await recordCampaignPayment(campaign.id, {
           invoiceId: inv.id!,

@@ -102,7 +102,7 @@ export const VERTICALS: Vertical[] = [
       'Generated copy no longer invents hours, response times, licensing, guarantees or prices about a business we have never spoken to (#903).',
     ],
     unproven: [
-      'Nobody has ever paid for one. There is no checkout for these tiers — the price is a proposal, not a thing anyone has been asked for.',
+      'Nobody has ever paid for one. A self-serve checkout for the custom-domain tier now exists on the post-claim page (flag-gated), so the price is a thing someone can be asked for — it is still a proposal until someone says yes.',
       'The restaurant model funds itself with a take-rate on orders. A towing company has no transaction to tax, so the free-site-plus-commission logic does not carry over and this has to be sold.',
       'The claim rate is completely unknown. Everything downstream is a fraction of a number nobody has measured, and the only cold-outreach evidence we own is 0 replies from 24 touches.',
       'A subdomain has no SEO story: our own page-one geo domains are worth roughly $116/month of equivalent traffic between them, and this is worth less. It sells on existing, being findable by name, and not looking defunct.',

@@ -139,7 +139,7 @@ export default function OperatorPanel({ evidence: e, tradeOps = null }: { eviden
       </p>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat k="Domains held" v={String(e.geoCampaigns)} s="Exact-match, city × trade" />
+        <Stat k="Domains held" v={String(e.geoDomainsOwned)} s={`${e.geoCampaigns} campaigns · ${e.geoCampaigns - e.geoDomainsOwned} never registered`} />
         <Stat k="Subscriptions" v={String(e.geoRented)} s="Ever created, including tests" />
         <Stat
           k="Rental payments"

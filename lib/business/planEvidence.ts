@@ -11,7 +11,10 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 
 /** Live counts, read at render. Never hardcode any of these into the prose. */
 export type PlanEvidence = {
+  /** Campaign rows — a city × trade we set out to hold, NOT a domain we hold. */
   geoCampaigns: number;
+  /** Domains actually registered (`registered`/`attached` after the nightly registry check). */
+  geoDomainsOwned: number;
   geoPublished: number;
   geoRented: number;
   rentalPaymentsTaken: number;
@@ -47,6 +50,7 @@ async function countOf(table: string, apply?: (q: any) => any): Promise<number> 
 export async function loadPlanEvidence(): Promise<PlanEvidence> {
   const [
     geoCampaigns,
+    geoDomainsOwned,
     geoRented,
     templates,
     templatesPublished,
@@ -60,6 +64,9 @@ export async function loadPlanEvidence(): Promise<PlanEvidence> {
     tradePaid,
   ] = await Promise.all([
     countOf('geo_industry_campaigns'),
+    // ⚠️ "100 geo domains" was 100 campaign ROWS; 60 of the domains were never bought. The
+    // registry truth is written back nightly by /api/cron/gsc-backfill (unregistered ↔ attached).
+    countOf('geo_industry_campaigns', (q) => q.in('domain_status', ['registered', 'attached'])),
     countOf('geo_industry_campaigns', (q) => q.not('subscription_status', 'is', null)),
     countOf('templates'),
     countOf('templates', (q) => q.eq('published', true)),
@@ -122,6 +129,7 @@ export async function loadPlanEvidence(): Promise<PlanEvidence> {
 
   return {
     geoCampaigns,
+    geoDomainsOwned,
     geoPublished,
     geoRented,
     rentalPaymentsTaken,

@@ -24,6 +24,16 @@ export type BackfillCandidate = { id: string; domain: string };
  * Namecheap nameservers (or have none), and no amount of retrying will write a TXT there. Those
  * are reported once, by name, and never consume the nightly budget. 93 of 100 are on Vercel.
  */
+/**
+ * Is this domain actually registered? Registered through Vercel, or delegated to SOME
+ * nameservers. An external domain with none is not registered — attaching it to a Vercel
+ * project needs no purchase, which is how 60 campaign rows came to say `attached` for domains
+ * RDAP has never heard of. Pure; the cron writes the answer back to the campaign row.
+ */
+export function isRegisteredDomain(d: { registeredWithVercel: boolean; nameservers: string[] }): boolean {
+  return d.registeredWithVercel || d.nameservers.length > 0;
+}
+
 export function partitionByZone(
   candidates: BackfillCandidate[],
   vercelZones: Set<string> | null,

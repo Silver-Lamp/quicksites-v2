@@ -12,7 +12,7 @@ const db = () => supabaseAdmin as any;
 
 export async function loadPlannerInputs(): Promise<{ campaigns: OwnedCampaign[]; history: SweepHistory[] }> {
   const [{ data: camps }, { data: prospects }] = await Promise.all([
-    db().from('geo_industry_campaigns').select('city, region, industry_key, domain, rank_status').not('domain', 'is', null).limit(2000),
+    db().from('geo_industry_campaigns').select('city, region, industry_key, domain, rank_status, domain_status').not('domain', 'is', null).limit(2000),
     db().from('outreach_prospects').select('city, region, industry_key, lead_tier, created_at').limit(20000),
   ]);
   const agg = new Map<string, SweepHistory>();

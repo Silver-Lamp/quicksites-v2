@@ -419,6 +419,21 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `for 24/7 towing…`, and the first apply missed 20 strings on 2 sites that only the re-audit caught;
   and the script lists every map entry with its match count, because an entry that matches nothing is
   a silent no-op. Re-derive, never remember: `npx tsx scripts/audit-live-claims.mjs`.
+- **⚠️ A `geo_industry_campaigns` row is NOT a domain we own (found 2026-09-08).** `domain_status
+  = 'attached'` means attached to the Vercel project — which needs no purchase — and **60 of the 100
+  campaign domains had never been registered** (RDAP: no record). The plan said "100 geo domains",
+  the operator panel "Domains held 100", and the queue planner ranked ten cities on "+50 we own
+  belmont-towing.com", a domain that does not exist. Now: the nightly `gsc-backfill` classifies
+  every Vercel domain (registered through Vercel, or delegated to nameservers → real) and writes
+  `domain_status='unregistered'` back; `planEvidence.geoDomainsOwned` counts only
+  `registered`/`attached`; the planner's ownership bonus needs the same. Before trusting "we own
+  X": `curl -sL https://rdap.org/domain/X` — a 404 means nobody does. The same afternoon found
+  the GSC backfill had **five** things wrong on our side, each of which read as "the owner's
+  re-consent didn't work": the callback 404'd (and discarded) a grant from an account with no
+  properties; the operator token was picked by freshest *expiry*, which the daily rank reads bump
+  on every old read-only row, so a new grant lost the tie twice; and "in Vercel's domain list" was
+  taken for "has a DNS zone". `app/api/gsc/__tests__/oauthCallback.test.ts` and
+  `lib/gsc/__tests__/backfillZones.test.ts` pin all of it.
 - Stripe Connect onboarding is consolidated on `payment_accounts` (fee config = `platform_fee_percent`/`collect_platform_fee`/`platform_fee_min_cents`). The legacy `merchant_payment_accounts` table + bps fee columns (`merchants.default_platform_fee_bps`, `sites.platform_fee_bps`) were retired in `supabase/migrations/20260701_retire_legacy_connect_bps.sql`. See [`docs/MONETIZATION.md`](docs/MONETIZATION.md).
 - Large artifacts (`quicksites-export.zip`, `get-pip.py`, `.tsbuildinfo`, lint reports) and dead dirs (`_pages-legacy/`, `_deprecated__domains/`, `_deprecating_sites/`) were removed from git in the cleanup milestone — the tree is clean of them today.
 - Two `admin/` locations: `app/admin/` (UI) and a top-level `admin/` (libs/tooling, incl. the master block schema). Don't confuse them.

@@ -100,11 +100,10 @@ export async function buildDraftFromListing(input: BuildDraftInput): Promise<Bui
   const heroImage = listing.photos?.[0] ?? null;
   const tpl = buildRebuildTemplate({ spec, heroImage, sourceUrl: listing.website ?? null });
 
-  // ⚠️ Services on a listing draft are the business's OWN declared categories or nothing.
-  // `buildRebuildTemplate` falls back to the industry scaffold's list when the spec has none —
-  // right for a URL rebuild, wrong here: "AC Recharge" under a towing company we never spoke to
-  // is the invented-menu class. Re-apply the cleaned list and, when it is empty, drop the block.
-  applyListingServices(tpl.data, spec.services);
+  // Services on a listing draft: the business's OWN declared categories when it has any, else the
+  // trade's standard list — stamped `meta.services_source` so the renderer adds "call to confirm"
+  // under a default list (owner decision 2026-09-08; header of lib/rebuild/listingServices.ts).
+  applyListingServices(tpl.data, spec.services, industryKey);
 
   // Insert a claimable draft (operator-owned until the business claims it), retrying
   // slug collisions.

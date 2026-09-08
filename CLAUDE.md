@@ -192,6 +192,15 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   parked no-website trade prospects — the button and the cron run the **same** `runSweep` /
   `buildDraftFromListing`, and the sweep category list is one module (`lib/prospects/sweepCategories.ts`).
   A person still chooses the cities; the cron never invents one, and restaurants are refused at enqueue.
+  PR 3: **the claim postcard** (`lib/outreach/claimPostcard.ts` — the one surface nothing delivered
+  before) mails each built, unmailed trade draft ONE card to the **listing's street address** (the
+  Google-PIN channel; cold SMS stays off) with a QR to the tracked `/go/<prospectId>` link. ⚠️ **It
+  is the most conservative surface we own** and a test greps the HTML for every promise it must
+  never make — no ranking/Google, no 24/7 or licensing, no guarantee, **no competitor, no deadline,
+  no printed price**. Three gates before postage (`TRADE_PIPELINE_MAIL_ENABLED`,
+  `POSTCARD_MAIL_ENABLED` + `LOB_*`, a sender profile with name + email) and two per draft: an
+  operational claim anywhere in the tree **blocks the send**, and the cron waits
+  `TRADE_PIPELINE_MAIL_MIN_AGE_HOURS` (24) so a person can eyeball last night's builds first.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

@@ -23,6 +23,9 @@ import crypto from 'node:crypto';
 import { scrubText, makesOperationalClaim, honestAnswerFor, claimKind } from '../lib/rebuild/scrubInventedClaims.ts';
 
 const APPLY = process.argv.includes('--apply');
+// --drafts: the unpublished listing-import drafts the claim postcard would mail. Committed and
+// NEVER published here — publishing an unclaimed draft takes a stranger's site live.
+const DRAFTS = process.argv.includes('--drafts');
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : null;
 
 /** The fields where removing a sentence leaves valid, readable copy. */
@@ -80,7 +83,11 @@ function scrubTree(node, onChange) {
   }
 }
 
-const rows = await rest(`templates?select=id,slug,rev,published,data&published=eq.true&limit=400`);
+const rows = await rest(
+  DRAFTS
+    ? `templates?select=id,slug,rev,published,data&published=eq.false&claim_source=eq.listing_import&limit=400`
+    : `templates?select=id,slug,rev,published,data&published=eq.true&limit=400`,
+);
 const targets = rows.filter((t) => !ONLY || t.slug === ONLY);
 
 const tot = { scanned: 0, changed: 0, strings: 0, done: 0, fail: 0, emptied: 0 };
@@ -108,6 +115,10 @@ for (const tpl of targets) {
         p_payload: { id: tpl.id, base_rev: tpl.rev ?? 0, patch: { data }, actor: null, kind: 'save', org_id: null },
       }),
     });
+    if (DRAFTS) {
+      tot.done++;
+      continue; // commit only — an unclaimed draft is never published from here
+    }
     await rest('rpc/publish_template_demo', { method: 'POST', body: JSON.stringify({ p_template_id: tpl.id }) });
 
     // ⚠️ Legacy `sites` rows shadow the republish: a custom domain is served from

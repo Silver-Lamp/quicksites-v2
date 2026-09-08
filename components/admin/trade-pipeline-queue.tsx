@@ -80,6 +80,50 @@ export default function TradePipelineQueue() {
   const queued = state?.rows.filter((r) => r.status === 'queued').length ?? 0;
   const recent = state?.rows.slice(0, 8) ?? [];
 
+  // ── Claim postcards (step 3) ──
+  type MailState = { mailable: number; blocked: Record<string, number>; lobConfigured: boolean; mailEnabled: boolean; senderReady: boolean; cron: { enabled: boolean; maxMail: number; minAgeHours: number } };
+  const [mail, setMail] = useState<MailState | null>(null);
+  const [mailMsg, setMailMsg] = useState<string | null>(null);
+  async function loadMail() {
+    const r = await fetch('/api/admin/prospects/mail-claim-postcards', { cache: 'no-store' });
+    if (r.ok) setMail(await r.json());
+  }
+  useEffect(() => {
+    void loadMail();
+  }, []);
+  async function previewCards() {
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/prospects/mail-claim-postcards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ preview: true }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.cards?.length) {
+        setMailMsg(j?.error || 'Nothing to preview.');
+        return;
+      }
+      const w = window.open('', '_blank');
+      if (!w) return;
+      const c = j.cards[0];
+      w.document.write(`<title>Claim card — ${c.businessName}</title><div style="display:flex;gap:24px;padding:16px;background:#e5e7eb"><iframe style="width:6.2in;height:9.2in;border:0" srcdoc="${c.frontHtml.replace(/"/g, '&quot;')}"></iframe><iframe style="width:6.2in;height:9.2in;border:0" srcdoc="${c.backHtml.replace(/"/g, '&quot;')}"></iframe></div>`);
+      w.document.close();
+      setMailMsg(`Previewing 1 of ${j.mailable} mailable${j.blocked?.length ? ` · ${j.blocked.length} blocked (${[...new Set(j.blocked.map((b: any) => b.reason))].join(', ')})` : ''}.`);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function mailCards(test: boolean) {
+    if (!test && !window.confirm(`Mail claim postcards to up to ${mail?.cron.maxMail ?? 10} businesses now? This spends postage.`)) return;
+    setBusy(true);
+    setMailMsg(null);
+    try {
+      const r = await fetch('/api/admin/prospects/mail-claim-postcards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ test, limit: mail?.cron.maxMail ?? 10 }) });
+      const j = await r.json().catch(() => ({}));
+      setMailMsg(!r.ok ? `Refused: ${j?.error || r.status}` : `${test ? 'Test card' : 'Mailed'}: ${j.mailed} sent, ${j.blocked} blocked, ${j.failed} failed.`);
+      await loadMail();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="mb-4 rounded-2xl border border-border bg-card p-4 text-card-foreground">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -131,6 +175,30 @@ export default function TradePipelineQueue() {
             </button>
           </div>
           {msg && <div className="text-xs text-muted-foreground">{msg}</div>}
+
+          {mail && (
+            <div className="rounded-xl border border-border bg-background p-3 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="font-semibold">📮 Claim postcards</span>{' '}
+                  <span className="text-muted-foreground">
+                    {mail.mailable} mailable
+                    {Object.keys(mail.blocked).length ? ` · blocked: ${Object.entries(mail.blocked).map(([k, n]) => `${n} ${k}`).join(', ')}` : ''}
+                    {' · '}
+                    {mail.cron.enabled ? `cron ON, ${mail.cron.maxMail}/night after ${mail.cron.minAgeHours}h review` : 'cron OFF (TRADE_PIPELINE_MAIL_ENABLED)'}
+                    {!mail.lobConfigured ? ' · Lob not configured' : !mail.mailEnabled ? ' · POSTCARD_MAIL_ENABLED off' : ''}
+                    {!mail.senderReady ? ' · ⚠️ sender profile needs name + email' : ''}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={previewCards} disabled={busy} className="rounded-lg border border-border px-2 py-1 hover:bg-muted disabled:opacity-50">Preview</button>
+                  <button type="button" onClick={() => mailCards(true)} disabled={busy || !mail.lobConfigured || !mail.mailEnabled} className="rounded-lg border border-border px-2 py-1 hover:bg-muted disabled:opacity-50">Mail test card</button>
+                  <button type="button" onClick={() => mailCards(false)} disabled={busy || !mail.lobConfigured || !mail.mailEnabled || !mail.senderReady || !mail.mailable} className="rounded-lg bg-emerald-400 px-2 py-1 font-semibold text-zinc-950 hover:bg-emerald-300 disabled:opacity-50">Mail now</button>
+                </div>
+              </div>
+              {mailMsg && <div className="mt-1 text-muted-foreground">{mailMsg}</div>}
+            </div>
+          )}
           {recent.length > 0 && (
             <ul className="divide-y divide-border text-xs">
               {recent.map((r) => (

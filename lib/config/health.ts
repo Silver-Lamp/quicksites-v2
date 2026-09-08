@@ -148,6 +148,14 @@ export const CONFIG_GATES: ConfigGate[] = [
       'The queue on /admin/growth fills and never drains: every sweep fails on the Places key, or every draft builds with no copy. The cron still reports ok because a job that processes nothing is not an error.',
   },
   {
+    key: 'trade_pipeline_mail',
+    label: 'Auto-built trade sites — nightly claim postcards (Lob)',
+    enabledBy: 'TRADE_PIPELINE_MAIL_ENABLED',
+    requires: ['LOB_API_KEY', 'LOB_FROM_NAME', 'LOB_FROM_LINE1', 'LOB_FROM_CITY', 'LOB_FROM_STATE', 'LOB_FROM_ZIP'],
+    breaks:
+      'The cron reaches its mail step every night and refuses with lob_not_configured, so drafts pile up "mailable" and nothing is ever delivered. POSTCARD_MAIL_ENABLED must also be 1 — the step honours the same kill-switch as the operator button.',
+  },
+  {
     key: 'ai',
     label: 'AI (copy, hero images, backdrops)',
     requires: ['OPENAI_API_KEY'],

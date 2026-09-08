@@ -38,15 +38,18 @@ export function makeRest(env) {
  * @param data       the rewritten data tree to commit
  * @param transform  (obj) => void — applies the SAME rewrite in place to the legacy snapshot
  * @param message    commit message for the minted snapshot
+ * @param opts       { publish?: boolean } — false for an UNPUBLISHED draft: commit only, never
+ *                   publish it (publishing an unclaimed draft would take a stranger's site live).
  * @returns { repointed: string | null }
  */
-export async function republishTemplate(rest, tpl, data, transform, message) {
+export async function republishTemplate(rest, tpl, data, transform, message, opts = {}) {
   await rest('rpc/commit_template_http', {
     method: 'POST',
     body: JSON.stringify({
       p_payload: { id: tpl.id, base_rev: tpl.rev ?? 0, patch: { data }, actor: null, kind: 'save', org_id: null },
     }),
   });
+  if (opts.publish === false) return { repointed: null };
   await rest('rpc/publish_template_demo', { method: 'POST', body: JSON.stringify({ p_template_id: tpl.id }) });
 
   const [legacy] = await rest(`sites?select=id,published_snapshot_id&slug=eq.${encodeURIComponent(tpl.slug)}`);

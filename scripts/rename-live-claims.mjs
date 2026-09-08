@@ -8,6 +8,7 @@
 //   npx tsx scripts/rename-live-claims.mjs                  # dry run, published sites
 //   npx tsx scripts/rename-live-claims.mjs --apply
 //   npx tsx scripts/rename-live-claims.mjs --apply --only graftontowing
+//   npx tsx scripts/rename-live-claims.mjs --apply --drafts # UNPUBLISHED listing drafts: commit only, never publish
 //
 // Every replacement is a hand-read entry in lib/rebuild/liveClaimRewrites.ts (tested: each target
 // is a claim, each replacement is not). Applied to EVERY string in the tree, so the html / text /
@@ -19,6 +20,9 @@ import { loadEnv, makeRest, republishTemplate } from './lib/republishTemplate.mj
 
 const APPLY = process.argv.includes('--apply');
 const ONLY = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : null;
+// --drafts: the unpublished listing-import drafts the claim postcard would mail. They are committed
+// and NEVER published here — publishing an unclaimed draft takes a stranger's site live.
+const DRAFTS = process.argv.includes('--drafts');
 
 const rest = makeRest(loadEnv());
 
@@ -47,7 +51,11 @@ function rewriteTree(node, slug, changes, matched) {
   }
 }
 
-const rows = await rest(`templates?select=id,slug,rev,published,data&published=eq.true&limit=400`);
+const rows = await rest(
+  DRAFTS
+    ? `templates?select=id,slug,rev,published,data&published=eq.false&claim_source=eq.listing_import&limit=400`
+    : `templates?select=id,slug,rev,published,data&published=eq.true&limit=400`,
+);
 const targets = rows.filter((t) => !ONLY || t.slug === ONLY);
 const matched = new Map();
 const tot = { scanned: 0, changed: 0, strings: 0, done: 0, fail: 0, repointed: 0 };
@@ -80,6 +88,7 @@ for (const tpl of targets) {
       rest, tpl, data,
       (snap) => rewriteTree(snap, tpl.slug, [], new Map()),
       'rename operational claims; fill company-name placeholder',
+      { publish: !DRAFTS },
     );
     tot.done++;
     if (repointed) { tot.repointed++; console.log(`     legacy snapshot repointed → ${repointed.slice(0, 8)}…`); }

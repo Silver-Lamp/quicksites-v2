@@ -17,6 +17,7 @@ import PlanBody from '@/components/business-plan/plan-body';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { getVertical } from '@/lib/business/verticals';
 import { loadPlanEvidence } from '@/lib/business/planEvidence';
+import { loadTradeOpsSnapshot } from '@/lib/tradeSites/opsSnapshot';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -34,12 +35,15 @@ export default async function BusinessPlanPage({
 }) {
   const { v } = await searchParams;
   const [admin, evidence] = await Promise.all([getAdminUser(), loadPlanEvidence()]);
+  // Operational detail for the operator panel only — loaded solely for an admin, so the public
+  // render pays for none of it and none of it can leak into the shareable half.
+  const tradeOps = admin ? await loadTradeOpsSnapshot().catch(() => null) : null;
 
   return (
     <>
       <SiteHeader sticky />
       <div className="min-h-screen bg-zinc-950">
-        <PlanBody vertical={getVertical(v)} evidence={evidence} isAdmin={!!admin} />
+        <PlanBody vertical={getVertical(v)} evidence={evidence} isAdmin={!!admin} tradeOps={tradeOps} />
       </div>
     </>
   );

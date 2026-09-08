@@ -18,6 +18,7 @@ import {
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import type { Prospect } from '@/lib/outreach/prospects';
 import { getSenderProfile, type SenderProfile } from '@/lib/outreach/senderProfile';
+import { isLobSafeImageUrl } from '@/lib/outreach/lobSafeImage';
 import { ensureTalkingDemo, talkingDemoAutogenEnabled } from '@/lib/talkingDemo/ensureTalkingDemo';
 
 export function publicBaseUrl(): string {
@@ -175,12 +176,16 @@ export function postcardBenefits(industry: IndustryKey): string[] {
 export function senderFromProfile(profile: SenderProfile, brandName?: string | null): PostcardSender | null {
   if (brandName) return null;
   if (!profile.name) return null;
+  // ⚠️ Lob renders PNG/JPEG only. A URL in any other format prints as a broken-image icon on the
+  // card — which is what every proof showed while the headshot was a WebP. The profile save now
+  // converts, but this is the last gate before paper: drop, never emit, anything else.
+  const safe = (u: string | null | undefined) => (isLobSafeImageUrl(u) ? (u as string) : null);
   return {
     name: profile.name,
     title: profile.title,
     email: profile.email,
-    headshotUrl: profile.headshotUrl,
-    signatureUrl: profile.signatureUrl,
+    headshotUrl: safe(profile.headshotUrl),
+    signatureUrl: safe(profile.signatureUrl),
   };
 }
 

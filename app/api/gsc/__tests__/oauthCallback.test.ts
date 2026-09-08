@@ -32,8 +32,11 @@ describe('the GSC consent callback keeps the grant', () => {
     expect(CODE).toMatch(/onConflict: 'domain'/);
   });
 
-  it('the backfill acts under the newest grant, so a fresh consent wins over the 2025 rows', () => {
+  it('the backfill acts under the newest CONSENT, not the freshest expiry — reads refresh old rows daily', () => {
     const connect = readFileSync(join(process.cwd(), 'lib/gsc/connectDomain.ts'), 'utf8');
-    expect(connect).toMatch(/\.order\('expiry', \{ ascending: false/);
+    const created = connect.indexOf(".order('created_at', { ascending: false })");
+    const expiry = connect.indexOf(".order('expiry', { ascending: false");
+    expect(created).toBeGreaterThan(-1);
+    expect(expiry).toBeGreaterThan(created); // created_at is the primary key of the sort
   });
 });

@@ -1,16 +1,22 @@
 /**
  * @jest-environment node
  */
-// "Our Services" on a listing-built draft shows the business's own categories when it declared any,
-// else the trade's standard list WITH a "call to confirm" line — never Google's taxonomy tags.
+// "Our Services" on a listing-built draft: what the business NAMED itself after, then what it declared
+// to Google, then — only when those are thin — the trade's standard list with a "call to confirm"
+// line. Never Google's taxonomy tags.
 import { readFileSync } from 'node:fs';
 import {
+  MIN_OWN_SERVICES,
+  PROMISE_IN_SERVICE_NAME,
   applyListingServices,
   cleanListingCategories,
   countServicesBlocks,
+  decideListingServices,
   ensureServicesBlock,
   industryDefaultServices,
   isGenericListingCategory,
+  mergeServiceLists,
+  servicesFromName,
 } from '../listingServices';
 import { buildSpecFromListing } from '../importListing';
 import { GENERIC_PLACE_TYPES } from '../../places/typeToIndustry';
@@ -24,29 +30,92 @@ describe('generic Places tags are not services', () => {
       expect(isGenericListingCategory(s)).toBe(false);
     }
   });
-
   it('shares ONE list with the industry resolver plus `service`', () => {
     for (const t of GENERIC_PLACE_TYPES) expect(isGenericListingCategory(t)).toBe(true);
   });
-
-  it('the Ferry Street case: four tags → the one real category, label untouched', () => {
+  it('the Ferry Street case: four tags → the one real category', () => {
     expect(cleanListingCategories(['Car repair', 'Point of interest', 'Service', 'Establishment'])).toEqual(['Car repair']);
   });
+});
 
-  it('a towing listing tagged only with plumbing → nothing declared', () => {
-    expect(cleanListingCategories(['Point of interest', 'Service', 'Establishment'])).toEqual([]);
+describe('the name layer — the owner\'s own words', () => {
+  it('"Ferry Street Towing & Roadside Assistance" names two services', () => {
+    expect(servicesFromName('Ferry Street Towing & Roadside Assistance', 'auto_repair')).toEqual(['Roadside Assistance', 'Towing']);
   });
+  it('reads the trade words the fleet actually uses', () => {
+    expect(servicesFromName("Glover Wrecker Service", 'towing')).toEqual(['Towing & Recovery']);
+    expect(servicesFromName('Arab Towing, Muffler & Auto Service', 'auto_repair')).toEqual(['Towing', 'Muffler & Exhaust', 'Auto Repair']);
+    expect(servicesFromName("Medrano's Roof Cleaning", 'roof_cleaning')).toEqual(['Roof Cleaning']);
+    expect(servicesFromName('Tydi Concrete Cutting & Coring', 'concrete')).toEqual(['Concrete Cutting & Coring']); // "Concrete" folds into the specific one
+    expect(servicesFromName('Duvall Electric', 'electrical')).toEqual(['Electrical']);
+    expect(servicesFromName('OX HVAC Contractor Seattle LLC', 'general_contractor')).toEqual(['Heating', 'General Contracting']);
+  });
+  it('a name with no trade word yields nothing — never a guess', () => {
+    expect(servicesFromName("Joe's", 'auto_repair')).toEqual([]);
+    expect(servicesFromName('Ferry Street Garage', 'auto_repair')).toEqual([]);
+  });
+  it('⚠️ is skipped for restaurants and people — "Glass House Bistro" repairs no glass', () => {
+    expect(servicesFromName('Glass House Bistro', 'restaurant')).toEqual([]);
+    expect(servicesFromName('The Tree House Cafe', 'food_cafe')).toEqual([]);
+    expect(servicesFromName('Roofing Rick — Résumé', 'personal')).toEqual([]);
+  });
+  it('labels never carry a promise', () => {
+    for (const s of servicesFromName('24/7 Licensed Towing & Roadside Assistance Guaranteed', 'towing')) {
+      expect(s).not.toMatch(/24\/7|licensed|guarantee|free|insured/i);
+    }
+  });
+});
 
-  it('dedupes case-insensitively and keeps order', () => {
-    expect(cleanListingCategories(['Roofing contractor', 'roofing_contractor', 'General contractor'])).toEqual(['Roofing contractor', 'General contractor']);
+describe('the standard list may not promise', () => {
+  it('drops "Free Estimates" and the like from every industry default', () => {
+    for (const key of ['concrete', 'towing', 'roofing', 'plumbing', 'electrical', 'auto_repair', 'general_contractor', 'roof_cleaning']) {
+      for (const s of industryDefaultServices(key)) expect(s).not.toMatch(PROMISE_IN_SERVICE_NAME);
+    }
+    expect(PROMISE_IN_SERVICE_NAME.test('Free Estimates')).toBe(true);
+    expect(PROMISE_IN_SERVICE_NAME.test('24/7 Towing')).toBe(true);
+    expect(PROMISE_IN_SERVICE_NAME.test('Licensed & Insured')).toBe(true);
+    expect(PROMISE_IN_SERVICE_NAME.test('Winch-Outs')).toBe(false);
+  });
+});
+
+describe('mergeServiceLists', () => {
+  it('canonicalises Google\'s wording so "Car repair" and "Auto Repair" do not both show', () => {
+    expect(mergeServiceLists(['Auto Repair'], ['Car repair'])).toEqual(['Auto Repair']);
+  });
+  it('a raw sweep type we have no canonical word for is at least made readable', () => {
+    expect(mergeServiceLists(['shipping_service', 'transportation_service'])).toEqual(['Shipping service', 'Transportation service']);
+  });
+  it('drops an item another item already contains, keeping the longer one', () => {
+    expect(mergeServiceLists(['Towing'], ['Towing & Recovery', 'Roadside Assistance'])).toEqual(['Towing & Recovery', 'Roadside Assistance']);
+  });
+  it('keeps priority order otherwise', () => {
+    expect(mergeServiceLists(['Roadside Assistance', 'Towing'], ['Car repair'])).toEqual(['Roadside Assistance', 'Towing', 'Auto Repair']);
+  });
+});
+
+describe('decideListingServices — three layers', () => {
+  it('Ferry Street: name + declared reach the bar → the owner\'s own list, no disclaimer', () => {
+    const r = decideListingServices({ businessName: 'Ferry Street Towing & Roadside Assistance', categories: ['Car repair', 'Point of interest', 'Service', 'Establishment'], industryKey: 'auto_repair' });
+    expect(r).toEqual({ services: ['Roadside Assistance', 'Towing', 'Auto Repair'], source: 'listing' });
+    expect(r.services.length).toBeGreaterThanOrEqual(MIN_OWN_SERVICES);
+  });
+  it('Watertown Towing: one own word → topped up with the trade\'s standard list, stamped for the disclaimer', () => {
+    const r = decideListingServices({ businessName: 'Watertown Towing', categories: ['Point of interest', 'Service', 'Establishment'], industryKey: 'towing' });
+    expect(r.source).toBe('industry_default');
+    expect(r.services).not.toContain('Towing'); // folded into the standard "Towing & Recovery", which contains it
+    expect(r.services).toContain('Towing & Recovery');
+    for (const s of industryDefaultServices('towing')) expect(r.services).toContain(s);
+  });
+  it('nothing named, nothing declared, no industry → empty', () => {
+    expect(decideListingServices({ businessName: "Joe's", categories: [], industryKey: null })).toEqual({ services: [], source: 'industry_default' });
   });
 });
 
 function draft(services: string[], withBlock = true) {
-  const block = (shape: 'content' | 'props') => ({ type: 'services', [shape]: { items: [{ name: 'Oil Change' }, { name: 'AC Recharge' }], title: 'Our Services' } });
+  const block = (shape: 'content' | 'props') => ({ type: 'services', [shape]: { items: [{ name: 'Oil Change' }], title: 'Our Services' } });
   return {
     services,
-    meta: { services, business_name: 'X' },
+    meta: { services, business_name: 'Watertown Towing' },
     pages: [
       {
         content_blocks: [{ type: 'hero', content: {} }, ...(withBlock ? [block('content')] : []), { type: 'faq', content: {} }],
@@ -57,69 +126,40 @@ function draft(services: string[], withBlock = true) {
 }
 
 describe('applyListingServices', () => {
-  it('declared categories win and are stamped `listing`, written into BOTH template-level copies', () => {
-    const d = draft(['Car repair', 'Point of interest', 'Service', 'Establishment']);
-    const r = applyListingServices(d, d.services, 'auto_repair');
-    expect(r).toEqual({ services: ['Car repair'], source: 'listing', insertedBlocks: 0 });
-    expect(d.services).toEqual(['Car repair']);
-    expect(d.meta.services).toEqual(['Car repair']);
-    expect(d.meta.services_source).toBe('listing');
-    expect(d.meta.business_name).toBe('X'); // the rest of meta survives
-  });
-
-  it('⚠️ nothing declared → the trade\'s standard list, stamped `industry_default` so the page adds "call to confirm"', () => {
+  it('writes BOTH template-level copies and the stamp; reads the name off meta when not passed', () => {
     const d = draft(['Point of interest', 'Service', 'Establishment']);
-    const r = applyListingServices(d, d.services, 'towing');
+    const r = applyListingServices(d, { categories: d.services, industryKey: 'towing' });
     expect(r.source).toBe('industry_default');
-    expect(r.services).toEqual(industryDefaultServices('towing'));
-    expect(r.services.length).toBeGreaterThan(2);
-    expect(r.services.some((s) => /tow/i.test(s))).toBe(true);
+    expect(d.services).toEqual(r.services);
+    expect(d.meta.services).toEqual(r.services);
     expect(d.meta.services_source).toBe('industry_default');
-    expect(countServicesBlocks(d)).toBe(2); // the existing blocks were kept, none added
+    expect(d.meta.business_name).toBe('Watertown Towing');
     expect(r.insertedBlocks).toBe(0);
+    expect(countServicesBlocks(d)).toBe(2);
   });
-
   it('restores a block into BOTH arrays, right after the hero, when an earlier pass removed it', () => {
     const d = draft([], false);
-    expect(countServicesBlocks(d)).toBe(0);
-    const r = applyListingServices(d, [], 'towing');
+    const r = applyListingServices(d, { categories: [], industryKey: 'towing' });
     expect(r.insertedBlocks).toBe(2);
     expect(d.pages[0].content_blocks.map((b: any) => b.type)).toEqual(['hero', 'services', 'faq']);
     expect(d.pages[0].blocks.map((b: any) => b.type)).toEqual(['hero', 'services', 'order_bar']);
-    const items = d.pages[0].content_blocks[1].content.items.map((i: any) => i.name);
-    expect(items).toEqual(industryDefaultServices('towing'));
+    expect(d.pages[0].content_blocks[1].content.items.map((i: any) => i.name)).toEqual(r.services);
   });
-
   it('ensureServicesBlock is a no-op when a block exists, and tolerates no pages', () => {
-    const d = draft([]);
-    expect(ensureServicesBlock(d, ['Towing'])).toBe(0);
+    expect(ensureServicesBlock(draft([]), ['Towing'])).toBe(0);
     expect(ensureServicesBlock({}, ['Towing'])).toBe(0);
     expect(ensureServicesBlock({ pages: [{}] }, ['Towing'])).toBe(0);
-  });
-
-  it('no industry and nothing declared → empty, and says so (the script skips these)', () => {
-    const d = draft([]);
-    const r = applyListingServices(d, [], null);
-    expect(r).toEqual({ services: [], source: 'industry_default', insertedBlocks: 0 });
   });
 });
 
 describe('buildSpecFromListing on the sweep-built path', () => {
-  it('raw sweep types never reach services or copy', () => {
+  it('raw sweep types never reach services or copy; the name\'s trade words lead', () => {
     const spec = buildSpecFromListing({ name: 'Ferry Street Towing & Roadside Assistance', categories: ['car_repair', 'point_of_interest', 'service', 'establishment'] }, undefined, 'auto_repair');
-    expect(spec.services).toEqual(['Car repair']);
+    expect(spec.services).toEqual(['Roadside Assistance', 'Towing', 'Auto Repair']);
     expect(spec.subheadline).not.toMatch(/point of interest|establishment|service —/i);
-    expect(spec.about).toMatch(/car repair/i);
   });
-
-  it('a listing with only generic tags yields NO declared services and falls back to the industry label in copy', () => {
-    const spec = buildSpecFromListing({ name: "Robert's Towing LLC", categories: ['point_of_interest', 'service', 'establishment'] }, undefined, 'towing');
-    expect(spec.services).toEqual([]);
-    expect(spec.subheadline).not.toMatch(/point of interest|establishment/i);
-  });
-
-  it('a restaurant path is unchanged: real categories pass through', () => {
-    const spec = buildSpecFromListing({ name: 'Hawkers', categories: ['Bar', 'American', 'point_of_interest'] });
+  it('a restaurant path is unchanged: real categories pass through, name layer off', () => {
+    const spec = buildSpecFromListing({ name: 'Glass House Bar & Grill', categories: ['Bar', 'American', 'point_of_interest'] });
     expect(spec.services).toEqual(['Bar', 'American']);
   });
 });
@@ -137,11 +177,11 @@ describe('the renderer', () => {
   });
 });
 
-describe('the trade builder applies the rule after the scaffold', () => {
-  it('buildDraftFromListing calls applyListingServices with the industry after buildRebuildTemplate', () => {
+describe('the trade builder applies the rule after the scaffold, with the name', () => {
+  it('buildDraftFromListing calls applyListingServices with categories + industry + businessName after buildRebuildTemplate', () => {
     const src = readFileSync('lib/outreach/buildDraftFromListing.ts', 'utf8');
     const a = src.indexOf('buildRebuildTemplate({ spec');
-    const b = src.indexOf('applyListingServices(tpl.data, spec.services, industryKey)');
+    const b = src.indexOf('applyListingServices(tpl.data, { categories: spec.services, industryKey, businessName: spec.businessName })');
     expect(a).toBeGreaterThan(0);
     expect(b).toBeGreaterThan(a);
   });

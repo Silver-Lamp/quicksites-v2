@@ -14,8 +14,26 @@
 // often lands `pending` — that is success-so-far, not failure, and the next run retries it.
 
 import { connectDomainToGsc, verifyPendingGscDomain, bareDomain } from '@/lib/gsc/connectDomain';
+import { hasGoogleVerificationTxt } from '@/lib/domains/vercel';
 
 export type BackfillCandidate = { id: string; domain: string };
+
+/**
+ * Split candidates by whether Vercel hosts their DNS. The first run under a working grant
+ * (2026-09-08) spent 6 of its 10 slots on domains that answered "not a DNS zone" — they sit on
+ * Namecheap nameservers (or have none), and no amount of retrying will write a TXT there. Those
+ * are reported once, by name, and never consume the nightly budget. 93 of 100 are on Vercel.
+ */
+export function partitionByZone(
+  candidates: BackfillCandidate[],
+  vercelZones: Set<string> | null,
+): { onVercel: BackfillCandidate[]; offVercel: BackfillCandidate[] } {
+  if (!vercelZones) return { onVercel: candidates, offVercel: [] }; // unknown → try them all, as before
+  const onVercel: BackfillCandidate[] = [];
+  const offVercel: BackfillCandidate[] = [];
+  for (const c of candidates) (vercelZones.has(bareDomain(c.domain)) ? onVercel : offVercel).push(c);
+  return { onVercel, offVercel };
+}
 
 export type BackfillOutcome = {
   domain: string;
@@ -77,8 +95,12 @@ export function summarize(outcomes: BackfillOutcome[], remaining: number): Backf
 }
 
 /** Connect one domain, translating the connect result into a flat outcome. */
-export async function connectOne(domain: string, userId: string, retryPending = false): Promise<BackfillOutcome> {
-  const r = retryPending
+export async function connectOne(domain: string, userId: string, retryPending?: boolean): Promise<BackfillOutcome> {
+  // Unspecified → look at the zone: a google-site-verification TXT already there means a previous
+  // run got as far as publishing it, so re-verify instead of asking for a second token and writing
+  // a duplicate record every night.
+  const retry = retryPending ?? ((await hasGoogleVerificationTxt(bareDomain(domain))) === true);
+  const r = retry
     ? await verifyPendingGscDomain(domain, userId)
     : await connectDomainToGsc(domain, userId);
   if (r.verified && !r.pending) return { domain, status: 'connected' };

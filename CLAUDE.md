@@ -201,6 +201,10 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `POSTCARD_MAIL_ENABLED` + `LOB_*`, a sender profile with name + email) and two per draft: an
   operational claim anywhere in the tree **blocks the send**, and the cron waits
   `TRADE_PIPELINE_MAIL_MIN_AGE_HOURS` (24) so a person can eyeball last night's builds first.
+  **All four flags were set 2026-09-07 evening; `/status` shows every trade gate ready — the loop
+  is LIVE.** The loop is drawn on `/business-plan?v=trade_sites` (`components/business-plan/trade-sites-flow.tsx`,
+  pure SVG, counts from `planEvidence`, no price, one amber "operator decides" node — a test pins that
+  it never claims more automation than exists).
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

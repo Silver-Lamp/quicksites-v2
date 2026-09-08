@@ -72,6 +72,30 @@ export default function TradePipelineQueue() {
     }
   }
 
+  // ── Plan the queue from what we own and what we have measured ──
+  type Planned = { city: string; region: string; industry: string; category: string; priority: number; reasons: string[] };
+  const [plan, setPlan] = useState<{ plan: Planned[]; skipped: Array<{ city: string; region: string; industry: string; why: string }> } | null>(null);
+  async function planQueue(apply: boolean) {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await fetch('/api/admin/prospects/sweep-queue/plan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ limit: 14, apply }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setMsg(j?.error || 'Could not plan.');
+        return;
+      }
+      setPlan({ plan: j.plan, skipped: j.skipped });
+      if (apply) {
+        setMsg(`Queued ${j.inserted} in ranked order — the cron takes the top one tonight.${j.enabled ? '' : ' ⚠️ The cron is OFF.'}`);
+        setPlan(null);
+        await load();
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function cancel(id: string) {
     await fetch(`/api/admin/prospects/sweep-queue?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     await load();
@@ -173,8 +197,37 @@ export default function TradePipelineQueue() {
             <button type="button" onClick={add} disabled={busy || (!metro && (!city || !region))} className="rounded-lg bg-emerald-400 px-3 py-1 font-semibold text-zinc-950 hover:bg-emerald-300 disabled:opacity-50">
               Queue
             </button>
+            <span className="pb-1 text-xs text-muted-foreground">or</span>
+            <button type="button" onClick={() => planQueue(false)} disabled={busy} className="rounded-lg border border-border px-3 py-1 hover:bg-muted disabled:opacity-50" title="Rank city × trade pairs from the domains we own and the no-website rates we have measured">
+              Plan the queue
+            </button>
           </div>
           {msg && <div className="text-xs text-muted-foreground">{msg}</div>}
+
+          {plan && (
+            <div className="rounded-xl border border-border bg-background p-3 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold">Proposed order — {plan.plan.length} sweep{plan.plan.length === 1 ? '' : 's'}, one a night</span>
+                <span className="flex gap-2">
+                  <button type="button" onClick={() => setPlan(null)} className="rounded-lg border border-border px-2 py-1 hover:bg-muted">Discard</button>
+                  <button type="button" onClick={() => planQueue(true)} disabled={busy || !plan.plan.length} className="rounded-lg bg-emerald-400 px-2 py-1 font-semibold text-zinc-950 hover:bg-emerald-300 disabled:opacity-50">Queue these {plan.plan.length}</button>
+                </span>
+              </div>
+              <ol className="mt-2 space-y-1">
+                {plan.plan.map((p, i) => (
+                  <li key={`${p.city}-${p.region}-${p.category}`} className="flex gap-2">
+                    <span className="w-5 shrink-0 text-right text-muted-foreground">{i + 1}.</span>
+                    <span><span className="font-medium">{p.city}, {p.region}</span> · {p.category} <span className="text-muted-foreground">— {p.reasons.join('; ')}</span></span>
+                  </li>
+                ))}
+              </ol>
+              {plan.skipped.length > 0 && (
+                <div className="mt-2 text-muted-foreground">
+                  Skipped {plan.skipped.length}: {Object.entries(plan.skipped.reduce<Record<string, number>>((a, s) => ((a[s.why.replace(/\d+ days? ago/, 'within cooldown')] = (a[s.why.replace(/\d+ days? ago/, 'within cooldown')] ?? 0) + 1), a), {})).map(([w, n]) => `${n} ${w}`).join(', ')}.
+                </div>
+              )}
+            </div>
+          )}
 
           {mail && (
             <div className="rounded-xl border border-border bg-background p-3 text-xs">

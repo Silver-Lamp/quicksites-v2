@@ -1,10 +1,15 @@
 // app/welcome/[id]/page.tsx
 //
-// Post-claim payoff. After an owner claims their auto-built site, we land them here
-// (instead of straight into the editor) to show the demand we captured while it was a
-// preview — "N people tried to order, here's who" — the activation moment that turns the
-// claim into "turn on online ordering now." Owner/admin-gated (the leads are PII the
-// public claim page never shows). Falls back to a simple welcome when there's no demand.
+// Post-claim payoff. After an owner claims their auto-built site, we land them here (instead of
+// straight into the editor). Two jobs:
+//
+//   1. Show the site is LIVE at its address — true since claim publishes it (lib/tradeSites/activate).
+//   2. For a trade site, offer the one paid thing: a custom domain we register and manage. This is
+//      the self-serve conversion the business plan depends on ("a claim link and a card on file or it
+//      is nothing"). Flag-gated: with TRADE_SITE_BILLING_ENABLED off the page shows no price at all.
+//
+// Restaurants keep the demand block ("N people tried to order") — that activation hook is theirs.
+// Owner/admin-gated (the leads are PII the public claim page never shows).
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -14,13 +19,28 @@ import Link from 'next/link';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getDemandDetails } from '@/lib/menu/demand';
+import { publicSiteUrl } from '@/lib/sites/publicUrl';
+import { isTradeIndustry, tradeSiteBillingEnabled, tradeSiteDomainPriceCents } from '@/lib/tradeSites/config';
+import { getTradeSiteSubscription } from '@/lib/tradeSites/subscriptions';
+import TradeSiteUpgrade from '@/components/welcome/trade-site-upgrade';
 
 function telHref(phone: string | null) {
   const d = (phone || '').replace(/[^\d+]/g, '');
   return d ? `tel:${d}` : '';
 }
 
-export default async function ClaimWelcomePage({ params }: { params: { id: string } }) {
+function priceLabel(cents: number): string {
+  const dollars = cents / 100;
+  return `$${Number.isInteger(dollars) ? dollars : dollars.toFixed(2)}/month`;
+}
+
+export default async function ClaimWelcomePage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
   const id = params.id;
   const editorHref = `/admin/templates/${id}`;
 
@@ -30,7 +50,7 @@ export default async function ClaimWelcomePage({ params }: { params: { id: strin
 
   const { data: tpl } = await supabaseAdmin
     .from('templates')
-    .select('owner_id, business_name, template_name')
+    .select('owner_id, business_name, template_name, slug, custom_domain, industry, published')
     .eq('id', id)
     .maybeSingle();
   if (!tpl) redirect('/admin/templates');
@@ -42,11 +62,20 @@ export default async function ClaimWelcomePage({ params }: { params: { id: strin
     if (!adminRow) redirect(editorHref); // not theirs → just send them to the editor
   }
 
-  const name = (tpl as any).business_name || (tpl as any).template_name || 'your site';
-  const detail = (await getDemandDetails([id]))[id];
+  const t = tpl as any;
+  const name = t.business_name || t.template_name || 'your site';
+  const url = publicSiteUrl({ custom_domain: t.custom_domain, slug: t.slug });
+  const isTrade = isTradeIndustry(t.industry);
+  const upgraded = searchParams?.upgraded === '1';
+
+  const detail = isTrade ? null : (await getDemandDetails([id]))[id];
   const count = detail?.count ?? 0;
   const leads = detail?.leads ?? [];
   const calls = detail?.calls ?? 0;
+
+  const sub = isTrade ? await getTradeSiteSubscription(id) : null;
+  const hasActiveSub = !!sub && sub.subscription_status === 'active';
+  const offerDomain = isTrade && tradeSiteBillingEnabled() && !t.custom_domain && !hasActiveSub;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center px-6 py-16 text-center">
@@ -57,9 +86,34 @@ export default async function ClaimWelcomePage({ params }: { params: { id: strin
         🎉 {name} is yours.
       </h1>
 
-      {count > 0 ? (
+      {url && t.published ? (
+        <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
+          It’s live at{' '}
+          <a href={url} target="_blank" rel="noopener" className="font-semibold text-sky-400 hover:text-sky-300">
+            {url.replace(/^https?:\/\//, '')}
+          </a>
+          . Everything on it came from your public listing — edit anything that isn’t right.
+        </p>
+      ) : (
+        <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
+          Your site is yours to edit. Open the editor to review it and publish when it looks right.
+        </p>
+      )}
+
+      {upgraded && sub && (
+        <div className="mt-6 w-full rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-left text-sm">
+          <div className="font-semibold text-emerald-300">Payment received.</div>
+          <div className="mt-1 text-muted-foreground">
+            {sub.domain_status === 'bound'
+              ? <>{sub.desired_domain} is connected. DNS can take up to an hour to reach everyone.</>
+              : <>We’re setting up {sub.desired_domain}. Your subdomain keeps working meanwhile; we’ll email you when the domain is connected.</>}
+          </div>
+        </div>
+      )}
+
+      {!isTrade && count > 0 && (
         <>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
+          <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
             While it was a preview, <span className="font-semibold text-amber-300">{count} {count === 1 ? 'person' : 'people'} tried to order</span>.
             Turn on online ordering to reach them{leads.length ? " — here's who:" : '.'}
           </p>
@@ -67,26 +121,26 @@ export default async function ClaimWelcomePage({ params }: { params: { id: strin
           {leads.length > 0 && (
             <ul className="mt-6 w-full space-y-2 text-left">
               {leads.map((l, i) => (
-                <li key={i} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                <li key={i} className="rounded-xl border border-border bg-card p-3 text-card-foreground">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-zinc-100">{l.name || 'Someone'}</span>
+                    <span className="font-semibold">{l.name || 'Someone'}</span>
                     {l.phone && (
                       <a href={telHref(l.phone)} className="text-sm text-sky-400 hover:text-sky-300">📞 {l.phone}</a>
                     )}
                   </div>
-                  {l.items && <div className="mt-1 text-sm text-zinc-300">“{l.items}”</div>}
+                  {l.items && <div className="mt-1 text-sm text-muted-foreground">“{l.items}”</div>}
                 </li>
               ))}
             </ul>
           )}
           {calls > 0 && (
-            <p className="mt-3 text-sm text-zinc-500">+ {calls} more tapped to call (no message left).</p>
+            <p className="mt-3 text-sm text-muted-foreground">+ {calls} more tapped to call (no message left).</p>
           )}
         </>
-      ) : (
-        <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
-          Your site is live and yours to edit. Add your menu, hours, and online ordering to start taking orders.
-        </p>
+      )}
+
+      {offerDomain && (
+        <TradeSiteUpgrade templateId={id} priceLabel={priceLabel(tradeSiteDomainPriceCents())} businessName={name} />
       )}
 
       <div className="mt-8">
@@ -97,6 +151,9 @@ export default async function ClaimWelcomePage({ params }: { params: { id: strin
           Open your site editor →
         </Link>
       </div>
+      <p className="mt-6 max-w-md text-xs text-muted-foreground">
+        Don’t want it? Say the word and it’s gone — email support@quicksites.ai from the address you signed up with.
+      </p>
     </main>
   );
 }

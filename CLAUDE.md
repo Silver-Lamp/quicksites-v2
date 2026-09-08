@@ -168,6 +168,24 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   scaffold's FAQ **invents service promises** ("we respond within the hour", "free no-obligation quote")
   under a real shop's name, which is the invented-menu class with liability attached. `MIN_MENU_ITEMS`
   eligibility also disqualifies every auto shop.
+- **Auto-built trade sites — the automated loop (2026-09-07, PRIORITY)**: the seventh vertical
+  (`lib/business/verticals.ts` `trade_sites`) made to run without a person wherever honesty allows.
+  Map + status per step: **[`docs/TRADE_SITES_PIPELINE.md`](docs/TRADE_SITES_PIPELINE.md)**. PR 1:
+  **claim now publishes** (`lib/tradeSites/activate.ts` — before it, setting `owner_id` made the
+  preview URL 404 for everyone but the owner while `/welcome` said "live"), the prospect is marked
+  `claimed` (declared for months, never written — the claim rate is the decisive number), and the
+  post-claim page sells the **custom-domain tier** self-serve (`POST /api/trade-sites/checkout`,
+  flag `TRADE_SITE_BILLING_ENABLED`, price from `TRADE_SITE_DOMAIN_PRICE_CENTS` — **never write the
+  number into copy**). Stripe events ride the **geo-rental webhook endpoint** (one endpoint, one
+  secret; routed by `trade_site_template_id` metadata) into `trade_site_subscriptions` (migration
+  `20260838`), and payment provisions the domain via the Vercel registrar when
+  `VERCEL_DOMAIN_REGISTER_ENABLED=1`, else an `admin_tasks` row. ⚠️ Binding a custom domain is
+  **three writes** — `set_template_custom_domain` RPC, re-publish, and the legacy `sites` row with a
+  minted `snapshots` row — because `app/host` resolves a custom host **only** through `sites.domain`
+  and serves `sites.published_snapshot_id`, which no publish path writes. `payment_count > 0` is the
+  only proof of money; a status word is not. Still manual by design: choosing cities (spend), mailing
+  the claim link (postage — the link is a bearer credential; a postcard to the listing address is
+  the Google-PIN channel, cold SMS is not), and the money flags.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

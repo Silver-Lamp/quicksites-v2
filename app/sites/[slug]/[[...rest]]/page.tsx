@@ -318,9 +318,24 @@ const loadDraftTemplate = cache(async (
  * ⚠️ DELIBERATELY NARROW. Only operator-built listing drafts with NO owner. A guest_build draft is
  * somebody's private work-in-progress and must stay invisible until they publish it.
  */
-function isPublicPreClaimDraft(claimSource: string | null, ownerId: string | null): boolean {
-  if (ownerId) return false;
-  return claimSource === 'listing_import' || claimSource === 'operator_draft';
+/**
+ * ⚠️ "NO OWNER" WAS NEVER TRUE OF A PIPELINE DRAFT, SO THIS 404'D EVERY ONE OF THEM. buildDraftFromListing
+ * stamps owner_id = the operator who built it — it has to, or the draft is invisible to every admin
+ * list — so the early return on a non-null owner refused exactly the drafts this exists to show. It
+ * surfaced the day the first claim postcard was rendered: the address printed on the card,
+ * osborne-s-towing-8f68v.quicksites.ai, answered 404, and so did the claim page's inline preview.
+ * The intent ("a guest's private work-in-progress stays private") is kept by the claim_source check
+ * plus one more: the owner must be a platform operator. A draft owned by anyone else is somebody's.
+ */
+const isOperatorUser = cache(async (userId: string | null) => {
+  if (!userId) return false;
+  const { data } = await supabaseAdmin.from('admin_users').select('user_id').eq('user_id', userId).maybeSingle();
+  return !!data;
+});
+
+async function isPublicPreClaimDraft(claimSource: string | null, ownerId: string | null): Promise<boolean> {
+  if (claimSource !== 'listing_import' && claimSource !== 'operator_draft') return false;
+  return !ownerId || (await isOperatorUser(ownerId));
 }
 
 /** Current request user (auth cookie), memoized per request. */
@@ -395,11 +410,16 @@ export async function generateMetadata({
   let claimSource: string | null = null;
   if (siteRow.published_snapshot_id) {
     snapshotData = await loadSnapshotDataById(siteRow.published_snapshot_id);
-  } else if ((admin || menuHost) && siteRow.template_id) {
+  } else if (siteRow.template_id) {
+    // Same rule as the page body: admins and the menu host see any draft, the public sees an
+    // unclaimed operator-built one. Metadata for a draft is always noindex (below).
     const draft = await loadDraftTemplate(siteRow.template_id);
-    snapshotData = draft?.data ?? null;
-    isDraft = !!snapshotData;
-    claimSource = draft?.claimSource ?? null;
+    const mayShow = admin || menuHost || (draft ? await isPublicPreClaimDraft(draft.claimSource, draft.ownerId) : false);
+    if (mayShow) {
+      snapshotData = draft?.data ?? null;
+      isDraft = !!snapshotData;
+      claimSource = draft?.claimSource ?? null;
+    }
   }
   if (!snapshotData) return {};
 
@@ -532,7 +552,7 @@ export default async function SitePreviewPage({
     const draft = await loadDraftTemplate(siteRow.template_id);
     // Admins and the menu host see any draft; everyone else only an unclaimed operator draft.
     const mayShow =
-      admin || menuHost || (draft ? isPublicPreClaimDraft(draft.claimSource, draft.ownerId) : false);
+      admin || menuHost || (draft ? await isPublicPreClaimDraft(draft.claimSource, draft.ownerId) : false);
     if (draft?.data && mayShow) {
       normalized = normalizeForRenderer(draft.data, draft.siteFields);
       isDraft = true;

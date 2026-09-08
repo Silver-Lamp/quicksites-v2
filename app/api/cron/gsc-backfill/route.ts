@@ -12,8 +12,9 @@ import { isCronAuthorized } from '@/lib/cron/auth';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { gscAutoConnectEnabled } from '@/lib/gsc/connectDomain';
 import {
-  pickBackfillCandidates, connectOne, summarize, backfillFailed, type BackfillOutcome,
+  pickBackfillCandidates, partitionByZone, connectOne, summarize, backfillFailed, type BackfillOutcome,
 } from '@/lib/gsc/backfillGscProperties';
+import { listVercelOwnedDomains } from '@/lib/domains/registrar';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -63,16 +64,13 @@ async function handle(req: NextRequest) {
       db.from('gsc_tokens').select('domain'),
     ]);
 
-    const candidates = pickBackfillCandidates(
-      (camps ?? []) as { id: string; domain: string }[],
-      ((props ?? []) as { domain: string }[]).map((p) => p.domain).filter(Boolean),
-      BATCH,
-    );
-    const totalUnconnected = pickBackfillCandidates(
-      (camps ?? []) as { id: string; domain: string }[],
-      ((props ?? []) as { domain: string }[]).map((p) => p.domain).filter(Boolean),
-      100000,
-    ).length;
+    const connectedProps = ((props ?? []) as { domain: string }[]).map((p) => p.domain).filter(Boolean);
+    const unconnected = pickBackfillCandidates((camps ?? []) as { id: string; domain: string }[], connectedProps, 100000);
+    // Only a zone Vercel hosts can take the TXT. Domains elsewhere are named, not retried.
+    const zones = await listVercelOwnedDomains();
+    const { onVercel, offVercel } = partitionByZone(unconnected, zones ? new Set(zones.map((z) => z.domain)) : null);
+    const candidates = onVercel.slice(0, BATCH);
+    const totalUnconnected = onVercel.length;
 
     const outcomes: BackfillOutcome[] = [];
     for (const cand of candidates) {
@@ -87,6 +85,9 @@ async function handle(req: NextRequest) {
       {
         ok: !failed,
         ...summary,
+        // Named so an operator can move their nameservers (or register them) — the cron cannot.
+        notOnVercelDns: offVercel.map((c) => c.domain),
+        vercelZonesKnown: zones !== null,
         ...(failed
           ? { error: `Attempted ${summary.attempted} and connected none. First reason: ${outcomes[0]?.reason ?? 'unknown'}` }
           : {}),

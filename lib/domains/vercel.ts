@@ -72,3 +72,21 @@ export async function addDnsRecord(
 export async function addDnsTxtRecord(domain: string, value: string, name = '') {
   return addDnsRecord(domain, { type: 'TXT', name, value });
 }
+
+/**
+ * Is a Google site-verification TXT already published on this zone? Lets the GSC backfill tell
+ * "TXT written, Google has not seen it yet" (retry the verify) from "never started" (ask for a
+ * token and write one) — without writing a duplicate record each night. Null when the zone is
+ * not on Vercel or the lookup fails.
+ */
+export async function hasGoogleVerificationTxt(domain: string): Promise<boolean | null> {
+  try {
+    const json = await vercelFetch(`/v4/domains/${encodeURIComponent(domain)}/records?limit=100`);
+    const records: Array<{ type?: string; value?: string; name?: string }> = json?.records ?? [];
+    return records.some(
+      (r) => String(r.type).toUpperCase() === 'TXT' && String(r.value ?? '').startsWith('google-site-verification=') && (!r.name || r.name === '' || r.name === '@'),
+    );
+  } catch {
+    return null;
+  }
+}

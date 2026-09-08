@@ -49,6 +49,22 @@ describe('the scaffold no longer ships the bullets the rewrite removes', () => {
   });
 });
 
+describe('editor instructions never ship on a public page', () => {
+  const { PLACEHOLDER_REWRITES } = require('@/lib/rebuild/liveClaimRewrites');
+  it('the leaked sentence is removed, and it was never a claim to begin with', () => {
+    for (const r of PLACEHOLDER_REWRITES) {
+      expect(makesOperationalClaim(r.from)).toBe(false);
+      expect(r.to).toBe('');
+    }
+  });
+  it('the scaffold no longer emits it', () => {
+    const SRC = readFileSync(join(process.cwd(), 'lib/builder/industryScaffold.ts'), 'utf8');
+    const CODE = SRC.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+    expect(CODE).not.toMatch(/Share your story and what sets you apart here/);
+    expect(CODE).toMatch(/dedicated to quality work and honest, dependable service\./);
+  });
+});
+
 describe('placeholders are filled only where a name is known', () => {
   it('every name is a real business name, not the placeholder or a slug', () => {
     for (const [slug, name] of Object.entries(PLACEHOLDER_NAMES)) {

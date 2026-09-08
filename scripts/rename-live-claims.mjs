@@ -14,7 +14,7 @@
 // is a claim, each replacement is not). Applied to EVERY string in the tree, so the html / text /
 // value copies all change together (CLAUDE.md §8). An entry that matches nothing is reported —
 // a rewrite that finds no target is exactly the silent-success failure the last handoff named.
-import { REWRITES, PLACEHOLDER, PLACEHOLDER_NAMES } from '../lib/rebuild/liveClaimRewrites.ts';
+import { REWRITES, PLACEHOLDER_REWRITES, PLACEHOLDER, PLACEHOLDER_NAMES } from '../lib/rebuild/liveClaimRewrites.ts';
 import { makesOperationalClaim } from '../lib/rebuild/scrubInventedClaims.ts';
 import { loadEnv, makeRest, republishTemplate } from './lib/republishTemplate.mjs';
 
@@ -39,7 +39,7 @@ function rewriteTree(node, slug, changes, matched) {
       next = next.split(PLACEHOLDER).join(name);
       matched.set(PLACEHOLDER, (matched.get(PLACEHOLDER) ?? 0) + 1);
     }
-    for (const r of REWRITES) {
+    for (const r of [...REWRITES, ...PLACEHOLDER_REWRITES]) {
       if (!next.includes(r.from)) continue;
       next = next.split(r.from).join(r.to);
       matched.set(r.from, (matched.get(r.from) ?? 0) + 1);
@@ -100,7 +100,7 @@ for (const tpl of targets) {
 
 // ── Which entries did work, and which found nothing? ─────────────────────────────────────────
 console.log('\nRewrites by target:');
-for (const r of [{ from: PLACEHOLDER, why: 'placeholder' }, ...REWRITES]) {
+for (const r of [{ from: PLACEHOLDER, why: 'placeholder' }, ...REWRITES, ...PLACEHOLDER_REWRITES]) {
   const n = matched.get(r.from) ?? 0;
   console.log(`   ${String(n).padStart(4)}  ${n === 0 ? '⚠️ NO MATCH  ' : ''}${r.from.replace(/\s+/g, ' ').slice(0, 90)}`);
 }

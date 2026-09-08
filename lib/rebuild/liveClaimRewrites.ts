@@ -77,6 +77,18 @@ export const REWRITES: Rewrite[] = [
 ];
 
 /**
+ * Editor instruction text that leaked onto public pages. Not a claim — nothing is asserted — but
+ * "Share your story and what sets you apart here." on a page we mail to a business as *their
+ * website* reads as unfinished, and the card says it is ready. Seen on Osborne's Towing the day
+ * the first claim card was rendered; 10 published sites and 14 drafts carried it. Removed, never
+ * replaced: the sentence before it already reads as a whole.
+ */
+export const PLACEHOLDER_REWRITES: Rewrite[] = [
+  { from: ' Share your story and what sets you apart here.', to: '', why: 'editor instruction leaked onto a public page' },
+  { from: 'Share your story and what sets you apart here.', to: '', why: 'editor instruction leaked onto a public page (no leading space)' },
+];
+
+/**
  * A literal template placeholder shipped inside blog posts on three live custom domains. Filled from
  * the site's own name — and ONLY for slugs listed here. The script refuses to fill it anywhere else:
  * guessing a business's name is a worse bug than leaving the placeholder.

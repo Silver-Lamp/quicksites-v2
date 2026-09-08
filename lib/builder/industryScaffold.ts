@@ -764,7 +764,9 @@ export function buildIndustryStarter(opts: {
     const aboutCol: any = createDefaultBlock('text');
     aboutCol.content = {
       ...aboutCol.content,
-      value: `<h3>About ${bn}</h3><p>We're a local ${label.toLowerCase()} team dedicated to quality work and honest, dependable service. Share your story and what sets you apart here.</p>`,
+      // ⚠️ No editor instructions in public copy. This used to end "Share your story and what sets
+      // you apart here." — fine in an editor, wrong on a page mailed to a business as their website.
+      value: `<h3>About ${bn}</h3><p>We're a local ${label.toLowerCase()} team dedicated to quality work and honest, dependable service.</p>`,
     };
     // ⚠️ These bullets ship on every split-layout site, including ones built for businesses we have
     // never spoken to. They may not assert a fact only the owner knows: the old list said

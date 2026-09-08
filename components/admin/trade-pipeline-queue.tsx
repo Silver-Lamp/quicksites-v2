@@ -7,6 +7,7 @@
 // finds. The panel says plainly whether the cron is ON — a queue that fills and never drains is the
 // silent failure this feature would otherwise have.
 import { useEffect, useState } from 'react';
+import { LOW_YIELD_RATE } from '@/lib/tradeSites/queuePlanner';
 
 type Row = {
   id: string;
@@ -73,27 +74,42 @@ export default function TradePipelineQueue() {
   }
 
   // ── Plan the queue from what we own and what we have measured ──
-  type Planned = { city: string; region: string; industry: string; category: string; priority: number; reasons: string[] };
+  type Planned = { city: string; region: string; industry: string; category: string; priority: number; reasons: string[]; rate: number; measured: boolean };
   const [plan, setPlan] = useState<{ plan: Planned[]; skipped: Array<{ city: string; region: string; industry: string; why: string }> } | null>(null);
+  // Which planned rows the operator has left ticked. All ticked to start; untick the low-yield ones.
+  const [ticked, setTicked] = useState<Set<string>>(new Set());
+  const rowKey = (p: { city: string; region: string; category: string }) => `${p.city}|${p.region}|${p.category}`;
   async function planQueue(apply: boolean) {
     setBusy(true);
     setMsg(null);
     try {
-      const r = await fetch('/api/admin/prospects/sweep-queue/plan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ limit: 14, apply }) });
+      const rows = apply && plan ? plan.plan.filter((p) => ticked.has(rowKey(p))).map((p) => ({ city: p.city, region: p.region, category: p.category })) : undefined;
+      const r = await fetch('/api/admin/prospects/sweep-queue/plan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ limit: 14, apply, rows }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
         setMsg(j?.error || 'Could not plan.');
         return;
       }
-      setPlan({ plan: j.plan, skipped: j.skipped });
       if (apply) {
-        setMsg(`Queued ${j.inserted} in ranked order — the cron takes the top one tonight.${j.enabled ? '' : ' ⚠️ The cron is OFF.'}`);
+        const dup = j.skippedQueued ? ` ${j.skippedQueued} already queued, skipped.` : '';
+        setMsg(`Added ${j.inserted} behind the ${j.queuedAhead} already queued.${dup}${j.enabled ? '' : ' ⚠️ The cron is OFF.'}`);
         setPlan(null);
         await load();
+      } else {
+        setPlan({ plan: j.plan, skipped: j.skipped });
+        setTicked(new Set((j.plan as Planned[]).map(rowKey)));
       }
     } finally {
       setBusy(false);
     }
+  }
+  const tickedCount = plan ? plan.plan.filter((p) => ticked.has(rowKey(p))).length : 0;
+  /** The calendar night the last ticked row would run: tonight is night 1 of the queue. */
+  function lastNight(queuedAhead: number, adding: number, perNight: number): string {
+    const nights = Math.ceil((queuedAhead + adding) / Math.max(1, perNight));
+    const d = new Date();
+    d.setDate(d.getDate() + Math.max(0, nights - 1));
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
   async function cancel(id: string) {
@@ -207,19 +223,47 @@ export default function TradePipelineQueue() {
           {plan && (
             <div className="rounded-xl border border-border bg-background p-3 text-xs">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold">Proposed order — {plan.plan.length} sweep{plan.plan.length === 1 ? '' : 's'}, one a night</span>
+                <span className="font-semibold">Proposed — tick what to add, in this order</span>
                 <span className="flex gap-2">
                   <button type="button" onClick={() => setPlan(null)} className="rounded-lg border border-border px-2 py-1 hover:bg-muted">Discard</button>
-                  <button type="button" onClick={() => planQueue(true)} disabled={busy || !plan.plan.length} className="rounded-lg bg-emerald-400 px-2 py-1 font-semibold text-zinc-950 hover:bg-emerald-300 disabled:opacity-50">Queue these {plan.plan.length}</button>
+                  <button type="button" onClick={() => planQueue(true)} disabled={busy || !tickedCount} className="rounded-lg bg-emerald-400 px-2 py-1 font-semibold text-zinc-950 hover:bg-emerald-300 disabled:opacity-50">
+                    Add {tickedCount} after the {queued} queued
+                  </button>
                 </span>
               </div>
+              {/* What the click does, in one sentence — the button used to say "Queue these 14" and
+                  nothing else, and the first plan would have interleaved with the rows already queued. */}
+              <div className="mt-1 text-muted-foreground">
+                Adds {tickedCount} row{tickedCount === 1 ? '' : 's'} to the end of the queue. The cron takes {state.caps.maxSweeps} a night, so the last one runs around{' '}
+                <span className="text-foreground">{lastNight(queued, tickedCount, state.caps.maxSweeps)}</span>. Nothing is spent until a row is swept; untick a row to leave it out.
+              </div>
               <ol className="mt-2 space-y-1">
-                {plan.plan.map((p, i) => (
-                  <li key={`${p.city}-${p.region}-${p.category}`} className="flex gap-2">
-                    <span className="w-5 shrink-0 text-right text-muted-foreground">{i + 1}.</span>
-                    <span><span className="font-medium">{p.city}, {p.region}</span> · {p.category} <span className="text-muted-foreground">— {p.reasons.join('; ')}</span></span>
-                  </li>
-                ))}
+                {plan.plan.map((p, i) => {
+                  const k = rowKey(p);
+                  const on = ticked.has(k);
+                  const lowYield = p.rate < LOW_YIELD_RATE;
+                  return (
+                    <li key={k} className={`flex items-start gap-2 ${on ? '' : 'opacity-50'}`}>
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => setTicked((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; })}
+                        className="mt-0.5 shrink-0"
+                        aria-label={`Include ${p.city}, ${p.region} ${p.category}`}
+                      />
+                      <span className="w-5 shrink-0 text-right text-muted-foreground">{i + 1}.</span>
+                      <span>
+                        <span className="font-medium">{p.city}, {p.region}</span> · {p.category}
+                        {lowYield && (
+                          <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 py-px text-[10px] text-amber-300" title={`${Math.round(p.rate * 100)}% of these businesses have no website — a 20-business sweep yields about ${Math.max(1, Math.round(p.rate * 20))} draft${Math.round(p.rate * 20) === 1 ? '' : 's'}`}>
+                            low yield
+                          </span>
+                        )}{' '}
+                        <span className="text-muted-foreground">— {p.reasons.join('; ')}</span>
+                      </span>
+                    </li>
+                  );
+                })}
               </ol>
               {plan.skipped.length > 0 && (
                 <div className="mt-2 text-muted-foreground">

@@ -38,7 +38,13 @@ export type PlannedSweep = {
   category: string;
   priority: number;
   reasons: string[];
+  /** Expected no-website share (0..1) — measured over ≥10 businesses when `measured`, else the prior. */
+  rate: number;
+  measured: boolean;
 };
+
+/** Below this share the operator is shown a "low yield" tag: a 20-business sweep yields ≤2 drafts. */
+export const LOW_YIELD_RATE = 0.15;
 
 /** Prior no-website rate per trade, from docs/AUTO_SHOP_VERTICAL.md and the July/September sweeps. */
 export const NO_WEBSITE_PRIOR: Record<string, number> = {
@@ -147,7 +153,7 @@ export function planSweepQueue(input: {
     if (h && h.total >= 5 && h.noWebsite / h.total < 0.1) { score -= 30; reasons.push(`this pair measured ${h.noWebsite}/${h.total} last time`); }
     else if (h && h.total >= 5) reasons.push(`re-sweep: ${h.noWebsite}/${h.total} no website last time`);
 
-    plan.push({ city: c.city, region: c.region, industry: c.industry, category, priority: score, reasons });
+    plan.push({ city: c.city, region: c.region, industry: c.industry, category, priority: score, reasons, rate, measured: !!measured });
   }
 
   plan.sort((a, b) => b.priority - a.priority || a.city.localeCompare(b.city));

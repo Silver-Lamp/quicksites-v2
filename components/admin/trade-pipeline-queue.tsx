@@ -154,7 +154,7 @@ export default function TradePipelineQueue() {
       // ⚠️ The frames must match the card. #919 made the card LANDSCAPE (9.25in × 6.25in) but these
       // stayed portrait (6.2in × 9.2in), so the preview clipped the right third — where the QR is —
       // and the operator reported "the QR isn't showing" the night before the first real send. A
-      // preview that lies about the artefact is worse than none; size it from one constant.
+      // preview that lies about the artifact is worse than none; size it from one constant.
       const W = '9.25in';
       const H = '6.25in';
       const frame = (html: string, label: string) =>

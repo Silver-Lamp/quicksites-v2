@@ -79,6 +79,23 @@ export async function addDnsTxtRecord(domain: string, value: string, name = '') 
  * token and write one) — without writing a duplicate record each night. Null when the zone is
  * not on Vercel or the lookup fails.
  */
+/**
+ * Can Vercel write DNS for this domain? "In the account's domain list" is not the same thing:
+ * the list includes domains registered through Vercel whose zone was never set up, and the
+ * first backfill under a working grant spent 6 of 10 slots on exactly those ("not a DNS zone").
+ * The records endpoint is the authoritative probe. Null = could not tell (token/network).
+ */
+export async function isVercelDnsZone(domain: string): Promise<boolean | null> {
+  try {
+    await vercelFetch(`/v4/domains/${encodeURIComponent(domain)}/records?limit=1`);
+    return true;
+  } catch (e: any) {
+    const msg = String(e?.message || '');
+    if (/not a DNS zone|not_found|not found/i.test(msg)) return false;
+    return null;
+  }
+}
+
 export async function hasGoogleVerificationTxt(domain: string): Promise<boolean | null> {
   try {
     const json = await vercelFetch(`/v4/domains/${encodeURIComponent(domain)}/records?limit=100`);

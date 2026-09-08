@@ -26,9 +26,12 @@ describe('the backfill spends its nightly budget only where it can write DNS', (
     expect(offVercel).toHaveLength(0);
   });
 
-  it('the cron picks its batch from the on-Vercel set and names the rest', () => {
+  it('the cron probes the zone while picking — listed is not writable — and names the rest', () => {
+    // Second run under a working grant: the 6 "not a DNS zone" domains were IN Vercel's domain
+    // list (registered there, zone never created) and still burned 6 of 10 slots.
     const src = read('app/api/cron/gsc-backfill/route.ts');
-    expect(src).toMatch(/const candidates = onVercel\.slice\(0, BATCH\)/);
+    expect(src).toMatch(/const zone = await isVercelDnsZone\(bareDomain\(c\.domain\)\)/);
+    expect(src).toMatch(/if \(zone === false\) noZone\.push/);
     expect(src).toMatch(/notOnVercelDns: offVercel\.map/);
   });
 

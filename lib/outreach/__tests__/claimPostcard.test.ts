@@ -145,6 +145,14 @@ describe('wiring', () => {
   it('a real send requires a human to reach', () => {
     expect(read('lib/outreach/claimPostcardSend.ts')).toMatch(/senderProfileReady\(profile\)/);
   });
+  it('a city-only address is completed from Place Details once, never guessed', () => {
+    const send = read('lib/outreach/claimPostcardSend.ts');
+    expect(send).toMatch(/backfillMailingAddress\(p\)/);
+    expect(send).toMatch(/fetchGooglePlace\(p\.place_id\)/);
+    // Written back only when the fetched address actually parses to a street + zip.
+    expect(send).toMatch(/if \(!full \|\| !parseUsAddress\(full, p\.city, p\.region\)\) return null;/);
+  });
+
   it('the printed address is fetched before a card is printed — the first one 404d', () => {
     const send = read('lib/outreach/claimPostcardSend.ts');
     expect(send).toMatch(/await preflightSiteUrl\(d\.siteUrl\)/);

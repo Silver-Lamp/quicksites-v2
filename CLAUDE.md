@@ -192,6 +192,11 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   parked no-website trade prospects — the button and the cron run the **same** `runSweep` /
   `buildDraftFromListing`, and the sweep category list is one module (`lib/prospects/sweepCategories.ts`).
   A person still chooses the cities; the cron never invents one, and restaurants are refused at enqueue.
+  **"Plan the queue"** (`lib/tradeSites/queuePlanner.ts`, pure) ranks city × trade from the domains we
+  own (+50) and the measured no-website rate per trade (prior from `AUTO_SHOP_VERTICAL.md` until 10
+  businesses are seen), skips pairs inside a 60-day cooldown, and the operator clicks to enqueue in
+  that order. Two campaign industries (`roof_cleaning`, `windshield_repair`) had no sweep category at
+  all until this — a test now pins every owned-domain industry to one.
   PR 3: **the claim postcard** (`lib/outreach/claimPostcard.ts` — the one surface nothing delivered
   before) mails each built, unmailed trade draft ONE card to the **listing's street address** (the
   Google-PIN channel; cold SMS stays off) with a QR to the tracked `/go/<prospectId>` link. ⚠️ **It

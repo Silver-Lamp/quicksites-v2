@@ -11,13 +11,18 @@
 export type SweepCategory = { label: string; types?: string[]; textQuery?: string; industry?: string };
 
 export const SWEEP_CATEGORIES: SweepCategory[] = [
-  { label: 'Restaurants', types: ['restaurant', 'cafe', 'bar'] },
-  { label: 'Plumbing', types: ['plumber'] },
-  { label: 'Electrical', types: ['electrician'] },
+  { label: 'Restaurants', types: ['restaurant', 'cafe', 'bar'], industry: 'restaurant' },
+  // Typed categories carry their industry too, so the queue planner can go from a campaign's
+  // industry_key ("plumbing", from plumbing-town.com) back to the category that sweeps it.
+  { label: 'Plumbing', types: ['plumber'], industry: 'plumbing' },
+  { label: 'Electrical', types: ['electrician'], industry: 'electrical' },
   { label: 'HVAC', textQuery: 'HVAC contractor', industry: 'hvac' },
-  { label: 'Painting', types: ['painter'] },
-  { label: 'Roofing', types: ['roofing_contractor'] },
-  { label: 'Contractor', types: ['general_contractor'] },
+  { label: 'Painting', types: ['painter'], industry: 'painting' },
+  { label: 'Roofing', types: ['roofing_contractor'], industry: 'roofing' },
+  { label: 'Contractor', types: ['general_contractor'], industry: 'general_contractor' },
+  // Two industries we own campaign domains for (11 + 5 of 100) had no sweepable category at all.
+  { label: 'Roof cleaning', textQuery: 'roof cleaning service', industry: 'roof_cleaning' },
+  { label: 'Windshield repair', textQuery: 'windshield repair', industry: 'windshield_repair' },
   // Instant-estimator trades — each auto-builds a quote_estimator site + a
   // <city>-<trade>.com geo-vertical (all 9 trades live on the DeckSketch endpoint).
   { label: 'Deck builder', textQuery: 'deck builder', industry: 'deck_builder' },
@@ -37,10 +42,10 @@ export const SWEEP_CATEGORIES: SweepCategory[] = [
   { label: 'Garage door', textQuery: 'garage door repair', industry: 'general_contractor' },
   { label: 'Appliance repair', textQuery: 'appliance repair', industry: 'other' },
   { label: 'Locksmith', types: ['locksmith'] },
-  { label: 'Moving', types: ['moving_company'] },
+  { label: 'Moving', types: ['moving_company'], industry: 'moving' },
   { label: 'Storage', types: ['storage'] },
   { label: 'Towing', textQuery: 'towing service', industry: 'towing' },
-  { label: 'Auto repair', types: ['car_repair'] },
+  { label: 'Auto repair', types: ['car_repair'], industry: 'auto_repair' },
   { label: 'Car wash', types: ['car_wash'] },
   { label: 'Auto detailing', textQuery: 'auto detailing', industry: 'auto_repair' },
   { label: 'Dental', types: ['dentist'] },

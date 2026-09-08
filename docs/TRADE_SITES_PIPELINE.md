@@ -79,6 +79,17 @@ an operator's draft. Both pass the prospect's own `industry_key` — the guess d
 pipeline"; one city or a metro fanned through `citiesForMetro`). The cron never invents a city.
 Restaurants are refused at enqueue: they belong to the take-rate pipeline.
 
+**Or let the data propose them.** "Plan the queue" (`POST /api/admin/prospects/sweep-queue/plan`,
+`lib/tradeSites/queuePlanner.ts`) ranks city × trade pairs from two measured facts: **where we own
+`<city>-<trade>.com`** (+50 — the pitch site and the claim card reinforce each other) and **how often
+that trade has no website** (the measured rate once ten businesses have been seen, else the prior
+from `docs/AUTO_SHOP_VERTICAL.md`: auto repair ~50%, towing ~45%, plumbing/HVAC ~25%, roofing 3%).
+A pair swept inside the 60-day cooldown is skipped (a re-sweep dedupes on `place_id` and finds
+nothing); a pair that measured under 10% is pushed down, not out. The operator sees the ranked list
+with a reason per row and clicks "Queue these N"; priorities descend with rank so the cron drains
+them in that order, one a night. Still a person's click — the planner proposes, it never enqueues on
+its own.
+
 **Ownership of a nightly draft**: `TRADE_PIPELINE_OPERATOR_ID` → the queue row's requester → the
 prospect's discoverer → the first `admin_users` row. Never null; an ownerless draft is invisible
 to every admin list.

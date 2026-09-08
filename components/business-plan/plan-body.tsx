@@ -15,6 +15,7 @@
 import Link from 'next/link';
 import { VERTICALS, STAGE_LABEL, type Stage, type Vertical } from '@/lib/business/verticals';
 import type { PlanEvidence } from '@/lib/business/planEvidence';
+import type { TradeOpsSnapshot } from '@/lib/tradeSites/opsSnapshot';
 import { formatCents } from '@/lib/commerce/rentalSplits';
 import OperatorPanel from '@/components/business-plan/operator-panel';
 import TradeSitesFlow from '@/components/business-plan/trade-sites-flow';
@@ -40,10 +41,13 @@ export default function PlanBody({
   vertical,
   evidence: e,
   isAdmin,
+  tradeOps = null,
 }: {
   vertical: Vertical;
   evidence: PlanEvidence;
   isAdmin: boolean;
+  /** Operator-only pipeline detail; null for every public reader (the page never loads it for them). */
+  tradeOps?: TradeOpsSnapshot | null;
 }) {
   const lifetimeRevenueCents = e.platformFeeCents + e.rentalCentsCollected;
 
@@ -219,7 +223,7 @@ export default function PlanBody({
 
       {/* ⚠️ The one and only thing on this page a reader cannot see. Operational detail —
           never a fact that would make the plan read worse. */}
-      {isAdmin && <OperatorPanel evidence={e} />}
+      {isAdmin && <OperatorPanel evidence={e} tradeOps={tradeOps} />}
 
       <p className="mt-10 border-t border-neutral-800 pt-5 text-xs leading-relaxed text-neutral-500">
         Every count on this page is queried when the page loads, so it cannot drift from reality the

@@ -38,3 +38,24 @@ describe('the trade-site loop diagram on the business plan', () => {
     expect(FLOW).toMatch(/^import type \{ PlanEvidence \}/m);
   });
 });
+
+describe('the operator view of the pipeline', () => {
+  const PAGE = read('app/business-plan/page.tsx');
+  const OPERATOR = read('components/business-plan/operator-panel.tsx');
+
+  it('is loaded only for an admin, so the public render never pays for it or leaks it', () => {
+    expect(PAGE).toMatch(/admin \? await loadTradeOpsSnapshot\(\)/);
+    expect(BODY).toMatch(/\{isAdmin && <OperatorPanel evidence=\{e\} tradeOps=\{tradeOps\} \/>\}/);
+  });
+
+  it('shows the queue, the last run, and what is waiting to mail — operational detail only', () => {
+    for (const s of ['Queued sweeps', 'Last run', 'Waiting to mail', 'Up next']) expect(OPERATOR).toContain(s);
+    // It tells the operator to read built/mailed, not the status word — the rank sync said ok for months.
+    expect(OPERATOR).toMatch(/not its status/);
+  });
+
+  it('the vertical is live but unproven — no stage above what the money says', () => {
+    const { getVertical } = require('@/lib/business/verticals');
+    expect(getVertical('trade_sites').stage).toBe('live-untested');
+  });
+});

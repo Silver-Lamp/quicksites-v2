@@ -89,7 +89,7 @@ export const VERTICALS: Vertical[] = [
     name: 'Auto-built Trade Sites',
     oneLiner:
       'Build a working website for a local trade business from its public listing — for the ones that have none — and sell it to them for the price of a phone plan.',
-    stage: 'built-inert',
+    stage: 'live-untested',
     mechanics: [
       'Their own name and their own site, not one of our geo domains. Nothing is exclusive and nothing is scarce, so this is a subscription rather than a rental.',
       'Free until claimed: an unclaimed draft renders watermarked and noindex behind a "claim this site" bar. The claim is the conversion event, not the site.',
@@ -97,9 +97,11 @@ export const VERTICALS: Vertical[] = [
       'Self-serve by necessity. A salesperson costs more to acquire a customer than this earns in a year, so it is a claim link and a card on file or it is nothing. Reps sell the geo rental instead.',
     ],
     built: [
-      'The whole production line already exists for restaurants: listing import, draft assembly, watermark-and-noindex until claimed, tokenised claim links, ownership transfer on claim.',
+      'The loop runs without a person from the second step on: a nightly cron sweeps the queued city × trade, builds a draft for every business with no website, and mails each one a claim card to its listed address after a day’s review window (#909, #910).',
+      'The queue proposes itself: a planner ranks city × trade from the domains we own and the measured no-website rate per trade — towing measures 57% — and an operator clicks to accept the order (#912).',
+      'Claiming publishes the site the same instant and the post-claim page sells a custom domain self-serve; payment registers, attaches and binds the domain with no operator in the loop (#908).',
       'Marginal cost is cents — 1,379 metered AI calls cost $25 across a month, and a subdomain costs nothing.',
-      'Generated copy no longer invents hours, response times, licensing, guarantees or prices about a business we have never spoken to (#903).',
+      'Generated copy no longer invents hours, response times, licensing, guarantees or prices about a business we have never spoken to (#903), and a draft that still carries one is blocked at the mailbox, never sent.',
     ],
     unproven: [
       'Nobody has ever paid for one. A self-serve checkout for the custom-domain tier now exists on the post-claim page (flag-gated), so the price is a thing someone can be asked for — it is still a proposal until someone says yes.',
@@ -111,7 +113,7 @@ export const VERTICALS: Vertical[] = [
     decisiveTest:
       'Send the claim link to every no-website business in one trade and count two numbers: how many claim a free site, and how many of those pay for a domain. The first tests whether the site is wanted; the second tests whether it is worth money. They are different questions and the first is cheap.',
     costToTest:
-      'Production is already paid for. The real spend is the outreach and building a checkout for the tier — call it a week, plus postage.',
+      'Production is paid for and the checkout is built. The spend that remains is what the cron does each night — Places calls and cents of AI per draft, then postage at ten cards a night — and the only decision left is which cities to queue.',
   },
   {
     key: 'commerce',

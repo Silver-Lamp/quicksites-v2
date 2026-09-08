@@ -15,6 +15,8 @@ import {
   pickBackfillCandidates, partitionByZone, connectOne, summarize, backfillFailed, type BackfillOutcome,
 } from '@/lib/gsc/backfillGscProperties';
 import { listVercelOwnedDomains } from '@/lib/domains/registrar';
+import { isVercelDnsZone } from '@/lib/domains/vercel';
+import { bareDomain } from '@/lib/gsc/connectDomain';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -68,9 +70,20 @@ async function handle(req: NextRequest) {
     const unconnected = pickBackfillCandidates((camps ?? []) as { id: string; domain: string }[], connectedProps, 100000);
     // Only a zone Vercel hosts can take the TXT. Domains elsewhere are named, not retried.
     const zones = await listVercelOwnedDomains();
-    const { onVercel, offVercel } = partitionByZone(unconnected, zones ? new Set(zones.map((z) => z.domain)) : null);
-    const candidates = onVercel.slice(0, BATCH);
-    const totalUnconnected = onVercel.length;
+    const { onVercel, offVercel: notListed } = partitionByZone(unconnected, zones ? new Set(zones.map((z) => z.domain)) : null);
+    // ⚠️ Listed is not the same as writable: a domain registered through Vercel can sit in the
+    // account list with no DNS zone. Probe the zone while picking, so the ten slots go to domains a
+    // TXT can actually land on; the rest are named for the operator.
+    const candidates: typeof onVercel = [];
+    const noZone: string[] = [];
+    for (const c of onVercel) {
+      if (candidates.length >= BATCH) break;
+      const zone = await isVercelDnsZone(bareDomain(c.domain));
+      if (zone === false) noZone.push(c.domain);
+      else candidates.push(c);
+    }
+    const offVercel = [...notListed, ...noZone.map((domain) => ({ id: '', domain }))];
+    const totalUnconnected = onVercel.length - noZone.length;
 
     const outcomes: BackfillOutcome[] = [];
     for (const cand of candidates) {

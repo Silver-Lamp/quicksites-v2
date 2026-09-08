@@ -14,6 +14,8 @@ import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
 import { getSenderProfile } from '@/lib/outreach/senderProfile';
 import { hasMenuBlock, RESTAURANT_FEE_PERCENT } from '@/lib/commerce/pricingPolicy';
 import { getDemandCount } from '@/lib/menu/demand';
+import { publicSiteUrl } from '@/lib/sites/publicUrl';
+import { getSiteCompetition } from '@/lib/outreach/competitionForSite';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -33,7 +35,7 @@ export default async function ClaimSitePage({
   const { data: tpl } = tokenOk
     ? await supabaseAdmin
         .from('templates')
-        .select('id, slug, business_name, template_name, claim_source, data')
+        .select('id, slug, business_name, template_name, claim_source, data, custom_domain')
         .eq('id', params.id)
         .maybeSingle()
     : { data: null };
@@ -41,10 +43,13 @@ export default async function ClaimSitePage({
   const claimable = tokenOk && tpl && (tpl as any).claim_source === 'listing_import';
   const name = (tpl as any)?.business_name || (tpl as any)?.template_name || 'your business';
   const slug = (tpl as any)?.slug ?? params.id;
-  // ⚠️ /preview/<slug> resolves the SITE from the request host and treats the path as a PAGE slug,
-  // so on www.quicksites.ai it found no site and the inline preview was a 404 inside the pitch.
-  // The explicit template id is what the preview route actually resolves a draft by.
-  const previewHref = `/preview?template_id=${encodeURIComponent(params.id)}`;
+  // ⚠️ The preview is the site's REAL public address — the same one printed on the claim card —
+  // rendered by the public route with no editor around it. Two things went wrong before this:
+  // /preview/<slug> resolved the site from the request host (404 inside the pitch), and
+  // /preview?template_id= wraps the site in the editor provider, so a prospect saw "+ Add block"
+  // and Edit/move/delete toolbars over their own business's page.
+  const siteUrl = publicSiteUrl({ custom_domain: (tpl as any)?.custom_domain, slug: (tpl as any)?.slug }) ?? `/sites/${encodeURIComponent(slug)}`;
+  const previewHref = siteUrl;
 
   // With verification on, "Claim it free" first proves control of the business (OTP to
   // the listing phone); otherwise it arms the claim cookie directly (legacy).
@@ -81,13 +86,18 @@ export default async function ClaimSitePage({
   // Real demand is the strongest possible reason to claim NOW — surface the count (never
   // the PII) on the pitch. Only for ordering sites, where "tried to order" makes sense.
   const demandCount = isMenuSite ? await getDemandCount(params.id) : 0;
+  // "It goes to one business — claim it before a competitor does" is only true when there is a
+  // real race: a first-to-claim campaign with two or more businesses still in it. The same rule the
+  // live site's competition banner uses; a per-business draft gets the plain, honest line instead.
+  const competition = await getSiteCompetition(params.id);
 
   return (
     <ClaimSiteHero
       name={name}
       previewHref={previewHref}
       claimHref={claimHref}
-      urlLabel={(tpl as any)?.slug ? `${slug}.delivered.menu` : 'your new site'}
+      urlLabel={siteUrl.replace(/^https?:\/\//, '')}
+      competition={!!competition}
       brandName={brand.orgId ? brand.name : null}
       brandLogoUrl={brand.logoUrl}
       contactEmail={contactEmail}

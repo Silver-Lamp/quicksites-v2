@@ -15,10 +15,17 @@ export default function ClaimSiteHero({
   contactEmail,
   feePercent,
   demandCount = 0,
+  competition = false,
 }: {
   name: string;
+  /** What the iframe and "Open full preview" show — the site's real public address, never an editor surface. */
   previewHref: string;
   claimHref: string;
+  /**
+   * Only a first-to-claim competition may say "it goes to one business — claim it before a
+   * competitor". A per-business draft is nobody's prize; that line on it is invented urgency.
+   */
+  competition?: boolean;
   /** Text shown in the fake browser URL bar above the preview (e.g. "slug.delivered.menu"). */
   urlLabel: string;
   /** Owning-org brand (e.g. "CedarSites"); shown as a "Built by" wordmark. Null → QuickSites default (no wordmark). */
@@ -104,9 +111,15 @@ export default function ClaimSiteHero({
         </a>
       </div>
 
-      <p className="mt-5 text-sm text-amber-400/90">
-        This is a premium local domain — it goes to <b>one</b> business. Claim it before a competitor does.
-      </p>
+      {competition ? (
+        <p className="mt-5 text-sm text-amber-400/90">
+          This is a premium local domain — it goes to <b>one</b> business. Claim it before a competitor does.
+        </p>
+      ) : (
+        <p className="mt-5 text-sm text-zinc-400">
+          Built from your public listing — name, phone, address and hours. Nothing else. Don’t want it? Say the word and it’s gone.
+        </p>
+      )}
       <p className="mt-2 text-sm text-zinc-500">
         Claiming creates your account and makes this site yours to edit and publish.
       </p>

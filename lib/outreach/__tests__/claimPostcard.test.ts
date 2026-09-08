@@ -153,8 +153,15 @@ describe('wiring', () => {
     const sites = read('app/sites/[slug]/[[...rest]]/page.tsx');
     expect(sites).not.toMatch(/if \(ownerId\) return false/);
     expect(sites).toMatch(/isOperatorUser\(ownerId\)/);
-    // And the claim page's inline preview resolves the draft by id, not by a host it is not on.
-    expect(read('app/claim-site/[id]/page.tsx')).toMatch(/\/preview\?template_id=/);
+    // And the claim page's inline preview is the site's real public address — the one on the card —
+    // never the /preview route, which wraps the site in the editor and showed "+ Add block" to a prospect.
+    const claim = read('app/claim-site/[id]/page.tsx');
+    expect(claim).toMatch(/publicSiteUrl\(/);
+    expect(claim).not.toMatch(/previewHref = `\/preview/);
+    // The "goes to one business — claim before a competitor" line is a competition's, never a per-business draft's.
+    expect(read('components/sites/claim-site-hero.tsx')).toMatch(/\{competition \? \(/);
+    expect(claim).toMatch(/const competition = await getSiteCompetition\(params\.id\)/);
+    expect(claim).toMatch(/competition=\{!!competition\}/);
   });
   it('every new env key is declared', () => {
     const env = read('.env.example');

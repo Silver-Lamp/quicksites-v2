@@ -155,6 +155,17 @@ export default function ServicesRender({
 
   const headingCls = compact ? 'text-lg font-semibold mb-2' : 'text-2xl font-semibold mb-6';
 
+  // ⚠️ A DEFAULT LIST SAYS SO. On a listing-built draft whose Google listing declared no usable
+  // category, the list is the trade's standard services, not this shop's (owner decision
+  // 2026-09-08; lib/rebuild/listingServices.ts stamps `meta.services_source`). The line under it is
+  // what keeps that honest — the same "call to confirm" rule menus use for prices we cannot date.
+  const isDefaultList = (template?.data as any)?.meta?.services_source === 'industry_default';
+  const confirmNote = isDefaultList ? (
+    <p className="mt-4 text-sm text-muted-foreground" data-services-note="industry_default">
+      Typical services for this trade — call to confirm what&apos;s offered.
+    </p>
+  ) : null;
+
   // Split a "Name — $price" item back into label + trailing meta for richer variants.
   const parse = (s: string) => {
     const idx = s.indexOf(' — ');
@@ -234,6 +245,7 @@ export default function ServicesRender({
               </li>
             ))}
           </ul>
+          {confirmNote}
         </div>
       </SectionShell>
     );
@@ -244,6 +256,7 @@ export default function ServicesRender({
       <div className="mx-auto w-full max-w-4xl">
         <h3 className={`${headingCls} text-foreground`}>{heading}</h3>
         {inner}
+        {confirmNote}
       </div>
     </SectionShell>
   );

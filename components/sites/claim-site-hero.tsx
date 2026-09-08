@@ -4,6 +4,10 @@
 // in isolation. Server-safe (no client hooks).
 
 const BASE_PERKS = ['Free hosting', 'Online ordering', 'Edit anytime', 'Live in minutes'];
+// ⚠️ A trade has no order to take. "Online ordering" and "we earn when you sell" on a tow shop's
+// pitch offer something the page cannot do (the same wrongness as "Is this your restaurant?");
+// what a trade site does is let a customer request a quote or call in one tap.
+const TRADE_PERKS = ['Free hosting', 'Request a quote in one tap', 'Edit anytime', 'Live in minutes'];
 
 export default function ClaimSiteHero({
   name,
@@ -16,7 +20,10 @@ export default function ClaimSiteHero({
   feePercent,
   demandCount = 0,
   competition = false,
+  isFood = true,
 }: {
+  /** Restaurants get the menu / ordering / take-rate pitch; every other trade gets the listing / quote pitch. */
+  isFood?: boolean;
   name: string;
   /** What the iframe and "Open full preview" show — the site's real public address, never an editor surface. */
   previewHref: string;
@@ -43,7 +50,9 @@ export default function ClaimSiteHero({
   const keepPct = hasFee ? 100 - (feePercent as number) : null;
   const PERKS = hasFee
     ? ['Free hosting — no monthly', `Keep ${keepPct}% of every order`, 'Edit anytime', 'Live in minutes']
-    : BASE_PERKS;
+    : isFood
+      ? BASE_PERKS
+      : TRADE_PERKS;
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center px-6 py-14 text-center">
       {brandName && (
@@ -69,10 +78,19 @@ export default function ClaimSiteHero({
         </div>
       )}
       <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
-        We assembled it from your public listing — your menu, hours, location, and online ordering.
-        {hasFee
-          ? ` Free hosting, no monthly fee — you keep ${keepPct}% of every order, we only take ${feePercent}% when you sell. Here it is:`
-          : ' Free hosting; we only earn a small fee when you sell. Here it is:'}
+        {isFood ? (
+          <>
+            We assembled it from your public listing — your menu, hours, location, and online ordering.
+            {hasFee
+              ? ` Free hosting, no monthly fee — you keep ${keepPct}% of every order, we only take ${feePercent}% when you sell. Here it is:`
+              : ' Free hosting; we only earn a small fee when you sell. Here it is:'}
+          </>
+        ) : (
+          <>
+            We built it from your public listing — name, phone, address and hours. Free to keep on its own
+            address; your own .com is the one thing we charge for. Here it is:
+          </>
+        )}
       </p>
 
       {/* Inline live preview — the actual built site, so they see the value before signing up. */}

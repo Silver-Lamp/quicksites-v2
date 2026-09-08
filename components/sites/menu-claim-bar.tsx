@@ -108,7 +108,7 @@ export default function MenuClaimBar({
                 <span className="text-neutral-400">
                   takes about 2 minutes.{' '}
                   <a href="/pricing" className="underline underline-offset-2 hover:text-neutral-200">
-                    Free to keep; we earn only on orders.
+                    {isFood ? 'Free to keep; we earn only on orders.' : 'Free to keep; your own .com is the one thing we charge for.'}
                   </a>
                 </span>
               </>

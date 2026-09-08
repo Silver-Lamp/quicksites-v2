@@ -98,6 +98,7 @@ export default async function ClaimSitePage({
       claimHref={claimHref}
       urlLabel={siteUrl.replace(/^https?:\/\//, '')}
       competition={!!competition}
+      isFood={isMenuSite}
       brandName={brand.orgId ? brand.name : null}
       brandLogoUrl={brand.logoUrl}
       contactEmail={contactEmail}

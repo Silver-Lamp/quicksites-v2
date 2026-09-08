@@ -162,6 +162,12 @@ describe('wiring', () => {
     expect(read('components/sites/claim-site-hero.tsx')).toMatch(/\{competition \? \(/);
     expect(claim).toMatch(/const competition = await getSiteCompetition\(params\.id\)/);
     expect(claim).toMatch(/competition=\{!!competition\}/);
+    // A trade has no order to take: the pitch, the perks and the in-site claim bar must not promise one.
+    expect(claim).toMatch(/isFood=\{isMenuSite\}/);
+    const hero = read('components/sites/claim-site-hero.tsx');
+    expect(hero).toMatch(/TRADE_PERKS/);
+    expect(hero).toMatch(/isFood \? \(/);
+    expect(read('components/sites/menu-claim-bar.tsx')).toMatch(/isFood \? 'Free to keep; we earn only on orders\.' : /);
   });
   it('every new env key is declared', () => {
     const env = read('.env.example');

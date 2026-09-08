@@ -81,8 +81,12 @@ export default function ServicesRender({
    * This is presentation only, and it fixes every existing draft with no backfill.
    */
   const singleService = items.length === 1;
-  const heading =
-    String(cfg.heading ?? cfg.title ?? '').trim() || (singleService ? 'What we do' : 'Our Services');
+  // The scaffold stamps `title: "Our Services"` on every block it seeds, which defeated the
+  // single-item heading below on every auto-built draft (the live page read "Our Services / Car
+  // repair"). An owner's own custom title still wins; only the stock plural is swapped.
+  const explicitHeading = String(cfg.heading ?? cfg.title ?? '').trim();
+  const isStockPlural = /^our services$/i.test(explicitHeading);
+  const heading = explicitHeading && !(singleService && isStockPlural) ? explicitHeading : singleService ? 'What we do' : 'Our Services';
 
   // ⚠️ ON A PERSON'S SITE THIS BLOCK IS A SKILLS LIST, NOT A SERVICE MENU. Forty numbered bullets
   // is a wall nobody reads top-to-bottom; grouped chips are scannable in about three seconds.

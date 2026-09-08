@@ -20,6 +20,7 @@ import { augmentListingWithYelp } from '@/lib/rebuild/importListingYelp';
 import { menuFromPhotos, pickMenuPhotos } from '@/lib/rebuild/menuFromPhotos';
 import { enrichListingCopy } from '@/lib/rebuild/enrichListingCopy';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
+import { applyListingServices } from '@/lib/rebuild/listingServices';
 import type { IndustryKey } from '@/lib/industries';
 
 function uuid(): string {
@@ -98,6 +99,12 @@ export async function buildDraftFromListing(input: BuildDraftInput): Promise<Bui
   const spec = await enrichListingCopy(baseSpec, { menu, operatorId: input.operatorId });
   const heroImage = listing.photos?.[0] ?? null;
   const tpl = buildRebuildTemplate({ spec, heroImage, sourceUrl: listing.website ?? null });
+
+  // ⚠️ Services on a listing draft are the business's OWN declared categories or nothing.
+  // `buildRebuildTemplate` falls back to the industry scaffold's list when the spec has none —
+  // right for a URL rebuild, wrong here: "AC Recharge" under a towing company we never spoke to
+  // is the invented-menu class. Re-apply the cleaned list and, when it is empty, drop the block.
+  applyListingServices(tpl.data, spec.services);
 
   // Insert a claimable draft (operator-owned until the business claims it), retrying
   // slug collisions.

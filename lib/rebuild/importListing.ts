@@ -20,6 +20,7 @@ import type {
 import { parseUsAddress } from '@/lib/rebuild/parseAddress';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { typeToIndustryKey } from '@/lib/places/typeToIndustry';
+import { cleanListingCategories } from '@/lib/rebuild/listingServices';
 
 export type Listing = {
   name: string;
@@ -115,7 +116,10 @@ export function buildSpecFromListing(
   // path. Humanize them for anything user-facing (idempotent — already-nice labels like
   // "Bars" pass through unchanged) so no snake_case ever leaks into copy or services. Keep
   // the RAW `cats` for typeToIndustryKey above, which matches on the raw Places type ids.
-  const displayCats = cats.map(prettyCategory);
+  // ⚠️ And DROP the taxonomy plumbing first. The sweep-built path hands us raw
+  // `point_of_interest` / `service` / `establishment` that never met `mapTypes`, and 26 trade
+  // drafts listed them as services under real businesses' names (lib/rebuild/listingServices.ts).
+  const displayCats = cleanListingCategories(cats).map(prettyCategory);
 
   const contact: ContactSpec = {};
   if (listing.phone) contact.phone = listing.phone;

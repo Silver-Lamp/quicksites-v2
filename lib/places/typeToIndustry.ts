@@ -53,8 +53,9 @@ const PLACES_TYPE_ALIASES: Record<string, IndustryKey> = {
   pet_store: 'pet_boutique',
 };
 
-// Generic Google types that carry no industry signal — never let them win.
-const GENERIC_PLACE_TYPES = new Set([
+// Generic Google types that carry no industry signal — never let them win. Exported so the
+// listing-services filter (lib/rebuild/listingServices.ts) shares ONE list; two lists drifted once.
+export const GENERIC_PLACE_TYPES = new Set([
   'point_of_interest',
   'establishment',
   'store',

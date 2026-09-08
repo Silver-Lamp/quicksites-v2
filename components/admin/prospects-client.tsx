@@ -34,6 +34,7 @@ import {
 } from '@/lib/prospects/recentLocations';
 import MailPreviewModal, { type MailPreviewData } from '@/components/admin/mail-preview-modal';
 import SenderProfileModal, { type SenderProfile } from '@/components/admin/sender-profile-modal';
+import { SWEEP_CATEGORIES } from '@/lib/prospects/sweepCategories';
 
 const TERRITORY_CELL_DEGREES = 0.02;
 
@@ -67,48 +68,9 @@ const ProspectsMap = dynamic(() => import('@/components/admin/prospects-map'), {
 //                   can never be found by a type-only sweep.
 // `industry` on keyword categories is the canonical IndustryKey the query represents,
 // so a keyword-found prospect (generic Places types) still gets the right scaffold.
-const CATEGORIES: { label: string; types?: string[]; textQuery?: string; industry?: string }[] = [
-  { label: 'Restaurants', types: ['restaurant', 'cafe', 'bar'] },
-  { label: 'Plumbing', types: ['plumber'] },
-  { label: 'Electrical', types: ['electrician'] },
-  { label: 'HVAC', textQuery: 'HVAC contractor', industry: 'hvac' },
-  { label: 'Painting', types: ['painter'] },
-  { label: 'Roofing', types: ['roofing_contractor'] },
-  { label: 'Contractor', types: ['general_contractor'] },
-  // Instant-estimator trades — each auto-builds a quote_estimator site + a
-  // <city>-<trade>.com geo-vertical (all 9 trades live on the DeckSketch endpoint).
-  { label: 'Deck builder', textQuery: 'deck builder', industry: 'deck_builder' },
-  { label: 'Fencing', textQuery: 'fence contractor', industry: 'fencing' },
-  { label: 'Concrete', textQuery: 'concrete contractor', industry: 'concrete' },
-  { label: 'Artificial turf', textQuery: 'artificial turf installer', industry: 'turf' },
-  { label: 'Epoxy flooring', textQuery: 'epoxy flooring contractor', industry: 'epoxy_flooring' },
-  { label: 'Paving', textQuery: 'paving contractor', industry: 'paving' },
-  { label: 'Siding', textQuery: 'siding contractor', industry: 'siding' },
-  { label: 'Retaining walls', textQuery: 'retaining wall contractor', industry: 'retaining_walls' },
-  { label: 'Handyman', textQuery: 'handyman service', industry: 'general_contractor' },
-  { label: 'Landscaping', textQuery: 'landscaping service', industry: 'landscaping' },
-  { label: 'Tree service', textQuery: 'tree service', industry: 'landscaping' },
-  { label: 'Pest control', textQuery: 'pest control', industry: 'pest_control' },
-  { label: 'Cleaning', textQuery: 'house cleaning service', industry: 'other' },
-  { label: 'Junk removal', textQuery: 'junk removal', industry: 'junk_removal' },
-  { label: 'Garage door', textQuery: 'garage door repair', industry: 'general_contractor' },
-  { label: 'Appliance repair', textQuery: 'appliance repair', industry: 'other' },
-  { label: 'Locksmith', types: ['locksmith'] },
-  { label: 'Moving', types: ['moving_company'] },
-  { label: 'Storage', types: ['storage'] },
-  { label: 'Towing', textQuery: 'towing service', industry: 'towing' },
-  { label: 'Auto repair', types: ['car_repair'] },
-  { label: 'Car wash', types: ['car_wash'] },
-  { label: 'Auto detailing', textQuery: 'auto detailing', industry: 'auto_repair' },
-  { label: 'Dental', types: ['dentist'] },
-  { label: 'Veterinary', types: ['veterinary_care'] },
-  { label: 'Salon / Spa', types: ['hair_care', 'beauty_salon', 'nail_salon', 'spa'] },
-  { label: 'Fitness', types: ['gym'] },
-  { label: 'Real estate', types: ['real_estate_agency'] },
-  { label: 'Insurance', types: ['insurance_agency'] },
-  { label: 'Accounting', types: ['accounting'] },
-  { label: 'Legal', types: ['lawyer'] },
-];
+// One list, shared with the nightly pipeline's queue (lib/prospects/sweepCategories.ts) — a
+// category the cron can sweep is exactly a category this form can sweep.
+const CATEGORIES = SWEEP_CATEGORIES;
 
 const TIER_META: Record<string, { label: string; cls: string }> = {
   no_website: { label: 'No website', cls: 'bg-emerald-500/20 text-emerald-300' },

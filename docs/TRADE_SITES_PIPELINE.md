@@ -17,8 +17,8 @@ sweep city × trade  →  build drafts (no-website only)  →  deliver a claim l
 
 | Step | Code | Trigger | Status (2026-09-07) |
 |---|---|---|---|
-| 1. Sweep a city for one trade | `app/api/admin/prospects/discover` | operator click | manual — a cron is PR 2 |
-| 2. Build drafts for the no-website tier | `app/api/admin/prospects/build` → `lib/outreach/buildDraftFromListing.ts` | operator click | manual — PR 2 |
+| 1. Sweep a city for one trade | `lib/prospects/runSweep.ts` (the button and the cron run the same function) | operator click **or nightly cron** | **automated (PR 2)** — the operator queues city × trade on `/admin/growth`; flag `TRADE_PIPELINE_ENABLED` |
+| 2. Build drafts for the no-website tier | `lib/tradeSites/pipeline.ts` → `lib/outreach/buildDraftFromListing.ts` | nightly cron, `TRADE_PIPELINE_MAX_BUILDS` a night | **automated (PR 2)** — also drains the backlog of parked no-website trade prospects |
 | 3. Deliver the claim link | *(nothing)* | — | **no code path delivers it** — PR 3 (postcard) |
 | 4. Claim | `/claim-site/<id>?token` → `app/api/claim-draft` → `lib/auth/claimPendingSiteDraft.ts` | the business | automated |
 | 5. **Site goes live** | `lib/tradeSites/activate.ts` (publish on claim, prospect → `claimed`) | on claim | **automated (PR 1)** |
@@ -60,6 +60,27 @@ sweep city × trade  →  build drafts (no-website only)  →  deliver a claim l
 **Proof rule, inherited from the rental rail:** `subscription_status='active'` says a subscription
 exists. Only `payment_count > 0` says money moved (`invoice.paid`), and only the count tells a
 renewal from a first payment. `/business-plan` reads `tradePaid` from that count, never from a status.
+
+## PR 2 — the nightly sweep-and-build cron
+
+`/api/cron/trade-site-pipeline` (06:00, before the GSC crons) drains `trade_sweep_queue` (migration
+`20260839`) at `TRADE_PIPELINE_MAX_SWEEPS` a night, then builds a draft for every parked no-website
+trade prospect without one, newest first, at `TRADE_PIPELINE_MAX_BUILDS` a night. The operator's
+Discover button and the cron call the same `runSweep`; the operator's Build button and the cron call
+the same `buildDraftFromListing` with the same `listingForProspect`, so a nightly draft is exactly
+an operator's draft. Both pass the prospect's own `industry_key` — the guess defaults to
+`restaurant` and has put menus on real tow companies twice.
+
+**A person still chooses the cities** (queue rows on `/admin/growth` → "Nightly trade-site
+pipeline"; one city or a metro fanned through `citiesForMetro`). The cron never invents a city.
+Restaurants are refused at enqueue: they belong to the take-rate pipeline.
+
+**Ownership of a nightly draft**: `TRADE_PIPELINE_OPERATOR_ID` → the queue row's requester → the
+prospect's discoverer → the first `admin_users` row. Never null; an ownerless draft is invisible
+to every admin list.
+
+The cron reports `sweeps`, `noWebsiteFound`, `built`, `buildsFailed` **and a sample of slugs
+built**, because a job that processes a hundred things and builds none still says `ok`.
 
 ## Honesty constraints that shape the automation
 

@@ -13,46 +13,17 @@
 
 import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
-import { getProspect, markProspectBuilt, type Prospect } from '@/lib/outreach/prospects';
+import { getProspect, markProspectBuilt } from '@/lib/outreach/prospects';
 import { buildDraftFromListing, BuildDraftError } from '@/lib/outreach/buildDraftFromListing';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
-import { fetchGooglePlace, type Listing } from '@/lib/rebuild/importListing';
+// Shared with the nightly pipeline (lib/tradeSites/pipeline.ts) so both build the same draft.
+import { listingForProspect } from '@/lib/outreach/listingForProspect';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // vision OCR for restaurant prospects
 
 const MAX_BATCH = 10; // cap synchronous builds per request (AI cost + serverless time)
-
-/**
- * Assemble the richest Listing we can for a prospect: start from its parked fields,
- * then overlay a live Place Details fetch (photos + hours — the parts discovery never
- * stores) when the prospect carries a place_id and Places is configured. Prospect
- * fields win for identity (name/phone/address/website/categories); Google fills the
- * gaps and supplies the menu-photo candidates. Never throws — a failed lookup just
- * yields the prospect-only listing.
- */
-async function listingForProspect(p: Prospect): Promise<Listing> {
-  const base: Listing = {
-    name: p.business_name,
-    phone: p.phone ?? undefined,
-    address: p.address ?? undefined,
-    website: p.website,
-    categories: p.categories ?? [],
-  };
-  if (!p.place_id) return base;
-  const g = await fetchGooglePlace(p.place_id).catch(() => null);
-  if (!g) return base;
-  return {
-    name: base.name || g.name,
-    phone: base.phone ?? g.phone,
-    address: base.address ?? g.address,
-    website: base.website ?? g.website ?? null,
-    categories: base.categories?.length ? base.categories : g.categories ?? [],
-    hours: g.hours,
-    photos: g.photos, // the point: menu-photo candidates for OCR + a hero image
-  };
-}
 
 export async function POST(req: Request) {
   const operator = await getAdminUser();

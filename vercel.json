@@ -69,6 +69,10 @@
       "schedule": "0 13 * * *"
     },
     {
+      "path": "/api/cron/trade-site-pipeline",
+      "schedule": "0 6 * * *"
+    },
+    {
       "path": "/api/cron/gsc-backfill",
       "schedule": "0 7 * * *"
     },

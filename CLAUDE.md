@@ -185,7 +185,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   and serves `sites.published_snapshot_id`, which no publish path writes. `payment_count > 0` is the
   only proof of money; a status word is not. Still manual by design: choosing cities (spend), mailing
   the claim link (postage — the link is a bearer credential; a postcard to the listing address is
-  the Google-PIN channel, cold SMS is not), and the money flags.
+  the Google-PIN channel, cold SMS is not), and the money flags. PR 2: **the nightly cron**
+  `/api/cron/trade-site-pipeline` (06:00, flag `TRADE_PIPELINE_ENABLED`, caps
+  `TRADE_PIPELINE_MAX_{SWEEPS,BUILDS}`) drains `trade_sweep_queue` (migration `20260839`, filled
+  from `/admin/growth` → "Nightly trade-site pipeline", one city or a metro) and builds drafts for
+  parked no-website trade prospects — the button and the cron run the **same** `runSweep` /
+  `buildDraftFromListing`, and the sweep category list is one module (`lib/prospects/sweepCategories.ts`).
+  A person still chooses the cities; the cron never invents one, and restaurants are refused at enqueue.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

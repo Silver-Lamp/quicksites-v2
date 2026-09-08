@@ -9,6 +9,7 @@
 // sign-off (see senderFromProfile) so a partner's card never carries the platform operator.
 
 import { getSiteSetting, setSiteSetting } from '@/lib/settings/siteSettings';
+import { ensureLobSafeImageUrl } from '@/lib/outreach/lobSafeImage';
 
 export const SENDER_PROFILE_KEY = 'outreach_sender_profile';
 
@@ -94,15 +95,29 @@ export async function getSenderProfile(): Promise<SenderProfile> {
   };
 }
 
-/** Persist the sender profile (admin-gated at the call site). Validates the email if present. */
-export async function setSenderProfile(input: SenderProfileInput | null, updatedBy?: string | null): Promise<void> {
+/**
+ * Persist the sender profile (admin-gated at the call site). Validates the email if present.
+ *
+ * ⚠️ Headshot + signature are made LOB-SAFE here (PNG/JPEG; anything else is converted to a PNG
+ * copy in storage and the copy's URL is what gets stored). The upload field accepts WebP/AVIF and
+ * the browser uploads bytes as-is; Lob renders only PNG/JPEG, so a WebP headshot printed as a
+ * broken-image circle on every proof. `ensureImage` is injectable for tests.
+ */
+export async function setSenderProfile(
+  input: SenderProfileInput | null,
+  updatedBy?: string | null,
+  ensureImage: (url: string, kind: 'headshot' | 'signature') => Promise<{ url: string }> = ensureLobSafeImageUrl,
+): Promise<void> {
   if (input === null) {
     await setSiteSetting(SENDER_PROFILE_KEY, EMPTY, updatedBy);
     return;
   }
+  const headshotUrl = str(input.headshotUrl);
+  const signatureUrl = str(input.signatureUrl);
   const next = normalize({
     name: str(input.name), title: str(input.title), email: str(input.email),
-    headshotUrl: str(input.headshotUrl), signatureUrl: str(input.signatureUrl),
+    headshotUrl: headshotUrl ? (await ensureImage(headshotUrl, 'headshot')).url : null,
+    signatureUrl: signatureUrl ? (await ensureImage(signatureUrl, 'signature')).url : null,
     city: str(input.city), state: input.state != null ? String(input.state).trim().toUpperCase() : null,
     lat: num(input.lat), lng: num(input.lng),
   });

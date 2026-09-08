@@ -64,12 +64,15 @@ async function operatorOAuthClient(userId: string) {
     .select('access_token, refresh_token, expiry')
     .eq('user_id', userId)
     .not('refresh_token', 'is', null)
-    // ⚠️ ORDER MATTERS. There are 22 token rows sharing 3 refresh tokens — one per consent event —
-    // and this used to take whichever row the database happened to return. The scopes differ
-    // between grants: the older ones are webmasters.readonly, which cannot verify a site or add a
-    // property. Picking one of those fails with "insufficient authentication scopes" AFTER an
-    // operator has just re-consented, which reads as the re-consent not having worked.
-    // Freshest expiry = most recently refreshed credential = the newest grant.
+    // ⚠️ ORDER MATTERS, AND "FRESHEST EXPIRY" WAS THE WRONG KEY. There are 23 token rows sharing
+    // 4 refresh tokens — one per consent event — and the scopes differ between grants: the 2025
+    // ones are webmasters.readonly, which cannot verify a site or add a property. Picking one of
+    // those fails with "insufficient authentication scopes" AFTER an operator has just re-consented,
+    // which reads as the re-consent not having worked. On 2026-09-08 it did exactly that TWICE: the
+    // rank readers refresh the old rows' access tokens every morning, so every 2025 row's expiry
+    // sat at the same minute as the brand-new grant's, and the tie broke to a read-only token.
+    // A grant's CREATION time is the consent time; the row that carries the newest consent wins.
+    .order('created_at', { ascending: false })
     .order('expiry', { ascending: false, nullsFirst: false })
     .limit(1)
     .maybeSingle();

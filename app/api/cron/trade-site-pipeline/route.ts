@@ -36,6 +36,9 @@ async function handle(req: NextRequest) {
       built: report.builds.built,
       buildsFailed: report.builds.failed,
       sample,
+      mailed: report.mail?.mailed ?? 0,
+      mailBlocked: report.mail?.blocked ?? 0,
+      mailReason: report.mail?.reason ?? (report.mail ? null : 'mail_step_off'),
       caps: report.caps,
       report,
     });

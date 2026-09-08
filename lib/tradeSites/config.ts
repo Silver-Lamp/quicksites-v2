@@ -52,6 +52,20 @@ export function isTradeIndustry(industry: string | null | undefined): boolean {
   return !NOT_A_TRADE.has(industry);
 }
 
+/**
+ * The host printed on a trade-site postcard and used by its tracked link.
+ *
+ * ⚠️ NOT publicBaseUrl(). That helper reads APP_BASE_URL / NEXT_PUBLIC_APP_URL, which in at least
+ * one environment point at delivered.menu — the restaurant deliverable — and the first live render
+ * of this card printed `https://delivered.menu/c/<id>` on an auto shop's postcard. On that host the
+ * middleware rewrites every path to /sites/<slug>, so the QR would have landed on a 404. A printed
+ * link cannot be corrected after it is mailed; it must not depend on which env it was rendered in.
+ */
+export function tradeSiteBaseUrl(): string {
+  const v = (process.env.TRADE_SITE_BASE_URL || '').trim().replace(/\/+$/, '');
+  return /^https:\/\//.test(v) ? v : 'https://www.quicksites.ai';
+}
+
 /** A bare apex like `smithtowing.com`. Rejects protocols, paths, www and subdomains. */
 export function normalizeApexDomain(input: string): string | null {
   const s = String(input ?? '')

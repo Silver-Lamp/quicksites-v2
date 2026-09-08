@@ -19,7 +19,7 @@ sweep city × trade  →  build drafts (no-website only)  →  deliver a claim l
 |---|---|---|---|
 | 1. Sweep a city for one trade | `lib/prospects/runSweep.ts` (the button and the cron run the same function) | operator click **or nightly cron** | **automated (PR 2)** — the operator queues city × trade on `/admin/growth`; flag `TRADE_PIPELINE_ENABLED` |
 | 2. Build drafts for the no-website tier | `lib/tradeSites/pipeline.ts` → `lib/outreach/buildDraftFromListing.ts` | nightly cron, `TRADE_PIPELINE_MAX_BUILDS` a night | **automated (PR 2)** — also drains the backlog of parked no-website trade prospects |
-| 3. Deliver the claim link | *(nothing)* | — | **no code path delivers it** — PR 3 (postcard) |
+| 3. Deliver the claim link | `lib/outreach/claimPostcard.ts` + `claimPostcardSend.ts` → Lob; tracked link `/c/<prospectId>` | nightly cron (`TRADE_PIPELINE_MAIL_ENABLED`) or `/admin/growth` → Claim postcards | **automated (PR 3)** — a card to the listing's street address, after a 24h review window |
 | 4. Claim | `/claim-site/<id>?token` → `app/api/claim-draft` → `lib/auth/claimPendingSiteDraft.ts` | the business | automated |
 | 5. **Site goes live** | `lib/tradeSites/activate.ts` (publish on claim, prospect → `claimed`) | on claim | **automated (PR 1)** |
 | 6. **Custom-domain checkout** | `/welcome/<id>` → `POST /api/trade-sites/checkout` | the owner | **automated (PR 1)**, flag `TRADE_SITE_BILLING_ENABLED` |
@@ -81,6 +81,33 @@ to every admin list.
 
 The cron reports `sweeps`, `noWebsiteFound`, `built`, `buildsFailed` **and a sample of slugs
 built**, because a job that processes a hundred things and builds none still says `ok`.
+
+## PR 3 — the claim postcard
+
+Nothing delivered a claim link before this. Now every built, unmailed, no-website trade draft gets
+one 6×9 card to the **listing's street address** — the same channel Google uses to prove control
+of a Business Profile — carrying the site's address, a QR to the tracked link `/c/<prospectId>`
+(which mints a fresh claim token on visit and counts the visit on the prospect, migration
+`20260840`), the sender's name and email, and the exit: *"say the word and it's gone."*
+
+**The card is the most conservative surface we own**, and `lib/outreach/__tests__/claimPostcard.test.ts`
+greps the rendered HTML for every promise it must never make: no ranking / page-one / Google, no
+availability or licensing claim, no guarantee, **no competitor and no deadline** (the competition
+mechanic stays out of the message), and **no printed price** (a number on paper cannot follow the
+env). What it says instead is what is true by construction: built from the public listing, free,
+yours to edit, your own .com is the one thing we charge for.
+
+**Three gates before postage**: `TRADE_PIPELINE_MAIL_ENABLED` (the cron step), `POSTCARD_MAIL_ENABLED`
++ `LOB_*` (the same kill-switch as the operator button), and a **sender profile with name + email**
+(a prospect must be able to reach a human). Plus two per-draft gates: a draft carrying an
+operational claim anywhere in its tree is **blocked at send** and counted, never mailed; and the
+cron never mails a draft the night it was built (`TRADE_PIPELINE_MAIL_MIN_AGE_HOURS`, default 24) —
+one working day to look at last night's builds before a card goes out under a real business's
+name. The operator's **Preview / Mail test card / Mail now** on `/admin/growth` run the same loop.
+
+**Cold SMS stays off.** The claim link is a bearer credential and `docs/OUTREACH_METHOD.md` forbids
+it in a cold text; that rule is about a phone that may be wrong or forwarded, not about mail to the
+listed premises. `CLAIM_VERIFICATION_ENABLED` can additionally gate the transfer.
 
 ## Honesty constraints that shape the automation
 

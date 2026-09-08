@@ -17,6 +17,7 @@ import { resolveSweepCategory, sweepArgsFor, type SweepCategory } from '@/lib/pr
 import { buildDraftFromListing, BuildDraftError } from '@/lib/outreach/buildDraftFromListing';
 import { listingForProspect } from '@/lib/outreach/listingForProspect';
 import { markProspectBuilt, type Prospect } from '@/lib/outreach/prospects';
+import { selectMailableDrafts, sendClaimPostcards, type SendReport } from '@/lib/outreach/claimPostcardSend';
 import { isTradeIndustry } from './config';
 
 const db = () => supabaseAdmin as any;
@@ -47,9 +48,30 @@ export type PipelineOptions = {
 export type PipelineReport = {
   sweeps: Array<{ id: string; city: string; region: string; category: string; ok: boolean; found?: number; noWebsite?: number; inserted?: number; error?: string }>;
   builds: { attempted: number; built: number; skipped: number; failed: number; results: Array<{ prospectId: string; ok: boolean; templateId?: string; slug?: string; error?: string }> };
+  /** The claim-postcard step: null when TRADE_PIPELINE_MAIL_ENABLED is off. */
+  mail: (SendReport & { candidates: number }) | null;
   operatorId: string | null;
   caps: { maxSweeps: number; maxBuilds: number };
 };
+
+export function mailEnabled(): boolean {
+  const v = process.env.TRADE_PIPELINE_MAIL_ENABLED;
+  return v === '1' || v === 'true';
+}
+
+/**
+ * Postage caps. `minAgeHours` is the review window: a draft is never mailed the night it was
+ * built, so an operator has one working day to look at last night's builds before a card goes
+ * out under a real business's name.
+ */
+export function mailCaps(): { enabled: boolean; maxMail: number; minAgeHours: number } {
+  const age = Number(process.env.TRADE_PIPELINE_MAIL_MIN_AGE_HOURS);
+  return {
+    enabled: mailEnabled(),
+    maxMail: envInt('TRADE_PIPELINE_MAX_MAIL', 10, 25),
+    minAgeHours: Number.isFinite(age) && age >= 0 ? age : 24,
+  };
+}
 
 export function pipelineEnabled(): boolean {
   const v = process.env.TRADE_PIPELINE_ENABLED;
@@ -203,10 +225,26 @@ export async function runTradePipeline(opts: PipelineOptions = {}): Promise<Pipe
   const report: PipelineReport = {
     sweeps: [],
     builds: { attempted: 0, built: 0, skipped: 0, failed: 0, results: [] },
+    mail: null,
     operatorId: opts.operatorId ?? process.env.TRADE_PIPELINE_OPERATOR_ID ?? null,
     caps: { maxSweeps, maxBuilds },
   };
   await drainSweeps(maxSweeps, opts.operatorId, report);
   await buildDrafts(maxBuilds, opts.operatorId, report);
+  await mailClaimPostcards(opts.operatorId ?? null, report);
   return report;
+}
+
+/**
+ * The third step: mail a claim postcard to every built, reviewed, unmailed trade draft, at
+ * `maxMail` a night. Gated twice — TRADE_PIPELINE_MAIL_ENABLED here, and POSTCARD_MAIL_ENABLED +
+ * LOB_* inside sendClaimPostcards — because this is the step that spends postage on a stranger.
+ * A draft with an operational claim is blocked at send, never mailed, and counted.
+ */
+async function mailClaimPostcards(sentBy: string | null, report: PipelineReport) {
+  const caps = mailCaps();
+  if (!caps.enabled || caps.maxMail <= 0) return;
+  const drafts = await selectMailableDrafts({ minAgeHours: caps.minAgeHours, limit: 100 });
+  const sent = await sendClaimPostcards({ drafts, sentBy, max: caps.maxMail });
+  report.mail = { ...sent, candidates: drafts.length };
 }

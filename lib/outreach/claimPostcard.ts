@@ -149,7 +149,10 @@ export function renderClaimPostcardFront(m: ClaimPostcardModel): string {
 <style>
   * { box-sizing:border-box; margin:0; padding:0; }
   html,body { background:#fff; }
-  .card { width:6in; height:9in; margin:0 auto; padding:.55in .6in; background:#0b1020; color:#fff;
+  /* ⚠️ LANDSCAPE. Lob's "6x9" postcard is 9.25in wide × 6.25in tall including bleed. The first
+     proof (2026-09-08) was authored portrait: the copy sat in the left two-thirds and the bottom
+     was cut off. Text column on the left, QR column on the right, everything inside a .25in safe zone. */
+  .card { position:relative; width:9.25in; height:6.25in; margin:0 auto; padding:.5in 3.4in .45in .6in; background:#0b1020; color:#fff;
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; display:flex; flex-direction:column; }
   .kicker { font-size:11pt; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#5eead4; }
   .h { margin-top:.12in; font-size:26pt; font-weight:800; line-height:1.08; }
@@ -157,13 +160,13 @@ export function renderClaimPostcardFront(m: ClaimPostcardModel): string {
   .sub { margin-top:.16in; font-size:12.5pt; color:#cbd5e1; line-height:1.4; max-width:4.7in; }
   .host { margin-top:.1in; font-size:14pt; font-weight:700; color:#fff; word-break:break-all; }
   .alt { margin-top:.06in; font-size:10.5pt; font-style:italic; color:#94a3b8; }
-  .qrwrap { margin-top:auto; display:flex; align-items:flex-end; justify-content:space-between; gap:.3in; }
-  .qr { width:2.1in; height:2.1in; background:#fff; padding:.1in; border-radius:.12in; }
+  .qrwrap { position:absolute; right:.55in; top:.5in; bottom:.45in; width:2.5in; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.16in; text-align:center; }
+  .qr { width:2.2in; height:2.2in; background:#fff; padding:.1in; border-radius:.12in; }
   .qr img { width:100%; height:100%; display:block; }
   .scan { font-size:11pt; color:#cbd5e1; line-height:1.4; max-width:2.6in; }
   .scan b { color:#fff; }
-  .fine { margin-top:.18in; font-size:8.5pt; color:#94a3b8; line-height:1.35; }
-  @media print { @page { size:6in 9in; margin:0; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+  .fine { margin-top:auto; padding-top:.15in; font-size:8.5pt; color:#94a3b8; line-height:1.35; }
+  @media print { @page { size:9.25in 6.25in; margin:0; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
 </style></head>
 <body><div class="card">
   <div class="kicker">${esc(m.businessName)}</div>
@@ -203,7 +206,9 @@ export function renderClaimPostcardBack(m: ClaimPostcardModel): string {
 <style>
   * { box-sizing:border-box; margin:0; padding:0; }
   html,body { background:#fff; }
-  .back { width:6in; height:9in; margin:0 auto; padding:.5in .55in; color:#0b1020; display:flex; flex-direction:column;
+  /* Landscape 9.25in × 6.25in. Our copy stays in the LEFT 4.6in; Lob overlays the address block and
+     postage on the right, so the right side is left clear on purpose. */
+  .back { width:9.25in; height:6.25in; margin:0 auto; padding:.45in .5in .4in .55in; color:#0b1020; display:flex; flex-direction:column;
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
   .hi { font-size:12pt; font-weight:700; color:#0f766e; }
   .p { margin-top:.12in; font-size:11.5pt; color:#334155; max-width:4.6in; line-height:1.4; }
@@ -221,8 +226,8 @@ export function renderClaimPostcardBack(m: ClaimPostcardModel): string {
   .sname { font-size:10.5pt; color:#334155; font-weight:700; }
   .sloc { font-size:9.5pt; color:#0f766e; font-weight:600; }
   .sqa { margin-top:.02in; font-size:9.5pt; color:#334155; }
-  .spacer { flex:1; min-height:3.5in; }
-  @media print { @page { size:6in 9in; margin:0; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+  .spacer { flex:1; }
+  @media print { @page { size:9.25in 6.25in; margin:0; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
 </style></head>
 <body><div class="back">
   <div class="hi">Hi ${esc(m.businessName)},</div>

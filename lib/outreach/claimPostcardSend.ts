@@ -28,6 +28,28 @@ export type MailableDraft = {
 
 export type SelectOptions = { city?: string | null; region?: string | null; industry?: string | null; limit?: number; minAgeHours?: number };
 
+/**
+ * ⚠️ 22 OF THE FIRST 46 CARDS HAD NOWHERE TO GO. The July sweeps parked prospects with the address
+ * Places Text Search returns — often just "Hartselle, AL" — and a card needs a street. The full
+ * formatted address is one Place Details call away (the same call the builder makes for photos),
+ * so a prospect whose address will not parse gets it fetched ONCE and written back to the row.
+ * Never guessed: if Details has no street either, the card stays blocked as unparseable_address.
+ */
+export async function backfillMailingAddress(p: Prospect): Promise<string | null> {
+  if (parseUsAddress(p.address, p.city, p.region)) return p.address;
+  if (!p.place_id) return null;
+  try {
+    const { fetchGooglePlace } = await import('@/lib/rebuild/importListing');
+    const g = await fetchGooglePlace(p.place_id);
+    const full = g?.address ?? null;
+    if (!full || !parseUsAddress(full, p.city, p.region)) return null;
+    await db().from('outreach_prospects').update({ address: full, updated_at: new Date().toISOString() }).eq('id', p.id);
+    return full;
+  } catch {
+    return null;
+  }
+}
+
 /** Every built, unmailed, no-website trade draft — with the reason any of them is blocked. */
 export async function selectMailableDrafts(opts: SelectOptions = {}): Promise<MailableDraft[]> {
   let q = db()
@@ -67,7 +89,12 @@ export async function selectMailableDrafts(opts: SelectOptions = {}): Promise<Ma
     let blocked: MailableDraft['blocked'] = null;
     if (t.claim_source !== 'listing_import') blocked = 'not_a_listing_draft';
     else if (draftHasOperationalClaims(t.data)) blocked = 'operational_claims';
-    else if (!parseUsAddress(p.address, p.city, p.region)) blocked = 'unparseable_address';
+    else if (!parseUsAddress(p.address, p.city, p.region)) {
+      // One Place Details call, written back, before giving up on the card.
+      const full = await backfillMailingAddress(p);
+      if (full) p.address = full;
+      else blocked = 'unparseable_address';
+    }
     out.push({ prospect: p, templateId: t.id, slug: t.slug, siteUrl, builtAt: t.created_at, blocked });
   }
   return out;

@@ -416,6 +416,13 @@ export type OwnedDomain = {
    * (serviceType 'external') have no price here — their cost is entered manually.
    */
   registeredWithVercel: boolean;
+  /**
+   * The nameservers the registry currently delegates to. EMPTY means the domain is not
+   * delegated anywhere — and for an external domain that is the tell that it was never
+   * registered at all: on 2026-09-08, 60 of 100 campaign domains sat in this list "attached"
+   * to the project with no nameservers, and RDAP had no record of them.
+   */
+  nameservers: string[];
 };
 
 /**
@@ -432,7 +439,7 @@ export async function listVercelOwnedDomains(): Promise<OwnedDomain[] | null> {
     for (let page = 0; page < 20; page++) {
       const q = `/v9/domains?limit=100${until ? `&until=${until}` : ''}`;
       const res = await vercelFetch<{
-        domains?: Array<{ name?: string; expiresAt?: number | null; boughtAt?: number | null; renew?: boolean | null; serviceType?: string | null }>;
+        domains?: Array<{ name?: string; expiresAt?: number | null; boughtAt?: number | null; renew?: boolean | null; serviceType?: string | null; nameservers?: string[] | null }>;
         pagination?: { next?: number | null };
       }>(q);
       if (!res.ok) return page === 0 ? null : out;
@@ -445,6 +452,7 @@ export async function listVercelOwnedDomains(): Promise<OwnedDomain[] | null> {
           boughtAt: typeof d?.boughtAt === 'number' ? d.boughtAt : null,
           autoRenew: typeof d?.renew === 'boolean' ? d.renew : null,
           registeredWithVercel: d?.serviceType === 'zeit.world',
+          nameservers: Array.isArray(d?.nameservers) ? d!.nameservers!.map(String) : [],
         });
       }
       const next = res.data?.pagination?.next;

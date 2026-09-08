@@ -12,7 +12,7 @@ import { isCronAuthorized } from '@/lib/cron/auth';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { gscAutoConnectEnabled } from '@/lib/gsc/connectDomain';
 import {
-  pickBackfillCandidates, partitionByZone, connectOne, summarize, backfillFailed, type BackfillOutcome,
+  pickBackfillCandidates, partitionByZone, isRegisteredDomain, connectOne, summarize, backfillFailed, type BackfillOutcome,
 } from '@/lib/gsc/backfillGscProperties';
 import { listVercelOwnedDomains } from '@/lib/domains/registrar';
 import { isVercelDnsZone } from '@/lib/domains/vercel';
@@ -62,7 +62,7 @@ async function handle(req: NextRequest) {
     }
 
     const [{ data: camps }, { data: props }] = await Promise.all([
-      db.from('geo_industry_campaigns').select('id, domain').not('domain', 'is', null).limit(1000),
+      db.from('geo_industry_campaigns').select('id, domain, domain_status').not('domain', 'is', null).limit(1000),
       db.from('gsc_tokens').select('domain'),
     ]);
 
@@ -70,7 +70,29 @@ async function handle(req: NextRequest) {
     const unconnected = pickBackfillCandidates((camps ?? []) as { id: string; domain: string }[], connectedProps, 100000);
     // Only a zone Vercel hosts can take the TXT. Domains elsewhere are named, not retried.
     const zones = await listVercelOwnedDomains();
-    const { onVercel, offVercel: notListed } = partitionByZone(unconnected, zones ? new Set(zones.map((z) => z.domain)) : null);
+
+    // ⚠️ RECORD WHAT IS NOT REGISTERED. A domain attached to the project with no nameservers and
+    // not registered through Vercel does not exist at the registry (RDAP: no record). The rows said
+    // `attached`, the planner said "we own it", the plan said "100 geo domains". Write the truth
+    // back nightly so every reader stops treating an unbought domain as an asset.
+    let markedUnregistered = 0;
+    let markedRegistered = 0;
+    if (zones) {
+      const unregistered = new Set(zones.filter((z) => !isRegisteredDomain(z)).map((z) => z.domain));
+      for (const c of (camps ?? []) as { id: string; domain: string; domain_status?: string }[]) {
+        const bare = bareDomain(c.domain);
+        if (unregistered.has(bare) && c.domain_status !== 'unregistered' && c.domain_status !== 'planned') {
+          const { error } = await db.from('geo_industry_campaigns').update({ domain_status: 'unregistered', updated_at: new Date().toISOString() }).eq('id', c.id);
+          if (!error) markedUnregistered++;
+        } else if (!unregistered.has(bare) && c.domain_status === 'unregistered') {
+          const { error } = await db.from('geo_industry_campaigns').update({ domain_status: 'attached', updated_at: new Date().toISOString() }).eq('id', c.id);
+          if (!error) markedRegistered++;
+        }
+      }
+    }
+
+    const registeredZones = zones ? new Set(zones.filter(isRegisteredDomain).map((z) => z.domain)) : null;
+    const { onVercel, offVercel: notListed } = partitionByZone(unconnected, registeredZones);
     // ⚠️ Listed is not the same as writable: a domain registered through Vercel can sit in the
     // account list with no DNS zone. Probe the zone while picking, so the ten slots go to domains a
     // TXT can actually land on; the rest are named for the operator.
@@ -101,6 +123,9 @@ async function handle(req: NextRequest) {
         // Named so an operator can move their nameservers (or register them) — the cron cannot.
         notOnVercelDns: offVercel.map((c) => c.domain),
         vercelZonesKnown: zones !== null,
+        unregisteredCampaignDomains: zones ? zones.filter((z) => !isRegisteredDomain(z)).length : null,
+        markedUnregistered,
+        markedRegistered,
         ...(failed
           ? { error: `Attempted ${summary.attempted} and connected none. First reason: ${outcomes[0]?.reason ?? 'unknown'}` }
           : {}),

@@ -3,7 +3,21 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { partitionByZone } from '@/lib/gsc/backfillGscProperties';
+import { partitionByZone, isRegisteredDomain } from '@/lib/gsc/backfillGscProperties';
+
+describe('a domain in the Vercel list is not necessarily registered', () => {
+  it('registered through Vercel, or delegated to nameservers, counts; attached with neither does not', () => {
+    expect(isRegisteredDomain({ registeredWithVercel: true, nameservers: [] })).toBe(true);
+    expect(isRegisteredDomain({ registeredWithVercel: false, nameservers: ['ns1.vercel-dns.com'] })).toBe(true);
+    // milton-electrical.com on 2026-09-08: serviceType "na", nameservers [], RDAP 404.
+    expect(isRegisteredDomain({ registeredWithVercel: false, nameservers: [] })).toBe(false);
+  });
+  it('the cron writes the registry truth back to the campaign rows every night', () => {
+    const src = read('app/api/cron/gsc-backfill/route.ts');
+    expect(src).toMatch(/domain_status: 'unregistered'/);
+    expect(src).toMatch(/domain_status: 'attached'/);
+  });
+});
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 

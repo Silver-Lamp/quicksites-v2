@@ -18,7 +18,16 @@
 // new. A pair that measured under 10% no-website is pushed down, not out — the prior may be wrong.
 // Restaurants are never planned: they belong to the take-rate pipeline.
 
-export type OwnedCampaign = { city: string; region: string; industry_key: string | null; domain: string; rank_status?: string | null };
+export type OwnedCampaign = { city: string; region: string; industry_key: string | null; domain: string; rank_status?: string | null; domain_status?: string | null };
+
+/**
+ * A campaign row is not a domain we own. 60 of 100 rows said `attached` for domains that were
+ * never registered (the Vercel attach needs no purchase). Only a registered or delegated domain
+ * earns the "we own it" bonus; the nightly gsc-backfill writes `unregistered` back to the rows.
+ */
+export function campaignOwnsDomain(c: Pick<OwnedCampaign, 'domain_status'>): boolean {
+  return c.domain_status === 'registered' || c.domain_status === 'attached';
+}
 export type SweepHistory = { city: string; region: string; industry_key: string | null; total: number; noWebsite: number; lastSweptAt: string | null };
 export type QueuedPair = { city: string; region: string; category: string };
 
@@ -91,13 +100,18 @@ export function planSweepQueue(input: {
   const hist = new Map<string, SweepHistory>();
   for (const h of input.history) if (h.industry_key) hist.set(pairKey(h.city, h.region, h.industry_key), h);
   const queued = new Set(input.alreadyQueued.map((q) => `${norm(q.city)}|${norm(q.region)}|${norm(q.category)}`));
-  const citiesWithDomain = new Set(input.campaigns.map((c) => `${norm(c.city)}|${norm(c.region)}`));
+  const owned = input.campaigns.filter(campaignOwnsDomain);
+  const citiesWithDomain = new Set(owned.map((c) => `${norm(c.city)}|${norm(c.region)}`));
 
-  // Candidates: every owned-domain pair, plus every pair we have swept before (to re-sweep after cooldown).
-  const candidates = new Map<string, { city: string; region: string; industry: string; domain?: string; rank?: string | null }>();
+  // Candidates: every campaign pair (owned domain or not), plus every pair we have swept before.
+  const candidates = new Map<string, { city: string; region: string; industry: string; domain?: string; rank?: string | null; unregistered?: boolean }>();
   for (const c of input.campaigns) {
     if (!c.industry_key || !c.city || !c.region) continue;
-    candidates.set(pairKey(c.city, c.region, c.industry_key), { city: c.city, region: c.region, industry: c.industry_key, domain: c.domain, rank: c.rank_status });
+    const owns = campaignOwnsDomain(c);
+    candidates.set(pairKey(c.city, c.region, c.industry_key), {
+      city: c.city, region: c.region, industry: c.industry_key,
+      domain: owns ? c.domain : undefined, rank: c.rank_status, unregistered: !owns,
+    });
   }
   for (const h of input.history) {
     if (!h.industry_key || !h.city || !h.region) continue;
@@ -123,6 +137,7 @@ export function planSweepQueue(input: {
     }
     if (c.domain) { score += 50; reasons.push(`we own ${c.domain}${c.rank && c.rank !== 'unranked' ? ` (${c.rank})` : ''}`); }
     else if (citiesWithDomain.has(`${norm(c.city)}|${norm(c.region)}`)) { score += 15; reasons.push('we own a domain in this city'); }
+    else if (c.unregistered) reasons.push('a campaign exists here but its domain was never registered — no bonus');
 
     const measured = rates[c.industry];
     const rate = measured ? measured.rate : (NO_WEBSITE_PRIOR[c.industry] ?? 0.15);

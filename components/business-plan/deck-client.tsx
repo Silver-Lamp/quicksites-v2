@@ -152,9 +152,9 @@ export default function DeckClient({
                     s: `${evidence.templatesPublished} published`,
                   },
                   {
-                    k: 'Geo domains',
-                    v: String(evidence.geoCampaigns),
-                    s: `${evidence.geoRented} rented`,
+                    k: 'Geo domains held',
+                    v: String(evidence.geoDomainsOwned),
+                    s: `of ${evidence.geoCampaigns} campaigns · ${evidence.geoRented} rented`,
                   },
                   {
                     k: 'Merchants',

@@ -108,7 +108,7 @@ export default function PlanBody({
             v={e.templates.toLocaleString()}
             s={`${e.templatesPublished} published`}
           />
-          <Metric k="Geo domains" v={String(e.geoCampaigns)} s={`${e.geoRented} rented`} />
+          <Metric k="Geo domains held" v={String(e.geoDomainsOwned)} s={`of ${e.geoCampaigns} campaigns · ${e.geoRented} rented`} />
           <Metric
             k="Merchants"
             v={String(e.merchants)}

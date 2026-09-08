@@ -29,11 +29,18 @@ export type MailableDraft = {
 export type SelectOptions = { city?: string | null; region?: string | null; industry?: string | null; limit?: number; minAgeHours?: number };
 
 /**
- * ⚠️ 22 OF THE FIRST 46 CARDS HAD NOWHERE TO GO. The July sweeps parked prospects with the address
- * Places Text Search returns — often just "Hartselle, AL" — and a card needs a street. The full
- * formatted address is one Place Details call away (the same call the builder makes for photos),
- * so a prospect whose address will not parse gets it fetched ONCE and written back to the row.
- * Never guessed: if Details has no street either, the card stays blocked as unparseable_address.
+ * ⚠️ 22 OF THE FIRST 46 CARDS HAD NOWHERE TO GO. The July drafts came from the legacy `leads` table
+ * with city-only addresses ("Hartselle, AL"), and a card needs a street. For a prospect with a REAL
+ * Google place_id, the full formatted address is one Place Details call away, so it is fetched ONCE
+ * and written back to the row. Never guessed: if Details has no street either, the card stays
+ * blocked as unparseable_address.
+ *
+ * ⚠️ This could not and cannot rescue those 22: their place_id is the SYNTHETIC `lead:<uuid>` from
+ * `migrateLeads.ts`, not a Google id, so Details has nothing to answer. The first diagnosis ("Details
+ * rejects the stored ids") read that 404 as an expired id. The name-based fix is
+ * `lib/outreach/addressBackfill.ts` (`npm run outreach:backfill-addresses`) — deliberately an
+ * operator script, not wired in here: it accepts on a name match, and a card mailed on a guess is
+ * the one surface we cannot take back.
  */
 export async function backfillMailingAddress(p: Prospect): Promise<string | null> {
   if (parseUsAddress(p.address, p.city, p.region)) return p.address;

@@ -75,6 +75,7 @@
     "screenshot:run": "tsx scripts/screenshot-worker.ts",
     "verify:assets": "node scripts/verify-image-assets.mjs --selftest && node scripts/verify-image-assets.mjs",
     "outreach:candidates": "tsx --env-file=.env.local scripts/outreach-candidates.ts",
+    "outreach:backfill-addresses": "tsx --env-file=.env.local scripts/backfill-prospect-addresses.ts",
     "emit:lanes": "tsx --tsconfig tsconfig.json scripts/emit-lane-specs.ts"
   },
   "scripts-meta": {

@@ -124,6 +124,35 @@ name. The operator's **Preview / Mail test card / Mail now** on `/admin/growth` 
 it in a cold text; that rule is about a phone that may be wrong or forwarded, not about mail to the
 listed premises. `CLAIM_VERIFICATION_ENABLED` can additionally gate the transfer.
 
+### A card needs a street, and 22 of the first 46 drafts had none (fixed 2026-09-08)
+
+The July drafts that came from the legacy `leads` table stored **city-only** addresses ("Hartselle,
+AL") and were blocked `unparseable_address` at send. ⚠️ **The failure was misdiagnosed twice, and
+both wrong diagnoses were written down as the fix.** "Place Details rejects their stored `place_id`s"
+— no: those rows carry a **synthetic `place_id = lead:<uuid>`** minted by `lib/outreach/migrateLeads.ts`,
+so Details was never asked about a Google id; `backfillMailingAddress` (Details by id) can never
+rescue one. "A fresh sweep of those cities fixes it" — no: `upsertProspects` is on-conflict-**do-nothing**
+on `place_id`, so a sweep never rewrites a row; when Google returns the same shop under its real id,
+the sweep inserts a **second prospect and the pipeline builds a second draft site for the same
+business**. That had already happened — the 2026-09-07 Arab, AL sweep re-found five of them.
+
+The fix is by **name**: `npm run outreach:backfill-addresses` (`lib/outreach/addressBackfill.ts`,
+`scripts/backfill-prospect-addresses.ts`) runs one Places Text Search per blocked row and writes the
+result back **only** when the name matches, the state matches, the address has a street number, the
+town matches (or the name is near-exact **and** the result is within 60 km of the row's stored
+coordinates — the first dry run matched a generic "Grant's Towing Service" to one 814 km away), and
+**no other prospect already owns the returned `place_id`** (that is the duplicate detector: the real
+row gets the card, the legacy row stays blocked and may be `--dismiss-duplicates`'d). Dry by default;
+`--apply` writes; `--allow <id>` bypasses only the town/distance rule for a row a person has checked.
+**`place_id` is never rewritten** — the migration counts `lead:%` rows to stay idempotent. Pinned by
+`lib/outreach/__tests__/addressBackfill.test.ts`.
+
+First run: 22 needed · **11 written** (all exact-name, same town or ≤5 km) · 5 duplicates of real
+rows · 2 too far (Grant's 814 km; Ray's Trk & Wrecker 91 km — `--allow 8d9f6a11` if you judge it the
+same shop) · 3 no result · 1 Google has no street either (Oakley's Towing). ⚠️ **The five duplicate
+pairs each have TWO live draft sites** for one business; dismissing the legacy row stops the second
+card but does not unpublish the second site.
+
 ## Honesty constraints that shape the automation
 
 - **Claim is free; only the domain costs.** The plan's decisive test is two numbers — claims, then
@@ -150,6 +179,7 @@ listed premises. `CLAIM_VERIFICATION_ENABLED` can additionally gate the transfer
 
 ```bash
 npx tsx scripts/audit-live-claims.mjs                 # live claims on published sites (3 buckets)
+npm run outreach:backfill-addresses                   # built drafts with no street to mail to (dry; --apply writes)
 psql "$SUPABASE_DB_URL" -c "select status, count(*) from outreach_prospects where industry_key <> 'restaurant' group by 1"
 psql "$SUPABASE_DB_URL" -c "select domain_status, subscription_status, payment_count from trade_site_subscriptions"
 ```

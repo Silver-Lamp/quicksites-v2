@@ -88,3 +88,17 @@ describe('5. the spend button is inside the panel it spends for', () => {
     expect(queue).toMatch(/spends Places API calls/);
   });
 });
+
+describe('6. the postcard preview shows the whole card', () => {
+  // #919 made the card landscape; the preview frames stayed portrait and clipped the QR column.
+  // The night before the first real send the operator read that as "the QR isn't showing".
+  const card = readFileSync('lib/outreach/claimPostcard.ts', 'utf8');
+  it('frames are sized from the card\'s own dimensions', () => {
+    const size = card.match(/\.card \{[^}]*width:([\d.]+in); height:([\d.]+in)/);
+    expect(size).not.toBeNull();
+    const [, w, h] = size!;
+    expect(queue).toMatch(new RegExp(`const W = '${w.replace('.', '\\.')}'`));
+    expect(queue).toMatch(new RegExp(`const H = '${h.replace('.', '\\.')}'`));
+    expect(queue).not.toMatch(/width:6\.2in;height:9\.2in/);
+  });
+});

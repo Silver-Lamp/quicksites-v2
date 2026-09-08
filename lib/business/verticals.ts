@@ -92,7 +92,8 @@ export const VERTICALS: Vertical[] = [
     stage: 'live-untested',
     mechanics: [
       'Their own name and their own site, not one of our geo domains. Nothing is exclusive and nothing is scarce, so this is a subscription rather than a rental.',
-      'Free until claimed: an unclaimed draft renders watermarked and noindex behind a "claim this site" bar. The claim is the conversion event, not the site.',
+      'Free until claimed: an unclaimed draft renders watermarked and noindex behind a "claim this site" bar. One postcard to the listed street address carries the link — the channel Google itself uses to verify a business — and the claim is the conversion event, not the site.',
+      'A person decides where; the machine does the rest. A queue holds city × trade pairs, a planner proposes them from the domains we own and the measured no-website rate per trade, and the nightly cron takes one a night — sweep, build, then mail after a day’s review.',
       'Three tiers once claimed — the site on a QuickSites subdomain, the same site on a custom domain we register and manage, and a managed tier where we keep it current.',
       'Self-serve by necessity. A salesperson costs more to acquire a customer than this earns in a year, so it is a claim link and a card on file or it is nothing. Reps sell the geo rental instead.',
     ],
@@ -104,14 +105,14 @@ export const VERTICALS: Vertical[] = [
       'Generated copy no longer invents hours, response times, licensing, guarantees or prices about a business we have never spoken to (#903), and a draft that still carries one is blocked at the mailbox, never sent.',
     ],
     unproven: [
-      'Nobody has ever paid for one. A self-serve checkout for the custom-domain tier now exists on the post-claim page (flag-gated), so the price is a thing someone can be asked for — it is still a proposal until someone says yes.',
+      'Nobody has ever paid for one. A self-serve checkout for the custom-domain tier is live on the post-claim page, so the price is a thing someone can be asked for — it is still a proposal until someone says yes.',
       'The restaurant model funds itself with a take-rate on orders. A towing company has no transaction to tax, so the free-site-plus-commission logic does not carry over and this has to be sold.',
-      'The claim rate is completely unknown. Everything downstream is a fraction of a number nobody has measured, and the only cold-outreach evidence we own is 0 replies from 24 touches.',
+      'The claim rate is completely unknown. Everything downstream is a fraction of a number nobody has measured; the only cold-outreach evidence we own is 0 replies from 24 hand-written touches, and the first automated cards have not landed yet. The count under "claimed" in the diagram above is that number, live.',
       'A subdomain has no SEO story: our own page-one geo domains are worth roughly $116/month of equivalent traffic between them, and this is worth less. It sells on existing, being findable by name, and not looking defunct.',
-      'Volume is the whole model and there is not much of it yet — 60 no-website towing prospects, 30 restaurant, 14 concrete. At $19/month and a generous 10% claim-to-paid that is about $114/month.',
+      'Volume is the whole model, and the queue is how it scales — a city a night, capped at 15 builds and 10 cards. The parked inventory today is small (the diagram above counts it live), and at $19/month with a generous 10% claim-to-paid, a hundred drafts is about $190/month. The model needs thousands.',
     ],
     decisiveTest:
-      'Send the claim link to every no-website business in one trade and count two numbers: how many claim a free site, and how many of those pay for a domain. The first tests whether the site is wanted; the second tests whether it is worth money. They are different questions and the first is cheap.',
+      'The test is running rather than planned: the cron mails the claim card to every no-website business in the queued trades, ten a night, and the two numbers to count are on this page — how many claim a free site, and how many of those pay for a domain. The first tests whether the site is wanted; the second tests whether it is worth money. They are different questions and the first is cheap.',
     costToTest:
       'Production is paid for and the checkout is built. The spend that remains is what the cron does each night — Places calls and cents of AI per draft, then postage at ten cards a night — and the only decision left is which cities to queue.',
   },

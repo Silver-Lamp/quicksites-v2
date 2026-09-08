@@ -156,6 +156,7 @@ export function renderClaimPostcardFront(m: ClaimPostcardModel): string {
   .h b { color:#5eead4; }
   .sub { margin-top:.16in; font-size:12.5pt; color:#cbd5e1; line-height:1.4; max-width:4.7in; }
   .host { margin-top:.1in; font-size:14pt; font-weight:700; color:#fff; word-break:break-all; }
+  .alt { margin-top:.06in; font-size:10.5pt; font-style:italic; color:#94a3b8; }
   .qrwrap { margin-top:auto; display:flex; align-items:flex-end; justify-content:space-between; gap:.3in; }
   .qr { width:2.1in; height:2.1in; background:#fff; padding:.1in; border-radius:.12in; }
   .qr img { width:100%; height:100%; display:block; }
@@ -169,6 +170,7 @@ export function renderClaimPostcardFront(m: ClaimPostcardModel): string {
   <div class="h">We built <b>${esc(m.businessName)}</b> a website.</div>
   <div class="sub">It’s already online — built from your public listing: name, phone, address and hours.</div>
   <div class="host">${esc(host)}</div>
+  <div class="alt">Prefer something simpler, like yourbusiness.com? That’s one step away once it’s yours.</div>
   <div class="qrwrap">
     <div class="scan"><b>Scan to see it and claim it.</b><br/>Free. Yours to edit. No card needed.</div>
     <div class="qr"><img src="${m.qrDataUrl}" alt="QR code" /></div>

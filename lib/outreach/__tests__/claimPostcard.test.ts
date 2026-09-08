@@ -62,6 +62,11 @@ describe('the claim postcard is the most conservative surface we own', () => {
     expect(back).toMatch(/free/i);
   });
 
+  it('offers the simpler address under the host, as a placeholder, never a specific domain we do not own', () => {
+    expect(front).toMatch(/class="alt">[^<]*yourbusiness\.com/);
+    expect(front).not.toMatch(/austin-tow-truck\.com|austintowtruck\.com/);
+  });
+
   it('describes the source honestly — the public listing, nothing more', () => {
     expect(front).toMatch(/built from your public listing/i);
     expect(back).toMatch(/name, phone, address and hours anyone can already see/);

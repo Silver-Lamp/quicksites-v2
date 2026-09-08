@@ -17,6 +17,7 @@ import { VERTICALS, STAGE_LABEL, type Stage, type Vertical } from '@/lib/busines
 import type { PlanEvidence } from '@/lib/business/planEvidence';
 import { formatCents } from '@/lib/commerce/rentalSplits';
 import OperatorPanel from '@/components/business-plan/operator-panel';
+import TradeSitesFlow from '@/components/business-plan/trade-sites-flow';
 
 const STAGE_TONE: Record<Stage, string> = {
   proven: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
@@ -180,6 +181,8 @@ export default function PlanBody({
               </ul>
             </div>
           </div>
+
+          {vertical.key === 'trade_sites' && <TradeSitesFlow evidence={e} />}
 
           <div className="mt-6 rounded-lg border border-rose-500/30 bg-rose-500/[0.06] p-4">
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-rose-300">

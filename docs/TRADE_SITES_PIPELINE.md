@@ -10,6 +10,10 @@
 
 ## The loop
 
+Drawn live on the public plan at `/business-plan?v=trade_sites` (`components/business-plan/trade-sites-flow.tsx`):
+teal steps run on their own, amber ones need an operator, and the three counts under the nodes are
+the evidence loader's, never typed in.
+
 ```
 sweep city × trade  →  build drafts (no-website only)  →  deliver a claim link  →  claim
    →  site goes LIVE on its subdomain  →  owner buys a custom domain  →  domain provisioned

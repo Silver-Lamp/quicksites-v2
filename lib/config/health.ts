@@ -139,6 +139,15 @@ export const CONFIG_GATES: ConfigGate[] = [
       'The post-claim page sells a custom domain, Stripe charges for it monthly, and nothing is written back: no subscription row, no payment count, no domain provisioned. Events for this rail arrive on the geo-rental webhook endpoint, so the geo secret is the one that must be set.',
   },
   {
+    key: 'trade_pipeline',
+    label: 'Auto-built trade sites — nightly sweep-and-build cron',
+    enabledBy: 'TRADE_PIPELINE_ENABLED',
+    requires: ['GOOGLE_PLACES_API_KEY', 'CRON_SECRET'],
+    requiresAnyOf: [['OPENAI_API_KEY', 'AI_GATEWAY_API_KEY']],
+    breaks:
+      'The queue on /admin/growth fills and never drains: every sweep fails on the Places key, or every draft builds with no copy. The cron still reports ok because a job that processes nothing is not an error.',
+  },
+  {
     key: 'ai',
     label: 'AI (copy, hero images, backdrops)',
     requires: ['OPENAI_API_KEY'],

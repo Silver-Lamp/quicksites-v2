@@ -8,6 +8,7 @@
 import { Suspense } from 'react';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import ProspectsClient from '@/components/admin/prospects-client';
+import TradePipelineQueue from '@/components/admin/trade-pipeline-queue';
 import OutreachPipeline from '@/components/admin/outreach-pipeline';
 import GrowthWorkspace from '@/components/admin/growth-workspace';
 import { loadProspectsWorkspaceData, loadOutreachDrafts } from '@/lib/outreach/growthData';
@@ -30,13 +31,16 @@ export default async function GrowthPage() {
       <GrowthWorkspace
         counts={{ prospects: prospects.length, pipeline: drafts.length }}
         prospects={
-          <ProspectsClient
-            initialProspects={prospects}
-            initialCampaigns={campaigns}
-            channels={channels}
-            callCounts={callCounts}
-            readinessGate={outreachReadinessGateEnabled()}
-          />
+          <>
+            <TradePipelineQueue />
+            <ProspectsClient
+              initialProspects={prospects}
+              initialCampaigns={campaigns}
+              channels={channels}
+              callCounts={callCounts}
+              readinessGate={outreachReadinessGateEnabled()}
+            />
+          </>
         }
         pipeline={<OutreachPipeline list={drafts} />}
       />

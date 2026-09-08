@@ -140,6 +140,17 @@ describe('wiring', () => {
   it('a real send requires a human to reach', () => {
     expect(read('lib/outreach/claimPostcardSend.ts')).toMatch(/senderProfileReady\(profile\)/);
   });
+  it('the printed address is fetched before a card is printed — the first one 404d', () => {
+    const send = read('lib/outreach/claimPostcardSend.ts');
+    expect(send).toMatch(/await preflightSiteUrl\(d\.siteUrl\)/);
+    expect(send).toMatch(/site_not_reachable/);
+    // The rule that produced the 404: no pipeline draft has a null owner, so "no owner" is never true.
+    const sites = read('app/sites/[slug]/[[...rest]]/page.tsx');
+    expect(sites).not.toMatch(/if \(ownerId\) return false/);
+    expect(sites).toMatch(/isOperatorUser\(ownerId\)/);
+    // And the claim page's inline preview resolves the draft by id, not by a host it is not on.
+    expect(read('app/claim-site/[id]/page.tsx')).toMatch(/\/preview\?template_id=/);
+  });
   it('every new env key is declared', () => {
     const env = read('.env.example');
     for (const k of ['TRADE_PIPELINE_MAIL_ENABLED', 'TRADE_PIPELINE_MAX_MAIL', 'TRADE_PIPELINE_MAIL_MIN_AGE_HOURS']) {

@@ -75,6 +75,25 @@ export async function selectMailableDrafts(opts: SelectOptions = {}): Promise<Ma
 
 export type SendResult = { prospectId: string; businessName: string; ok: boolean; lobId?: string; expectedDelivery?: string | null; skipped?: string; error?: string };
 
+/**
+ * ⚠️ THE PRINTED ADDRESS MUST ANSWER BEFORE A CARD IS PRINTED. The first card rendered pointed at a
+ * draft whose public route 404'd (an owner-id rule that no pipeline draft could satisfy). A card is
+ * the one surface we cannot correct after the fact, so the send loop fetches the URL it is about to
+ * print and refuses when it does not answer 200 with real markup — the same preflight the résumé
+ * repoint script uses for the same reason.
+ */
+export async function preflightSiteUrl(url: string): Promise<{ ok: boolean; status: number; detail?: string }> {
+  try {
+    const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(12_000), headers: { 'user-agent': 'quicksites-preflight' } });
+    const text = await res.text();
+    if (res.status !== 200) return { ok: false, status: res.status };
+    if (text.length < 2000 || !/<h1|<main|<section/i.test(text)) return { ok: false, status: res.status, detail: 'thin_body' };
+    return { ok: true, status: res.status };
+  } catch (e: any) {
+    return { ok: false, status: 0, detail: e?.name === 'TimeoutError' ? 'timeout' : e?.message || 'fetch_failed' };
+  }
+}
+
 export type SendOptions = {
   drafts: MailableDraft[];
   sentBy: string | null;
@@ -138,6 +157,12 @@ export async function sendClaimPostcards(opts: SendOptions): Promise<SendReport>
       continue;
     }
     try {
+      const live = await preflightSiteUrl(d.siteUrl);
+      if (!live.ok) {
+        report.failed++;
+        report.results.push({ prospectId: p.id, businessName: p.business_name, ok: false, error: `site_not_reachable:${live.status}${live.detail ? `:${live.detail}` : ''}` });
+        continue;
+      }
       const { frontHtml, backHtml } = await renderClaimPostcardFor(d);
       const r = await sendPostcard({
         to,

@@ -41,7 +41,10 @@ export default async function ClaimSitePage({
   const claimable = tokenOk && tpl && (tpl as any).claim_source === 'listing_import';
   const name = (tpl as any)?.business_name || (tpl as any)?.template_name || 'your business';
   const slug = (tpl as any)?.slug ?? params.id;
-  const previewHref = `/preview/${encodeURIComponent(slug)}`;
+  // ⚠️ /preview/<slug> resolves the SITE from the request host and treats the path as a PAGE slug,
+  // so on www.quicksites.ai it found no site and the inline preview was a 404 inside the pitch.
+  // The explicit template id is what the preview route actually resolves a draft by.
+  const previewHref = `/preview?template_id=${encodeURIComponent(params.id)}`;
 
   // With verification on, "Claim it free" first proves control of the business (OTP to
   // the listing phone); otherwise it arms the claim cookie directly (legacy).

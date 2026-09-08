@@ -151,7 +151,15 @@ export default function TradePipelineQueue() {
       const w = window.open('', '_blank');
       if (!w) return;
       const c = j.cards[0];
-      w.document.write(`<title>Claim card — ${c.businessName}</title><div style="display:flex;gap:24px;padding:16px;background:#e5e7eb"><iframe style="width:6.2in;height:9.2in;border:0" srcdoc="${c.frontHtml.replace(/"/g, '&quot;')}"></iframe><iframe style="width:6.2in;height:9.2in;border:0" srcdoc="${c.backHtml.replace(/"/g, '&quot;')}"></iframe></div>`);
+      // ⚠️ The frames must match the card. #919 made the card LANDSCAPE (9.25in × 6.25in) but these
+      // stayed portrait (6.2in × 9.2in), so the preview clipped the right third — where the QR is —
+      // and the operator reported "the QR isn't showing" the night before the first real send. A
+      // preview that lies about the artefact is worse than none; size it from one constant.
+      const W = '9.25in';
+      const H = '6.25in';
+      const frame = (html: string, label: string) =>
+        `<div><div style="font:600 12px system-ui;color:#374151;margin:0 0 6px">${label}</div><iframe style="width:${W};height:${H};border:0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)" srcdoc="${html.replace(/"/g, '&quot;')}"></iframe></div>`;
+      w.document.write(`<title>Claim card — ${c.businessName}</title><div style="display:flex;flex-direction:column;gap:24px;padding:16px;background:#e5e7eb;min-width:calc(${W} + 32px)">${frame(c.frontHtml, 'Front')}${frame(c.backHtml, 'Back — right 4.6in stays clear for the address block')}</div>`);
       w.document.close();
       setMailMsg(`Previewing 1 of ${j.mailable} mailable${j.blocked?.length ? ` · ${j.blocked.length} blocked (${[...new Set(j.blocked.map((b: any) => b.reason))].join(', ')})` : ''}.`);
     } finally {

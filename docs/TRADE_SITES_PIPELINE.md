@@ -79,6 +79,17 @@ an operator's draft. Both pass the prospect's own `industry_key` — the guess d
 pipeline"; one city or a metro fanned through `citiesForMetro`). The cron never invents a city.
 Restaurants are refused at enqueue: they belong to the take-rate pipeline.
 
+**Where the queue lives on the page (2026-09-08, pass 2).** The panel renders directly UNDER the
+sweep form on `/admin/growth?tab=prospects`, and a single city is queued from **that form** — the
+same city + trade chips as Discover, with two exits: **Discover** (sweep now, results below) and
+**🌙 Queue for tonight** (the cron sweeps it). The panel itself only adds whole metros, runs the
+planner, lists the queue, and mails the claim cards; its own city/state inputs are gone, and "Run
+now" moved inside it, labelled as a spend. The rest of the tab: the Growth Coach's **active step
+opens its section** (`STEP_SECTION` in `prospects-client.tsx`; everything else is a one-line header
+with a count), competition clusters and restaurant contests are **chips inside the campaigns
+section**, the map is collapsed, and every domain-spend surface moved to `/admin/domains/costs`.
+Pinned by `components/admin/__tests__/growthLayout.test.ts`.
+
 **Or let the data propose them.** "Plan the queue" (`POST /api/admin/prospects/sweep-queue/plan`,
 `lib/tradeSites/queuePlanner.ts`) ranks city × trade pairs from two measured facts: **where we own
 `<city>-<trade>.com`** (+50 — the pitch site and the claim card reinforce each other) and **how often

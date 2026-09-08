@@ -31,16 +31,16 @@ export default async function GrowthPage() {
       <GrowthWorkspace
         counts={{ prospects: prospects.length, pipeline: drafts.length }}
         prospects={
-          <>
-            <TradePipelineQueue />
-            <ProspectsClient
-              initialProspects={prospects}
-              initialCampaigns={campaigns}
-              channels={channels}
-              callCounts={callCounts}
-              readinessGate={outreachReadinessGateEnabled()}
-            />
-          </>
+          <ProspectsClient
+            initialProspects={prospects}
+            initialCampaigns={campaigns}
+            channels={channels}
+            callCounts={callCounts}
+            readinessGate={outreachReadinessGateEnabled()}
+            // The nightly queue renders under the sweep form, not above the page title: one form
+            // names a city, and "sweep now" / "queue for tonight" are its two exits.
+            afterDiscover={<TradePipelineQueue />}
+          />
         }
         pipeline={<OutreachPipeline list={drafts} />}
       />

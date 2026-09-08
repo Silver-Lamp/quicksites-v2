@@ -6,7 +6,7 @@
 // prospects, no AI), review by lead tier, selectively Build draft sites (AI), Dismiss,
 // and launch location-industry domain campaigns from the competition cards.
 
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import type { Prospect } from '@/lib/outreach/prospects';
@@ -17,10 +17,9 @@ import { nextActionLabel } from '@/components/admin/templates/campaign-badge';
 import { scoreTerritories } from '@/lib/prospects/territoryScore';
 import { buildRankedOpportunities } from '@/lib/prospects/rankedOpportunities';
 import { matchesCampaign, tradeEvidence } from '@/lib/outreach/attachProspects';
-import DomainBuyListPlanner from '@/components/admin/domain-buy-list-planner';
 import CollapsibleSection, { openSection } from '@/components/admin/collapsible-section';
-import DomainCostSummary from '@/components/admin/domain-cost-summary';
-import ParksPrewarmPanel from '@/components/admin/parks-prewarm-panel';
+// Domain money (cost summary, buy-list planner, industrial-park registry) moved to
+// /admin/domains/costs — they are spend decisions, not prospecting. See pass 2, PR #928.
 import { computeCoachState, computeRestaurantCoachState, type CoachAction } from '@/lib/prospects/growthCoach';
 import GrowthCoach, { actionId } from '@/components/admin/growth-coach';
 import ApexDomainCheck from '@/components/admin/apex-domain-check';
@@ -78,6 +77,22 @@ const TIER_META: Record<string, { label: string; cls: string }> = {
   has_site: { label: 'Has a site', cls: 'bg-neutral-800 text-neutral-400' },
 };
 
+/**
+ * Which section each coach step lives in, so the active step's panel is the one that opens.
+ * `discover` has no entry: the sweep form is always visible — it is the page's one input.
+ * Exported for the layout test, which pins that every step key the coach can emit is here.
+ */
+export const STEP_SECTION: Record<string, { section: string; view?: 'launched' | 'clusters' | 'restaurants' }> = {
+  launch: { section: 'geo-campaigns', view: 'clusters' },
+  attach: { section: 'prospects-list' },
+  rank: { section: 'geo-campaigns', view: 'launched' },
+  refine: { section: 'ranked-ready' },
+  outreach: { section: 'ranked-ready' },
+  build: { section: 'prospects-list' },
+  contest: { section: 'geo-campaigns', view: 'restaurants' },
+  demand: { section: 'prospects-list' },
+};
+
 function prettyIndustry(key: string | null): string {
   if (!key) return 'Business';
   return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -99,6 +114,7 @@ export default function ProspectsClient({
   channels = { mail: false, sms: false, call: false },
   callCounts = {},
   readinessGate = false,
+  afterDiscover = null,
 }: {
   initialProspects: Prospect[];
   initialCampaigns: GeoCampaign[];
@@ -108,6 +124,9 @@ export default function ProspectsClient({
   callCounts?: Record<string, number>;
   /** When true, Mail/Text are hard-blocked until a campaign is marked refined. */
   readinessGate?: boolean;
+  /** Rendered directly under the sweep form — the nightly queue lives there so "sweep now"
+   *  and "queue for tonight" sit beside the one form that names a city. */
+  afterDiscover?: ReactNode;
 }) {
   const router = useRouter();
   const [city, setCity] = useState('');
@@ -392,6 +411,35 @@ export default function ProspectsClient({
   // <city>-restaurant.com surfaces right next to the sweep tally (the buy tools live
   // on /admin/restaurant-domains — this is just the "is the prize ours?" answer).
   const [apexQuery, setApexQuery] = useState<{ city: string; region: string } | null>(null);
+
+  /**
+   * The same city + categories as Discover, but for the nightly cron instead of right now. One form
+   * names a city; the two exits are "sweep now" (spends now, results below) and "queue for tonight"
+   * (spends when the cron drains it). The pipeline panel used to carry a second city form.
+   */
+  async function queueForTonight() {
+    setMsg(null);
+    if (!city.trim() || !region.trim()) return setMsg('Enter a city and state to queue.');
+    const labels = [...effectivePicked].filter((l) => l !== 'Restaurants');
+    if (!labels.length) return setMsg('Pick at least one trade — restaurants run through their own pipeline, not the nightly queue.');
+    setBusy('queue');
+    try {
+      let inserted = 0;
+      const rejected: string[] = [];
+      for (const label of labels) {
+        const r = await post('/api/admin/prospects/sweep-queue', { city: city.trim(), region: region.trim(), category: label });
+        inserted += Number(r.inserted) || 0;
+        for (const x of r.rejected ?? []) rejected.push(`${x.category}: ${x.reason}`);
+      }
+      setMsg(`Queued ${inserted} for tonight — ${city.trim()}, ${region.trim()} × ${labels.join(', ')}.${rejected.length ? ` Rejected: ${rejected.join('; ')}.` : ''}`);
+      rememberLocation({ city: city.trim(), region: region.trim(), radiusKm, categories: [...effectivePicked] });
+      window.dispatchEvent(new CustomEvent('qs:sweep-queue:changed'));
+    } catch (e: any) {
+      setMsg(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function discover() {
     setMsg(null);
@@ -1064,6 +1112,21 @@ export default function ProspectsClient({
     });
   }, [prospects, orderedCompetition, rankedOpportunities, campaignById, campaigns, viewMode, restaurantComps, channels.mail, channels.sms, readinessGate]);
 
+  // ── The coach is the spine: the section for the ACTIVE step opens; everything else stays an
+  // index line with its count. Sections start closed (collapsible-section.tsx) and remember a
+  // manual toggle, so this only ever opens — it never closes something the operator opened.
+  const [campaignsView, setCampaignsView] = useState<'launched' | 'clusters' | 'restaurants'>(() =>
+    campaigns.length ? 'launched' : orderedCompetition.length ? 'clusters' : 'restaurants',
+  );
+  const activeStepKey = coachState.steps.find((s) => s.status === 'active')?.key ?? null;
+  useEffect(() => {
+    if (!activeStepKey) return;
+    const target = STEP_SECTION[activeStepKey];
+    if (!target) return;
+    openSection(target.section);
+    if (target.view) setCampaignsView(target.view);
+  }, [activeStepKey]);
+
   async function coachAct(a: CoachAction) {
     const id = actionId(a);
     const c = a.campaignId ? campaignById.get(a.campaignId) : undefined;
@@ -1079,7 +1142,10 @@ export default function ProspectsClient({
         revealProspects();
         break;
       case 'launch-geo':
-        document.getElementById('competition-cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // The clusters live inside the campaigns section now, behind a chip — open both, then go.
+        openSection('geo-campaigns');
+        setCampaignsView('clusters');
+        setTimeout(() => document.getElementById('competition-cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
         break;
       case 'connect-gsc':
         setMsg('Connect each geo-domain in Google Search Console (left nav → Google Search Console) so we can read live rank.');
@@ -1098,7 +1164,9 @@ export default function ProspectsClient({
         try { await buildAllNoWebsite(); } finally { setBusyAction(null); }
         break;
       case 'launch-restaurant-comp':
-        document.getElementById('restaurant-competition-cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        openSection('geo-campaigns');
+        setCampaignsView('restaurants');
+        setTimeout(() => document.getElementById('restaurant-competition-cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
         break;
       case 'open-location-domains':
         router.push('/admin/restaurant-domains');
@@ -1179,6 +1247,123 @@ export default function ProspectsClient({
         : 0,
     [attachMatching, attachCampaign],
   );
+
+  /** Competition clusters — city × trade groups of no-website businesses. A card that already
+   *  spawned a campaign shows it and links into "Ranked & ready" instead of a duplicate launch. */
+  function renderClusterCards() {
+    if (!orderedCompetition.length) return <div className="text-xs text-neutral-500">No clusters yet — sweep a city; two or more no-website businesses in one trade make a cluster.</div>;
+    return (
+      <div id="competition-cards" className="scroll-mt-24">
+        <p className="mb-2 text-xs text-neutral-500">
+          Each is a cluster of no-website businesses competing for one exact-match geo-domain.
+          <span className="text-emerald-400"> Green</span> = open to grab ·<span className="text-sky-300"> sky</span> = campaign already live.
+        </p>
+        <div className="flex snap-x gap-3 overflow-x-auto pb-2">
+          {orderedCompetition.map(({ g, existing }) => {
+            if (existing) {
+              const gsc = gscByDomain?.[normalizeGscDomain(existing.domain)];
+              const badge = rankBadge(gsc);
+              const rd = readinessOf(existing);
+              return (
+                <div key={g.key} className="flex w-72 shrink-0 snap-start flex-col rounded-xl border border-sky-900/60 bg-sky-950/20 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="truncate text-sm font-semibold text-white">{g.city} · {prettyIndustry(g.industryKey)}</div>
+                    <span className="shrink-0 rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-medium text-sky-200">✓ Live</span>
+                  </div>
+                  <div className="mt-1 truncate font-mono text-xs text-sky-300">{existing.domain}</div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className={`rounded px-1.5 py-0.5 text-[11px] ${badge.cls}`}>{badge.label}</span>
+                    <span className="text-xs text-neutral-500">{g.prospects.length} competitor{g.prospects.length === 1 ? '' : 's'}</span>
+                  </div>
+                  <div className="mt-1 flex-1 text-xs">
+                    {rd.ready ? (
+                      <span className="text-emerald-400">Ready ✓</span>
+                    ) : rd.hard.length ? (
+                      <span className="text-amber-400">Refine — {rd.hard.length} blocker{rd.hard.length === 1 ? '' : 's'}</span>
+                    ) : (
+                      <span className="text-neutral-500">Not yet marked ready</span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => scrollToOpp(existing.id)}
+                      title="Jump to this campaign in Ranked & ready"
+                      className="flex-1 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-200 hover:bg-sky-500/20"
+                    >
+                      Open ↑
+                    </button>
+                    {existing.template_id && (
+                      <a
+                        href={`/admin/templates/${existing.template_id}`}
+                        className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-xs font-medium text-white hover:bg-indigo-500"
+                      >
+                        Refine →
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div key={g.key} className="flex w-72 shrink-0 snap-start flex-col rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-4">
+                <div className="truncate text-sm font-semibold text-white">{g.city} · {prettyIndustry(g.industryKey)}</div>
+                <div className="mt-1 text-xs text-neutral-400">{g.prospects.length} businesses with no website</div>
+                <ul className="mt-2 flex-1 space-y-0.5 text-xs text-neutral-300">
+                  {g.prospects.slice(0, 4).map((p) => (
+                    <li key={p.id} className="truncate">• {p.business_name}</li>
+                  ))}
+                  {g.prospects.length > 4 && <li className="text-neutral-500">+{g.prospects.length - 4} more</li>}
+                </ul>
+                <button
+                  onClick={() => launchGeo(g)}
+                  disabled={busy === `geo:${g.key}`}
+                  className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  {busy === `geo:${g.key}` ? 'Launching…' : 'Launch geo-domain campaign'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  /** Restaurant domain-contests — built cohorts racing for one <city>-restaurant.com apex. */
+  function renderRestaurantCards() {
+    if (!restaurantComps.length) return <div className="text-xs text-neutral-500">No cohorts yet — build two or more restaurant sites in one city first.</div>;
+    return (
+      <div id="restaurant-competition-cards" className="scroll-mt-24">
+        <p className="mb-2 text-xs text-neutral-500">
+          Each built restaurant already has its own ordering site. Launch a{' '}
+          <span className="font-mono text-amber-300">&lt;city&gt;-restaurant.com</span> — first to claim wins it (their site is featured in the apex directory) for extra traffic. Money stays the per-order take-rate.
+        </p>
+        <div className="flex snap-x gap-3 overflow-x-auto pb-2">
+          {restaurantComps.map((g) => (
+            <div key={g.key} className="flex w-72 shrink-0 snap-start flex-col rounded-xl border border-amber-900/60 bg-amber-950/20 p-4">
+              <div className="truncate text-sm font-semibold text-white">{g.city} · Restaurants</div>
+              <div className="mt-1 text-xs text-neutral-400">{g.prospects.length} built restaurant sites</div>
+              <ul className="mt-2 flex-1 space-y-0.5 text-xs text-neutral-300">
+                {g.prospects.slice(0, 4).map((p) => (
+                  <li key={p.id} className="truncate">• {p.business_name}</li>
+                ))}
+                {g.prospects.length > 4 && <li className="text-neutral-500">+{g.prospects.length - 4} more</li>}
+              </ul>
+              <button
+                onClick={() => createRestaurantComp(g)}
+                disabled={busy === `rcomp:${g.key}`}
+                className="mt-3 w-full rounded-lg bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+              >
+                {busy === `rcomp:${g.key}`
+                  ? 'Creating…'
+                  : `Create ${g.city.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-restaurant.com`}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10 text-white">
@@ -1283,6 +1468,16 @@ export default function ProspectsClient({
           >
             {busy === 'discover' ? 'Sweeping…' : 'Discover'}
           </button>
+          {viewMode !== 'restaurants' && (
+            <button
+              onClick={queueForTonight}
+              disabled={busy === 'queue' || busy === 'discover'}
+              title="Add this city × the picked trades to the nightly queue — the cron sweeps one a night and builds a draft for every no-website business"
+              className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+            >
+              {busy === 'queue' ? 'Queuing…' : '🌙 Queue for tonight'}
+            </button>
+          )}
 
           {recent.length > 0 && (
             <div className="relative">
@@ -1366,6 +1561,9 @@ export default function ProspectsClient({
           )}
         </div>
       )}
+
+      {/* The nightly queue sits directly under the one form that names a city. */}
+      {afterDiscover && <div className="mt-4">{afterDiscover}</div>}
 
       {/* Apex-domain check for the just-swept city — is <city>-restaurant.com ours/buyable? */}
       {apexQuery && (
@@ -1473,124 +1671,18 @@ export default function ProspectsClient({
         </CollapsibleSection>
       )}
 
-      {/* Competition cards — city × industry clusters, in a horizontal scroll row above the
-          map. A card that already spawned a campaign shows it (domain + rank + readiness) and
-          links into "Ranked & ready" instead of offering a duplicate launch. */}
-      {orderedCompetition.length > 0 && (
-        <div id="competition-cards" className="mt-8 scroll-mt-24">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Competition cards — grab the domain</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Each is a cluster of no-website businesses competing for one exact-match geo-domain.
-            <span className="text-emerald-400"> Green</span> = open to grab ·<span className="text-sky-300"> sky</span> = campaign already live.
-          </p>
-          <div className="mt-3 flex snap-x gap-3 overflow-x-auto pb-2">
-            {orderedCompetition.map(({ g, existing }) => {
-              if (existing) {
-                const gsc = gscByDomain?.[normalizeGscDomain(existing.domain)];
-                const badge = rankBadge(gsc);
-                const rd = readinessOf(existing);
-                return (
-                  <div key={g.key} className="flex w-72 shrink-0 snap-start flex-col rounded-xl border border-sky-900/60 bg-sky-950/20 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="truncate text-sm font-semibold text-white">{g.city} · {prettyIndustry(g.industryKey)}</div>
-                      <span className="shrink-0 rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-medium text-sky-200">✓ Live</span>
-                    </div>
-                    <div className="mt-1 truncate font-mono text-xs text-sky-300">{existing.domain}</div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className={`rounded px-1.5 py-0.5 text-[11px] ${badge.cls}`}>{badge.label}</span>
-                      <span className="text-xs text-neutral-500">{g.prospects.length} competitor{g.prospects.length === 1 ? '' : 's'}</span>
-                    </div>
-                    <div className="mt-1 flex-1 text-xs">
-                      {rd.ready ? (
-                        <span className="text-emerald-400">Ready ✓</span>
-                      ) : rd.hard.length ? (
-                        <span className="text-amber-400">Refine — {rd.hard.length} blocker{rd.hard.length === 1 ? '' : 's'}</span>
-                      ) : (
-                        <span className="text-neutral-500">Not yet marked ready</span>
-                      )}
-                    </div>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => scrollToOpp(existing.id)}
-                        title="Jump to this campaign in Ranked & ready"
-                        className="flex-1 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-200 hover:bg-sky-500/20"
-                      >
-                        Open ↑
-                      </button>
-                      {existing.template_id && (
-                        <a
-                          href={`/admin/templates/${existing.template_id}`}
-                          className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-xs font-medium text-white hover:bg-indigo-500"
-                        >
-                          Refine →
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-              return (
-                <div key={g.key} className="flex w-72 shrink-0 snap-start flex-col rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-4">
-                  <div className="truncate text-sm font-semibold text-white">{g.city} · {prettyIndustry(g.industryKey)}</div>
-                  <div className="mt-1 text-xs text-neutral-400">{g.prospects.length} businesses with no website</div>
-                  <ul className="mt-2 flex-1 space-y-0.5 text-xs text-neutral-300">
-                    {g.prospects.slice(0, 4).map((p) => (
-                      <li key={p.id} className="truncate">• {p.business_name}</li>
-                    ))}
-                    {g.prospects.length > 4 && <li className="text-neutral-500">+{g.prospects.length - 4} more</li>}
-                  </ul>
-                  <button
-                    onClick={() => launchGeo(g)}
-                    disabled={busy === `geo:${g.key}`}
-                    className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-                  >
-                    {busy === `geo:${g.key}` ? 'Launching…' : 'Launch geo-domain campaign'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Restaurant domain-competitions — built restaurant cohorts competing for one
-          premium <city>-restaurant.com apex (first to claim wins the featured directory slot). */}
-      {restaurantComps.length > 0 && (
-        <div id="restaurant-competition-cards" className="mt-8 scroll-mt-24">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Restaurant competitions — one domain, one winner</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Each built restaurant already has its own ordering site. Launch a{' '}
-            <span className="font-mono text-amber-300">&lt;city&gt;-restaurant.com</span> — first to claim wins it (their site is featured in the apex directory) for extra traffic. Money stays the per-order take-rate.
-          </p>
-          <div className="mt-3 flex snap-x gap-3 overflow-x-auto pb-2">
-            {restaurantComps.map((g) => (
-              <div key={g.key} className="flex w-72 shrink-0 snap-start flex-col rounded-xl border border-amber-900/60 bg-amber-950/20 p-4">
-                <div className="truncate text-sm font-semibold text-white">{g.city} · Restaurants</div>
-                <div className="mt-1 text-xs text-neutral-400">{g.prospects.length} built restaurant sites</div>
-                <ul className="mt-2 flex-1 space-y-0.5 text-xs text-neutral-300">
-                  {g.prospects.slice(0, 4).map((p) => (
-                    <li key={p.id} className="truncate">• {p.business_name}</li>
-                  ))}
-                  {g.prospects.length > 4 && <li className="text-neutral-500">+{g.prospects.length - 4} more</li>}
-                </ul>
-                <button
-                  onClick={() => createRestaurantComp(g)}
-                  disabled={busy === `rcomp:${g.key}`}
-                  className="mt-3 w-full rounded-lg bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-500 disabled:opacity-50"
-                >
-                  {busy === `rcomp:${g.key}`
-                    ? 'Creating…'
-                    : `Create ${g.city.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-restaurant.com`}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Map of swept prospects — click a marker to select it for building. */}
+      {/* Competition clusters and restaurant contests now render INSIDE the campaigns section,
+          behind chips — see `campaignsView`. Three stacked headings became one. */}
+      {/* Map of swept prospects — click a marker to select it for building. Collapsed by default:
+          the territory heat and the LLM brief are a "where next" side-quest, not the funnel. */}
       {prospects.some((p) => p.address_lat != null && p.address_lon != null) && (
-        <div className="mt-6">
+        <CollapsibleSection
+          id="prospects-map"
+          className="mt-8"
+          title="Map · where to target next"
+          count={prospects.filter((p) => p.address_lat != null && p.address_lon != null).length}
+          subtitle="Every swept business on a map; click a marker to select it. Toggle the territory heat to score which area to sweep next."
+        >
           <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -1661,45 +1753,56 @@ export default function ProspectsClient({
               <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-sm border-2 border-dashed border-emerald-400" /> Already ranking here (boosted)</span>
             )}
           </div>
-        </div>
+        </CollapsibleSection>
       )}
 
-      {/* What we already own is costing us — surfaced right where new domains are bought,
-          so the recurring liability is visible before spending more. */}
-      <DomainCostSummary className="mt-8" />
-
-      {/* Domain buy-list planner — spend a fixed budget on the best geo-domains to acquire. */}
-      <DomainBuyListPlanner />
-
-      {/* Pre-warm the industrial-park registry for a metro so pitch-site default addresses
-          land in a real building. Collapsed by default — an occasional per-metro chore. */}
-      <CollapsibleSection
-        id="parks-prewarm"
-        className="mt-8"
-        title="Industrial-park registry"
-        subtitle="Pre-warm a metro's parks to ground default office addresses"
-        defaultOpen={false}
-      >
-        <ParksPrewarmPanel />
-      </CollapsibleSection>
-
-      {/* Existing campaigns */}
-      {campaigns.length > 0 && (
+      {/* Campaigns — one section, three views: launched (the table), clusters ready to launch
+          (the competition cards), restaurant contests. Three stacked headings became one line
+          with chips; the coach's step picks the chip. Maintenance buttons live in a drawer. */}
+      {(campaigns.length > 0 || orderedCompetition.length > 0 || restaurantComps.length > 0) && (
         <CollapsibleSection
           id="geo-campaigns"
           className="mt-8"
           title="Geo-domain campaigns"
           count={campaigns.length}
           right={
-            <>
+            <button
+              onClick={() => setShowSenderModal(true)}
+              title={senderReady ? 'Edit who prospects see contacting them (name, photo, signature, email)' : 'Set up your sender identity — prospects should know who built their site and how to reach you'}
+              className={`relative rounded-lg border px-3 py-1.5 text-xs font-medium ${senderReady ? 'border-neutral-600 bg-neutral-800/60 text-neutral-200 hover:bg-neutral-700/60' : 'border-amber-500/50 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'}`}
+            >
+              {senderReady ? '✍️ Sender profile' : '⚠ Set up sender'}
+              {!senderReady && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-400" />}
+            </button>
+          }
+        >
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs" role="tablist" aria-label="Campaign view">
+            {([
+              ['launched', `Launched (${campaigns.length})`, campaigns.length],
+              ['clusters', `Ready to launch (${orderedCompetition.filter((x) => !x.existing).length})`, orderedCompetition.length],
+              ['restaurants', `Restaurant contests (${restaurantComps.length})`, restaurantComps.length],
+            ] as const).map(([v, label, n]) => (
               <button
-                onClick={() => setShowSenderModal(true)}
-                title={senderReady ? 'Edit who prospects see contacting them (name, photo, signature, email)' : 'Set up your sender identity — prospects should know who built their site and how to reach you'}
-                className={`relative rounded-lg border px-3 py-1.5 text-xs font-medium ${senderReady ? 'border-neutral-600 bg-neutral-800/60 text-neutral-200 hover:bg-neutral-700/60' : 'border-amber-500/50 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'}`}
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={campaignsView === v}
+                disabled={n === 0}
+                onClick={() => setCampaignsView(v)}
+                className={`rounded-full px-3 py-1 ${campaignsView === v ? 'bg-sky-500/20 text-sky-200 ring-1 ring-sky-500/40' : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'} disabled:cursor-not-allowed disabled:opacity-40`}
               >
-                {senderReady ? '✍️ Sender profile' : '⚠ Set up sender'}
-                {!senderReady && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-400" />}
+                {label}
               </button>
+            ))}
+          </div>
+
+          {campaignsView === 'clusters' && renderClusterCards()}
+          {campaignsView === 'restaurants' && renderRestaurantCards()}
+
+          {campaignsView === 'launched' && campaigns.length > 0 && (
+          <details className="mb-3 rounded-lg border border-neutral-800 bg-neutral-900/40 px-3 py-2 text-xs">
+            <summary className="cursor-pointer text-neutral-400 hover:text-neutral-200">🛠 Maintenance — test address, webhook self-test, bulk backfills</summary>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <button
                 onClick={setTestAddress}
                 title={testAddr ? `Live-test postcards mail here: ${testAddr.line}` : 'Set a live-test mailing address — test sends go here instead of the prospects'}
@@ -1755,9 +1858,11 @@ export default function ProspectsClient({
               >
                 {busy === 'recs:all' ? 'Recomputing…' : '↻ Recompute recommendations'}
               </button>
-            </>
-          }
-        >
+            </div>
+          </details>
+          )}
+
+          {campaignsView === 'launched' && campaigns.length > 0 && (
           <div className="max-h-[36rem] overflow-auto rounded-xl border border-neutral-800">
             <table className="min-w-full text-sm">
               <thead className="sticky top-0 z-10 bg-neutral-900">
@@ -2020,6 +2125,7 @@ export default function ProspectsClient({
               </tbody>
             </table>
           </div>
+          )}
         </CollapsibleSection>
       )}
 

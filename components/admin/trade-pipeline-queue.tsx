@@ -2,12 +2,17 @@
 
 // components/admin/trade-pipeline-queue.tsx
 //
-// The nightly pipeline's queue, on /admin/growth. A person adds city × trade rows (one city, or a
-// whole metro); the cron sweeps them at its cap and builds drafts for every no-website business it
-// finds. The panel says plainly whether the cron is ON — a queue that fills and never drains is the
-// silent failure this feature would otherwise have.
+// The nightly pipeline's queue, on /admin/growth, rendered directly under the sweep form. A single
+// city is queued from THAT form ("Queue for tonight" — one form names a city, two exits); this panel
+// adds whole metros, lets the data plan the queue, shows what is queued, and mails the claim cards.
+// The cron sweeps at its cap and builds drafts for every no-website business it finds. The panel
+// says plainly whether the cron is ON — a queue that fills and never drains is the silent failure
+// this feature would otherwise have.
 import { useEffect, useState } from 'react';
 import { LOW_YIELD_RATE } from '@/lib/tradeSites/queuePlanner';
+
+/** Fired by the sweep form after it queues a city, so this panel refreshes without a reload. */
+export const SWEEP_QUEUE_CHANGED = 'qs:sweep-queue:changed';
 
 type Row = {
   id: string;
@@ -26,8 +31,6 @@ type QueueState = { enabled: boolean; caps: { maxSweeps: number; maxBuilds: numb
 export default function TradePipelineQueue() {
   const [state, setState] = useState<QueueState | null>(null);
   const [open, setOpen] = useState(false);
-  const [city, setCity] = useState('');
-  const [region, setRegion] = useState('');
   const [metro, setMetro] = useState('');
   const [category, setCategory] = useState('Towing');
   const [busy, setBusy] = useState(false);
@@ -39,21 +42,26 @@ export default function TradePipelineQueue() {
   }
   useEffect(() => {
     void load();
+    // The sweep form above queues single cities; reflect them here without a reload.
+    const onChanged = () => { void load(); setOpen(true); };
+    window.addEventListener(SWEEP_QUEUE_CHANGED, onChanged);
+    return () => window.removeEventListener(SWEEP_QUEUE_CHANGED, onChanged);
   }, []);
 
-  async function add() {
+  /** Fan a whole metro (~30 cities) × one trade into the queue. Single cities come from the sweep form. */
+  async function addMetro() {
+    if (!metro) return;
     setBusy(true);
     setMsg(null);
     try {
-      const body = metro ? { metro, category } : { city, region, category };
-      const r = await fetch('/api/admin/prospects/sweep-queue', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      const r = await fetch('/api/admin/prospects/sweep-queue', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ metro, category }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
         setMsg(j?.error || 'Could not queue.');
         return;
       }
       setMsg(`Queued ${j.inserted}${j.rejected?.length ? `, rejected ${j.rejected.length}` : ''}.${j.enabled ? '' : ' ⚠️ The cron is OFF (TRADE_PIPELINE_ENABLED) — nothing will drain this.'}`);
-      setCity('');
+      setMetro('');
       await load();
     } finally {
       setBusy(false);
@@ -177,11 +185,8 @@ export default function TradePipelineQueue() {
             )}
           </div>
           <div className="text-xs text-muted-foreground">
-            {queued} queued. Queue a city × trade; the cron sweeps it and builds a draft for every no-website business. {open ? '▲' : '▼'}
+            {queued} queued · {state?.caps.maxSweeps ?? 1} swept a night. Add a city with “Queue for tonight” in the sweep form above; add a metro or let the data plan here. {open ? '▲' : '▼'}
           </div>
-        </button>
-        <button type="button" onClick={runNow} disabled={busy} className="rounded-lg border border-border px-3 py-1 text-xs hover:bg-muted disabled:opacity-50">
-          Run now
         </button>
       </div>
 
@@ -189,17 +194,8 @@ export default function TradePipelineQueue() {
         <div className="mt-3 space-y-3">
           <div className="flex flex-wrap items-end gap-2 text-sm">
             <label className="flex flex-col text-xs text-muted-foreground">
-              City
-              <input value={city} onChange={(e) => { setCity(e.target.value); setMetro(''); }} placeholder="Arab" className="rounded-lg border border-border bg-background px-2 py-1 text-foreground" />
-            </label>
-            <label className="flex flex-col text-xs text-muted-foreground">
-              State
-              <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="AL" className="w-16 rounded-lg border border-border bg-background px-2 py-1 text-foreground" />
-            </label>
-            <span className="pb-1 text-xs text-muted-foreground">or</span>
-            <label className="flex flex-col text-xs text-muted-foreground">
-              Metro (fans out ~30 cities)
-              <select value={metro} onChange={(e) => { setMetro(e.target.value); setCity(''); }} className="rounded-lg border border-border bg-background px-2 py-1 text-foreground">
+              Whole metro (fans out ~30 cities)
+              <select value={metro} onChange={(e) => setMetro(e.target.value)} className="rounded-lg border border-border bg-background px-2 py-1 text-foreground">
                 <option value="">—</option>
                 {state.metros.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
@@ -210,12 +206,18 @@ export default function TradePipelineQueue() {
                 {state.categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </label>
-            <button type="button" onClick={add} disabled={busy || (!metro && (!city || !region))} className="rounded-lg bg-emerald-400 px-3 py-1 font-semibold text-zinc-950 hover:bg-emerald-300 disabled:opacity-50">
-              Queue
+            <button type="button" onClick={addMetro} disabled={busy || !metro} className="rounded-lg bg-emerald-400 px-3 py-1 font-semibold text-zinc-950 hover:bg-emerald-300 disabled:opacity-50">
+              Queue the metro
             </button>
             <span className="pb-1 text-xs text-muted-foreground">or</span>
             <button type="button" onClick={() => planQueue(false)} disabled={busy} className="rounded-lg border border-border px-3 py-1 hover:bg-muted disabled:opacity-50" title="Rank city × trade pairs from the domains we own and the no-website rates we have measured">
               Plan the queue
+            </button>
+            <span className="grow" />
+            {/* Spends Places calls now. Lives inside the panel, beside the queue it drains — it used
+                to sit on the collapsed header where nothing said what it would do. */}
+            <button type="button" onClick={runNow} disabled={busy} title={queued ? `Sweep the next queued row and build up to ${state.caps.maxBuilds} drafts now instead of at 06:00 UTC (spends Places API calls)` : `Nothing queued — runs the build step only (up to ${state.caps.maxBuilds} backlog drafts)`} className="rounded-lg border border-border px-3 py-1 text-xs hover:bg-muted disabled:opacity-50">
+              ▶ Run tonight&apos;s pass now
             </button>
           </div>
           {msg && <div className="text-xs text-muted-foreground">{msg}</div>}

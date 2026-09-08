@@ -59,12 +59,33 @@ export async function GET(req: Request) {
   const siteJson = await siteRes.json();
   const siteEntries = siteJson?.siteEntry ?? [];
 
-  if (siteEntries.length === 0) {
-    return NextResponse.json({ error: 'No verified sites found' }, { status: 404 });
-  }
-
   const now = new Date();
   const expiresAt = new Date(now.getTime() + (tokens.expires_in ?? 3600) * 1000).toISOString();
+
+  // ⚠️ A GRANT FROM AN ACCOUNT WITH NO PROPERTIES IS STILL THE GRANT THE BACKFILL NEEDS. This used
+  // to answer `{"error":"No verified sites found"}` and drop the token on the floor — after the
+  // operator had approved both scopes. But the nightly gsc-backfill exists precisely to ADD
+  // properties (verify by DNS TXT, then add), which any account can do; it only needs a refresh
+  // token with the write scopes under the operator's user id (connectDomain.ts picks the newest).
+  // So the grant is stored either way: per property when there are some, under a sentinel row
+  // when there are none. The one thing a zero-property grant cannot do is refresh the existing
+  // per-property rows, which belong to whichever account owns those properties.
+  const grantOwner = userId ?? (await firstOperatorId());
+  if (siteEntries.length === 0) {
+    if (grantOwner) {
+      await supabaseAdmin.from('gsc_tokens').upsert(
+        {
+          domain: `account-grant:${grantOwner}`,
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token ?? null,
+          expiry: expiresAt,
+          user_id: grantOwner,
+        },
+        { onConflict: 'domain' }
+      );
+    }
+    return NextResponse.redirect(`${BASE_URL}/admin/templates/gsc-bulk-stats?connected=1&sites=0`);
+  }
 
   // Insert a token row for each valid site
   for (const entry of siteEntries) {
@@ -78,12 +99,22 @@ export async function GET(req: Request) {
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token ?? null,
           expiry: expiresAt,
-          user_id: userId,
+          user_id: grantOwner,
         },
         { onConflict: 'domain' }
       );
     }
   }
 
-  return NextResponse.redirect(`${BASE_URL}/admin/templates/gsc-bulk-stats?connected=1`);
+  return NextResponse.redirect(`${BASE_URL}/admin/templates/gsc-bulk-stats?connected=1&sites=${siteEntries.length}`);
+}
+
+/**
+ * The consent may arrive without a QuickSites session cookie (a different browser profile, an
+ * incognito window). A token row with user_id null is invisible to the backfill, which looks the
+ * operator up by user_id — so fall back to the first platform operator rather than store nothing.
+ */
+async function firstOperatorId(): Promise<string | null> {
+  const { data } = await supabaseAdmin.from('admin_users').select('user_id').order('created_at', { ascending: true }).limit(1).maybeSingle();
+  return (data as { user_id?: string } | null)?.user_id ?? null;
 }

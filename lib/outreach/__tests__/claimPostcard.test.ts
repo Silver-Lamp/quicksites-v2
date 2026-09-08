@@ -21,7 +21,7 @@ const model: ClaimPostcardModel = {
   region: 'TX',
   industryKey: 'towing' as any,
   siteUrl: 'https://austin-tow-truck-sj4hx.quicksites.ai',
-  claimUrl: 'https://www.quicksites.ai/c/3ae8c8cd',
+  claimUrl: 'https://www.quicksites.ai/go/3ae8c8cd',
   qrDataUrl: 'data:image/png;base64,AAAA',
   benefits: ['A real website at your own address — live in minutes', 'Request a quote or call you in one tap', 'Nothing to install, nothing to maintain'],
   sender: { name: 'Sandon', title: 'Founder', email: 'sandon@quicksites.ai', headshotUrl: null, signatureUrl: null },
@@ -56,7 +56,7 @@ describe('the claim postcard is the most conservative surface we own', () => {
     expect(front).toContain('We built <b>Austin Tow Truck</b> a website.');
     expect(front).toContain('austin-tow-truck-sj4hx.quicksites.ai');
     expect(front).toContain('data:image/png;base64,AAAA');
-    expect(back).toContain('https://www.quicksites.ai/c/3ae8c8cd');
+    expect(back).toContain('https://www.quicksites.ai/go/3ae8c8cd');
     expect(back).toMatch(/Say the word and it’s gone/);
     expect(back).toContain('sandon@quicksites.ai');
     expect(back).toMatch(/free/i);
@@ -80,8 +80,8 @@ describe('the claim postcard is the most conservative surface we own', () => {
 });
 
 describe('the printed link carries no bearer token', () => {
-  it('is the tracked /c/ route, which mints a fresh token on visit', () => {
-    expect(trackedDraftClaimUrl('abc', 'https://www.quicksites.ai/')).toBe('https://www.quicksites.ai/c/abc');
+  it('is the tracked /go/ route, which mints a fresh token on visit', () => {
+    expect(trackedDraftClaimUrl('abc', 'https://www.quicksites.ai/')).toBe('https://www.quicksites.ai/go/abc');
     expect(trackedDraftClaimUrl('abc')).not.toMatch(/token=/);
   });
   it('prints hosts without a scheme', () => {
@@ -118,9 +118,9 @@ describe('the send gate — an invented promise never reaches a mailbox', () => 
   it('the printed host never depends on the env that rendered it', () => {
     const saved = process.env.TRADE_SITE_BASE_URL;
     delete process.env.TRADE_SITE_BASE_URL;
-    expect(trackedDraftClaimUrl('x')).toBe('https://www.quicksites.ai/c/x');
+    expect(trackedDraftClaimUrl('x')).toBe('https://www.quicksites.ai/go/x');
     process.env.TRADE_SITE_BASE_URL = 'http://delivered.menu'; // not https → ignored
-    expect(trackedDraftClaimUrl('x')).toBe('https://www.quicksites.ai/c/x');
+    expect(trackedDraftClaimUrl('x')).toBe('https://www.quicksites.ai/go/x');
     process.env.TRADE_SITE_BASE_URL = saved;
     expect(read('lib/outreach/claimPostcardSend.ts')).not.toMatch(/baseUrl: brand\.baseUrl,/);
   });

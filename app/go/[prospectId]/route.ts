@@ -1,4 +1,4 @@
-// app/c/[prospectId]/route.ts
+// app/go/[prospectId]/route.ts
 //
 // Tracked claim link for a per-business draft (the trade-site claim postcard's QR). Counts the
 // visit on the prospect, mints a FRESH claim token, and 302s to the claim page — so the printed

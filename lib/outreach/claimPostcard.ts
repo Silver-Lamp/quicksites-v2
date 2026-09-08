@@ -31,7 +31,7 @@ export type ClaimPostcardModel = {
   industryKey: IndustryKey | null;
   /** The draft's public address, watermarked until claimed. */
   siteUrl: string;
-  /** The tracked link (/c/<prospectId>) — mints a fresh claim token on visit. */
+  /** The tracked link (/go/<prospectId>) — mints a fresh claim token on visit. */
   claimUrl: string;
   qrDataUrl: string;
   benefits: string[];
@@ -43,7 +43,7 @@ export type ClaimPostcardModel = {
 
 /** The tracked claim link printed on the card. Never the raw tokenised URL — a fresh token is minted on visit. */
 export function trackedDraftClaimUrl(prospectId: string, base: string = tradeSiteBaseUrl()): string {
-  return `${base.replace(/\/+$/, '')}/c/${prospectId}`;
+  return `${base.replace(/\/+$/, '')}/go/${prospectId}`;
 }
 
 /** Strip the scheme for print: "smithtowing.quicksites.ai" reads; "https://…" does not. */

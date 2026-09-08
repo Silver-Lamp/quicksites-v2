@@ -19,7 +19,7 @@ sweep city × trade  →  build drafts (no-website only)  →  deliver a claim l
 |---|---|---|---|
 | 1. Sweep a city for one trade | `lib/prospects/runSweep.ts` (the button and the cron run the same function) | operator click **or nightly cron** | **automated (PR 2)** — the operator queues city × trade on `/admin/growth`; flag `TRADE_PIPELINE_ENABLED` |
 | 2. Build drafts for the no-website tier | `lib/tradeSites/pipeline.ts` → `lib/outreach/buildDraftFromListing.ts` | nightly cron, `TRADE_PIPELINE_MAX_BUILDS` a night | **automated (PR 2)** — also drains the backlog of parked no-website trade prospects |
-| 3. Deliver the claim link | `lib/outreach/claimPostcard.ts` + `claimPostcardSend.ts` → Lob; tracked link `/c/<prospectId>` | nightly cron (`TRADE_PIPELINE_MAIL_ENABLED`) or `/admin/growth` → Claim postcards | **automated (PR 3)** — a card to the listing's street address, after a 24h review window |
+| 3. Deliver the claim link | `lib/outreach/claimPostcard.ts` + `claimPostcardSend.ts` → Lob; tracked link `/go/<prospectId>` | nightly cron (`TRADE_PIPELINE_MAIL_ENABLED`) or `/admin/growth` → Claim postcards | **automated (PR 3)** — a card to the listing's street address, after a 24h review window |
 | 4. Claim | `/claim-site/<id>?token` → `app/api/claim-draft` → `lib/auth/claimPendingSiteDraft.ts` | the business | automated |
 | 5. **Site goes live** | `lib/tradeSites/activate.ts` (publish on claim, prospect → `claimed`) | on claim | **automated (PR 1)** |
 | 6. **Custom-domain checkout** | `/welcome/<id>` → `POST /api/trade-sites/checkout` | the owner | **automated (PR 1)**, flag `TRADE_SITE_BILLING_ENABLED` |
@@ -86,7 +86,7 @@ built**, because a job that processes a hundred things and builds none still say
 
 Nothing delivered a claim link before this. Now every built, unmailed, no-website trade draft gets
 one 6×9 card to the **listing's street address** — the same channel Google uses to prove control
-of a Business Profile — carrying the site's address, a QR to the tracked link `/c/<prospectId>`
+of a Business Profile — carrying the site's address, a QR to the tracked link `/go/<prospectId>`
 (which mints a fresh claim token on visit and counts the visit on the prospect, migration
 `20260840`), the sender's name and email, and the exit: *"say the word and it's gone."*
 

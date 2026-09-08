@@ -194,7 +194,7 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   A person still chooses the cities; the cron never invents one, and restaurants are refused at enqueue.
   PR 3: **the claim postcard** (`lib/outreach/claimPostcard.ts` — the one surface nothing delivered
   before) mails each built, unmailed trade draft ONE card to the **listing's street address** (the
-  Google-PIN channel; cold SMS stays off) with a QR to the tracked `/c/<prospectId>` link. ⚠️ **It
+  Google-PIN channel; cold SMS stays off) with a QR to the tracked `/go/<prospectId>` link. ⚠️ **It
   is the most conservative surface we own** and a test greps the HTML for every promise it must
   never make — no ranking/Google, no 24/7 or licensing, no guarantee, **no competitor, no deadline,
   no printed price**. Three gates before postage (`TRADE_PIPELINE_MAIL_ENABLED`,

@@ -60,11 +60,131 @@ export function cleanListingCategories(cats: unknown): string[] {
   return out;
 }
 
-/** The trade's standard service names — the same list the industry scaffold seeds. */
+/**
+ * A service name may not be a promise. The scaffold's concrete list ends in "Free Estimates" — a
+ * pricing claim about a business we never spoke to, the class `scripts/audit-live-claims.mjs`
+ * exists to find. On a listing draft's DEFAULT list it is dropped; the owner can add it back.
+ */
+export const PROMISE_IN_SERVICE_NAME = /\bfree\b|24\s*\/\s*7|24[- ]hours?|guarantee|licen[sc]ed|insured|same[- ]day|within \d+ (minutes?|hours?)|no[- ]obligation/i;
+
+/** The trade's standard service names — the same list the industry scaffold seeds, minus promises. */
 export function industryDefaultServices(industryKey: string | null | undefined): string[] {
   if (!industryKey) return [];
-  return generateServices({ industryKey: industryKey as IndustryKey }).map((s) => s.name).filter(Boolean);
+  return generateServices({ industryKey: industryKey as IndustryKey })
+    .map((s) => s.name)
+    .filter((n) => n && !PROMISE_IN_SERVICE_NAME.test(n));
 }
+
+/** "shipping_service" → "Shipping service". Already-nice labels pass through untouched. */
+export function prettyServiceLabel(label: string): string {
+  const s = String(label ?? '').trim();
+  if (!/_/.test(s)) return s;
+  const t = s.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/**
+ * Trade terms a business puts in its OWN NAME → the service that names. "Ferry Street Towing &
+ * Roadside Assistance" declared `car_repair` to Google and rendered "What we do — Car repair" under
+ * a title that says towing twice. The name is the most honest source on the page: the owner chose
+ * those words. Ordered; the first pattern to match a term wins, and one name can yield several.
+ * Labels are the trade's everyday words, never a promise (no "24/7", no "licensed").
+ */
+export const NAME_SERVICE_TERMS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\broadside\b/i, 'Roadside Assistance'],
+  [/\b(wrecker|recovery)\b/i, 'Towing & Recovery'],
+  [/\btow(ing)?\b/i, 'Towing'],
+  [/\bmuffler|exhaust\b/i, 'Muffler & Exhaust'],
+  [/\btransmissions?\b/i, 'Transmission Repair'],
+  [/\b(auto|collision) ?body\b/i, 'Auto Body & Collision'],
+  [/\btires?\b/i, 'Tires'],
+  [/\b(auto|automotive|car) (repair|service|care|mechanic)s?\b/i, 'Auto Repair'],
+  [/\bwindshields?\b|\bauto ?glass\b/i, 'Windshield Repair'],
+  [/\bglass\b/i, 'Glass Repair'],
+  [/\broof(ing)? clean/i, 'Roof Cleaning'],
+  [/\broof(ing|er|ers)?\b(?!\s*clean)/i, 'Roofing'],
+  [/\bgutters?\b/i, 'Gutters'],
+  [/\bplumb(ing|er|ers)\b/i, 'Plumbing'],
+  [/\b(heating|hvac|furnace)\b/i, 'Heating'],
+  [/\b(cooling|air conditioning|a\/c|ac)\b/i, 'Air Conditioning'],
+  [/\belectric(al|ian|ians)?\b/i, 'Electrical'],
+  [/\bconcrete\b/i, 'Concrete'],
+  [/\bcutting\b|\bcoring\b/i, 'Concrete Cutting & Coring'],
+  [/\b(paving|asphalt)\b/i, 'Paving'],
+  [/\bmasonry\b/i, 'Masonry'],
+  [/\bfenc(e|es|ing)\b/i, 'Fencing'],
+  [/\b(landscap(e|ing)|lawn)\b/i, 'Landscaping'],
+  [/\btree\b/i, 'Tree Service'],
+  [/\bpressure wash|power wash/i, 'Pressure Washing'],
+  [/\bpaint(ing|ers?)\b/i, 'Painting'],
+  [/\b(remodel(ing)?|renovations?)\b/i, 'Remodeling'],
+  [/\b(construction|builders?|contract(or|ors|ing))\b/i, 'General Contracting'],
+  [/\bhandyman\b/i, 'Handyman Services'],
+  [/\blocksmiths?\b/i, 'Locksmith'],
+  [/\bmoving|movers?\b/i, 'Moving'],
+  [/\bjunk\b|\bhauling\b/i, 'Junk Removal & Hauling'],
+  [/\bpest\b|\bexterminat/i, 'Pest Control'],
+  [/\bclean(ing|ers)\b/i, 'Cleaning'],
+  [/\bsalvage\b/i, 'Salvage'],
+];
+
+/**
+ * Industries whose names are not service menus: "Glass House Bistro" does not repair glass, and a
+ * person is not a trade. The name layer is skipped for these.
+ */
+export const NAME_LAYER_EXCLUDED: ReadonlySet<string> = new Set(['restaurant', 'personal', 'author', 'realtor', 'church', 'nonprofit']);
+
+/** Services the business named itself after. Empty for "Ferry Street Garage" or "Joe's". */
+export function servicesFromName(name: unknown, industryKey?: string | null): string[] {
+  const s = String(name ?? '').trim();
+  if (!s) return [];
+  const ik = String(industryKey ?? '');
+  if (NAME_LAYER_EXCLUDED.has(ik) || ik.startsWith('food') || ik.startsWith('retail')) return [];
+  const out: string[] = [];
+  for (const [re, label] of NAME_SERVICE_TERMS) {
+    if (re.test(s) && !out.includes(label)) out.push(label);
+  }
+  // "Medrano's Roof Cleaning" matches roof-cleaning, roofing AND cleaning; keep the specific one.
+  return mergeServiceLists(out);
+}
+
+/** Google's category wording → the everyday label, so "Car repair" and "Auto Repair" do not both show. */
+const CANONICAL: Record<string, string> = {
+  car_repair: 'Auto Repair',
+  auto_repair_shop: 'Auto Repair',
+  towing_service: 'Towing',
+  roofing_contractor: 'Roofing',
+  general_contractor: 'General Contracting',
+  electrician: 'Electrical',
+  plumber: 'Plumbing',
+  locksmith: 'Locksmith',
+  moving_company: 'Moving',
+  glass_repair_service: 'Glass Repair',
+};
+export function canonicalService(label: string): string {
+  return CANONICAL[norm(label)] ?? prettyServiceLabel(label);
+}
+
+/**
+ * Merge in priority order, dropping exact duplicates and any item another item already contains
+ * ("Towing" beside "Towing & Recovery" says the same thing twice; the longer one stays).
+ */
+export function mergeServiceLists(...lists: string[][]): string[] {
+  const flat = lists.flat().map((s) => canonicalService(String(s ?? '').trim())).filter(Boolean);
+  const keys = flat.map(norm);
+  const out: string[] = [];
+  flat.forEach((label, i) => {
+    const k = keys[i];
+    if (out.some((o) => norm(o) === k)) return;
+    const containedElsewhere = keys.some((other, j) => j !== i && other !== k && other.includes(k));
+    if (containedElsewhere) return;
+    out.push(label);
+  });
+  return out;
+}
+
+/** Below this many declared-or-named services, the trade's standard list is added (with its disclaimer). */
+export const MIN_OWN_SERVICES = 3;
 
 type AnyBlock = { type?: string } & Record<string, unknown>;
 
@@ -105,22 +225,43 @@ export function ensureServicesBlock(data: any, names: string[]): number {
   return inserted;
 }
 
+export type ListingServicesInput = {
+  /** Google categories as stored (raw or prettified). */
+  categories: unknown;
+  industryKey: string | null | undefined;
+  /** The business's own name — trade words in it become services first. */
+  businessName?: unknown;
+};
+
+/**
+ * The list itself, pure. Three layers, in priority order:
+ *   1. services the business NAMED itself after (`servicesFromName`);
+ *   2. the categories it declared to Google (generic plumbing removed);
+ *   3. when 1 + 2 still give fewer than MIN_OWN_SERVICES, the trade's standard list is added and
+ *      the whole thing is stamped `industry_default` so the page says "call to confirm".
+ * A list that is entirely the business's own words is stamped `listing` and carries no disclaimer.
+ */
+export function decideListingServices(input: ListingServicesInput): { services: string[]; source: ServicesSource } {
+  const own = mergeServiceLists(servicesFromName(input.businessName, input.industryKey), cleanListingCategories(input.categories));
+  if (own.length >= MIN_OWN_SERVICES) return { services: own, source: 'listing' };
+  const std = industryDefaultServices(input.industryKey);
+  if (!std.length) return { services: own, source: own.length ? 'listing' : 'industry_default' };
+  return { services: mergeServiceLists(own, std), source: 'industry_default' };
+}
+
 /**
  * Decide the services for a listing draft and write them into the two template-level copies the
- * renderer prefers (`data.services`, `data.meta.services`), stamping `meta.services_source`.
- * Declared categories win; otherwise the industry default (and a block to hold it, if missing).
- * Mutates `data`; returns what it did so a script can print it.
+ * renderer prefers (`data.services`, `data.meta.services`), stamping `meta.services_source`, and
+ * restore a block to hold them if an earlier pass removed it. Mutates `data`; returns what it did.
  */
 export function applyListingServices(
   data: any,
-  categories: unknown,
-  industryKey: string | null | undefined,
+  input: ListingServicesInput,
 ): { services: string[]; source: ServicesSource; insertedBlocks: number } {
-  const declared = cleanListingCategories(categories);
-  const source: ServicesSource = declared.length ? 'listing' : 'industry_default';
-  const services = declared.length ? declared : industryDefaultServices(industryKey);
+  const businessName = input.businessName ?? data?.meta?.business_name;
+  const { services, source } = decideListingServices({ ...input, businessName });
   data.services = services;
   data.meta = { ...(data.meta ?? {}), services, services_source: source };
-  const insertedBlocks = source === 'industry_default' ? ensureServicesBlock(data, services) : 0;
+  const insertedBlocks = ensureServicesBlock(data, services);
   return { services, source, insertedBlocks };
 }

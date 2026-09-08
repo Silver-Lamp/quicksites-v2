@@ -103,7 +103,7 @@ export async function buildDraftFromListing(input: BuildDraftInput): Promise<Bui
   // Services on a listing draft: the business's OWN declared categories when it has any, else the
   // trade's standard list — stamped `meta.services_source` so the renderer adds "call to confirm"
   // under a default list (owner decision 2026-09-08; header of lib/rebuild/listingServices.ts).
-  applyListingServices(tpl.data, spec.services, industryKey);
+  applyListingServices(tpl.data, { categories: spec.services, industryKey, businessName: spec.businessName });
 
   // Insert a claimable draft (operator-owned until the business claims it), retrying
   // slug collisions.

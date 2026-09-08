@@ -20,7 +20,7 @@ import type {
 import { parseUsAddress } from '@/lib/rebuild/parseAddress';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { typeToIndustryKey } from '@/lib/places/typeToIndustry';
-import { cleanListingCategories } from '@/lib/rebuild/listingServices';
+import { cleanListingCategories, mergeServiceLists, servicesFromName } from '@/lib/rebuild/listingServices';
 
 export type Listing = {
   name: string;
@@ -158,7 +158,10 @@ export function buildSpecFromListing(
     headline: name,
     subheadline,
     about,
-    services: displayCats,
+    // The business's own name first ("… Towing & Roadside Assistance" → Towing, Roadside
+    // Assistance), then what it declared to Google. The standard-list top-up happens later, in
+    // applyListingServices, where the industry is settled.
+    services: mergeServiceLists(servicesFromName(name, industryKey), displayCats),
     faqs: [],
     // Menu only rides food specs; a non-restaurant listing never carries one.
     menu: isRestaurant && menu?.sections?.length ? menu : undefined,

@@ -86,9 +86,14 @@ that trade has no website** (the measured rate once ten businesses have been see
 from `docs/AUTO_SHOP_VERTICAL.md`: auto repair ~50%, towing ~45%, plumbing/HVAC ~25%, roofing 3%).
 A pair swept inside the 60-day cooldown is skipped (a re-sweep dedupes on `place_id` and finds
 nothing); a pair that measured under 10% is pushed down, not out. The operator sees the ranked list
-with a reason per row and clicks "Queue these N"; priorities descend with rank so the cron drains
-them in that order, one a night. Still a person's click — the planner proposes, it never enqueues on
-its own.
+with a reason per row, a **"low yield"** tag under 15% (`LOW_YIELD_RATE`), a tick-box per row, and a
+button that says what it does: **"Add N after the M queued"**, with the night the last one would run.
+The ticked rows go in **behind** everything already queued, in plan order (`prioritiesBehind`,
+`lib/tradeSites/planQueue.ts`); already-queued pairs are skipped, never duplicated. ⚠️ The first cut
+numbered a plan `N..1` — the same range as the previous plan — so a second plan **interleaved** with
+the first and would have swept Arlington HVAC tonight ahead of the Braintree Towing a person had put
+first. A click never reorders rows a person already queued; to run a new plan first, cancel the old
+rows. Still a person's click — the planner proposes, it never enqueues on its own.
 
 **Ownership of a nightly draft**: `TRADE_PIPELINE_OPERATOR_ID` → the queue row's requester → the
 prospect's discoverer → the first `admin_users` row. Never null; an ownerless draft is invisible

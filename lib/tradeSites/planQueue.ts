@@ -41,10 +41,40 @@ export async function planTradeQueue(opts: { limit?: number; cooldownDays?: numb
   });
 }
 
-/** Write a plan into the queue, ranked: priority descends with rank so the cron drains it in order. */
-export async function enqueuePlan(plan: PlannedSweep[], requestedBy: string | null) {
-  return enqueueSweeps(
-    plan.map((p, i) => ({ city: p.city, region: p.region, category: p.category, priority: plan.length - i })),
+export type PlanRowInput = Pick<PlannedSweep, 'city' | 'region' | 'category'>;
+
+/**
+ * Priorities for a plan that must run AFTER everything already queued, in the plan's own order.
+ *
+ * ⚠️ The first version numbered a plan `length..1` — the same range the previous plan used — so a
+ * second plan interleaved with the first: Arlington HVAC (14) would have run tonight ahead of the
+ * Braintree Towing (13) the operator had already put first, and every later night alternated
+ * between the two lists. A click labelled "Queue these" must not reshuffle rows a person already
+ * ordered; if the new plan should go first, cancel the old one. So a new plan starts one below the
+ * lowest queued priority and descends from there (negative is fine — the drain orders by priority
+ * desc, then oldest).
+ */
+export function prioritiesBehind(queuedPriorities: number[], count: number): number[] {
+  const floor = queuedPriorities.length ? Math.min(...queuedPriorities) : 1;
+  return Array.from({ length: count }, (_, i) => floor - 1 - i);
+}
+
+const pairKey = (r: { city: string; region: string; category: string }) => `${r.city}|${r.region}|${r.category}`.toLowerCase().trim();
+
+/**
+ * Write a plan (or the subset of it the operator ticked) into the queue, BEHIND what is already
+ * queued and in the given order. Pairs already queued or running are skipped, not duplicated — the
+ * same city × trade twice in one night's queue is two Places bills for one answer.
+ */
+export async function enqueuePlan(rows: PlanRowInput[], requestedBy: string | null) {
+  const queue = (await listQueue(500)).filter((r) => r.status === 'queued' || r.status === 'running');
+  const queuedKeys = new Set(queue.map(pairKey));
+  const fresh = rows.filter((r) => !queuedKeys.has(pairKey(r)));
+  const skippedQueued = rows.length - fresh.length;
+  const priorities = prioritiesBehind(queue.map((r) => r.priority), fresh.length);
+  const result = await enqueueSweeps(
+    fresh.map((p, i) => ({ city: p.city, region: p.region, category: p.category, priority: priorities[i] })),
     requestedBy,
   );
+  return { ...result, skippedQueued, queuedAhead: queue.length };
 }

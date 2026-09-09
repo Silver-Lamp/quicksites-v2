@@ -73,6 +73,10 @@
       "schedule": "0 6 * * *"
     },
     {
+      "path": "/api/cron/trade-site-mail",
+      "schedule": "27 20 * * *"
+    },
+    {
       "path": "/api/cron/gsc-backfill",
       "schedule": "0 7 * * *"
     },

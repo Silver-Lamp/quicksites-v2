@@ -105,6 +105,18 @@ describe('wiring', () => {
     expect(read('vercel.json')).toMatch(/"\/api\/cron\/trade-site-pipeline"/);
     expect(read('app/api/cron/trade-site-pipeline/route.ts')).toMatch(/pipelineEnabled\(\)/);
   });
+  it('the afternoon mail-only cron is registered after the window clears, flag-gated, and never sweeps or builds', () => {
+    const vercel = read('vercel.json');
+    expect(vercel).toMatch(/"\/api\/cron\/trade-site-mail"/);
+    // 20:27 UTC = 13:27 PT — the previous afternoon's builds (≈19:50–20:20 UTC) are past 24h.
+    expect(vercel).toMatch(/"\/api\/cron\/trade-site-mail",\s*"schedule": "27 20 \* \* \*"/);
+    const route = read('app/api/cron/trade-site-mail/route.ts');
+    expect(route).toMatch(/pipelineEnabled\(\)/);
+    expect(route).toMatch(/mailEnabled\(\)/);
+    expect(route).toMatch(/maxSweeps: 0, maxBuilds: 0/);
+    expect(route).toMatch(/429\|rate limit\|too many requests/);
+    expect(read('.env.example')).toMatch(/^TRADE_MAIL_AFTERNOON_MAX=/m);
+  });
   it('the discover route and the cron run the same sweep', () => {
     expect(read('app/api/admin/prospects/discover/route.ts')).toMatch(/runSweep\(/);
     expect(read('lib/tradeSites/pipeline.ts')).toMatch(/runSweep\(/);

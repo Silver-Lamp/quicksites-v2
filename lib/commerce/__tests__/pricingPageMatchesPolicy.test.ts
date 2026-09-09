@@ -22,7 +22,11 @@ const page = readFileSync(join(process.cwd(), 'app/pricing/page.tsx'), 'utf8');
 
 describe('/pricing cannot drift from the fee policy', () => {
   it('imports the rates instead of restating them', () => {
-    expect(page).toContain("from '@/lib/commerce/pricingPolicy'");
+    // pricingDefaults is the pure half of pricingPolicy (same constants, re-exported). The page must
+    // import THAT one: pricingPolicy also pulls in the service-role client, which threw
+    // "supabaseKey is required" in the browser and took /pricing down.
+    expect(page).toContain("from '@/lib/commerce/pricingDefaults'");
+    expect(page).not.toContain("from '@/lib/commerce/pricingPolicy'");
     // The literal that caused this: a private copy of the general rate.
     // ⚠️ Anchored to line start on purpose — the unanchored version matched the COMMENT in
     // page.tsx that quotes the old declaration to explain why it was removed. A test that

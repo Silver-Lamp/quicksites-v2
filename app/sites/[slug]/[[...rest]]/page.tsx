@@ -9,6 +9,7 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { pickTemplateForBase } from '@/lib/sites/baseSlug';
 import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
@@ -171,11 +172,24 @@ const loadSiteRowBySlugOrTemplate = cache(async (slug: string): Promise<SiteRow 
   if (legacy) return legacy;
 
   // 2) template by slug
-  const tpl = await supabaseAdmin
+  let tpl = await supabaseAdmin
     .from('templates')
     .select('id, slug, data, domain')
     .eq('slug', slug)
     .maybeSingle();
+
+  // 2b) bare base slug — `grandstead-towing-service` for `grandstead-towing-service-5v2qe`. The
+  // newest PUBLISHED template for that base, else the newest draft (lib/sites/baseSlug.ts). An
+  // exact slug always wins above; this only runs when nothing owns the slug outright.
+  if (!tpl.error && !tpl.data) {
+    const fam = await supabaseAdmin
+      .from('templates')
+      .select('id, slug, data, domain, base_slug, business_name, published, created_at')
+      .eq('base_slug', slug)
+      .limit(50);
+    const pick = !fam.error && Array.isArray(fam.data) ? pickTemplateForBase(fam.data as any[]) : null;
+    if (pick) tpl = { data: pick, error: null } as typeof tpl;
+  }
 
   if (tpl.error || !tpl.data) return null;
 

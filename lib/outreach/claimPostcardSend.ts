@@ -11,6 +11,7 @@ import { recordMailing } from '@/lib/outreach/mail/mailings';
 import { getTestRecipient } from '@/lib/outreach/mail/testRecipient';
 import { markOutreachSent, type Prospect } from '@/lib/outreach/prospects';
 import { publicSiteUrl } from '@/lib/sites/publicUrl';
+import { printableSlug, type BaseSlugRow } from '@/lib/sites/baseSlug';
 import { tradeSiteBaseUrl } from '@/lib/tradeSites/config';
 import { buildClaimPostcardModel, renderClaimPostcardFront, renderClaimPostcardBack, isMailableProspect, draftHasOperationalClaims } from './claimPostcard';
 
@@ -80,18 +81,28 @@ export async function selectMailableDrafts(opts: SelectOptions = {}): Promise<Ma
   const ids = prospects.map((p) => p.template_id!);
   const { data: tpls, error: tErr } = await db()
     .from('templates')
-    .select('id, slug, custom_domain, claim_source, owner_id, created_at, data')
+    .select('id, slug, base_slug, business_name, published, custom_domain, claim_source, owner_id, created_at, data')
     .in('id', ids);
   if (tErr) throw new Error(`selectMailableDrafts templates: ${tErr.message}`);
   const byId = new Map<string, any>((tpls ?? []).map((t: any) => [t.id, t]));
   const cutoff = opts.minAgeHours ? Date.now() - opts.minAgeHours * 3600_000 : null;
+
+  // The card prints the BARE host (`grandstead-towing-service.quicksites.ai`) when it is safe to —
+  // every template sharing the base is this same business and the bare host resolves to this
+  // template (lib/sites/baseSlug.ts). Otherwise the tailed slug. preflightSiteUrl then fetches
+  // whichever URL is printed, so a bare host that does not answer never reaches paper.
+  const bases = [...new Set((tpls ?? []).map((t: any) => t.base_slug).filter(Boolean))] as string[];
+  const { data: sibs } = bases.length
+    ? await db().from('templates').select('id, slug, base_slug, business_name, published, created_at').in('base_slug', bases)
+    : { data: [] as any[] };
+  const siblings = (sibs ?? []) as BaseSlugRow[];
 
   const out: MailableDraft[] = [];
   for (const p of prospects) {
     const t = byId.get(p.template_id!);
     if (!t) continue;
     if (cutoff && new Date(t.created_at).getTime() > cutoff) continue; // too fresh for the cron
-    const siteUrl = publicSiteUrl({ custom_domain: t.custom_domain, slug: t.slug });
+    const siteUrl = publicSiteUrl({ custom_domain: t.custom_domain, slug: printableSlug(t as BaseSlugRow, siblings) });
     if (!siteUrl) continue;
     let blocked: MailableDraft['blocked'] = null;
     if (t.claim_source !== 'listing_import') blocked = 'not_a_listing_draft';

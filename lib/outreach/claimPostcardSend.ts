@@ -219,6 +219,9 @@ export async function sendClaimPostcards(opts: SendOptions): Promise<SendReport>
       report.results.push({ prospectId: p.id, businessName: p.business_name, ok: true, lobId: r.id, expectedDelivery: r.expectedDeliveryDate });
     } catch (e: any) {
       report.failed++;
+      // Logged, not just returned: a refusal from Lob was invisible in the runtime logs (the route
+      // answered 200 with the message buried in results[]), so nothing could be read after the fact.
+      console.warn(`[claim-postcards] ${opts.test ? 'test ' : ''}send failed for ${d.slug} (${p.business_name}): ${e?.message || e}`);
       report.results.push({ prospectId: p.id, businessName: p.business_name, ok: false, error: e?.message || 'send_failed' });
     }
     if (opts.test) break;

@@ -3,7 +3,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { orderQueue, isBuildable, pipelineCaps, pipelineEnabled } from '@/lib/tradeSites/pipeline';
+import { orderQueue, isBuildable, pipelineCaps, pipelineEnabled, parsePipelineOverrides, OVERRIDE_LIMITS } from '@/lib/tradeSites/pipeline';
 import { SWEEP_CATEGORIES, resolveSweepCategory, sweepArgsFor } from '@/lib/prospects/sweepCategories';
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
@@ -32,6 +32,28 @@ describe('what the cron builds', () => {
     ['unknown industry — the guess defaults to restaurant, so never build blind', { ...base, industry_key: null }],
   ])('never: %s', (_why, p) => {
     expect(isBuildable(p as any)).toBe(false);
+  });
+});
+
+describe('a manual run can override the caps — clamped, zero allowed, never the review window', () => {
+  it('parses and clamps each override independently', () => {
+    expect(parsePipelineOverrides({ maxSweeps: 0, maxBuilds: 0, maxMail: 25 })).toEqual({ maxSweeps: 0, maxBuilds: 0, maxMail: 25 });
+    expect(parsePipelineOverrides({ maxMail: 999 })).toEqual({ maxMail: OVERRIDE_LIMITS.maxMail });
+    expect(parsePipelineOverrides({ maxSweeps: -3, maxBuilds: '12.9' })).toEqual({ maxSweeps: 0, maxBuilds: 12 });
+    expect(parsePipelineOverrides({ maxMail: 'lots' })).toEqual({});
+    expect(parsePipelineOverrides(null)).toEqual({});
+    expect(parsePipelineOverrides('x')).toEqual({});
+  });
+  it('the mail ceiling equals the per-send cap, so a run can never exceed one send', () => {
+    expect(OVERRIDE_LIMITS.maxMail).toBe(25);
+  });
+  it('the route applies overrides on POST only; the scheduled GET keeps the env caps; the 24h window is not a knob', () => {
+    const route = readFileSync('app/api/cron/trade-site-pipeline/route.ts', 'utf8');
+    expect(route).toMatch(/export async function POST[\s\S]*parsePipelineOverrides\(body\)/);
+    expect(route).toMatch(/export async function GET\(req: NextRequest\) \{\s*return handle\(req\);/);
+    const pipeline = readFileSync('lib/tradeSites/pipeline.ts', 'utf8');
+    expect(pipeline).toMatch(/minAgeHours: caps\.minAgeHours/);
+    expect(pipeline).not.toMatch(/minAgeHours: opts\./);
   });
 });
 

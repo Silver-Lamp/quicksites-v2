@@ -12,13 +12,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { runCron } from '@/lib/cron/record';
 import { isCronAuthorized } from '@/lib/cron/auth';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
-import { pipelineEnabled, pipelineCaps, runTradePipeline } from '@/lib/tradeSites/pipeline';
+import { pipelineEnabled, pipelineCaps, runTradePipeline, parsePipelineOverrides, type PipelineOptions } from '@/lib/tradeSites/pipeline';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
-async function handle(req: NextRequest) {
+async function handle(req: NextRequest, overrides: Pick<PipelineOptions, 'maxSweeps' | 'maxBuilds' | 'maxMail'> = {}) {
   const admin = await getAdminUser();
   if (!isCronAuthorized(req) && !admin) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
@@ -26,7 +26,7 @@ async function handle(req: NextRequest) {
     if (!pipelineEnabled()) {
       return NextResponse.json({ ok: true, skipped: 'disabled', detail: 'Set TRADE_PIPELINE_ENABLED=1 to sweep the queue and build drafts nightly.', caps: pipelineCaps() });
     }
-    const report = await runTradePipeline({ operatorId: admin?.id ?? null });
+    const report = await runTradePipeline({ operatorId: admin?.id ?? null, ...overrides });
     const sample = report.builds.results.filter((r) => r.ok).slice(0, 3).map((r) => r.slug);
     return NextResponse.json({
       ok: true,
@@ -45,9 +45,15 @@ async function handle(req: NextRequest) {
   });
 }
 
+/** Vercel's scheduled call: env caps only. */
 export async function GET(req: NextRequest) {
   return handle(req);
 }
+/**
+ * A manual run may carry `{ maxSweeps, maxBuilds, maxMail }` (each clamped, zero allowed) — so an
+ * operator can mail a day's volume without sweeping one more city per pass. Same auth as GET.
+ */
 export async function POST(req: NextRequest) {
-  return handle(req);
+  const body = await req.json().catch(() => ({}));
+  return handle(req, parsePipelineOverrides(body));
 }

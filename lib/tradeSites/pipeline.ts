@@ -41,9 +41,34 @@ export type SweepQueueRow = {
 export type PipelineOptions = {
   maxSweeps?: number;
   maxBuilds?: number;
+  /** Cards this run may mail (still capped by MAX_POSTCARD_PIECES_PER_SEND and the mail gates). */
+  maxMail?: number;
   /** Overrides every other operator resolution — used by an admin's manual run. */
   operatorId?: string | null;
 };
+
+/** Hard ceilings for a per-run override — a typo in a request body cannot become a fleet. */
+export const OVERRIDE_LIMITS = { maxSweeps: 10, maxBuilds: 50, maxMail: 25 } as const;
+
+/**
+ * Per-run overrides from a POST body: `{ maxSweeps, maxBuilds, maxMail }`, each optional, each
+ * clamped to [0, limit]. Zero is meaningful — `{ maxSweeps: 0, maxBuilds: 0, maxMail: 25 }` is a
+ * MAIL-ONLY pass, which is how a day's volume goes out without draining the city queue one row per
+ * click (the first manual passes swept Brookline and Chelsea as a side effect of mailing).
+ * Anything absent or non-numeric leaves the env cap in force.
+ */
+export function parsePipelineOverrides(body: unknown): Pick<PipelineOptions, 'maxSweeps' | 'maxBuilds' | 'maxMail'> {
+  const out: Pick<PipelineOptions, 'maxSweeps' | 'maxBuilds' | 'maxMail'> = {};
+  if (!body || typeof body !== 'object') return out;
+  for (const key of ['maxSweeps', 'maxBuilds', 'maxMail'] as const) {
+    const raw = (body as Record<string, unknown>)[key];
+    if (raw === undefined || raw === null || raw === '') continue;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) continue;
+    out[key] = Math.max(0, Math.min(OVERRIDE_LIMITS[key], Math.floor(n)));
+  }
+  return out;
+}
 
 export type PipelineReport = {
   sweeps: Array<{ id: string; city: string; region: string; category: string; ok: boolean; found?: number; noWebsite?: number; inserted?: number; error?: string }>;
@@ -231,7 +256,7 @@ export async function runTradePipeline(opts: PipelineOptions = {}): Promise<Pipe
   };
   await drainSweeps(maxSweeps, opts.operatorId, report);
   await buildDrafts(maxBuilds, opts.operatorId, report);
-  await mailClaimPostcards(opts.operatorId ?? null, report);
+  await mailClaimPostcards(opts.operatorId ?? null, report, opts.maxMail);
   return report;
 }
 
@@ -241,10 +266,13 @@ export async function runTradePipeline(opts: PipelineOptions = {}): Promise<Pipe
  * LOB_* inside sendClaimPostcards — because this is the step that spends postage on a stranger.
  * A draft with an operational claim is blocked at send, never mailed, and counted.
  */
-async function mailClaimPostcards(sentBy: string | null, report: PipelineReport) {
+async function mailClaimPostcards(sentBy: string | null, report: PipelineReport, maxMailOverride?: number) {
   const caps = mailCaps();
-  if (!caps.enabled || caps.maxMail <= 0) return;
+  const maxMail = maxMailOverride ?? caps.maxMail;
+  if (!caps.enabled || maxMail <= 0) return;
+  // The 24h review window is NOT overridable here on purpose: a card goes to a draft a person
+  // has had a day to look at, whatever the run's volume.
   const drafts = await selectMailableDrafts({ minAgeHours: caps.minAgeHours, limit: 100 });
-  const sent = await sendClaimPostcards({ drafts, sentBy, max: caps.maxMail });
+  const sent = await sendClaimPostcards({ drafts, sentBy, max: maxMail });
   report.mail = { ...sent, candidates: drafts.length };
 }

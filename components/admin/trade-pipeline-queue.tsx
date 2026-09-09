@@ -173,7 +173,14 @@ export default function TradePipelineQueue() {
     try {
       const r = await fetch('/api/admin/prospects/mail-claim-postcards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ test, limit: mail?.cron.maxMail ?? 10 }) });
       const j = await r.json().catch(() => ({}));
-      setMailMsg(!r.ok ? `Refused: ${j?.error || r.status}` : `${test ? 'Test card' : 'Mailed'}: ${j.mailed} sent, ${j.blocked} blocked, ${j.failed} failed.`);
+      // ⚠️ Say WHY. This used to print "0 sent, 0 blocked, 1 failed" and drop the error string the
+      // server had put in results[] — so a Lob refusal the night before the first real send read
+      // as "test card send failing" with nothing to act on.
+      const failures: string[] = Array.isArray(j?.results)
+        ? j.results.filter((x: any) => x && x.ok === false).map((x: any) => `${x.businessName ?? x.prospectId}: ${x.error ?? x.skipped ?? 'failed'}`)
+        : [];
+      const why = failures.length ? ` — ${failures.slice(0, 3).join(' · ')}${failures.length > 3 ? ` (+${failures.length - 3} more)` : ''}` : '';
+      setMailMsg(!r.ok ? `Refused: ${j?.error || r.status}` : `${test ? 'Test card' : 'Mailed'}: ${j.mailed} sent, ${j.blocked} blocked, ${j.failed} failed${why}.`);
       await loadMail();
     } finally {
       setBusy(false);

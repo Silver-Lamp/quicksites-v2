@@ -15,6 +15,17 @@ export const MAX_POSTCARD_PIECES_PER_SEND = 25;
 export function lobConfigured(): boolean {
   return !!process.env.LOB_API_KEY;
 }
+
+/**
+ * Lob keys are `test_…` or `live_…`. A test key ACCEPTS every request, returns a real-looking
+ * `psc_…` id and a thumbnail, and prints nothing — so a real send with a test key marks every
+ * prospect mailed while no card exists. ⚠️ That is exactly where production sat the night of the
+ * first real send: the proofs "looked good on Lob" and were all in the test queue. A real send
+ * must refuse a test key; a test card may use either.
+ */
+export function lobKeyIsTest(): boolean {
+  return /^test_/i.test(String(process.env.LOB_API_KEY ?? ''));
+}
 export function postcardMailEnabled(): boolean {
   return (process.env.POSTCARD_MAIL_ENABLED === '1' || process.env.POSTCARD_MAIL_ENABLED === 'true') && lobConfigured();
 }

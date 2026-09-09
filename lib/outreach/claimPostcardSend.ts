@@ -6,7 +6,7 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getSenderProfile, senderProfileReady } from '@/lib/outreach/senderProfile';
 import { resolveCampaignBrand, defaultOutreachOrgSlug } from '@/lib/outreach/campaignBrand';
-import { sendPostcard, parseUsAddress, postcardMailEnabled, lobConfigured, MAX_POSTCARD_PIECES_PER_SEND } from '@/lib/outreach/mail/lob';
+import { sendPostcard, parseUsAddress, postcardMailEnabled, lobConfigured, lobKeyIsTest, MAX_POSTCARD_PIECES_PER_SEND } from '@/lib/outreach/mail/lob';
 import { recordMailing } from '@/lib/outreach/mail/mailings';
 import { getTestRecipient } from '@/lib/outreach/mail/testRecipient';
 import { markOutreachSent, type Prospect } from '@/lib/outreach/prospects';
@@ -166,6 +166,9 @@ export async function sendClaimPostcards(opts: SendOptions): Promise<SendReport>
   const report: SendReport = { attempted: 0, mailed: 0, blocked: 0, failed: 0, results: [] };
   if (!lobConfigured()) return { ...report, reason: 'lob_not_configured' };
   if (!postcardMailEnabled()) return { ...report, reason: 'postcard_mail_disabled' };
+  // A test key would "succeed" into Lob's test queue and mark every prospect mailed with no card
+  // printed — the fails-open class. Real sends refuse it; a test card may still use it.
+  if (!opts.test && lobKeyIsTest()) return { ...report, reason: 'lob_test_key' };
   const profile = await getSenderProfile();
   if (!opts.test && !senderProfileReady(profile)) return { ...report, reason: 'sender_profile_incomplete' };
   const testTo = opts.test ? await getTestRecipient() : null;

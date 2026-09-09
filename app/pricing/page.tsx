@@ -60,7 +60,7 @@ import {
   GENERAL_FEE_PERCENT,
   RESTAURANT_FEE_PERCENT,
   RESTAURANT_FEE_MIN_CENTS,
-} from '@/lib/commerce/pricingPolicy';
+} from '@/lib/commerce/pricingDefaults'; // pure — pricingPolicy pulls in the server-only admin client
 
 const ORDER_FEE_PCT = GENERAL_FEE_PERCENT; // most storefronts
 const FOOD_FEE_PCT = RESTAURANT_FEE_PERCENT; // any site with a menu block

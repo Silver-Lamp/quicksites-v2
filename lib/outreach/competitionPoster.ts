@@ -64,6 +64,8 @@ export type PostcardSender = {
   /** Remote or data URL — Lob fetches remote images when it renders the HTML. */
   headshotUrl?: string | null;
   signatureUrl?: string | null;
+  /** "Prefer to talk? Book 15 minutes" — a scheduling link (https only), printed beside the email. */
+  bookingUrl?: string | null;
 };
 
 export type PosterModel = {
@@ -186,6 +188,8 @@ export function senderFromProfile(profile: SenderProfile, brandName?: string | n
     email: profile.email,
     headshotUrl: safe(profile.headshotUrl),
     signatureUrl: safe(profile.signatureUrl),
+    // Printed on paper and opened cold: https or nothing.
+    bookingUrl: /^https:\/\/\S+$/i.test(String(profile.bookingUrl ?? '')) ? profile.bookingUrl : null,
   };
 }
 

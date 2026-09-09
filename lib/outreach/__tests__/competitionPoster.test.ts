@@ -157,7 +157,7 @@ describe('senderFromProfile', () => {
   const profile: SenderProfile = {
     name: 'Sandon Jurowski', title: 'Founder', email: 'sandon@pointsevenstudio.com',
     headshotUrl: 'https://x/face.jpg', signatureUrl: 'https://x/sig.png',
-    city: 'Renton', state: 'WA', lat: 47.48, lng: -122.2,
+    city: 'Renton', state: 'WA', lat: 47.48, lng: -122.2, bookingUrl: null,
   };
 
   it('maps a profile to a postcard sender for the default brand', () => {

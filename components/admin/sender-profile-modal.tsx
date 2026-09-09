@@ -19,10 +19,12 @@ export type SenderProfile = {
   state: string | null;
   lat: number | null;
   lng: number | null;
+  /** Scheduling link (Calendly) — "Prefer to talk? Book 15 minutes" on the card, claim and welcome pages. */
+  bookingUrl: string | null;
 };
 
 const EMPTY: SenderProfile = {
-  name: '', title: '', email: '', headshotUrl: '', signatureUrl: '', city: '', state: '', lat: null, lng: null,
+  name: '', title: '', email: '', headshotUrl: '', signatureUrl: '', city: '', state: '', lat: null, lng: null, bookingUrl: '',
 };
 
 function Field({
@@ -76,6 +78,7 @@ export default function SenderProfileModal({
           state: p.state || null,
           lat: p.lat ?? null,
           lng: p.lng ?? null,
+          bookingUrl: p.bookingUrl || null,
         }),
       });
       const j = await res.json();
@@ -108,6 +111,10 @@ export default function SenderProfileModal({
           <div className="sm:col-span-2">
             <Field label="Contact email" type="email" value={p.email ?? ''} onChange={set('email')} placeholder="you@studio.com"
               hint="Printed as “Questions? …” on the card and shown on the claim page." />
+          </div>
+          <div className="sm:col-span-2">
+            <Field label="Booking link (optional)" type="url" value={p.bookingUrl ?? ''} onChange={set('bookingUrl')} placeholder="https://calendly.com/you/15min"
+              hint="Printed as “Prefer to talk? Book 15 minutes” beside your email, and linked on the claim + welcome pages. A calendar with a face behind it is the strongest “real person” signal a cold card can carry. Leave blank to use NEXT_PUBLIC_CALENDLY_URL." />
           </div>
           <div className="sm:col-span-2">
             <SenderImageField

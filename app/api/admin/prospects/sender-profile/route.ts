@@ -53,6 +53,7 @@ export async function POST(req: Request) {
     state: body.state ?? null,
     lat: body.lat ?? null,
     lng: body.lng ?? null,
+    bookingUrl: body.bookingUrl ?? null,
   };
   try {
     await setSenderProfile(input, operator.id);

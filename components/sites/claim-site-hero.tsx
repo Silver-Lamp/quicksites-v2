@@ -17,6 +17,7 @@ export default function ClaimSiteHero({
   brandName,
   brandLogoUrl,
   contactEmail,
+  bookingUrl = null,
   feePercent,
   demandCount = 0,
   competition = false,
@@ -40,6 +41,8 @@ export default function ClaimSiteHero({
   brandLogoUrl?: string | null;
   /** "Questions? email us" contact, so a prospect can reach a human before claiming. */
   contactEmail?: string | null;
+  /** "Or book 15 minutes" — a scheduling link; a calendar with a face behind it beats an inbox. */
+  bookingUrl?: string | null;
   /** Menu-ordering sites: the concrete take-rate (e.g. 8) → states "keep {100-fee}%, no monthly". Null → generic copy. */
   feePercent?: number | null;
   /** Real order-intent already logged on this preview — the count (never PII) is the sharpest reason to claim now. */
@@ -141,12 +144,25 @@ export default function ClaimSiteHero({
       <p className="mt-2 text-sm text-zinc-500">
         Claiming creates your account and makes this site yours to edit and publish.
       </p>
-      {contactEmail && (
+      {(contactEmail || bookingUrl) && (
         <p className="mt-6 text-sm text-zinc-500">
-          Questions? Email{' '}
-          <a href={`mailto:${contactEmail}`} className="text-sky-400 underline underline-offset-4">
-            {contactEmail}
-          </a>
+          {contactEmail && (
+            <>
+              Questions? Email{' '}
+              <a href={`mailto:${contactEmail}`} className="text-sky-400 underline underline-offset-4">
+                {contactEmail}
+              </a>
+            </>
+          )}
+          {contactEmail && bookingUrl && <>{' '}· </>}
+          {bookingUrl && (
+            <>
+              Prefer to talk?{' '}
+              <a href={bookingUrl} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline underline-offset-4">
+                Book 15 minutes
+              </a>
+            </>
+          )}
         </p>
       )}
     </main>

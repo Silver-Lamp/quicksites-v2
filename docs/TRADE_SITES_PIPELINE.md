@@ -128,6 +128,15 @@ mechanic stays out of the message), and **no printed price** (a number on paper 
 env). What it says instead is what is true by construction: built from the public listing, free,
 yours to edit, your own .com is the one thing we charge for.
 
+**Volume (2026-09-09).** The 06:00 UTC pass mails 10; a second cron, **`/api/cron/trade-site-mail` at
+20:27 UTC** (13:27 PT, when the previous afternoon's builds have cleared the 24h window), mails
+whatever else is eligible in passes of 25, up to `TRADE_MAIL_AFTERNOON_MAX` a day (default 50, hard
+max 100), stopping on an empty pool or anything that looks like a Lob 429. It **sweeps nothing and
+builds nothing** — volume never drains the city queue. A manual `POST /api/cron/trade-site-pipeline`
+also accepts clamped `{maxSweeps, maxBuilds, maxMail}` (zero allowed). ⚠️ The 24h review window is
+not a knob on either path. ⚠️ **A Lob `test_` key is refused for a real send** (`lobKeyIsTest`) —
+production ran one for a night and "mailed" 10 cards into Lob's test queue.
+
 **Three gates before postage**: `TRADE_PIPELINE_MAIL_ENABLED` (the cron step), `POSTCARD_MAIL_ENABLED`
 + `LOB_*` (the same kill-switch as the operator button), and a **sender profile with name + email**
 (a prospect must be able to reach a human). Plus two per-draft gates: a draft carrying an

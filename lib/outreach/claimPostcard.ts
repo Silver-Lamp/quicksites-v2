@@ -17,7 +17,23 @@
 // about SMS to a phone that may be wrong or forwarded. A card mailed to the listing's street
 // address is the channel Google itself uses to prove control of a Business Profile. It goes
 // there and nowhere else.
-import { qrDataUrlFor, postcardBenefits, resolveLocalityLine, senderFromProfile, type PostcardSender } from '@/lib/outreach/competitionPoster';
+import { qrDataUrlFor, resolveLocalityLine, senderFromProfile, type PostcardSender } from '@/lib/outreach/competitionPoster';
+
+/**
+ * ⚠️ The claim card's three bullets are the SAME for every trade, on purpose. `postcardBenefits`
+ * (the competition poster's per-vertical set) promises what the VERTICAL will do — for auto repair
+ * "show customers the actual problem, a photo and the tech's note" is the SecondSet capture flow,
+ * flag-OFF and not on any draft; for estimator trades "a free instant estimate" is a block the
+ * draft may not carry. A card describes the site that exists on the day it is mailed. These three
+ * are true of every claimed listing draft: it is live at its own address, the contact form works,
+ * there is nothing to install. The forbidden-word test cannot see a feature that is not there;
+ * this constant is how it stays out.
+ */
+export const CLAIM_CARD_BENEFITS: readonly string[] = [
+  'A real website at your own address — live in minutes',
+  'Request a quote or call you in one tap',
+  'Nothing to install, nothing to maintain',
+];
 import type { SenderProfile } from '@/lib/outreach/senderProfile';
 import type { Prospect } from '@/lib/outreach/prospects';
 import type { IndustryKey } from '@/lib/industries';
@@ -129,7 +145,7 @@ export async function buildClaimPostcardModel(input: {
     siteUrl: input.siteUrl,
     claimUrl,
     qrDataUrl: await qrDataUrlFor(claimUrl),
-    benefits: industryKey ? postcardBenefits(industryKey).slice(0, 3) : [],
+    benefits: [...CLAIM_CARD_BENEFITS],
     sender,
     brandName: input.brandName ?? null,
     localLine,
@@ -141,9 +157,11 @@ function esc(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] as string);
 }
 
-/** 6×9 front: the business's name, where the site is, and a QR. Nothing else. */
+/** 6×9 front: the business's name, where the site is, what it does for them, and a QR. */
 export function renderClaimPostcardFront(m: ClaimPostcardModel): string {
   const host = printableHost(m.siteUrl);
+  const benefitsHtml = m.benefits.length ? `<ul class="benefits">${m.benefits.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : '';
+  const long = m.businessName.trim().length > 26;
   return `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
@@ -151,29 +169,44 @@ export function renderClaimPostcardFront(m: ClaimPostcardModel): string {
   html,body { background:#fff; }
   /* ⚠️ LANDSCAPE. Lob's "6x9" postcard is 9.25in wide × 6.25in tall including bleed. The first
      proof (2026-09-08) was authored portrait: the copy sat in the left two-thirds and the bottom
-     was cut off. Text column on the left, QR column on the right, everything inside a .25in safe zone. */
-  .card { position:relative; width:9.25in; height:6.25in; margin:0 auto; padding:.5in 3.4in .45in .6in; background:#0b1020; color:#fff;
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; display:flex; flex-direction:column; }
+     was cut off. Text column on the left, QR column on the right, everything inside a .25in safe zone.
+     ⚠️ POSITION, DON'T FLEX. Lob's renderer honoured the absolutely-positioned QR column and ignored
+     margin-top:auto on the fine print, which sat under the copy and left the bottom half empty
+     (second proof, 2026-09-09). Anything that must sit at an edge is positioned; the copy flows. */
+  .card { position:relative; width:9.25in; height:6.25in; margin:0 auto; padding:.5in 3.4in .5in .6in; background:#0b1020; color:#fff;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
   .kicker { font-size:11pt; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#5eead4; }
-  .h { margin-top:.12in; font-size:26pt; font-weight:800; line-height:1.08; }
+  .h { margin-top:.14in; font-size:33pt; font-weight:800; line-height:1.06; }
   .h b { color:#5eead4; }
-  .sub { margin-top:.16in; font-size:12.5pt; color:#cbd5e1; line-height:1.4; max-width:4.7in; }
-  .host { margin-top:.1in; font-size:14pt; font-weight:700; color:#fff; word-break:break-all; }
-  .alt { margin-top:.06in; font-size:10.5pt; font-style:italic; color:#94a3b8; }
-  .qrwrap { position:absolute; right:.55in; top:.5in; bottom:.45in; width:2.5in; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.16in; text-align:center; }
+  .sub { margin-top:.22in; font-size:13.5pt; color:#cbd5e1; line-height:1.45; max-width:4.9in; }
+  /* Break at the hyphens, never mid-word: "…assistance.quicksit / es.ai" was the second proof. */
+  .host { margin-top:.18in; font-size:16pt; font-weight:700; color:#fff; overflow-wrap:anywhere; word-break:normal; }
+  .alt { margin-top:.07in; font-size:10.5pt; font-style:italic; color:#94a3b8; }
+  .benefits { margin:.32in 0 0 .02in; padding:0; list-style:none; max-width:4.9in; }
+  .benefits li { position:relative; padding-left:.3in; margin:.12in 0; font-size:13pt; color:#e2e8f0; font-weight:600; line-height:1.3; }
+  /* A long business name ("Ferry Street Towing & Roadside Assistance", 41 chars) wraps the headline
+     to three lines and pushed the third bullet into the fine print. Scale, don't overflow. */
+  .card.long .h { font-size:26pt; }
+  .card.long .sub { margin-top:.16in; font-size:12.5pt; }
+  .card.long .host { margin-top:.14in; font-size:14pt; }
+  .card.long .benefits { margin-top:.22in; }
+  .card.long .benefits li { margin:.08in 0; font-size:12pt; }
+  .benefits li::before { content:"✓"; position:absolute; left:0; color:#5eead4; font-weight:800; }
+  .qrwrap { position:absolute; right:.55in; top:.5in; bottom:.5in; width:2.5in; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.16in; text-align:center; }
   .qr { width:2.2in; height:2.2in; background:#fff; padding:.1in; border-radius:.12in; }
   .qr img { width:100%; height:100%; display:block; }
   .scan { font-size:11pt; color:#cbd5e1; line-height:1.4; max-width:2.6in; }
   .scan b { color:#fff; }
-  .fine { margin-top:auto; padding-top:.15in; font-size:8.5pt; color:#94a3b8; line-height:1.35; }
+  .fine { position:absolute; left:.6in; right:3.4in; bottom:.5in; font-size:8.5pt; color:#94a3b8; line-height:1.35; }
   @media print { @page { size:9.25in 6.25in; margin:0; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
 </style></head>
-<body><div class="card">
+<body><div class="card${long ? ' long' : ''}">
   <div class="kicker">${esc(m.businessName)}</div>
   <div class="h">We built <b>${esc(m.businessName)}</b> a website.</div>
   <div class="sub">It’s already online — built from your public listing: name, phone, address and hours.</div>
   <div class="host">${esc(host)}</div>
   <div class="alt">Prefer something simpler, like yourbusiness.com? That’s one step away once it’s yours.</div>
+  ${benefitsHtml}
   <div class="qrwrap">
     <div class="scan"><b>Scan to see it and claim it.</b><br/>Free. Yours to edit. No card needed.</div>
     <div class="qr"><img src="${m.qrDataUrl}" alt="QR code" /></div>
@@ -186,7 +219,8 @@ export function renderClaimPostcardFront(m: ClaimPostcardModel): string {
 export function renderClaimPostcardBack(m: ClaimPostcardModel): string {
   const host = printableHost(m.siteUrl);
   const trade = m.industryKey ? m.industryKey.replace(/_/g, ' ') : 'local service';
-  const benefitsHtml = m.benefits.length ? `<ul class="benefits">${m.benefits.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : '';
+  // The three benefit bullets moved to the FRONT (2026-09-09): here they pushed the sign-off —
+  // face, signature, name, email, booking line — off the bottom edge on the second proof.
   const s = m.sender;
   const signOff = s
     ? `<div class="sender">
@@ -209,18 +243,18 @@ export function renderClaimPostcardBack(m: ClaimPostcardModel): string {
   html,body { background:#fff; }
   /* Landscape 9.25in × 6.25in. Our copy stays in the LEFT 4.6in; Lob overlays the address block and
      postage on the right, so the right side is left clear on purpose. */
-  .back { width:9.25in; height:6.25in; margin:0 auto; padding:.45in .5in .4in .55in; color:#0b1020; display:flex; flex-direction:column;
+  .back { position:relative; width:9.25in; height:6.25in; margin:0 auto; padding:.45in .5in .4in .55in; color:#0b1020; display:flex; flex-direction:column;
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
   .hi { font-size:12pt; font-weight:700; color:#0f766e; }
   .p { margin-top:.12in; font-size:11.5pt; color:#334155; max-width:4.6in; line-height:1.4; }
   .p b { color:#0b1020; }
   .u { margin-top:.12in; font-size:10.5pt; color:#0f766e; word-break:break-all; }
-  .benefits { margin:.14in 0 0 .02in; padding:0; list-style:none; max-width:4.6in; }
-  .benefits li { position:relative; padding-left:.26in; margin:.06in 0; font-size:11pt; color:#0f172a; font-weight:600; line-height:1.3; }
-  .benefits li::before { content:"✓"; position:absolute; left:0; color:#0f766e; font-weight:800; }
   .exit { margin-top:.14in; font-size:10.5pt; color:#334155; max-width:4.6in; line-height:1.4; }
-  .sig { margin-top:.16in; font-size:10.5pt; color:#334155; font-weight:600; }
-  .sender { margin-top:.14in; display:flex; align-items:center; gap:.14in; }
+  /* ⚠️ POSITIONED, NOT FLOWED. The sign-off is pinned to the bottom of the LEFT column so it can
+     never be pushed off the edge by the copy above it (second proof, 2026-09-09: the booking line
+     was cut off). Lob's renderer honours absolute positioning; it ignored the flex spacer. */
+  .sig { position:absolute; left:.55in; bottom:.45in; font-size:10.5pt; color:#334155; font-weight:600; }
+  .sender { position:absolute; left:.55in; bottom:.42in; width:4.6in; display:flex; align-items:center; gap:.14in; }
   .face { width:.7in; height:.7in; border-radius:999px; object-fit:cover; border:2px solid #0f766e; }
   .smeta { display:flex; flex-direction:column; }
   .sign { height:.42in; width:auto; max-width:2.4in; object-fit:contain; margin-bottom:.02in; }
@@ -235,7 +269,6 @@ export function renderClaimPostcardBack(m: ClaimPostcardModel): string {
   <div class="p">We build websites for ${esc(trade)} businesses that don’t have one yet, starting from the public listing — the name, phone, address and hours anyone can already see. Yours is at <b>${esc(host)}</b>.</div>
   <div class="p">If you want it, scan the code on the front or open the link below. It’s free, it’s yours to edit, and your own .com is the one thing we charge for.</div>
   <div class="u">${esc(m.claimUrl)}</div>
-  ${benefitsHtml}
   <div class="exit">Don’t want it? Say the word and it’s gone the same day${m.contactEmail ? ` — email ${esc(m.contactEmail)}` : ''}.</div>
   ${signOff}
   <div class="spacer"></div>

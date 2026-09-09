@@ -10,6 +10,7 @@ import {
   printableHost,
   isMailableProspect,
   draftHasOperationalClaims,
+  CLAIM_CARD_BENEFITS,
   type ClaimPostcardModel,
 } from '@/lib/outreach/claimPostcard';
 
@@ -29,6 +30,49 @@ const model: ClaimPostcardModel = {
   localLine: null,
   contactEmail: 'sandon@quicksites.ai',
 };
+
+describe('layout — nothing flowed to an edge, nothing crowded off one (second proof, 2026-09-09)', () => {
+  const front = renderClaimPostcardFront(model);
+  const back = renderClaimPostcardBack(model);
+  it('the benefits are on the FRONT (it had a dead bottom half) and not on the back (it was clipping the sign-off)', () => {
+    for (const b of model.benefits) {
+      expect(front).toContain(b);
+      expect(back).not.toContain(b);
+    }
+  });
+  it('edge elements are positioned, never flex-pinned — Lob honoured one and ignored the other', () => {
+    expect(front).toMatch(/\.fine \{ position:absolute;[^}]*bottom:/);
+    expect(back).toMatch(/\.sender \{ position:absolute;[^}]*bottom:/);
+    expect(back).toMatch(/\.back \{ position:relative;/);
+    expect(front).not.toMatch(/\.fine \{[^}]*margin-top:auto/);
+  });
+});
+
+describe('the bullets describe the site that exists, not the vertical\'s roadmap', () => {
+  it('the claim card never uses the per-vertical postcardBenefits — SecondSet and estimator lines are features not on the draft', () => {
+    const src = read('lib/outreach/claimPostcard.ts');
+    expect(src).not.toMatch(/postcardBenefits\(/);
+    expect(src).toMatch(/benefits: \[\.\.\.CLAIM_CARD_BENEFITS\]/);
+  });
+  it('an auto-repair card carries the three generic bullets and nothing about photos, tech notes, approvals or estimates', () => {
+    const auto: ClaimPostcardModel = { ...model, industryKey: 'auto_repair' as any, benefits: [...CLAIM_CARD_BENEFITS] };
+    const front = renderClaimPostcardFront(auto);
+    for (const b of CLAIM_CARD_BENEFITS) expect(front).toContain(b);
+    expect(front).not.toMatch(/tech.s note|photo of|approve the work|instant estimate|ballpark/i);
+  });
+});
+
+describe('a long business name scales the front instead of overflowing it', () => {
+  it('41 characters gets the compact class; a short name does not', () => {
+    const long = renderClaimPostcardFront({ ...model, businessName: 'Ferry Street Towing & Roadside Assistance' });
+    expect(long).toMatch(/<div class="card long">/);
+    expect(renderClaimPostcardFront(model)).toMatch(/<div class="card">/);
+  });
+  it('the host wraps at hyphens, never mid-word', () => {
+    expect(renderClaimPostcardFront(model)).toMatch(/\.host \{[^}]*overflow-wrap:anywhere; word-break:normal/);
+    expect(renderClaimPostcardFront(model)).not.toMatch(/\.host \{[^}]*break-all/);
+  });
+});
 
 describe('"Prefer to talk?" — the booking link is a real-person signal, and https or nothing', () => {
   const withBooking: ClaimPostcardModel = { ...model, sender: { ...model.sender!, bookingUrl: 'https://calendly.com/quicksites' } };

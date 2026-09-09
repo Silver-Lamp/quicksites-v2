@@ -44,6 +44,31 @@ export type LobAddress = {
   country?: string;
 };
 
+/**
+ * Lob's address field limits (from its 422s, not its docs): name ≤ 40, address lines ≤ 64,
+ * description ≤ 255. ⚠️ "Ferry Street Towing & Roadside Assistance" is 41 characters, and the
+ * night before the first real send every card to it was refused with
+ *   "to.name" length must be less than or equal to 40 characters long.
+ * A business name is data we do not control, so the request builder clamps it here — the one
+ * place every Lob request passes through — rather than hoping upstream callers remember.
+ */
+export const LOB_LIMITS = { name: 40, addressLine: 64, description: 255 } as const;
+
+/**
+ * Cut to `max` characters at a word boundary, dropping a dangling "&"/"-"/","; never empty.
+ * The mailpiece still reaches the shop — USPS delivers on the address — and the full name is on
+ * the card face, so a shortened envelope name loses nothing that matters.
+ */
+export function clampLobField(value: string, max: number): string {
+  const s = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (s.length <= max) return s;
+  let cut = s.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  if (lastSpace >= Math.floor(max / 2)) cut = cut.slice(0, lastSpace);
+  cut = cut.replace(/[\s&,\-–—/]+$/g, '').trim();
+  return cut || s.slice(0, max).trim();
+}
+
 /** Best-effort parse of a Places formatted address into Lob components. */
 export function parseUsAddress(
   formatted: string | null | undefined,
@@ -115,19 +140,19 @@ export async function sendPostcard(opts: {
   if (!from) throw new Error('LOB_FROM_* return address env is not set.');
 
   const form = new URLSearchParams();
-  form.set('description', opts.description ?? 'QuickSites geo-competition postcard');
+  form.set('description', clampLobField(opts.description ?? 'QuickSites geo-competition postcard', LOB_LIMITS.description));
   form.set('size', opts.size ?? '6x9');
   form.set('use_type', lobUseType());
   form.set('front', opts.frontHtml);
   form.set('back', opts.backHtml);
-  form.set('to[name]', opts.to.name);
-  form.set('to[address_line1]', opts.to.line1);
+  form.set('to[name]', clampLobField(opts.to.name, LOB_LIMITS.name));
+  form.set('to[address_line1]', clampLobField(opts.to.line1, LOB_LIMITS.addressLine));
   form.set('to[address_city]', opts.to.city);
   form.set('to[address_state]', opts.to.state);
   form.set('to[address_zip]', opts.to.zip);
   form.set('to[address_country]', opts.to.country ?? 'US');
-  form.set('from[name]', from.name);
-  form.set('from[address_line1]', from.line1);
+  form.set('from[name]', clampLobField(from.name, LOB_LIMITS.name));
+  form.set('from[address_line1]', clampLobField(from.line1, LOB_LIMITS.addressLine));
   form.set('from[address_city]', from.city);
   form.set('from[address_state]', from.state);
   form.set('from[address_zip]', from.zip);

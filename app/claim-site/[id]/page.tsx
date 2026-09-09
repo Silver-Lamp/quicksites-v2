@@ -75,9 +75,10 @@ export default async function ClaimSitePage({
 
   // "Questions? email us" — a branded campaign uses the org's support email; the default brand
   // uses the operator's sender profile, so a prospect can always reach a human.
-  const contactEmail = brand.orgId
-    ? brand.supportEmail
-    : (await getSenderProfile()).email;
+  const senderProfile = brand.orgId ? null : await getSenderProfile();
+  const contactEmail = brand.orgId ? brand.supportEmail : senderProfile?.email ?? null;
+  // A branded campaign speaks as the org, so the operator's personal calendar stays off it.
+  const bookingUrl = senderProfile?.bookingUrl ?? null;
 
   // Menu-ordering sites launch on restaurant terms — state the concrete take-rate on the
   // pitch ("keep 92%, no monthly"). Non-ordering drafts keep the generic copy.
@@ -102,6 +103,7 @@ export default async function ClaimSitePage({
       brandName={brand.orgId ? brand.name : null}
       brandLogoUrl={brand.logoUrl}
       contactEmail={contactEmail}
+      bookingUrl={bookingUrl}
       feePercent={feePercent}
       demandCount={demandCount}
     />

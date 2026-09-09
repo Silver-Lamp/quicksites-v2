@@ -30,6 +30,27 @@ describe('clampLobField', () => {
   });
 });
 
+describe('a test key never counts as a real send', () => {
+  const saved = process.env.LOB_API_KEY;
+  afterEach(() => { if (saved === undefined) delete process.env.LOB_API_KEY; else process.env.LOB_API_KEY = saved; });
+  it('recognises Lob key prefixes', async () => {
+    const { lobKeyIsTest } = await import('../mail/lob');
+    process.env.LOB_API_KEY = 'test_abc';
+    expect(lobKeyIsTest()).toBe(true);
+    process.env.LOB_API_KEY = 'live_abc';
+    expect(lobKeyIsTest()).toBe(false);
+    delete process.env.LOB_API_KEY;
+    expect(lobKeyIsTest()).toBe(false);
+  });
+  it('the send loop refuses a real send on a test key, before any Lob call, and lets a test card through', () => {
+    const src = readFileSync('lib/outreach/claimPostcardSend.ts', 'utf8');
+    const guard = src.indexOf("if (!opts.test && lobKeyIsTest()) return { ...report, reason: 'lob_test_key' }");
+    const loop = src.indexOf('for (const d of opts.drafts)');
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(loop);
+  });
+});
+
 describe('sendPostcard clamps at the request builder, not upstream', () => {
   const src = readFileSync('lib/outreach/mail/lob.ts', 'utf8');
   it('to[name], from[name], both address_line1 and description go through clampLobField', () => {

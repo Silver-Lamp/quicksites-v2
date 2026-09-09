@@ -6,6 +6,7 @@ const profile = (over: Partial<SenderProfile> = {}): SenderProfile => ({
   name: 'Sandon Jurowski',
   title: 'Founder',
   email: 'sandon@pointsevenstudio.com',
+  bookingUrl: null,
   headshotUrl: 'https://example.test/headshot.webp',
   signatureUrl: 'https://example.test/sig.png',
   city: 'Renton',

@@ -30,6 +30,22 @@ const model: ClaimPostcardModel = {
   contactEmail: 'sandon@quicksites.ai',
 };
 
+describe('"Prefer to talk?" — the booking link is a real-person signal, and https or nothing', () => {
+  const withBooking: ClaimPostcardModel = { ...model, sender: { ...model.sender!, bookingUrl: 'https://calendly.com/quicksites' } };
+  it('prints the scheduler beside the email on the back, as a readable address', () => {
+    const back = renderClaimPostcardBack(withBooking);
+    expect(back).toMatch(/Prefer to talk\? Book 15 minutes: calendly\.com\/quicksites/);
+    expect(back).not.toMatch(/https:\/\/calendly/); // printed like the site host, no scheme
+  });
+  it('prints nothing when there is no link', () => {
+    expect(renderClaimPostcardBack(model)).not.toMatch(/Prefer to talk/);
+  });
+  it('the line itself makes no forbidden promise', () => {
+    const back = renderClaimPostcardBack(withBooking);
+    for (const [re] of FORBIDDEN) expect(back).not.toMatch(re);
+  });
+});
+
 /** Every promise a postcard must never make. A card cannot be caveated after it is mailed. */
 const FORBIDDEN: Array<[RegExp, string]> = [
   [/\brank(s|ing|ed)?\b/i, 'a ranking claim'],

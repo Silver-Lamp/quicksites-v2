@@ -196,6 +196,7 @@ export function renderClaimPostcardBack(m: ClaimPostcardModel): string {
           <div class="sname">— ${esc(s.name)}${s.title ? `, ${esc(s.title)}` : ''}</div>
           ${m.localLine ? `<div class="sloc">${esc(m.localLine)}</div>` : ''}
           ${s.email ? `<div class="sqa">Questions? ${esc(s.email)}</div>` : ''}
+          ${s.bookingUrl ? `<div class="sqa">Prefer to talk? Book 15 minutes: ${esc(printableHost(s.bookingUrl))}</div>` : ''}
         </div>
       </div>`
     : m.brandName

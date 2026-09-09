@@ -15,47 +15,28 @@
 // `menu` block), so no other vertical is touched. All numbers env-overridable + clamped
 // to the partner cap. Merchants can still be tuned individually afterwards.
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { clampPlatformFeePercent } from '@/lib/commerce/partner-terms';
+// ⚠️ The NUMBERS live in pricingDefaults.ts (pure) and are re-exported here. This module also
+// imports the service-role client for its DB helpers, so a client component must never import
+// it: /pricing did, and hydrated into "Application error: supabaseKey is required".
+import {
+  RESTAURANT_FEE_PERCENT,
+  RESTAURANT_FEE_MIN_CENTS,
+  GENERAL_FEE_PERCENT,
+  GENERAL_FEE_MIN_CENTS,
+  restaurantFeeDefault,
+  generalFeeDefault,
+  type FeeDefault,
+} from '@/lib/commerce/pricingDefaults';
 
-export type FeeDefault = { collect: boolean; percent: number; minCents: number };
-
-function envNum(v: string | undefined, d: number): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : d;
-}
-
-/** Restaurant / menu-ordering take-rate: 8% + 60¢ floor, no monthly. */
-export const RESTAURANT_FEE_PERCENT = clampPlatformFeePercent(
-  envNum(process.env.QS_RESTAURANT_PLATFORM_FEE_PERCENT, 0.08)
-);
-export const RESTAURANT_FEE_MIN_CENTS = Math.max(
-  0,
-  Math.round(envNum(process.env.QS_RESTAURANT_PLATFORM_FEE_MIN_CENTS, 60))
-);
-
-/** General commerce take-rate (unchanged): 5% / no floor. */
-export const GENERAL_FEE_PERCENT = clampPlatformFeePercent(
-  envNum(process.env.QS_DEFAULT_PLATFORM_FEE_PERCENT, 0.05)
-);
-export const GENERAL_FEE_MIN_CENTS = Math.max(
-  0,
-  Math.round(envNum(process.env.QS_DEFAULT_PLATFORM_FEE_MIN_CENTS, 0))
-);
-
-export function restaurantFeeDefault(): FeeDefault {
-  return {
-    collect: RESTAURANT_FEE_PERCENT > 0,
-    percent: RESTAURANT_FEE_PERCENT,
-    minCents: RESTAURANT_FEE_MIN_CENTS,
-  };
-}
-export function generalFeeDefault(): FeeDefault {
-  return {
-    collect: GENERAL_FEE_PERCENT > 0,
-    percent: GENERAL_FEE_PERCENT,
-    minCents: GENERAL_FEE_MIN_CENTS,
-  };
-}
+export {
+  RESTAURANT_FEE_PERCENT,
+  RESTAURANT_FEE_MIN_CENTS,
+  GENERAL_FEE_PERCENT,
+  GENERAL_FEE_MIN_CENTS,
+  restaurantFeeDefault,
+  generalFeeDefault,
+  type FeeDefault,
+} from '@/lib/commerce/pricingDefaults';
 
 /** A `menu` block is the restaurant vertical's ordering surface — the definitive marker
  *  of a menu-ordering site, robust to how the merchant was acquired or its industry label. */

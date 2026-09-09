@@ -20,6 +20,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getDemandDetails } from '@/lib/menu/demand';
 import { publicSiteUrl } from '@/lib/sites/publicUrl';
+import { getSenderProfile } from '@/lib/outreach/senderProfile';
 import { isTradeIndustry, tradeSiteBillingEnabled, tradeSiteDomainPriceCents } from '@/lib/tradeSites/config';
 import { getTradeSiteSubscription } from '@/lib/tradeSites/subscriptions';
 import TradeSiteUpgrade from '@/components/welcome/trade-site-upgrade';
@@ -76,6 +77,9 @@ export default async function ClaimWelcomePage({
   const sub = isTrade ? await getTradeSiteSubscription(id) : null;
   const hasActiveSub = !!sub && sub.subscription_status === 'active';
   const offerDomain = isTrade && tradeSiteBillingEnabled() && !t.custom_domain && !hasActiveSub;
+  // The warmest moment to offer a human: the owner just claimed. Same profile the card printed.
+  const sender = await getSenderProfile().catch(() => null);
+  const bookingUrl = sender?.bookingUrl && /^https:\/\/\S+$/i.test(sender.bookingUrl) ? sender.bookingUrl : null;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center px-6 py-16 text-center">
@@ -151,6 +155,15 @@ export default async function ClaimWelcomePage({
           Open your site editor →
         </Link>
       </div>
+      {bookingUrl && (
+        <p className="mt-6 max-w-md text-sm text-muted-foreground">
+          Want a hand setting it up?{' '}
+          <a href={bookingUrl} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline underline-offset-4">
+            Book 15 minutes{sender?.name ? ` with ${sender.name}` : ''}
+          </a>
+          .
+        </p>
+      )}
       <p className="mt-6 max-w-md text-xs text-muted-foreground">
         Don’t want it? Say the word and it’s gone — email support@quicksites.ai from the address you signed up with.
       </p>

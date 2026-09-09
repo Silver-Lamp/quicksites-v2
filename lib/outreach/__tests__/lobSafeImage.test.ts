@@ -24,7 +24,7 @@ describe('isLobSafeImageUrl', () => {
 });
 
 describe('the last gate before paper', () => {
-  const profile: SenderProfile = { name: 'Sandon', title: 'Founder', email: 's@x.com', headshotUrl: WEBP, signatureUrl: PNG, city: 'Renton', state: 'WA', lat: null, lng: null };
+  const profile: SenderProfile = { name: 'Sandon', title: 'Founder', email: 's@x.com', headshotUrl: WEBP, signatureUrl: PNG, city: 'Renton', state: 'WA', lat: null, lng: null, bookingUrl: null };
   it('senderFromProfile drops a non-Lob-safe image and keeps a safe one', () => {
     const s = senderFromProfile(profile, null)!;
     expect(s.headshotUrl).toBeNull();

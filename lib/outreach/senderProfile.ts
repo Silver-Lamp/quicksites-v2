@@ -25,6 +25,12 @@ export type SenderProfile = {
   /** Optional coordinates — enable the cross-state proximity radius. */
   lat: number | null;
   lng: number | null;
+  /**
+   * "Book 15 minutes" — a scheduling link (Calendly) printed beside "Questions? {email}" on the
+   * card, the claim page and the welcome page. A calendar with a face on the other end is a
+   * stronger "real person" signal than an email address. Falls back to NEXT_PUBLIC_CALENDLY_URL.
+   */
+  bookingUrl: string | null;
 };
 
 /** The stored (DB) shape — everything optional; unset fields fall back to env. */
@@ -32,8 +38,13 @@ export type SenderProfileInput = Partial<Record<keyof SenderProfile, string | nu
 
 const EMPTY: SenderProfile = {
   name: null, title: null, email: null, headshotUrl: null, signatureUrl: null,
-  city: null, state: null, lat: null, lng: null,
+  city: null, state: null, lat: null, lng: null, bookingUrl: null,
 };
+
+/** A scheduling link must be an absolute https URL — it is printed on paper and opened cold. */
+export function isValidBookingUrl(url: string): boolean {
+  return /^https:\/\/[^\s"'<>]+$/i.test(url);
+}
 
 function str(v: unknown): string | null {
   const s = typeof v === 'number' ? String(v) : typeof v === 'string' ? v.trim() : '';
@@ -62,6 +73,8 @@ function envProfile(): SenderProfile {
     state: str(process.env.POSTCARD_SENDER_STATE) ?? str(process.env.LOB_FROM_STATE),
     lat: num(process.env.POSTCARD_SENDER_LAT),
     lng: num(process.env.POSTCARD_SENDER_LNG),
+    // The Calendly the /book page already embeds — one scheduler, every surface.
+    bookingUrl: str(process.env.POSTCARD_SENDER_BOOKING_URL) ?? str(process.env.NEXT_PUBLIC_CALENDLY_URL),
   };
 }
 
@@ -77,6 +90,7 @@ function normalize(v: Partial<SenderProfile> | null | undefined): SenderProfile 
     state: str(v?.state),
     lat: num(v?.lat),
     lng: num(v?.lng),
+    bookingUrl: str(v?.bookingUrl),
   };
 }
 
@@ -92,6 +106,7 @@ export async function getSenderProfile(): Promise<SenderProfile> {
     name: pick('name'), title: pick('title'), email: pick('email'),
     headshotUrl: pick('headshotUrl'), signatureUrl: pick('signatureUrl'),
     city: pick('city'), state: pick('state'), lat: pick('lat'), lng: pick('lng'),
+    bookingUrl: pick('bookingUrl'),
   };
 }
 
@@ -120,8 +135,10 @@ export async function setSenderProfile(
     signatureUrl: signatureUrl ? (await ensureImage(signatureUrl, 'signature')).url : null,
     city: str(input.city), state: input.state != null ? String(input.state).trim().toUpperCase() : null,
     lat: num(input.lat), lng: num(input.lng),
+    bookingUrl: str(input.bookingUrl),
   });
   if (next.email && !isValidEmail(next.email)) throw new Error('That email address looks invalid.');
+  if (next.bookingUrl && !isValidBookingUrl(next.bookingUrl)) throw new Error('The booking link must be a full https:// URL (e.g. your Calendly event).');
   await setSiteSetting(SENDER_PROFILE_KEY, next, updatedBy);
 }
 

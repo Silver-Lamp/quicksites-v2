@@ -42,6 +42,8 @@ export function KpiTile({
   tone = 'neutral',
   icon,
   href,
+  onClick,
+  active = false,
 }: {
   label: string;
   value: ReactNode;
@@ -49,6 +51,10 @@ export function KpiTile({
   tone?: Tone;
   icon?: ReactNode;
   href?: string;
+  /** Makes the tile a button (e.g. to expand a detail panel beneath it). Ignored when `href` is set. */
+  onClick?: () => void;
+  /** Highlight while its panel is open. */
+  active?: boolean;
 }) {
   const body = (
     <>
@@ -60,14 +66,22 @@ export function KpiTile({
       {sub ? <div className="mt-0.5 text-xs text-neutral-500">{sub}</div> : null}
     </>
   );
-  const cls = 'block rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 transition';
-  return href ? (
-    <a href={href} className={`${cls} hover:border-zinc-600`}>
-      {body}
-    </a>
-  ) : (
-    <div className={cls}>{body}</div>
-  );
+  const cls = `block rounded-xl border ${active ? 'border-sky-500/60 bg-sky-500/5' : 'border-zinc-800 bg-zinc-900/40'} p-5 transition`;
+  if (href) {
+    return (
+      <a href={href} className={`${cls} hover:border-zinc-600`}>
+        {body}
+      </a>
+    );
+  }
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} aria-expanded={active} className={`${cls} w-full text-left hover:border-zinc-600`}>
+        {body}
+      </button>
+    );
+  }
+  return <div className={cls}>{body}</div>;
 }
 
 /**

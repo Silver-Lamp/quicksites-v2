@@ -12,6 +12,8 @@ export const EVENTS = {
   // A guest-build session confirmed an email and became an account. SIGNUP misses these: it keys
   // on account age, and a guest's account predates the confirmation by however long they built.
   GUEST_SIGNUP_CONFIRMED: 'guest_signup_confirmed',
+  // Someone opened the apology postcard's tracked link for a guest-built draft (/go/guest/<id>).
+  GUEST_CARD_LINK_VISITED: 'guest_card_link_visited',
   REBUILD_STARTED: 'rebuild_started', // /rebuild: a URL was submitted for AI rebuild
   REBUILD_COMPLETED: 'rebuild_completed', // /rebuild: a draft was generated from that URL
   BUILDER_ACTIVATED: 'builder_activated', // first meaningful template edit/save

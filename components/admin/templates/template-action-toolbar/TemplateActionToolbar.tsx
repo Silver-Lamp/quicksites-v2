@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useIsGuest } from '@/hooks/useIsGuest';
+import { requestGuestSignup } from '@/lib/auth/guestSignup';
 import { createPortal } from 'react-dom';
 import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
 import { Button } from '@/components/ui';
@@ -567,7 +568,9 @@ useEffect(() => {
       } catch {}
     } catch (e) {
       console.error('[Publish] failed', e);
-      toast.error('Failed to publish');
+      // Say why: a refused publish carries the reason (e.g. "Sign up to publish — it's free"),
+      // and publishSnapshot has already opened the sign-up box for a guest.
+      toast.error((e as any)?.message || 'Failed to publish');
     }
   };
 
@@ -868,6 +871,20 @@ useEffect(() => {
 
                 Only claimed when NOT dirty — an unsaved edit must never be described as saved.
               */}
+              {/* ⚠️ THE BUTTON, NOT JUST THE WORDS. "yours when you sign up" told a guest the fact
+                  and gave them nothing to press; the banner with the form had scrolled away; 0 of 16
+                  guest builders ever signed up (docs/GUEST_SIGNUP_PLAN.md). This bar is the one thing
+                  always on screen, so the control lives here. */}
+              {isGuest && (
+                <Button
+                  size="sm"
+                  onClick={() => requestGuestSignup('toolbar')}
+                  className="bg-sky-500 hover:bg-sky-400 text-zinc-950 font-medium mr-1"
+                  title="Free — your site stays exactly as it is; signing up makes it yours to publish"
+                >
+                  Sign up to publish
+                </Button>
+              )}
               {saveError ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 mr-1" title={saveError}>
                   <AlertTriangle className="w-3.5 h-3.5" /> Not saved

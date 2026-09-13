@@ -5,7 +5,8 @@ import * as Sentry from '@sentry/nextjs';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
-import { requireAdmin } from '@/lib/auth/requireUser';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
+import { NEEDS_SIGNUP_CODE } from '@/lib/auth/guestSignup';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -50,9 +51,11 @@ function deriveDomainFromTemplate(tpl: any) {
 }
 
 async function handle(req: Request) {
-  const gate = await requireAdmin();
-  if (gate instanceof NextResponse) return gate;
-
+  // ⚠️ Gated on OWNERSHIP, not platform admin, once the template id is known (below). This route
+  // is what every Publish button calls, and for months it required a PLATFORM ADMIN: a customer —
+  // or a guest — pressing Publish got "Failed to publish". 0 of 16 guest builders ever signed
+  // up (docs/GUEST_SIGNUP_PLAN.md). An anonymous owner gets 401 `needs_signup`, which the client
+  // turns into the sign-up box; a signed-up owner publishes their own site; admins publish any.
   const url = new URL(req.url);
   const debug = url.searchParams.get('debug') === '1';
 
@@ -88,6 +91,13 @@ async function handle(req: Request) {
     note('incoming', { method: req.method, templateId, snapshotId });
 
     if (!templateId) return j({ error: 'templateId required' }, 400);
+
+    const gate = await requireTemplateOwner(templateId);
+    if (!gate.ok) return gate.response;
+    if (gate.isAnonymous) {
+      return j({ error: 'Sign up to publish your site.', code: NEEDS_SIGNUP_CODE }, 401);
+    }
+    note('gate', { userId: gate.userId, isAdmin: gate.isAdmin });
 
     // Load template (need slug/data to derive a default domain)
     const tplRes = await pub

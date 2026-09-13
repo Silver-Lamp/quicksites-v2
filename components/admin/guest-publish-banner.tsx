@@ -2,9 +2,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
 import CharacterAvatar from '@/components/brand/CharacterAvatar';
 import Typewriter from '@/components/ui/typewriter';
+import { GuestSignupForm } from '@/components/admin/guest-signup-box';
+import { requestGuestSignup } from '@/lib/auth/guestSignup';
 
 const GUEST_LINE = 'You’re building as a guest. Sign up to publish your site — your work is saved.';
 
@@ -22,53 +23,13 @@ function buildPreviewUrl(): string | null {
 /**
  * Persistent banner shown while building as a guest (anonymous user).
  *
- * "Sign up to publish" upgrades the anonymous user IN PLACE via
- * supabase.auth.updateUser({ email }) — this keeps the SAME uid, so the draft
- * they already own is theirs the moment they confirm. (A fresh login would mint
- * a different uid and orphan the draft, which is why we don't link to /login.)
- *
- * NOTE: the anon→permanent upgrade requires "Allow anonymous sign-ins" enabled
- * in the Supabase project; until then this path can't be exercised end-to-end.
+ * The form itself is the shared GuestSignupForm (components/admin/guest-signup-box.tsx) —
+ * the same one the toolbar button and a refused Publish open as a modal. This banner sits in
+ * normal flow below the sticky header and scrolls out of view, which is why it is no longer
+ * the only place to sign up (docs/GUEST_SIGNUP_PLAN.md).
  */
 export default function GuestPublishBanner() {
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error' | 'exists'>('idle');
-  const [message, setMessage] = useState<string | null>(null);
-
-  /** Login URL that returns to the current editor and prefills the typed email. */
-  const loginHref = () => {
-    const path =
-      typeof window !== 'undefined' ? window.location.pathname : '/admin/templates/list';
-    const addr = email.trim();
-    const q = new URLSearchParams({ next: path });
-    if (addr) q.set('email', addr);
-    return `/login?${q.toString()}`;
-  };
-
-  /** Current template id from the editor path (null on non-template routes). */
-  const currentTemplateId = (): string | null => {
-    if (typeof window === 'undefined') return null;
-    const id = window.location.pathname.match(/\/admin\/templates\/([^/]+)/)?.[1];
-    return id && !['list', 'new', 'gsc-bulk-stats'].includes(id) ? id : null;
-  };
-
-  /**
-   * Go to login, but first mint a claim token (sets an httpOnly cookie) so the draft
-   * this guest built follows them into the account they log into. Best-effort — if
-   * minting fails, login still works, the draft just won't transfer.
-   */
-  const goLogin = async () => {
-    const id = currentTemplateId();
-    if (id) {
-      try {
-        await fetch(`/api/templates/${id}/claim-token`, { method: 'POST' });
-      } catch {
-        /* best-effort */
-      }
-    }
-    window.location.href = loginHref();
-  };
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   // The guide "types" the intro once, then it settles into the interactive version.
@@ -89,37 +50,6 @@ export default function GuestPublishBanner() {
     }
   };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const addr = email.trim();
-    if (!addr) return;
-    setStatus('sending');
-    setMessage(null);
-    try {
-      const { error } = await supabase.auth.updateUser({ email: addr });
-      if (error) {
-        // Email already has an account: they can't upgrade this guest session into
-        // it, so point them at login instead of showing a dead-end error.
-        const already =
-          (error as any)?.code === 'email_exists' ||
-          /already.*(registered|exists|in use)/i.test(error.message || '');
-        if (already) {
-          setStatus('exists');
-          setMessage('You already have an account with this email.');
-          return;
-        }
-        setStatus('error');
-        setMessage(error.message || 'Could not start signup. Please try again.');
-        return;
-      }
-      setStatus('sent');
-      setMessage(`Check ${addr} to confirm your account, then come back to publish.`);
-    } catch (err: any) {
-      setStatus('error');
-      setMessage(err?.message || 'Something went wrong. Please try again.');
-    }
-  };
-
   return (
     <div className="w-full border-b border-sky-500/30 bg-sky-500/10 px-4 py-2 text-sm">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -130,7 +60,7 @@ export default function GuestPublishBanner() {
               You’re building as a guest.{' '}
               <button
                 type="button"
-                onClick={() => setOpen(true)}
+                onClick={() => requestGuestSignup('banner')}
                 className="font-medium text-sky-300 underline-offset-2 transition hover:text-sky-200 hover:underline"
               >
                 Sign up to publish your site
@@ -142,9 +72,7 @@ export default function GuestPublishBanner() {
           )}
         </div>
 
-        {status === 'sent' ? (
-          <span className="text-emerald-300">{message}</span>
-        ) : !open ? (
+        {!open ? (
           <div className="flex shrink-0 items-center gap-2">
             {previewUrl && (
               <>
@@ -174,45 +102,11 @@ export default function GuestPublishBanner() {
             </button>
           </div>
         ) : (
-          <form onSubmit={submit} className="flex shrink-0 items-center gap-2">
-            <input
-              type="email"
-              required
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              aria-label="Email"
-              disabled={status === 'sending'}
-              className="w-56 rounded-md border border-sky-500/40 bg-zinc-900/70 px-3 py-1.5 text-white placeholder:text-zinc-500 focus:border-sky-400 focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={status === 'sending'}
-              className="rounded-md bg-sky-500 px-3 py-1.5 font-medium text-zinc-950 transition hover:bg-sky-400 disabled:opacity-60"
-            >
-              {status === 'sending' ? 'Sending…' : 'Continue'}
-            </button>
-          </form>
+          <div className="shrink-0">
+            <GuestSignupForm compact />
+          </div>
         )}
       </div>
-      {status === 'exists' && (
-        <p className="mx-auto mt-1 max-w-6xl text-sky-200" role="status">
-          {message}{' '}
-          <button
-            type="button"
-            onClick={goLogin}
-            className="font-medium text-sky-300 underline underline-offset-2 transition hover:text-sky-100"
-          >
-            Log in instead →
-          </button>
-        </p>
-      )}
-      {status === 'error' && message && (
-        <p className="mx-auto mt-1 max-w-6xl text-red-300" role="alert">
-          {message}
-        </p>
-      )}
     </div>
   );
 }

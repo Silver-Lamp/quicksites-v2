@@ -75,7 +75,7 @@ const CATEGORY_META: Record<OpsCategory, { label: string; emoji: string }> = {
 };
 
 export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot }) {
-  const { inventory, revenue, clients, markets } = snapshot;
+  const { inventory, revenue, clients, markets, guestFunnel } = snapshot;
 
   const [gscByDomain, setGscByDomain] = useState<Record<string, GscStat> | undefined>(undefined);
   const [gscLoaded, setGscLoaded] = useState(false);
@@ -194,6 +194,28 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
             { label: 'Idle', value: roll.idleCount, tone: 'bad' },
           ]}
         />
+      </div>
+
+      {/* Guest-build → signup funnel. The number that decides whether the builder's front door
+          works. On 2026-09-13 it read 16 · 47 · 7 · 0 · 0 · 0 since July — nobody who built as a
+          guest ever signed up, because the path was broken (docs/GUEST_SIGNUP_PLAN.md). Shown so
+          the fix is measured here, not remembered. */}
+      <div className="mt-8">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Guest builders → sign-ups</h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          Anonymous sessions that built a site, and how far each got. A guest who signs up keeps the same account, so "converted" counts guest-built sites whose owner now has an email.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <KpiTile label="Guests" value={guestFunnel.guests} tone="info" sub={`${guestFunnel.sites} site${guestFunnel.sites === 1 ? '' : 's'} · ${guestFunnel.builders} builder${guestFunnel.builders === 1 ? '' : 's'}`} href="/admin/users" />
+          <KpiTile label="Edited 10+ min" value={guestFunnel.editedTenMinPlus} tone={guestFunnel.editedTenMinPlus > 0 ? 'good' : 'neutral'} sub="invested real time" />
+          <KpiTile label="Came back" value={guestFunnel.returned} tone={guestFunnel.returned > 0 ? 'good' : 'warn'} sub="signed in again later" />
+          <KpiTile label="Started sign-up" value={guestFunnel.startedSignup} tone={guestFunnel.startedSignup > 0 ? 'good' : 'warn'} sub="email awaiting confirm" />
+          <KpiTile label="Converted" value={guestFunnel.converted} tone={guestFunnel.converted > 0 ? 'good' : 'bad'} sub={guestFunnel.sites ? `${Math.round((100 * guestFunnel.converted) / guestFunnel.sites)}% of guest sites` : '—'} />
+          <KpiTile label="Reachable" value={guestFunnel.withContact + guestFunnel.withSourceUrl} tone={guestFunnel.withContact + guestFunnel.withSourceUrl > 0 ? 'info' : 'neutral'} sub={`${guestFunnel.withSourceUrl} from a URL · ${guestFunnel.withContact} left a phone/email`} />
+        </div>
+        <p className="mt-2 text-xs text-neutral-500">
+          To contact them: <code className="rounded bg-neutral-800 px-1">npm run guests:contacts</code> lists each guest site with what it recorded and what its source website shows.
+        </p>
       </div>
 
       {/* Holistic Top 5 */}

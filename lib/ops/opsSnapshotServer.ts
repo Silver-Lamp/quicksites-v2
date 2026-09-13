@@ -24,6 +24,9 @@ const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: 
 
 const LAPSED_DAYS = 90;
 
+import { loadGuestFunnel } from '@/lib/admin/guestFunnelServer';
+import type { GuestFunnel } from '@/lib/admin/guestFunnel';
+
 export type OpsClients = {
   activeSubscribers: number;
   mrrCents: number;
@@ -48,6 +51,8 @@ export type OpsSnapshot = {
     campaigns: GeoCampaign[];
     channels: { mail: boolean; sms: boolean; call: boolean };
   };
+  /** Guest-build → signup funnel (lib/admin/guestFunnel.ts). */
+  guestFunnel: GuestFunnel;
 };
 
 /** Platform revenue roll-up from paid orders + attributed commissions. */
@@ -108,11 +113,12 @@ async function loadClients(nowMs: number): Promise<OpsClients> {
 /** Assemble the full server-side snapshot for the ops dashboard. */
 export async function assembleOpsSnapshot(): Promise<OpsSnapshot> {
   const nowMs = Date.now();
-  const [inv, revenue, clients, market] = await Promise.all([
+  const [inv, revenue, clients, market, guestFunnel] = await Promise.all([
     assembleOwnedInventory(12),
     loadRevenue(),
     loadClients(nowMs),
     loadProspectsWorkspaceData(),
+    loadGuestFunnel(),
   ]);
 
   return {
@@ -130,5 +136,6 @@ export async function assembleOpsSnapshot(): Promise<OpsSnapshot> {
       campaigns: market.campaigns,
       channels: market.channels,
     },
+    guestFunnel,
   };
 }

@@ -16,6 +16,7 @@ import { buildOpsSignals, computeOpsNextSteps, type OpsStep, type OpsCategory } 
 import type { OpsSnapshot } from '@/lib/ops/opsSnapshotServer';
 import DomainSpendChart from '@/components/admin/domain-spend-chart';
 import RevenueSimulator from '@/components/admin/ops/revenue-simulator';
+import { GuestReachableTile } from '@/components/admin/ops/guest-leads-panel';
 import { KpiTile, Gauge, SegmentBar, SeverityTag, formatMoney, type Tone } from '@/components/admin/ops/ops-widgets';
 import SuperAdminSetupAlerts from '@/components/admin/super-admin-setup-alerts';
 
@@ -211,7 +212,7 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
           <KpiTile label="Came back" value={guestFunnel.returned} tone={guestFunnel.returned > 0 ? 'good' : 'warn'} sub="signed in again later" />
           <KpiTile label="Started sign-up" value={guestFunnel.startedSignup} tone={guestFunnel.startedSignup > 0 ? 'good' : 'warn'} sub="email awaiting confirm" />
           <KpiTile label="Converted" value={guestFunnel.converted} tone={guestFunnel.converted > 0 ? 'good' : 'bad'} sub={guestFunnel.sites ? `${Math.round((100 * guestFunnel.converted) / guestFunnel.sites)}% of guest sites` : '—'} />
-          <KpiTile label="Reachable" value={guestFunnel.withContact + guestFunnel.withSourceUrl} tone={guestFunnel.withContact + guestFunnel.withSourceUrl > 0 ? 'info' : 'neutral'} sub={`${guestFunnel.withSourceUrl} from a URL · ${guestFunnel.withContact} left a phone/email`} />
+          <GuestReachableTile funnel={guestFunnel} />
         </div>
         <p className="mt-2 text-xs text-neutral-500">
           To contact them: <code className="rounded bg-neutral-800 px-1">npm run guests:contacts</code> lists each guest site with what it recorded and what its source website shows.

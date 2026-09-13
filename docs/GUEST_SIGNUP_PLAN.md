@@ -97,7 +97,22 @@ contact page show. Today: 3 sites have a source URL (Adze Media, RefReady, Meddz
 scraped phone, the rest are a business name only. The script finds people; **a person writes the
 apology** — the same rule as `outreach:candidates`.
 
-## PR B — the apology postcard with a QR to their site (owner asked 2026-09-13)
+## PR B — SHIPPED 2026-09-13: the "Reachable" tile on /admin/ops expands into the outreach panel
+
+Click **Reachable** → every guest site with what it recorded, what its source website shows
+(button, free), and a Places candidate by name (button, paid, CONFIRM only). Per row: **Email**
+(`mailto:` with a subject and no body), **Text** (`sms:`, no body), **Postcard** (a form prefilled
+from the candidate that the operator checks; Preview / Mail test card / Mail to this address; one
+card per click, `window.confirm`, real key only). The tracked link is `/go/guest/<templateId>`
+(`app/go/guest/[templateId]/route.ts`): mints the claim cookie server-side from the row's anon
+owner and sends the visitor to sign up with their editor as `next`; once the owner has an email the
+same link goes to the site. Card copy: `lib/outreach/guestApologyCard.ts`, pinned by the same
+forbidden-promise test as the claim card plus "it must say THEY built it". Same rows in the
+terminal: `npm run guests:contacts` (both call `lib/admin/guestLeads.ts`).
+⚠️ Still a person's call per row: a guest site records no city, so a candidate is a guess until you
+say otherwise; name-only builders with no listing get no card.
+
+## PR B — original spec (owner asked 2026-09-13)
 
 `npm run guests:contacts -- --lookup` adds a Google Places candidate (address · phone · website)
 per name-only site, tagged **CONFIRM** with a name-similarity score. ⚠️ A guest site records no

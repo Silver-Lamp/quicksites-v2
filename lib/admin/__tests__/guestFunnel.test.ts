@@ -43,7 +43,9 @@ describe('wired into the ops dashboard', () => {
     expect(snap).toMatch(/guestFunnel: GuestFunnel/);
     expect(snap).toMatch(/loadGuestFunnel\(\)/);
     const ui = readFileSync('components/admin/ops-dashboard-client.tsx', 'utf8');
-    for (const label of ['Guests', 'Edited 10+ min', 'Came back', 'Started sign-up', 'Converted', 'Reachable']) expect(ui).toContain(`label="${label}"`);
+    for (const label of ['Guests', 'Edited 10+ min', 'Came back', 'Started sign-up', 'Converted']) expect(ui).toContain(`label="${label}"`);
+    // "Reachable" is a tile + panel unit that lives with the panel (guest-leads-panel.tsx).
+    expect(ui).toMatch(/<GuestReachableTile funnel=\{guestFunnel\} \/>/);
     expect(ui).toMatch(/href="\/admin\/users"/);
     expect(ui).toMatch(/npm run guests:contacts/);
   });

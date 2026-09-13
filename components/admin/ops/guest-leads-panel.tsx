@@ -123,7 +123,14 @@ function LeadRow({ lead: l }: { lead: GuestLead }) {
   const verdict = l.lookup?.verdict ?? null;
   const cand = verdict?.show ? l.lookup!.candidate : null;
   const candTitle = verdict?.show ? `Places match score ${verdict.score.toFixed(2)}${verdict.note ? ` · ${verdict.note}` : ''}` : '';
-  const siteUrl = l.slug ? `https://${l.slug}.quicksites.ai` : null;
+  // ⚠️ A guest draft is UNPUBLISHED (all 47 were, 2026-09-13), and the public render deliberately
+  // refuses to serve a guest_build draft to anyone until its builder publishes it
+  // (isPublicPreClaimDraft in app/sites/[slug]/[[...rest]]/page.tsx). So `<slug>.quicksites.ai`
+  // answers 404 for the operator too — this row used to link there and read as "their site is
+  // live". The host is shown as text (it is what the postcard prints and where the site WILL be);
+  // the link opens the draft in the editor, which an admin may open for any template.
+  const siteHost = l.slug ? `${l.slug}.quicksites.ai` : null;
+  const editorUrl = `/admin/templates/${l.templateId}`;
   const subject = encodeURIComponent(`Your ${l.businessName} website — an apology from QuickSites`);
   const [showCard, setShowCard] = useState(false);
   return (
@@ -132,7 +139,8 @@ function LeadRow({ lead: l }: { lead: GuestLead }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-neutral-100">{l.businessName}</span>
-            {siteUrl && <a href={siteUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-300 hover:underline">{siteUrl.replace('https://', '')} ↗</a>}
+            <a href={editorUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-300 hover:underline" title="Open their draft in the editor (admin). The public host 404s until they publish.">open draft ↗</a>
+            {siteHost && <span className="text-xs text-neutral-500" title="Unpublished — this host answers 404 until the builder signs up and publishes. It is the address the postcard prints.">{siteHost} · unpublished</span>}
             <span className="text-xs text-neutral-500">built {l.createdAt.slice(0, 10)} · edited {minutesLabel(l.minutesEdited)}</span>
             {l.bestChannel ? <span className="rounded bg-emerald-500/15 px-1.5 py-px text-[10px] text-emerald-300">{l.bestChannel}</span> : <span className="rounded bg-zinc-800 px-1.5 py-px text-[10px] text-neutral-400">name only</span>}
           </div>

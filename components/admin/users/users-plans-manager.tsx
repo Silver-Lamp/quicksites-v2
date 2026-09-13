@@ -213,10 +213,12 @@ export default function UsersPlansManager() {
   const [actItems, setActItems] = useState<any[]>([]);
   const [actLoading, setActLoading] = useState(false);
 
-  // Page-local filters, applied server-side per page: guests (anonymous guest-build sessions —
-  // 22 of 73 auth users in Sep 2026, no email) are hidden by default so a real signup is not
-  // buried; "builders only" narrows to users who have made at least one site.
-  const [hideGuests, setHideGuests] = useState(true);
+  // Page-local filters, applied server-side per page. ⚠️ Guests are SHOWN by default: the first
+  // cut hid them (anonymous, no email — 22 of 73 auth users) and would have hidden exactly the
+  // activity the page exists to surface. On 2026-09-13 every new builder on the platform was a
+  // guest-build session (Adze Media, RefReady, …), each with one real site and no email yet.
+  // "Builders only" narrows to users who have made at least one site.
+  const [hideGuests, setHideGuests] = useState(false);
   const [buildersOnly, setBuildersOnly] = useState(false);
   const fetchUsers = React.useCallback(async (opts?: { resetPage?: boolean }) => {
     setLoading(true);

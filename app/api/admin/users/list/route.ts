@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { summarizeUserSites, authProvider, NO_SITES, type OwnedTemplateRow } from '@/lib/admin/userSites';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,6 +44,10 @@ export async function GET(req: NextRequest) {
   const page = Number(searchParams.get('page') ?? '1') || 1;
   const perPage = Math.min(Math.max(Number(searchParams.get('perPage') ?? '50'), 1), 200);
   const q = (searchParams.get('q') ?? '').trim().toLowerCase();
+  // Page-local filters (like `q`): builders=1 keeps only users with ≥1 template; guests=hide drops
+  // anonymous (guest-build) sessions — 22 of 73 auth users on 2026-09-13, none with an email.
+  const buildersOnly = searchParams.get('builders') === '1';
+  const hideGuests = searchParams.get('guests') === 'hide';
 
   // 1) auth users
   const { data: lu, error } = await (admin as any).auth.admin.listUsers({ page, perPage });
@@ -141,6 +146,31 @@ export async function GET(req: NextRequest) {
     if (m?.id) merchantIds.push(m.id);
   });
 
+  // 2b) what each user has BUILT — the thing a builder signup actually does. Newest-edited first;
+  // the cap is per page of users, not per user, so one agency account with thousands of sites
+  // gets its counts from what fits (shown as "5000+" would be wrong; instead the count is exact
+  // up to the cap and the UI says "≥" past it).
+  const TEMPLATE_ROW_CAP = 5000;
+  let templateRows: OwnedTemplateRow[] = [];
+  try {
+    const { data, error: te } = await (admin as any)
+      .from('templates')
+      .select('id, owner_id, slug, template_name, business_name, published, updated_at, created_at, custom_domain, claim_source, industry')
+      .in('owner_id', userIds)
+      .order('updated_at', { ascending: false })
+      .limit(TEMPLATE_ROW_CAP);
+    if (!te) templateRows = (data ?? []) as OwnedTemplateRow[];
+  } catch { /* tolerate */ }
+  const sitesByUser = summarizeUserSites(templateRows);
+  const sitesCapped = templateRows.length >= TEMPLATE_ROW_CAP;
+
+  // 2c) platform admins — so the list can tell an operator account from a customer.
+  const adminIds = new Set<string>();
+  try {
+    const { data: admins } = await (admin as any).from('admin_users').select('user_id').in('user_id', userIds);
+    (admins ?? []).forEach((a: any) => a?.user_id && adminIds.add(a.user_id));
+  } catch { /* tolerate */ }
+
   // 3) compliance profile
   let profiles: any[] = [];
   try {
@@ -193,9 +223,13 @@ export async function GET(req: NextRequest) {
     const row = {
       id: u.id,
       email: u.email,
-      name: (u.user_metadata as any)?.name ?? null,
+      name: (u.user_metadata as any)?.name ?? (u.user_metadata as any)?.full_name ?? null,
       created_at: (u as any).created_at ?? null,
       last_sign_in_at: (u as any).last_sign_in_at ?? null,
+      is_anonymous: !!(u as any).is_anonymous,
+      provider: authProvider(u as any),
+      is_admin: adminIds.has(u.id),
+      sites: sitesByUser.get(u.id) ?? NO_SITES,
       is_chef: !!chef,
       is_merchant: !!merch, // ⬅️ added
       chef: chef && {
@@ -232,12 +266,15 @@ export async function GET(req: NextRequest) {
     return row;
   });
 
-  // 6) deep filter on enriched fields (merchant/chef display names, plan labels, etc.)
+  // 6) deep filter on enriched fields (merchant/chef display names, plan labels, site names/slugs)
+  const scoped = shaped.filter((r) => (!buildersOnly || r.sites.total > 0) && (!hideGuests || !r.is_anonymous));
   const rows = q
-    ? shaped.filter((r) => {
+    ? scoped.filter((r) => {
         const hay = [
           r.email,
           r.name,
+          r.provider,
+          ...r.sites.latest.flatMap((s) => [s.name, s.slug, s.custom_domain]),
           r.plan?.label,
           r.chef?.display_name,
           r.chef?.name,
@@ -249,7 +286,7 @@ export async function GET(req: NextRequest) {
         ].filter(Boolean).map((x) => String(x).toLowerCase());
         return hay.some((s) => s.includes(q));
       })
-    : shaped;
+    : scoped;
 
   // 7) hasMore — reflect the auth-admin paging; deep filtering may shrink what you see
   const hasMoreAuthPage = (lu.users?.length ?? 0) === perPage;
@@ -261,6 +298,7 @@ export async function GET(req: NextRequest) {
     perPage,
     count: rows.length,
     hasMore,
+    sites_capped: sitesCapped,
     users: rows,
   });
 }

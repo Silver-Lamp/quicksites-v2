@@ -40,6 +40,25 @@ demand problem** — and the mechanism itself works: an anonymous session upgrad
 4. **An upgraded guest has an email but no password.** On a second device the only way in is the
    magic-link option on `/login`, which they were never told exists.
 
+## Status — steps 1–4 SHIPPED 2026-09-13 (PR A)
+
+- **1 ✓** `Sign up to publish` button in the always-visible bottom toolbar; a refused Publish opens
+  the same box (`publishSnapshot` maps `needs_signup` → `GUEST_SIGNUP_EVENT`; `GuestSignupModal`
+  is mounted in the guest shell). One form (`components/admin/guest-signup-box.tsx`), reused by
+  the banner.
+- **2 ✓** `/api/admin/sites/publish` gates on `requireTemplateOwner` (admin bypass kept); an
+  anonymous owner gets `401 needs_signup`. Any signed-up owner can publish their own site.
+- **3 ✓** `updateUser({ email, password }, { emailRedirectTo: /auth/callback?next=<editor> })` —
+  the confirmation lands in their editor; the callback's fragment branch finalises on any device.
+- **4 ✓** A password is collected in the same form, so a second device can log in normally.
+- **5 ☐** PostHog `guest_signup_started` / `guest_signup_confirmed` — not yet.
+- **Verification still owed (a person, in a browser):** incognito → `/build` → edit → press
+  Publish → box opens → sign up → confirm from a *different* browser → land in the editor →
+  Publish succeeds → `/admin/ops` shows `startedSignup` and `converted` move. The email template
+  is Supabase's default "Confirm email change"; if its link does not carry the tokens in the
+  fragment, the callback will send them to `/login?error=missing_tokens` — that is the one thing
+  a unit test cannot see.
+
 ## The plan (one PR, in this order)
 
 1. **Put "Sign up to publish" in the bottom toolbar** (`TemplateActionToolbar`, `fixed bottom-4`,

@@ -15,7 +15,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export type TemplateOwnerGate =
-  | { ok: true; userId: string; isAdmin: boolean }
+  | { ok: true; userId: string; isAdmin: boolean; /** A guest-build session: owns the row, cannot publish it. */ isAnonymous: boolean }
   | { ok: false; response: NextResponse };
 
 /**
@@ -44,7 +44,7 @@ export async function requireTemplateOwner(templateId: string): Promise<Template
     .select('user_id')
     .eq('user_id', user.id)
     .maybeSingle();
-  if (adminRow) return { ok: true, userId: user.id, isAdmin: true };
+  if (adminRow) return { ok: true, userId: user.id, isAdmin: true, isAnonymous: !!user.is_anonymous };
 
   // Otherwise, the caller must own the template.
   const { data: tpl } = await supabaseAdmin
@@ -60,5 +60,5 @@ export async function requireTemplateOwner(templateId: string): Promise<Template
     return { ok: false, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) };
   }
 
-  return { ok: true, userId: user.id, isAdmin: false };
+  return { ok: true, userId: user.id, isAdmin: false, isAnonymous: !!user.is_anonymous };
 }

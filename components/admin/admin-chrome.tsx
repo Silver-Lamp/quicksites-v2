@@ -6,6 +6,7 @@ import Image from 'next/image';
 import AppHeader from './AppHeader/app-header';
 import ResponsiveAdminLayout from './responsive-admin-layout';
 import GuestPublishBanner from './guest-publish-banner';
+import GuestSignupModal from './guest-signup-box';
 import WorkSurfaceBackground from './work-surface-background';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import { useSafeTargetRef } from '@/lib/ui/safeTargetRef';
@@ -41,6 +42,9 @@ function GuestChrome({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <GuestPublishBanner />
+      {/* Opens on qs:guest:signup — from the toolbar's button or from a refused Publish — so the
+          form appears at the moment of intent, wherever the banner has scrolled to. */}
+      <GuestSignupModal />
       <main className="min-w-0 pt-0">{children}</main>
     </div>
   );

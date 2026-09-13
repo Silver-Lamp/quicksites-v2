@@ -69,9 +69,10 @@ describe('wired in', () => {
     expect(src).toMatch(/searchParams\.get\('guests'\) === 'hide'/);
     expect(src).toMatch(/\.from\('templates'\)[\s\S]*\.in\('owner_id', userIds\)/);
   });
-  it('the manager hides guests by default, has a Sites column, and links each site to the editor and its public URL', () => {
+  it('the manager SHOWS guests by default (they are the new builders), has a Sites column, and links each site to the editor and its public URL', () => {
     const src = readFileSync('components/admin/users/users-plans-manager.tsx', 'utf8');
-    expect(src).toMatch(/useState\(true\);\s*\n\s*const \[buildersOnly/); // hideGuests default true
+    // ⚠️ The first cut defaulted this to true and would have hidden every new builder on 2026-09-13.
+    expect(src).toMatch(/const \[hideGuests, setHideGuests\] = useState\(false\)/);
     expect(src).toMatch(/<SortHead label="Sites" k="sites"/);
     expect(src).toMatch(/href=\{`\/admin\/templates\/\$\{s\.id\}`\}/);
     expect(src).toMatch(/href=\{s\.url\} target="_blank" rel="noopener noreferrer"/);

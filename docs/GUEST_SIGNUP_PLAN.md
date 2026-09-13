@@ -74,6 +74,39 @@ contact page show. Today: 3 sites have a source URL (Adze Media, RefReady, Meddz
 scraped phone, the rest are a business name only. The script finds people; **a person writes the
 apology** — the same rule as `outreach:candidates`.
 
+## PR B — the apology postcard with a QR to their site (owner asked 2026-09-13)
+
+`npm run guests:contacts -- --lookup` adds a Google Places candidate (address · phone · website)
+per name-only site, tagged **CONFIRM** with a name-similarity score. ⚠️ A guest site records no
+city, so the candidate is a guess until a person confirms it by eye; names with nothing
+distinctive ("pepe", "real estate", "Smoothie Shop") are skipped, not guessed. Postage to the
+wrong "Joe's Bakery" is the invented-menu class with a stamp on it.
+
+What the card needs that does not exist yet:
+
+1. **A tracked, bearer-free link for a guest draft** — `app/go/guest/[templateId]/route.ts`,
+   modelled on `app/go/[prospectId]` (the trade card's QR). The 30-minute `mintClaimToken` needs
+   the guest's *own* session, so a printed QR cannot carry it. The route instead: counts the visit,
+   reads the template's anonymous `owner_id` server-side, sets the `qs_pending_claim` cookie for
+   `{ templateId, anonUid }`, and 302s to `/login?next=/admin/templates/<id>` — so after sign-up
+   on ANY device, `claimPendingGuestDraft` transfers the site (the RPC only moves a row still
+   owned by that anon uid, so it is safe and idempotent). Once claimed, the same link goes to
+   the live site (a card lands a week later).
+2. **A card that apologises and promises nothing** — `lib/outreach/guestApologyCard.ts`, front:
+   *"You built &lt;name&gt; a website with us. Our sign-up step was broken — that was our fault.
+   It's still yours."* + the site host + QR; back: what happened in two sentences, the exit line,
+   the sender sign-off + the Calendly line. Run it through the same FORBIDDEN-promise test as the
+   claim card (no ranking / 24/7 / licensing / guarantee / competitor / deadline / price).
+3. **A confirm-gated send** — a `--to <templateId>=<candidate placeId>` list the operator types
+   after reading the CONFIRM rows; the script builds the Lob address from the candidate,
+   preflights the site URL (must answer 200), and mails through `sendPostcard` with
+   `lobKeyIsTest` refused. Never a bulk "mail all candidates".
+
+Owner decision before PR B: whether a postcard is the right channel for people who typed only a
+business name (a shop with a Places listing gets a card at its counter; a person building a
+personal or side-project site may have no listing at all — "Poignant Photography",
+"Doggie Doo Pickup").
+
 ## Owner decisions still open
 - Whether to collect a password at sign-up or go magic-link-only (plan step 4).
 - Whether to search the name-only guests by business name (the script deliberately does not).

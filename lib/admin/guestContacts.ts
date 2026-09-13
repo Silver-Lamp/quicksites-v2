@@ -86,6 +86,84 @@ export function contactOnRecord(data: any, businessName: string | null | undefin
   return { email, emailIsPlaceholder: isPlaceholderEmail(email, businessName), phone, address, sourceUrl };
 }
 
+// ── Business-name lookup (Places Text Search) ─────────────────────────────────────────────────
+//
+// For the name-only sites. ⚠️ A guest site records NO city, so "Smoothie Shop" or "pepe" will
+// match some business somewhere. A lookup here is therefore never an answer, only a CANDIDATE
+// the operator confirms by eye before anything is mailed — postage to the wrong "Joe's Bakery"
+// is the invented-menu class with a stamp on it. The rule below decides which candidates are
+// even worth showing.
+
+export type LookupCandidate = {
+  placeId: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  website: string | null;
+};
+
+const NAME_STOP = new Set(['the', 'a', 'and', 'of', 'shop', 'store', 'services', 'service', 'llc', 'inc', 'co', 'company']);
+// Words that name a TRADE, not a business: "real estate" is two of them and no business at all.
+const GENERIC_INDUSTRY = new Set([
+  'real', 'estate', 'realty', 'towing', 'plumbing', 'roofing', 'electric', 'electrical', 'hvac', 'concrete', 'paving', 'asphalt',
+  'bakery', 'cafe', 'coffee', 'restaurant', 'diner', 'grill', 'pizza', 'smoothie', 'juice', 'bar', 'food',
+  'media', 'photography', 'photo', 'studio', 'design', 'marketing', 'consulting', 'software', 'dev', 'tech',
+  'lawn', 'landscaping', 'cleaning', 'painting', 'auto', 'repair', 'salon', 'fitness', 'yoga', 'clinic', 'dental', 'law', 'legal',
+  'thrift', 'clothing', 'boutique', 'emporium', 'collectible', 'toy', 'mask', 'masks', 'wine', 'tasting', 'parties', 'train', 'trains',
+]);
+
+/** Words in the name that could identify a business — filler and generic trade words do not count. */
+export function distinctiveTokens(name: string): string[] {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s'&-]/g, ' ')
+    .split(/\s+/)
+    .map((t) => t.replace(/^'|'$/g, ''))
+    .filter((t) => t.length > 2 && !NAME_STOP.has(t) && !GENERIC_INDUSTRY.has(t.replace(/'s$/, '')));
+}
+
+/**
+ * Is there enough in the name to look up at all? "pepe", "real estate", "Smoothie Shop" → no.
+ * Needs at least one word that is not a trade word, plus either a second word of any kind, a
+ * possessive ("Jay Berry's"), or a locality recorded on the site.
+ */
+export function lookupWorthTrying(businessName: string, hint?: { address?: string | null }): boolean {
+  const distinct = distinctiveTokens(businessName);
+  if (!distinct.length) return !!hint?.address && businessName.trim().length >= 4 && !/^(real estate|quicksites)$/i.test(businessName.trim());
+  if (hint?.address) return true;
+  const words = businessName.trim().split(/\s+/).filter((w) => w.length > 2 && !NAME_STOP.has(w.toLowerCase()));
+  return words.length >= 2 || /'s$|'$/.test(businessName.trim());
+}
+
+/** The text query — name plus whatever locality the site recorded. */
+export function lookupQueryFor(businessName: string, hint?: { address?: string | null }): string {
+  return [businessName.trim(), hint?.address?.trim()].filter(Boolean).join(', ');
+}
+
+export type LookupVerdict =
+  | { show: true; score: number; note: string | null }
+  | { show: false; reason: 'no_match' | 'name_differs' | 'not_worth_trying'; score: number };
+
+/**
+ * Whether a Places result is worth putting in front of a person. Never "accept": the operator
+ * confirms. Shown when the returned name overlaps the site's name strongly; a locality on the
+ * site that the result does not share is noted, not fatal (the person typed it loosely).
+ */
+export function assessLookup(
+  businessName: string,
+  candidate: LookupCandidate | null,
+  similarity: (a: string, b: string) => number,
+  hint?: { address?: string | null },
+): LookupVerdict {
+  if (!lookupWorthTrying(businessName, hint)) return { show: false, reason: 'not_worth_trying', score: 0 };
+  if (!candidate) return { show: false, reason: 'no_match', score: 0 };
+  const score = similarity(businessName, candidate.name);
+  if (score < 0.6) return { show: false, reason: 'name_differs', score };
+  const addr = (hint?.address ?? '').trim().toLowerCase();
+  const note = addr && candidate.address && !candidate.address.toLowerCase().includes(addr.split(',')[0]) ? `site says "${hint!.address}", result is elsewhere` : null;
+  return { show: true, score, note };
+}
+
 export type GuestLead = {
   templateId: string;
   slug: string | null;
@@ -95,6 +173,8 @@ export type GuestLead = {
   onRecord: ContactOnRecord;
   /** From fetching the source website, when there was one. */
   scraped: { emails: string[]; phones: string[]; fetched: boolean; error?: string } | null;
+  /** From a Places lookup by business name — a CANDIDATE for a person to confirm, never a fact. */
+  lookup: { query: string; candidate: LookupCandidate | null; verdict: LookupVerdict } | null;
   /** The single best way to reach them, or null: a real email > a phone > the website's contact page. */
   bestChannel: 'email' | 'phone' | 'website' | null;
   reachable: boolean;
@@ -102,10 +182,12 @@ export type GuestLead = {
 
 export function classifyLead(input: {
   templateId: string; slug: string | null; businessName: string; createdAt: string; updatedAt: string;
-  onRecord: ContactOnRecord; scraped: GuestLead['scraped'];
+  onRecord: ContactOnRecord; scraped: GuestLead['scraped']; lookup?: GuestLead['lookup'];
 }): GuestLead {
   const realEmail = (!input.onRecord.emailIsPlaceholder && input.onRecord.email) || input.scraped?.emails[0] || null;
   const phone = input.onRecord.phone || input.scraped?.phones[0] || null;
+  // ⚠️ A lookup candidate never sets the channel — it is unconfirmed. `reachable` stays honest:
+  // it means we hold something the PERSON or THEIR SITE gave us.
   const bestChannel: GuestLead['bestChannel'] = realEmail ? 'email' : phone ? 'phone' : input.onRecord.sourceUrl ? 'website' : null;
   return {
     templateId: input.templateId,
@@ -115,6 +197,7 @@ export function classifyLead(input: {
     minutesEdited: Math.max(0, Math.round((new Date(input.updatedAt).getTime() - new Date(input.createdAt).getTime()) / 60_000)),
     onRecord: input.onRecord,
     scraped: input.scraped,
+    lookup: input.lookup ?? null,
     bestChannel,
     reachable: bestChannel !== null,
   };

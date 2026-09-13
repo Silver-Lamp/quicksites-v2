@@ -34,7 +34,29 @@ import { Loader, Search, RefreshCcw, ChevronLeft, ChevronRight, Timer, Slash, Hi
 
 const DEFAULT_PER_PAGE = 50;
 
-type SortKey = 'joined' | 'last_active' | 'name' | 'plan' | 'status';
+type SortKey = 'joined' | 'last_active' | 'name' | 'plan' | 'status' | 'sites' | 'last_edit';
+
+/** One of a user's sites, as the list API briefs it (lib/admin/userSites.ts). */
+type UserSiteBrief = {
+  id: string;
+  name: string;
+  slug: string | null;
+  url: string | null;
+  published: boolean;
+  updated_at: string | null;
+  custom_domain: string | null;
+  claim_source: string | null;
+  industry: string | null;
+};
+type UserSitesSummary = {
+  total: number;
+  published: number;
+  drafts: number;
+  custom_domains: number;
+  last_edited_at: string | null;
+  first_created_at: string | null;
+  latest: UserSiteBrief[];
+};
 const PLAN_OPTIONS = [
   { key: 'free', label: 'Free' },
   { key: 'starter', label: 'Starter' },
@@ -50,6 +72,12 @@ type AdminUserRow = {
   name?: string | null;
   created_at?: string | null;
   last_sign_in_at?: string | null;
+  /** A guest-build session (Supabase anonymous sign-in) — no email, real templates. */
+  is_anonymous?: boolean;
+  /** 'email' | 'google' | 'anonymous' | 'unknown'. */
+  provider?: string | null;
+  is_admin?: boolean;
+  sites?: UserSitesSummary | null;
   is_chef?: boolean;
   chef?: AnyRec | null;
   merchant?: AnyRec | null;
@@ -77,6 +105,8 @@ type ListResponse = {
   perPage: number;
   count: number;
   hasMore: boolean;
+  /** The per-page template scan hit its cap — an agency account's counts are "at least". */
+  sites_capped?: boolean;
   users: AdminUserRow[];
 };
 
@@ -112,6 +142,48 @@ function PlanBadge({ plan }: { plan?: AdminUserRow['plan'] | null }) {
   );
 }
 
+/**
+ * What this user has built: counts, when they last touched anything, and the newest few sites
+ * with an editor link and the public address. The one column a builder signup is about.
+ */
+function SitesCell({ sites, capped }: { sites: UserSitesSummary | null; capped: boolean }) {
+  const [open, setOpen] = useState(false);
+  if (!sites || sites.total === 0) return <span className="text-muted-foreground">no sites yet</span>;
+  const origin = (s: UserSiteBrief) =>
+    s.claim_source === 'guest_build' ? 'guest' : s.claim_source === 'listing_import' ? 'auto-built' : s.claim_source === 'demo_seed' ? 'demo' : null;
+  const shown = open ? sites.latest : sites.latest.slice(0, 1);
+  return (
+    <div className="space-y-1 text-sm">
+      <div>
+        <span className="font-medium">{capped ? '≥' : ''}{sites.total} site{sites.total === 1 ? '' : 's'}</span>
+        <span className="text-muted-foreground"> · {sites.published} live · {sites.drafts} draft{sites.drafts === 1 ? '' : 's'}</span>
+        {sites.custom_domains > 0 && <span className="text-muted-foreground"> · {sites.custom_domains} custom domain{sites.custom_domains === 1 ? '' : 's'}</span>}
+      </div>
+      {sites.last_edited_at && (
+        <div className="text-xs text-muted-foreground" title={formatDateTime(sites.last_edited_at)}>last edit {timeAgo(sites.last_edited_at)}</div>
+      )}
+      <ul className="space-y-0.5">
+        {shown.map((s) => (
+          <li key={s.id} className="flex items-center gap-2 text-xs">
+            <span className={`inline-block h-1.5 w-1.5 rounded-full ${s.published ? 'bg-emerald-400' : 'bg-zinc-500'}`} title={s.published ? 'Published' : 'Draft'} />
+            <a href={`/admin/templates/${s.id}`} className="truncate max-w-[14rem] underline underline-offset-2 hover:text-foreground" title="Open in the editor">{s.name}</a>
+            {s.url && (
+              <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground" title={s.url}>↗</a>
+            )}
+            {origin(s) && <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">{origin(s)}</span>}
+            {s.updated_at && <span className="text-muted-foreground">{timeAgo(s.updated_at)}</span>}
+          </li>
+        ))}
+      </ul>
+      {sites.latest.length > 1 && (
+        <button type="button" onClick={() => setOpen((o) => !o)} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+          {open ? 'show less' : `+${Math.min(sites.latest.length, sites.total) - 1} more${sites.total > sites.latest.length ? ` of ${sites.total}` : ''}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function UsersPlansManager() {
   const [q, setQ] = useState('');
   const dq = useDebounce(q);
@@ -141,6 +213,11 @@ export default function UsersPlansManager() {
   const [actItems, setActItems] = useState<any[]>([]);
   const [actLoading, setActLoading] = useState(false);
 
+  // Page-local filters, applied server-side per page: guests (anonymous guest-build sessions —
+  // 22 of 73 auth users in Sep 2026, no email) are hidden by default so a real signup is not
+  // buried; "builders only" narrows to users who have made at least one site.
+  const [hideGuests, setHideGuests] = useState(true);
+  const [buildersOnly, setBuildersOnly] = useState(false);
   const fetchUsers = React.useCallback(async (opts?: { resetPage?: boolean }) => {
     setLoading(true);
     setError(null);
@@ -148,6 +225,8 @@ export default function UsersPlansManager() {
       const p = opts?.resetPage ? 1 : page;
       const url = new URL('/api/admin/users/list', window.location.origin);
       if (dq) url.searchParams.set('q', dq);
+      if (hideGuests) url.searchParams.set('guests', 'hide');
+      if (buildersOnly) url.searchParams.set('builders', '1');
       url.searchParams.set('page', String(p));
       url.searchParams.set('perPage', String(perPage));
       const r = await fetch(url.toString(), { cache: 'no-store' });
@@ -160,11 +239,11 @@ export default function UsersPlansManager() {
     } finally {
       setLoading(false);
     }
-  }, [dq, page, perPage]);
+  }, [dq, page, perPage, hideGuests, buildersOnly]);
 
   useEffect(() => {
     fetchUsers({ resetPage: true });
-  }, [dq, perPage]);
+  }, [dq, perPage, hideGuests, buildersOnly]);
 
   // Fetch on page change
   useEffect(() => {
@@ -198,6 +277,8 @@ export default function UsersPlansManager() {
         case 'name': c = s(a.name || a.email).localeCompare(s(b.name || b.email)); break;
         case 'plan': c = s(a.plan?.key || a.plan?.label).localeCompare(s(b.plan?.key || b.plan?.label)); break;
         case 'status': c = s(a.plan?.status).localeCompare(s(b.plan?.status)); break;
+        case 'sites': c = (a.sites?.total ?? 0) - (b.sites?.total ?? 0) || (a.sites?.published ?? 0) - (b.sites?.published ?? 0); break;
+        case 'last_edit': c = t(a.sites?.last_edited_at) - t(b.sites?.last_edited_at); break;
       }
       return c * dir;
     });
@@ -515,6 +596,14 @@ export default function UsersPlansManager() {
               />
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60" />
             </div>
+            <label className="flex items-center gap-1.5 text-sm text-muted-foreground whitespace-nowrap" title="Anonymous guest-build sessions have no email and are hidden by default">
+              <input type="checkbox" checked={hideGuests} onChange={(e) => setHideGuests(e.target.checked)} className="h-4 w-4" />
+              Hide guests
+            </label>
+            <label className="flex items-center gap-1.5 text-sm text-muted-foreground whitespace-nowrap" title="Only users who have built at least one site">
+              <input type="checkbox" checked={buildersOnly} onChange={(e) => setBuildersOnly(e.target.checked)} className="h-4 w-4" />
+              Builders only
+            </label>
             <select
               value={perPage}
               onChange={(e) => setPerPage(Number(e.target.value))}
@@ -541,7 +630,7 @@ export default function UsersPlansManager() {
                 <TableRow>
                   <SortHead label="User" k="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <TableHead>Flags</TableHead>
-                  <TableHead>Compliance</TableHead>
+                  <SortHead label="Sites" k="sites" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortHead label="Plan" k="plan" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortHead label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortHead label="Joined" k="joined" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
@@ -568,31 +657,33 @@ export default function UsersPlansManager() {
                         <div className="mt-1 text-xs text-muted-foreground">{u.id}</div>
                       </TableCell>
 
-                      <TableCell className="space-x-2">
-                        {u.is_chef ? (
-                          <Badge variant="default">Chef</Badge>
-                        ) : (
-                          <Badge variant="secondary">User</Badge>
-                        )}
-                        {u.merchant?.id && <Badge variant="outline">Merchant</Badge>}
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1.5">
+                          {u.is_anonymous ? (
+                            <Badge variant="outline" title="Anonymous guest-build session — no email; the templates are real">Guest</Badge>
+                          ) : u.is_chef ? (
+                            <Badge variant="default">Chef</Badge>
+                          ) : (
+                            <Badge variant="secondary">User</Badge>
+                          )}
+                          {u.is_admin && <Badge variant="default" title="Platform admin (admin_users)">Admin</Badge>}
+                          {u.provider && u.provider !== 'anonymous' && u.provider !== 'unknown' && (
+                            <Badge variant="outline" className="capitalize" title="Sign-in method">{u.provider}</Badge>
+                          )}
+                          {u.merchant?.id && <Badge variant="outline">Merchant</Badge>}
+                          {u.merchant?.id && u.compliance?.overall && (
+                            <Badge
+                              title="Merchant compliance"
+                              variant={u.compliance.overall === 'good' ? 'default' : u.compliance.overall === 'pending' ? 'secondary' : 'destructive'}
+                            >
+                              {u.compliance.overall}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
 
-                      <TableCell>
-                        {u.compliance?.overall ? (
-                          <Badge
-                            variant={
-                              u.compliance.overall === 'good'
-                                ? 'default'
-                                : u.compliance.overall === 'pending'
-                                ? 'secondary'
-                                : 'destructive'
-                            }
-                          >
-                            {u.compliance.overall}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                      <TableCell className="min-w-[16rem]">
+                        <SitesCell sites={u.sites ?? null} capped={!!res?.sites_capped} />
                       </TableCell>
 
                       <TableCell>

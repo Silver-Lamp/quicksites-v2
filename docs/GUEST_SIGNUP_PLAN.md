@@ -51,7 +51,11 @@ demand problem** — and the mechanism itself works: an anonymous session upgrad
 - **3 ✓** `updateUser({ email, password }, { emailRedirectTo: /auth/callback?next=<editor> })` —
   the confirmation lands in their editor; the callback's fragment branch finalises on any device.
 - **4 ✓** A password is collected in the same form, so a second device can log in normally.
-- **5 ☐** PostHog `guest_signup_started` / `guest_signup_confirmed` — not yet.
+- **5 ✓** PostHog `guest_signup_confirmed` (`lib/analytics/guestConversion.ts`) fires from both
+  auth landing routes when a confirmed user's account predates the confirmation AND owns a
+  `guest_build` template. ⚠️ `SIGNUP` never fires for a converted guest — it keys on account age
+  — so any funnel that counts sign-ups must include this event. "Started" is not an event: the
+  ops panel reads it from `auth.users.new_email` (pending confirmation), which is the truth.
 - **Verification still owed (a person, in a browser):** incognito → `/build` → edit → press
   Publish → box opens → sign up → confirm from a *different* browser → land in the editor →
   Publish succeeds → `/admin/ops` shows `startedSignup` and `converted` move. The email template

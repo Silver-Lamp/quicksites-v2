@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { captureSignupIfNew } from '@/lib/analytics/funnel';
+import { captureGuestConversionIfFresh } from '@/lib/analytics/guestConversion';
 import { notifyNewSignup } from '@/lib/notifications/newSignupEmail';
 import { claimPendingGuestDraft } from '@/lib/auth/claimGuestDraft';
 import { claimPendingSiteDraft } from '@/lib/auth/claimPendingSiteDraft';
@@ -41,6 +42,9 @@ export async function POST(req: NextRequest) {
   // Best-effort funnel: fire SIGNUP for a brand-new account (magic-link is the
   // primary signup path). Never blocks the session write.
   try { await captureSignupIfNew(data.user); } catch {}
+  // A guest builder who just confirmed their email lands here (the confirmation carries fragment
+  // tokens, like a magic link). SIGNUP misses them; this counts them.
+  try { await captureGuestConversionIfFresh(data.user); } catch {}
   // Best-effort admin notification email on a genuine new signup (skips guests).
   try { await notifyNewSignup(data.user); } catch {}
 

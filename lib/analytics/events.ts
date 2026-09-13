@@ -9,6 +9,9 @@
 export const EVENTS = {
   // Acquisition / activation
   SIGNUP: 'signup',
+  // A guest-build session confirmed an email and became an account. SIGNUP misses these: it keys
+  // on account age, and a guest's account predates the confirmation by however long they built.
+  GUEST_SIGNUP_CONFIRMED: 'guest_signup_confirmed',
   REBUILD_STARTED: 'rebuild_started', // /rebuild: a URL was submitted for AI rebuild
   REBUILD_COMPLETED: 'rebuild_completed', // /rebuild: a draft was generated from that URL
   BUILDER_ACTIVATED: 'builder_activated', // first meaningful template edit/save

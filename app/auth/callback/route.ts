@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { captureSignupIfNew } from '@/lib/analytics/funnel';
+import { captureGuestConversionIfFresh } from '@/lib/analytics/guestConversion';
 import { notifyNewSignup } from '@/lib/notifications/newSignupEmail';
 import { claimPendingGuestDraft } from '@/lib/auth/claimGuestDraft';
 import { claimPendingSiteDraft } from '@/lib/auth/claimPendingSiteDraft';
@@ -42,8 +43,10 @@ export async function GET(req: NextRequest) {
         new URL(`/login?error=callback&msg=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`, url.origin)
       );
     }
-    // Best-effort funnel: fire SIGNUP for a brand-new account (never blocks auth).
+    // Best-effort funnel: fire SIGNUP for a brand-new account (never blocks auth), and
+    // GUEST_SIGNUP_CONFIRMED for a guest builder who just confirmed (SIGNUP misses those).
     try { await captureSignupIfNew(data.user); } catch {}
+    try { await captureGuestConversionIfFresh(data.user); } catch {}
     // Best-effort admin notification email on a genuine new signup (skips guests).
     try { await notifyNewSignup(data.user); } catch {}
     // Referral attribution: record a user-level signup if they arrived under a code.

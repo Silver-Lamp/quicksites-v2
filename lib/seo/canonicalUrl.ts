@@ -74,6 +74,35 @@ export function stripHomeSegment(rest?: string[] | null): string[] {
   return list.length === 1 && list[0] === 'home' ? [] : list;
 }
 
+/**
+ * Cross-host consolidation, opted into PER SITE — the "separate decision with a real prerequisite"
+ * the note above defers.
+ *
+ * A restaurant apex is reachable on up to three hosts (`kent-restaurant.com`, `www.` and
+ * `kent-restaurant.delivered.menu`), each self-canonical, so a search engine sees three copies of
+ * one page and splits whatever signal it has. `data.meta.canonical_origin` names the ONE host the
+ * others defer to. It is never inferred: `scripts/set-apex-canonical.mjs` writes it only after
+ * fetching that origin and checking it serves this same page (the DNS-not-live failure the note
+ * above warns about is exactly what the preflight refuses).
+ *
+ * Accepts only an https ORIGIN — no path, query, hash or credentials — because the page path is
+ * appended per request; a stored path would canonicalise every page of the site to one URL.
+ */
+export function canonicalOriginFromMeta(meta: unknown): string | null {
+  const raw = (meta as { canonical_origin?: unknown } | null | undefined)?.canonical_origin;
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  let u: URL;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (u.protocol !== 'https:') return null;
+  if (u.username || u.password || u.search || u.hash) return null;
+  if (u.pathname !== '/' && u.pathname !== '') return null;
+  return `https://${u.host.toLowerCase()}`;
+}
+
 /** Domains where the leftmost label is a site slug (mirrors `PLATFORM_DOMAINS` in middleware.ts). */
 export const PLATFORM_SITE_DOMAINS = ['quicksites.ai', 'cedarsites.com', 'pointsevenstudio.com'];
 

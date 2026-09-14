@@ -17,6 +17,7 @@ import { loadCityMenuFeed, menuFinderCampaignId } from '@/lib/menu/cityMenuIndex
 import {
   PUBLIC_PATH_HEADER,
   absoluteUrl,
+  canonicalOriginFromMeta,
   publicPathFor,
   stripHomeSegment,
 } from '@/lib/seo/canonicalUrl';
@@ -84,12 +85,13 @@ async function originFromHeaders() {
  * ⚠️ NOT `origin + '/sites/' + slug`. Every tenant host reaches this page through a rewrite, so
  * the routed path is our routing table, not their address. See lib/seo/canonicalUrl.ts.
  */
-async function publicUrlFromHeaders(slug: string, rest?: string[] | null): Promise<string> {
+async function publicPathFromHeaders(slug: string, rest?: string[] | null): Promise<string> {
   const h = await headers();
-  return absoluteUrl(
-    await originFromHeaders(),
-    publicPathFor({ headerPath: h.get(PUBLIC_PATH_HEADER), slug, rest: stripHomeSegment(rest) }),
-  );
+  return publicPathFor({ headerPath: h.get(PUBLIC_PATH_HEADER), slug, rest: stripHomeSegment(rest) });
+}
+
+async function publicUrlFromHeaders(slug: string, rest?: string[] | null): Promise<string> {
+  return absoluteUrl(await originFromHeaders(), await publicPathFromHeaders(slug, rest));
 }
 
 /**
@@ -457,12 +459,20 @@ export async function generateMetadata({
     icon: [{ url: `/api/site-icon/${encodeURIComponent(slug)}`, type: 'image/svg+xml' }],
   };
 
+  // A site reachable on several hosts may nominate ONE (`meta.canonical_origin`, written only by
+  // a script that verified the host serves this page — lib/seo/canonicalUrl.ts). The path is still
+  // the one the visitor requested; only the origin is swapped, so every page of the site defers to
+  // its twin on the nominated host rather than all pages collapsing onto one URL.
+  const meta = (normalized as any)?.meta ?? (normalized as any)?.data?.meta;
+  const canonicalOrigin = canonicalOriginFromMeta(meta);
   const md = generatePageMetadata({
     site: normalized as any,
     pageSlug,
     // The page's own public URL — `generatePageMetadata` appends nothing when the base already
     // resolves the page, so pass it whole rather than a base to be joined with a page slug.
-    baseUrl: await publicUrlFromHeaders(siteRow.slug ?? slug, rest),
+    baseUrl: canonicalOrigin
+      ? absoluteUrl(canonicalOrigin, await publicPathFromHeaders(siteRow.slug ?? slug, rest))
+      : await publicUrlFromHeaders(siteRow.slug ?? slug, rest),
     canonicalIsExact: true,
   });
   // A restaurant-apex portal indexes as soon as its directory has real content (2+
@@ -484,7 +494,6 @@ export async function generateMetadata({
   // copy is still being argued about. A discarded draft of a REAL NAMED PERSON'S business sitting
   // in a search index, competing with the one they chose, is a liability nobody asked us to create.
   // `meta.noindex` lets a site be publicly reachable without being publicly discoverable.
-  const meta = (normalized as any)?.meta ?? (normalized as any)?.data?.meta;
   if (meta?.noindex === true) return { ...md, icons: siteIcons, robots: { index: false, follow: false } };
 
   return { ...md, icons: siteIcons };

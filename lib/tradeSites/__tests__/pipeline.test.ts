@@ -3,7 +3,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { orderQueue, isBuildable, pipelineCaps, pipelineEnabled, parsePipelineOverrides, OVERRIDE_LIMITS } from '@/lib/tradeSites/pipeline';
+import { orderQueue, isBuildable, pipelineCaps, pipelineEnabled, parsePipelineOverrides, pickOperatorId, OVERRIDE_LIMITS } from '@/lib/tradeSites/pipeline';
 import { SWEEP_CATEGORIES, resolveSweepCategory, sweepArgsFor } from '@/lib/prospects/sweepCategories';
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
@@ -16,6 +16,22 @@ describe('the queue drains highest priority first, then oldest', () => {
       { id: 'c', priority: 5, created_at: '2026-09-03' },
     ];
     expect(orderQueue(rows).map((r) => r.id)).toEqual(['c', 'a', 'b']);
+  });
+});
+
+describe('a draft is owned by a platform ADMIN, or the public render hides it', () => {
+  // 2026-09-15: a sweep requested by the owner's gmail login (not in admin_users) built 35 drafts
+  // that 404'd for everyone — isPublicPreClaimDraft only shows drafts owned by an admin.
+  const admins = ['admin-oldest', 'admin-newer'];
+  it('takes the first candidate that is an admin', () => {
+    expect(pickOperatorId(['not-an-admin', 'admin-newer'], admins)).toBe('admin-newer');
+  });
+  it('falls through to the earliest admin when no candidate is one', () => {
+    expect(pickOperatorId(['gmail-login'], admins)).toBe('admin-oldest');
+    expect(pickOperatorId([], admins)).toBe('admin-oldest');
+  });
+  it('is null only when there is no admin at all', () => {
+    expect(pickOperatorId(['anyone'], [])).toBeNull();
   });
 });
 

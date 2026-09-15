@@ -9,6 +9,7 @@ import SiteHeader from '@/components/site/site-header';
 import { PARTNER_FEE_SHARE, MAX_PLATFORM_FEE_PERCENT, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
 import { getPartnerStats } from '@/lib/commerce/partnerStats';
 import { JoinButton, CopyLink, ConnectPayouts } from './client';
+import WhiteLabelChecklist from './white-label';
 
 export const dynamic = 'force-dynamic';
 
@@ -137,6 +138,9 @@ export default async function PartnerDashboard() {
           </p>
           <ConnectPayouts status={payoutStatus} />
         </div>
+
+        {/* White-label activation — self-serve (docs/WHITE_LABEL_PLAN.md slice 4) */}
+        <WhiteLabelChecklist />
 
         {/* Per-merchant earnings */}
         <div className="mt-8">

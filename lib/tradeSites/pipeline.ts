@@ -122,9 +122,26 @@ export function pipelineCaps(): { maxSweeps: number; maxBuilds: number } {
  * admin — never null, because a draft with no owner is invisible to every admin list.
  */
 export async function resolveOperatorId(candidates: Array<string | null | undefined>): Promise<string | null> {
-  for (const c of [process.env.TRADE_PIPELINE_OPERATOR_ID, ...candidates]) if (c) return c;
-  const { data } = await db().from('admin_users').select('user_id').order('created_at', { ascending: true }).limit(1).maybeSingle();
-  return (data as any)?.user_id ?? null;
+  const wanted = [process.env.TRADE_PIPELINE_OPERATOR_ID, ...candidates].filter((c): c is string => !!c);
+  const { data: admins } = await db().from('admin_users').select('user_id').order('created_at', { ascending: true });
+  const adminIds = ((admins ?? []) as Array<{ user_id: string }>).map((a) => a.user_id);
+  return pickOperatorId(wanted, adminIds);
+}
+
+/**
+ * Pure: the first candidate that IS a platform admin, else the earliest admin, else null.
+ *
+ * ⚠️ WHY THE MEMBERSHIP CHECK. The public render shows an unclaimed pipeline draft only when its
+ * owner is in `admin_users` (`isPublicPreClaimDraft`). This used to return the first non-empty
+ * candidate unchecked, so a sweep requested by an account that is not an operator — the owner's
+ * gmail login, 2026-09-15 — produced 35 drafts that 404'd for everyone and would have failed the
+ * postcard preflight the next morning. A non-admin requester is not a valid owner for a draft that
+ * must be publicly visible; fall through to a real operator instead.
+ */
+export function pickOperatorId(candidates: string[], adminIdsOldestFirst: string[]): string | null {
+  const admins = new Set(adminIdsOldestFirst);
+  for (const c of candidates) if (admins.has(c)) return c;
+  return adminIdsOldestFirst[0] ?? null;
 }
 
 /** Pure: the order rows are drained in. Higher priority first, then oldest first. */

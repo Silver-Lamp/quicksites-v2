@@ -86,7 +86,15 @@ Unlocked by Slice 0.
 
 ---
 
-## Status: Tier 1.5 slices 0–3 all shipped ✅
+### Slice 4 — Partner self-serve activation *(L)* · ✅ **shipped 2026-09-15**
+- **Why:** slices 0–3 branded every surface gated on a reseller org, and then nobody could get one. Creating the org, adding the owner membership, mapping the host, attaching it to Vercel and verifying a sending domain were five hand steps plus a **middleware edit and a deploy** (org hosts were a static map). Zero reseller orgs existed the day the first partner asked (`lyz186814444`, 2026-09-15).
+- ✅ **Checklist on `/partners/dashboard`** (`app/partners/dashboard/white-label.tsx`): brand → domain → email domain → payouts → share. Each step reports `done` / `waiting on you` / `to do`; "waiting on you" is the honest state while DNS or Stripe is outside our hands.
+- ✅ **Routes** under `app/api/partners/brand/*`, every one scoped through `requirePartner()` (signed-in, non-anon, owner of an active `provider_rep` code) → the partner's OWN reseller org (`org_members.role='owner'` + `billing_mode='reseller'`), **never a client-supplied org id** (source-guarded by `lib/partners/__tests__/whiteLabelRules.test.ts`). `POST /brand` creates the org + owner membership on first save (slug derived once from the name, reserved words suffixed); `/brand/logo` (multipart; shared pipeline `lib/org/orgAssetUpload.ts` with the platform-admin upload); `/brand/domain` attaches the portal host to the Vercel project (409 = already ours) + writes `org_domains(kind='admin')` and returns the CNAME/A record; `{check:true}` asks Vercel (`misconfigured:false`) and stamps `org_domains.verified_at` (migration `20260841`); `/brand/email-domain` registers the sending domain with Resend, keeps its records on `organizations.branding.email_domain`, and on `verified` sets `email_from` so `lib/email.ts` sends from their domain.
+- ✅ **Middleware is database-backed for org hosts** (`lookupOrgHost` in `middleware.ts`): an unknown host is looked up in `org_domains_public` over Supabase REST (Edge-safe fetch, anon key, 5-minute per-instance cache) and a `kind='admin'` hit is served as an APP host with `x-qsites-org-slug`, so `/login`, `/join/<code>` and `/admin` render under the partner's brand via the existing `resolveOrg()` host mapping. Static `ORG_DOMAINS`/`APP_HOSTS` still win first.
+- **Still by hand / outside us:** the partner's DNS records; Stripe's KYC (and Stripe's country list — mainland China cannot hold a Stripe account, so neither a partner there nor their merchants can be paid); Resend's verification; merchant sites still publish to `<slug>.quicksites.ai` unless each connects a custom domain (`site_base_domain` + wildcard on the partner's domain is the next slice).
+- Rules (pure, tested): `lib/partners/whiteLabelRules.ts` — `normalizeHost`, `isReservedHost` (our domains, delivered.menu, vercel.app are refused), `dnsInstructionsFor` (subdomain → CNAME `cname.vercel-dns.com`; apex → A `76.76.21.21`), `orgSlugFromName`, `emailFromFor`, `whiteLabelSteps`.
+
+## Status: Tier 1.5 slices 0–4 all shipped ✅
 Foundation + login/join + emails + admin wordmark/logo are live.
 
 **Follow-ups shipped:**

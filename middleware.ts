@@ -110,6 +110,54 @@ const ORG_DOMAINS: Record<string, string> = {
 };
 
 
+/**
+ * Database-backed org hosts — the partner self-serve white-label portal.
+ *
+ * ⚠️ WHY THIS EXISTS. Every org host above is a STATIC map, so a reseller's `app.theirbrand.com`
+ * needed a middleware edit and a deploy to be recognised — and until then it fell through to the
+ * custom-domain branch and was rewritten to `/sites/app` (a 404 that reads like a routing bug).
+ * `org_domains` (kind='admin') is written by /api/partners/brand/domain when a partner attaches
+ * their portal host; this looks it up over Supabase REST (Edge-safe: plain fetch, anon key —
+ * `org_domains_public` is a public view) with a per-instance cache so a miss costs one round-trip
+ * per host per TTL, and a hit costs nothing.
+ *
+ * Only unknown hosts reach this (static maps win first), and only kind='admin' is honoured.
+ */
+type OrgHostHit = { slug: string; kind: string } | null;
+const ORG_HOST_TTL_MS = 5 * 60 * 1000;
+const orgHostCache = new Map<string, { hit: OrgHostHit; exp: number }>();
+
+async function lookupOrgHost(host: string): Promise<OrgHostHit> {
+  const now = Date.now();
+  const cached = orgHostCache.get(host);
+  if (cached && cached.exp > now) return cached.hit;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  let hit: OrgHostHit = null;
+  if (base && key) {
+    try {
+      const headers = { apikey: key, Authorization: `Bearer ${key}` };
+      const r = await fetch(
+        `${base.replace(/\/+$/, '')}/rest/v1/org_domains_public?host=eq.${encodeURIComponent(host)}&select=org_id,kind&limit=1`,
+        { headers, cache: 'no-store' },
+      );
+      const rows = r.ok ? ((await r.json()) as Array<{ org_id: string; kind: string }>) : [];
+      if (rows[0]?.org_id) {
+        const o = await fetch(
+          `${base.replace(/\/+$/, '')}/rest/v1/organizations_public?id=eq.${encodeURIComponent(rows[0].org_id)}&select=slug&limit=1`,
+          { headers, cache: 'no-store' },
+        );
+        const orgs = o.ok ? ((await o.json()) as Array<{ slug: string }>) : [];
+        if (orgs[0]?.slug) hit = { slug: orgs[0].slug, kind: rows[0].kind };
+      }
+    } catch {
+      hit = null; // a lookup failure must never take a request down; it just is not an org host
+    }
+  }
+  orgHostCache.set(host, { hit, exp: now + ORG_HOST_TTL_MS });
+  return hit;
+}
+
 /** Paths we should never rewrite (Next internals, assets, specific APIs). */
 const IGNORE_PATHS: RegExp[] = [
   /^\/_next\//,
@@ -257,10 +305,11 @@ export async function middleware(req: NextRequest) {
   // If this is our app host, don't rewrite. Forward the current pathname as a
   // request header so server components (e.g. the admin layout) can see which
   // route is rendering.
-  if (APP_HOSTS.has(host) || isLocalDevHost(host) || host.endsWith('.vercel.app')) {
+  const appHostResponse = async (orgSlug?: string) => {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-pathname', pathname);
     const res = NextResponse.next({ request: { headers: requestHeaders } });
+    if (orgSlug) res.headers.set('x-qsites-org-slug', orgSlug);
 
     // Authoritative guest gate: anonymous users may reach ONLY the template
     // editor — never the rest of /admin (those pages carry browser-client writes
@@ -284,6 +333,9 @@ export async function middleware(req: NextRequest) {
     }
 
     return withCookies(res);
+  };
+  if (APP_HOSTS.has(host) || isLocalDevHost(host) || host.endsWith('.vercel.app')) {
+    return appHostResponse();
   }
 
   // --- delivered.menu restaurant surface ---
@@ -446,6 +498,16 @@ export async function middleware(req: NextRequest) {
     res.headers.set('x-qsites-org-slug', orgSlug);
     res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
     return withCookies(res);
+  }
+
+  // --- Partner white-label portal hosts (org_domains, kind='admin') ---
+  // A reseller's own `app.theirbrand.com` is an APP host for that org: /login, /join/<code>,
+  // /admin render under their brand (resolveOrg() maps the same host → org for the branding).
+  if (!platformSubdomainSlug(hostname) && !subdomainFromDevHost(hostname)) {
+    const orgHit = await lookupOrgHost(hostLc);
+    if (orgHit?.kind === 'admin') {
+      return appHostResponse(orgHit.slug);
+    }
   }
 
   // --- Dev subdomain (foo.localhost:3000) ---

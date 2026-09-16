@@ -1612,6 +1612,13 @@ export const blockContentSchemaMap = {
               title: z.string().min(1),
               price_cents: z.number().int().min(0).default(0),
               image_url: z.union([RelativeOrAbsoluteUrl, z.literal('')]).optional(),
+              // Display-only snapshot fields (a store we read but could not provision, e.g. a
+              // CNY catalog against a USD merchant): the grid renders these as a product gallery
+              // — real products, real prices in their own currency, no cart — until ids are wired.
+              currency: z.string().regex(/^[A-Z]{3}$/).optional(),
+              price_from: z.boolean().optional(),
+              compare_at_cents: z.number().int().min(0).optional(),
+              product_url: z.union([RelativeOrAbsoluteUrl, z.literal('')]).optional(),
             })
           )
           .default([]),

@@ -20,21 +20,26 @@ export type RenderResult =
   | { ok: true; page: RenderedPage; driver: 'playwright' | 'serverless' }
   | { ok: false; error: string; driver: 'playwright' | 'serverless' | 'none' };
 
+/** Generic form: whatever the evaluated script returned. */
+export type EvaluateResult<T> =
+  | { ok: true; value: T; driver: 'playwright' | 'serverless' }
+  | { ok: false; error: string; driver: 'playwright' | 'serverless' | 'none' };
+
 const VIEWPORT = { width: 1280, height: 900 };
 /** Fonts and late layout shift settle here; a snapshot mid-swap describes a page nobody sees. */
 const SETTLE_MS = 1200;
 
 /** Local + CI. Playwright is a dev dependency, so this cannot run in the deployed runtime. */
-async function viaPlaywright(url: string): Promise<RenderResult> {
+async function viaPlaywright<T>(url: string, js: string, timeoutMs: number): Promise<EvaluateResult<T>> {
   let browser: any;
   try {
     const { chromium } = await import('playwright');
     browser = await chromium.launch();
     const page = await browser.newPage({ viewport: VIEWPORT });
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 60_000 });
+    await page.goto(url, { waitUntil: 'networkidle', timeout: timeoutMs });
     await page.waitForTimeout(SETTLE_MS);
-    const raw = await page.evaluate(EXTRACT_JS);
-    return { ok: true, page: raw as RenderedPage, driver: 'playwright' };
+    const raw = await page.evaluate(js);
+    return { ok: true, value: raw as T, driver: 'playwright' };
   } catch (e: any) {
     return { ok: false, error: String(e?.message ?? e), driver: 'playwright' };
   } finally {
@@ -50,7 +55,7 @@ async function viaPlaywright(url: string): Promise<RenderResult> {
  * is not "it renders here". `GET /api/admin/verify/probe` exists to answer that from the running
  * process rather than from package.json — which is a claim about the repo, not about the runtime.
  */
-async function viaServerless(url: string): Promise<RenderResult> {
+async function viaServerless<T>(url: string, js: string, timeoutMs: number): Promise<EvaluateResult<T>> {
   let browser: any;
   try {
     const chromium = (await import('@sparticuz/chromium')).default as any;
@@ -62,10 +67,10 @@ async function viaServerless(url: string): Promise<RenderResult> {
       headless: true,
     });
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 60_000 });
+    await page.goto(url, { waitUntil: 'networkidle0', timeout: timeoutMs });
     await new Promise((r) => setTimeout(r, SETTLE_MS));
-    const raw = await page.evaluate(EXTRACT_JS);
-    return { ok: true, page: raw as RenderedPage, driver: 'serverless' };
+    const raw = await page.evaluate(js);
+    return { ok: true, value: raw as T, driver: 'serverless' };
   } catch (e: any) {
     return { ok: false, error: String(e?.message ?? e), driver: 'serverless' };
   } finally {
@@ -74,24 +79,39 @@ async function viaServerless(url: string): Promise<RenderResult> {
 }
 
 /**
- * Render a URL with whichever driver this process can actually run.
+ * Render a URL and evaluate `js` in it, with whichever driver this process can actually run.
  *
  * Playwright first when it is present (local + CI, and much faster to start); the serverless
  * driver otherwise. `prefer` forces one, which is how the probe tests the runtime path
  * specifically rather than getting a passing answer from a driver production will never use.
+ *
+ * The script is a string both drivers evaluate unchanged (see the header). It may return a
+ * promise — both drivers await it — which is how a caller scrolls for lazy images before reading.
  */
-export async function renderPage(
+export async function renderEvaluate<T>(
   url: string,
-  prefer?: 'playwright' | 'serverless',
-): Promise<RenderResult> {
-  if (prefer === 'serverless') return viaServerless(url);
-  if (prefer === 'playwright') return viaPlaywright(url);
+  js: string,
+  opts: { prefer?: 'playwright' | 'serverless'; timeoutMs?: number } = {},
+): Promise<EvaluateResult<T>> {
+  const timeoutMs = opts.timeoutMs ?? 60_000;
+  if (opts.prefer === 'serverless') return viaServerless<T>(url, js, timeoutMs);
+  if (opts.prefer === 'playwright') return viaPlaywright<T>(url, js, timeoutMs);
 
-  const pw = await viaPlaywright(url);
+  const pw = await viaPlaywright<T>(url, js, timeoutMs);
   if (pw.ok) return pw;
-  const sl = await viaServerless(url);
+  const sl = await viaServerless<T>(url, js, timeoutMs);
   if (sl.ok) return sl;
   // Both failed: report BOTH reasons. "could not render" without saying what was tried sends the
   // next person to debug the wrong half.
   return { ok: false, driver: 'none', error: `playwright: ${pw.error} | serverless: ${sl.error}` };
+}
+
+/** The verifier's render: the page as a stranger reads it (EXTRACT_JS). */
+export async function renderPage(
+  url: string,
+  prefer?: 'playwright' | 'serverless',
+): Promise<RenderResult> {
+  const r = await renderEvaluate<RenderedPage>(url, EXTRACT_JS, { prefer });
+  if (r.ok) return { ok: true, page: r.value, driver: r.driver };
+  return { ok: false, error: r.error, driver: r.driver };
 }

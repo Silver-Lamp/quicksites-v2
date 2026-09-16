@@ -44,13 +44,16 @@ const PLATFORM_MARKERS: ReadonlyArray<readonly [string, RegExp]> = [
 ];
 
 /** A link path that names a product, a collection, or the cart. */
-const PRODUCT_PATH_RE = /\/(?:products?|item|items|p)\/[^/?#]+/i;
-const COLLECTION_PATH_RE = /\/(?:collections?|categor(?:y|ies)|shop|store)(?:\/|$)/i;
+const PRODUCT_PATH_RE = /\/(?:products?|item|items|p|goods|spu|sku|commodity)\/[^/?#]+|(?:goods|product|spu|sku|item)_?id=/i;
+const COLLECTION_PATH_RE =
+  /\/(?:collections?|categor(?:y|ies)|shop|store|goods|all-?goods|productType|product-?list|catalog)(?:\/|\?|$)/i;
 const CART_PATH_RE = /\/(?:cart|checkout|basket)(?:\/|$)/i;
 
 /** "Add to cart" in the languages our prospects' stores actually use. */
 const ADD_TO_CART_RE =
   /add to (?:cart|bag|basket)|加入购物车|加入購物車|añadir al carrito|ajouter au panier|in den warenkorb/i;
+/** Weaker: a cart exists, even if no "add" verb is on the homepage (hicustom.com: 购物车 + a goods catalog). */
+const CART_TEXT_RE = /购物车|購物車|shopping cart|view cart|my cart|shopping bag/i;
 
 /** Product/Offer structured data anywhere in the parsed JSON-LD blocks. */
 function hasProductStructuredData(structuredData: unknown[]): boolean {
@@ -107,16 +110,20 @@ export function detectStorefront(input: {
 
   const addToCart = ADD_TO_CART_RE.test(html);
   if (addToCart) signals.push('add_to_cart_text');
+  const cartText = addToCart || CART_TEXT_RE.test(html);
+  if (cartText && !addToCart) signals.push('cart_text');
 
   const structured = hasProductStructuredData(input.structuredData ?? []);
   if (structured) signals.push('product_jsonld');
   if (input.hasOgProduct) signals.push('og_product');
 
   // A platform signature or machine-readable product data is conclusive on its own. Otherwise
-  // require two independent kinds of evidence, so a blog with one "/shop" link is not a store.
+  // require two independent kinds of evidence, so a blog with one "/shop" link is not a store:
+  // a catalog/collection path AND some cart evidence, or several product links.
   const heuristic =
-    (productPaths >= 2 && (cartPaths > 0 || addToCart || collectionPaths > 0)) ||
-    (productPaths + collectionPaths >= 4 && (cartPaths > 0 || addToCart)) ||
+    (productPaths >= 2 && (cartPaths > 0 || cartText || collectionPaths > 0)) ||
+    (collectionPaths >= 1 && (cartPaths > 0 || cartText)) ||
+    (productPaths + collectionPaths >= 4 && (cartPaths > 0 || cartText)) ||
     productPaths >= 6;
 
   const detected = platform !== null || structured || !!input.hasOgProduct || heuristic;

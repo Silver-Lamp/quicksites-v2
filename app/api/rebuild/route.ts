@@ -23,6 +23,11 @@ import { buildRebuildTemplate, wireCatalogIntoTemplate } from '@/lib/rebuild/ass
 import { importShopifyProducts, type ProductSpec } from '@/lib/rebuild/importShopify';
 import { productsFromScrape } from '@/lib/rebuild/importJsonLd';
 import { scrapeProductPages } from '@/lib/rebuild/importProductPages';
+import {
+  importRenderedCatalog,
+  renderedCatalogEnabled,
+  type RenderedCatalogResult,
+} from '@/lib/rebuild/renderedCatalog';
 import { provisionShopifyCatalog } from '@/lib/commerce/shopifyCatalog';
 import { generateRebuildHero, rebuildHeroEnabled } from '@/lib/rebuild/generateHero';
 import { captureServer } from '@/lib/analytics/posthog-server';
@@ -81,7 +86,9 @@ function hostOnly(u: string): string | null {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 // Scrape (~1-12s) + one chat call (~2-4s), well under the limit but give headroom.
-export const maxDuration = 60;
+// 120, not 60: the browser-rendered catalog rung (headless Chromium, cold start + a page load +
+// up to two listing pages) runs beside the ~10–20s AI call and needs the headroom on a slow store.
+export const maxDuration = 120;
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!;
@@ -193,17 +200,33 @@ export async function POST(req: Request) {
     // Shopify (/products.json) is exact; for every other cart we fall back to schema.org
     // Product JSON-LD / OpenGraph product meta parsed from the homepage.
     let importedProducts = products.length ? products : productsFromScrape(scraped);
+    let importSource: 'shopify' | 'jsonld' | 'crawl' | 'rendered' | undefined = products.length
+      ? 'shopify'
+      : importedProducts.length
+        ? 'jsonld'
+        : undefined;
 
     // 1d) A store whose homepage carries no readable catalog → follow a few product /
     //     collection subpages for their Product JSON-LD (where WooCommerce, Squarespace,
     //     BigCommerce and SSR'd Shopify look-alikes actually put it). Runs beside the AI
-    //     call, never on its critical path; best-effort. A client-rendered store (Shoptop)
-    //     still yields nothing here — detection below reports that as a gap, not a brochure.
+    //     call, never on its critical path; best-effort.
+    // 1e) Still nothing → RENDER the store in headless Chromium and read the product cards
+    //     as a visitor sees them (Shoptop, HiCustom, any SPA). Also beside the AI call.
+    //     A render failure is logged as a failure, not read as "no products".
     const storeDetected = !!scraped.storefront?.detected;
     const crawlPromise: Promise<ProductSpec[]> =
       !importedProducts.length && storeDetected
         ? scrapeProductPages(scraped).catch(() => [])
         : Promise.resolve([]);
+    const renderPromise: Promise<RenderedCatalogResult | null> =
+      !importedProducts.length && storeDetected && renderedCatalogEnabled()
+        ? importRenderedCatalog(scraped).catch((e: any) => ({
+            products: [],
+            rendered: [],
+            driver: 'none' as const,
+            error: String(e?.message ?? e),
+          }))
+        : Promise.resolve(null);
 
     // 2) One metered AI call → structured rebuild spec (incl. a menu when food).
     try {
@@ -213,12 +236,25 @@ export async function POST(req: Request) {
       const msg = e?.name === 'LLMBudgetExceededError' ? 'AI is busy right now — try again shortly.' : 'Could not generate the site.';
       return NextResponse.json({ error: msg, code: 'ai_failed' }, { status: 503 });
     }
-    if (!importedProducts.length) importedProducts = await crawlPromise;
+    if (!importedProducts.length) {
+      importedProducts = await crawlPromise;
+      if (importedProducts.length) importSource = 'crawl';
+    }
+    if (!importedProducts.length) {
+      const rendered = await renderPromise;
+      if (rendered?.products.length) {
+        importedProducts = rendered.products;
+        importSource = 'rendered';
+      } else if (rendered?.error) {
+        console.error('[rebuild] rendered catalog failed', { driver: rendered.driver, error: rendered.error, rendered: rendered.rendered });
+      }
+    }
     if (importedProducts.length) spec.products = importedProducts;
     if (storeDetected || importedProducts.length) {
       spec.storefront = {
         platform: scraped.storefront?.platform ?? (products.length ? 'shopify' : null),
         productsReadable: importedProducts.length > 0,
+        ...(importSource ? { source: importSource } : {}),
       };
     }
 
@@ -265,7 +301,15 @@ export async function POST(req: Request) {
   //     works. Done pre-insert so the wired data lands in one write (templates UPDATEs
   //     are trigger-guarded). Non-fatal: on failure we ship a display-only draft.
   let commerce: { merchantId: string; productsImported: number } | null = null;
-  if (spec.products?.length) {
+  // ⚠️ CURRENCY GATE. catalog_items carry integer minor units against the MERCHANT's currency
+  // (USD for a fresh merchant). Provisioning a ¥21.01 card as-is would list it at $21.01 with a
+  // working Add-to-Cart. So products in any other currency stay a DISPLAY-ONLY snapshot on the
+  // grid (real products, real prices, their own currency, no cart) until the owner sets a
+  // currency and imports them into a store deliberately.
+  const MERCHANT_CURRENCY = 'USD';
+  const currencies = new Set((spec.products ?? []).map((p: ProductSpec) => (p.currency || 'USD').toUpperCase()));
+  const purchasable = spec.products?.length ? currencies.size === 1 && currencies.has(MERCHANT_CURRENCY) : false;
+  if (spec.products?.length && purchasable) {
     try {
       const res = await provisionShopifyCatalog({
         ownerId,
@@ -276,10 +320,14 @@ export async function POST(req: Request) {
       if (res.created > 0) {
         wireCatalogIntoTemplate(tpl.data, res.merchantId, res.idByHandle);
         commerce = { merchantId: res.merchantId, productsImported: res.created };
+        if (tpl.data?.meta?.ecom) tpl.data.meta.ecom.import_status = 'imported';
       }
     } catch (e) {
       console.error('[rebuild] shopify catalog provisioning failed', e);
     }
+  } else if (spec.products?.length && tpl.data?.meta?.ecom) {
+    tpl.data.meta.ecom.import_status = 'display_only';
+    tpl.data.meta.ecom.display_only_reason = `currency:${Array.from(currencies).join(',')}`;
   }
 
   let insertedId: string | null = null;
@@ -336,6 +384,8 @@ export async function POST(req: Request) {
       storefront_detected: !!spec.storefront,
       storefront_platform: spec.storefront?.platform ?? null,
       products_imported: commerce?.productsImported ?? 0,
+      products_displayed: commerce ? 0 : (spec.products?.length ?? 0),
+      import_source: spec.storefront?.source ?? null,
     },
     ownerId,
   );
@@ -368,7 +418,13 @@ export async function POST(req: Request) {
             storefront: {
               platform: spec.storefront.platform,
               productsImported: commerce?.productsImported ?? 0,
+              // Read but not purchasable (currency ≠ merchant's): shown as a gallery.
+              productsDisplayed: commerce ? 0 : (spec.products?.length ?? 0),
               productsReadable: spec.storefront.productsReadable,
+              source: spec.storefront.source ?? null,
+              ...(spec.products?.length && !purchasable
+                ? { displayOnlyReason: `currency:${Array.from(currencies).join(',')}` }
+                : {}),
             },
           }
         : {}),

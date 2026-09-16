@@ -157,7 +157,20 @@ renders its catalog in the browser (`/api/mbr/goods/list`, parameters undocument
 scrape reads it. The fix shipped beside this doc: **store detection is now separate from import**
 (`lib/rebuild/storefrontDetect.ts`), product pages are crawled for JSON-LD when the homepage has
 none (`lib/rebuild/importProductPages.ts`), a detected-but-unreadable store gets an **empty Shop
-block + `meta.ecom.import_status='no_readable_products'`**, and the rebuild summary says so. The
-next rung — rendering JavaScript storefronts with a headless browser — is a separate decision
-(Chromium on Vercel is heavy; a small render worker is the honest shape), and its trigger is the
-`storefront_detected && products_imported=0` count in PostHog, not a guess.
+block + `meta.ecom.import_status='no_readable_products'`**, and the rebuild summary says so.
+
+**Later the same day, the rendering rung shipped** (`lib/rebuild/renderedCatalog.ts`), reusing the
+headless Chromium the claim-verification probe already runs on Vercel. It reads product cards off
+the rendered page by shape (link + image + price). Two findings that matter for this plan:
+
+- **hicustom.com is a store after all** — 8 products read once rendered, priced "从 ¥21.01 起"
+  (from-prices, CNY). Their own image tags are broken (`src="undefined/"`), so they import
+  without images. The static detector had missed it; it now recognises a goods-catalog path plus
+  bare cart text (购物车).
+- **FOYTEA lists no products anywhere**, not even on its "FOY select" page. It is a brand-services
+  site running on store software. There is nothing to import, and saying so is the right draft.
+
+**Currency is the seam between this and §2.3.** A CNY catalog against a USD merchant is not
+provisioned; it renders as a display-only product gallery until the merchant's currency is set.
+Slice 3 (merchant-settable `default_currency`) is therefore what turns a rendered Chinese catalog
+into a purchasable one — the two halves meet there.

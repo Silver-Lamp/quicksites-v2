@@ -263,8 +263,11 @@ export function buildRebuildTemplate(opts: {
           ecom: {
             ...(tpl.data?.meta?.ecom ?? {}),
             source_platform: spec.storefront.platform,
-            import_status: spec.products?.length ? 'imported' : 'no_readable_products',
+            // 'snapshot' = products are on the grid as a display-only gallery. The route
+            // upgrades this to 'imported' once catalog_items exist and ids are wired.
+            import_status: spec.products?.length ? 'snapshot' : 'no_readable_products',
             products_imported: spec.products?.length ?? 0,
+            ...(spec.storefront.source ? { import_source: spec.storefront.source } : {}),
           },
         }
       : {}),
@@ -374,6 +377,13 @@ function applyProductBlocks(blocks: any[], products: ProductSpec[]): void {
       price_cents: p.priceCents,
       image_url: p.images[0] ?? '',
       product_type: p.productType ?? null,
+      // Display-only snapshot fields: when the products are never provisioned (a currency the
+      // merchant does not trade in, or a browser-read catalog), the grid shows THESE — in the
+      // store's own currency, with "from" where the store said "from".
+      currency: p.currency || 'USD',
+      ...(p.priceFrom ? { price_from: true } : {}),
+      ...(p.compareAtCents ? { compare_at_cents: p.compareAtCents } : {}),
+      ...(p.productUrl ? { product_url: p.productUrl } : {}),
     })),
   };
 

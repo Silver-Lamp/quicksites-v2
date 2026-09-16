@@ -81,12 +81,17 @@ describe('a store WITH imported products', () => {
     expect(grids[0].content.products).toHaveLength(1);
   });
 
-  it('records import_status = imported with the count', () => {
+  it('records import_status = snapshot with the count (the route upgrades it to imported once ids are wired)', () => {
     expect(tpl.data.meta.ecom).toMatchObject({
       source_platform: 'shopify',
-      import_status: 'imported',
+      import_status: 'snapshot',
       products_imported: 1,
     });
+  });
+
+  it('keeps currency + product_url on the inline snapshot so the gallery can show them', () => {
+    const [grid] = gridsOf(tpl);
+    expect(grid.content.products[0]).toMatchObject({ currency: 'USD', product_url: 'https://foytea.com/products/fortune-tee' });
   });
 });
 

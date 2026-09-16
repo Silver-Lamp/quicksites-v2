@@ -43,6 +43,7 @@ import {
   Gauge,
   Volume2,
   Mic,
+  Eye,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useBrand } from '@/app/providers';
@@ -169,6 +170,13 @@ const NAV_ADMIN: NavItem[] = [
     label: 'Domain Costs',
     href: '/admin/domains/costs',
     icon: <Globe size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
+    label: 'Domain Watchlist',
+    href: '/admin/domains/watchlist',
+    icon: <Eye size={18} />,
     adminOnly: true,
   },
   {

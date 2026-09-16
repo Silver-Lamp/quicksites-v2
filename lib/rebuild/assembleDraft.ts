@@ -89,6 +89,11 @@ export function buildRebuildTemplate(opts: {
   // wireCatalogIntoTemplate() once the catalog_items rows exist.
   if (spec.products?.length) {
     applyProductBlocks(blocks, spec.products);
+  } else if (spec.storefront) {
+    // A store we could not read. The Shop block still goes on the page — EMPTY — so the draft
+    // says "this is a shop, add your items" instead of passing as a brochure. It renders nothing
+    // in public until items are wired (products-grid returns null outside the editor).
+    applyEmptyShopBlock(blocks);
   }
 
   // Brand storytelling → an alternating image+text `story` block. Pairs each AI story
@@ -251,6 +256,18 @@ export function buildRebuildTemplate(opts: {
       : {}),
     ...(Object.keys(metaContact).length ? { contact: metaContact } : {}),
     ...(copyVersions ? { copy: copyVersions } : {}),
+    // Store provenance, written even when nothing imported — the gap is the information.
+    // `merchant_id` is added later by wireCatalogIntoTemplate (spread-preserving).
+    ...(spec.storefront
+      ? {
+          ecom: {
+            ...(tpl.data?.meta?.ecom ?? {}),
+            source_platform: spec.storefront.platform,
+            import_status: spec.products?.length ? 'imported' : 'no_readable_products',
+            products_imported: spec.products?.length ?? 0,
+          },
+        }
+      : {}),
     // Provenance: mark this as a rebuild + where it came from (useful for the
     // editor banner + analytics; harmless to the renderer).
     rebuilt_from: sourceUrl || null,
@@ -365,6 +382,18 @@ function applyProductBlocks(blocks: any[], products: ProductSpec[]): void {
   if (gridIdx >= 0) blocks[gridIdx] = grid;
   else if (servicesIdx >= 0) blocks[servicesIdx] = grid;
   else blocks.splice(1, 0, grid);
+}
+
+/**
+ * A detected store with NO readable products: place an empty Shop grid right after the hero
+ * (unless the industry scaffold already seeded one). No inline snapshot, no ids — the editor's
+ * products_grid panel offers "Set up my store" + item picking from there.
+ */
+function applyEmptyShopBlock(blocks: any[]): void {
+  if (blocks.some((b) => b?.type === 'products_grid')) return;
+  const grid: any = createDefaultBlock('products_grid');
+  grid.content = { ...grid.content, title: 'Shop', productIds: [], products: [] };
+  blocks.splice(Math.min(1, blocks.length), 0, grid);
 }
 
 /**

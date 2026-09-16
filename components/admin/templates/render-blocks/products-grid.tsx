@@ -4,6 +4,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import type { Block } from '@/types/blocks';
+import { isEditorContext } from '@/lib/editor/isEditorContext';
 
 type Product = {
   id: string;
@@ -91,6 +92,11 @@ export default function RenderProductsGrid({ block }: { block: Block }) {
   const [products, setProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Owner-facing states (empty / loading / error) show ONLY in the editor. Resolved after mount
+  // so SSR (no window → public) and the first client render agree; the same pattern as
+  // contact-form.tsx. See editorHintsStayInEditor.test.ts for why this is a standing rule.
+  const [isEditor, setIsEditor] = React.useState(false);
+  React.useEffect(() => { setIsEditor(isEditorContext()); }, []);
 
   const fetchProducts = React.useCallback(async () => {
     setLoading(true);
@@ -145,9 +151,22 @@ export default function RenderProductsGrid({ block }: { block: Block }) {
     };
   }, [fetchProducts]);
 
-  if (error) return <div className="text-sm text-red-500">{error}</div>;
-  if (loading && products.length === 0) return <div className="text-sm text-muted-foreground">Loading products…</div>;
-  if (products.length === 0) return <div className="text-sm text-muted-foreground">No products found for this merchant.</div>;
+  // ⚠️ In PUBLIC an empty grid renders NOTHING. "No products found for this merchant." was
+  // server-rendered to every visitor of every site whose grid had nothing wired yet (a rebuilt
+  // store before its items exist, a starter before setup) — a message to the owner, addressed
+  // to their customer. Same rule as the footer hints, the services block, and a missing backdrop.
+  if (error) return isEditor ? <div className="text-sm text-red-500">{error}</div> : null;
+  if (loading && products.length === 0) {
+    return isEditor ? <div className="text-sm text-muted-foreground">Loading products…</div> : null;
+  }
+  if (products.length === 0) {
+    if (!isEditor) return null;
+    return (
+      <div className="text-sm text-muted-foreground">
+        No products yet — pick items in this block&apos;s panel, or use “Set up my store”.
+      </div>
+    );
+  }
 
   return (
     <section className="py-8">

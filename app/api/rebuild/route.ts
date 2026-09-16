@@ -20,8 +20,9 @@ import { scrapeSite, scrapeMenuPages, ScrapeError } from '@/lib/rebuild/scrapeSi
 import { inferSiteSpec } from '@/lib/rebuild/inferSiteSpec';
 import { looksLikeProfileUrl, profileFromScrape, rebuildSpecFromProfile } from '@/lib/rebuild/importProfile';
 import { buildRebuildTemplate, wireCatalogIntoTemplate } from '@/lib/rebuild/assembleDraft';
-import { importShopifyProducts } from '@/lib/rebuild/importShopify';
+import { importShopifyProducts, type ProductSpec } from '@/lib/rebuild/importShopify';
 import { productsFromScrape } from '@/lib/rebuild/importJsonLd';
+import { scrapeProductPages } from '@/lib/rebuild/importProductPages';
 import { provisionShopifyCatalog } from '@/lib/commerce/shopifyCatalog';
 import { generateRebuildHero, rebuildHeroEnabled } from '@/lib/rebuild/generateHero';
 import { captureServer } from '@/lib/analytics/posthog-server';
@@ -188,6 +189,22 @@ export async function POST(req: Request) {
       importShopifyProducts(scraped.finalUrl).catch(() => []),
     ]);
 
+    // Real products override the AI's generic services brochure with a live storefront.
+    // Shopify (/products.json) is exact; for every other cart we fall back to schema.org
+    // Product JSON-LD / OpenGraph product meta parsed from the homepage.
+    let importedProducts = products.length ? products : productsFromScrape(scraped);
+
+    // 1d) A store whose homepage carries no readable catalog → follow a few product /
+    //     collection subpages for their Product JSON-LD (where WooCommerce, Squarespace,
+    //     BigCommerce and SSR'd Shopify look-alikes actually put it). Runs beside the AI
+    //     call, never on its critical path; best-effort. A client-rendered store (Shoptop)
+    //     still yields nothing here — detection below reports that as a gap, not a brochure.
+    const storeDetected = !!scraped.storefront?.detected;
+    const crawlPromise: Promise<ProductSpec[]> =
+      !importedProducts.length && storeDetected
+        ? scrapeProductPages(scraped).catch(() => [])
+        : Promise.resolve([]);
+
     // 2) One metered AI call → structured rebuild spec (incl. a menu when food).
     try {
       spec = await inferSiteSpec(scraped, ownerId, menuPages);
@@ -196,11 +213,14 @@ export async function POST(req: Request) {
       const msg = e?.name === 'LLMBudgetExceededError' ? 'AI is busy right now — try again shortly.' : 'Could not generate the site.';
       return NextResponse.json({ error: msg, code: 'ai_failed' }, { status: 503 });
     }
-    // Real products override the AI's generic services brochure with a live storefront.
-    // Shopify (/products.json) is exact; for every other cart we fall back to schema.org
-    // Product JSON-LD / OpenGraph product meta parsed from the page.
-    const importedProducts = products.length ? products : productsFromScrape(scraped);
+    if (!importedProducts.length) importedProducts = await crawlPromise;
     if (importedProducts.length) spec.products = importedProducts;
+    if (storeDetected || importedProducts.length) {
+      spec.storefront = {
+        platform: scraped.storefront?.platform ?? (products.length ? 'shopify' : null),
+        productsReadable: importedProducts.length > 0,
+      };
+    }
 
     // 2b) Optionally generate a fresh, on-brand hero (flag-gated; best-effort). Falls
     //     back to the scraped og:image so a failure never breaks the rebuild.
@@ -307,7 +327,16 @@ export async function POST(req: Request) {
   // Funnel: a draft was generated from the prospect's site.
   void captureServer(
     EVENTS.REBUILD_COMPLETED,
-    { host: hostOnly(scraped.finalUrl), industry: spec.industryKey, is_anonymous: isAnonymous, template_id: insertedId },
+    {
+      host: hostOnly(scraped.finalUrl),
+      industry: spec.industryKey,
+      is_anonymous: isAnonymous,
+      template_id: insertedId,
+      // Store funnel: how often a rebuilt site is a shop, and how often we could read it.
+      storefront_detected: !!spec.storefront,
+      storefront_platform: spec.storefront?.platform ?? null,
+      products_imported: commerce?.productsImported ?? 0,
+    },
     ownerId,
   );
 
@@ -330,6 +359,17 @@ export async function POST(req: Request) {
             productsImported: commerce.productsImported,
             merchantId: commerce.merchantId,
             needsPayoutSetup: !isAnonymous, // anon can't onboard until they sign up
+          }
+        : {}),
+      // Always present when the source was a store — including when we could NOT read its
+      // products, which the client says out loud (an empty Shop block is the honest draft).
+      ...(spec.storefront
+        ? {
+            storefront: {
+              platform: spec.storefront.platform,
+              productsImported: commerce?.productsImported ?? 0,
+              productsReadable: spec.storefront.productsReadable,
+            },
           }
         : {}),
     },

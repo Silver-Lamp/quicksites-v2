@@ -13,6 +13,14 @@ export type CronJob = {
 
 export const CRON_JOBS: CronJob[] = [
   {
+    key: 'domain-watch',
+    path: '/api/cron/domain-watch',
+    schedule: '5 */6 * * *',
+    intervalMinutes: 360,
+    label: 'Domain watchlist',
+    description: 'Checks watched domains against the registry + Vercel registrar; buys at ≤ cap the day one drops, else files a task. UI: /admin/domains/watchlist.',
+  },
+  {
     key: 'approve-commissions',
     path: '/api/cron/approve-commissions',
     schedule: '0 8 * * *',

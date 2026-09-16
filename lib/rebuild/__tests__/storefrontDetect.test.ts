@@ -28,10 +28,10 @@ describe('detectStorefront — platform signatures', () => {
     expect(detectStorefront({ html, links: [] })).toMatchObject({ detected: true, platform: 'shopify' });
   });
 
-  it('does NOT take the word "Shopify" in a form label as a platform (hicustom.com)', () => {
+  it('does NOT take the word "Shopify" in a form label as a platform signature', () => {
     const html = `<label><input type="checkbox" value="Shopify" name="cross_border_platform"><p>Shopify</p></label>
       <a href="/about">About</a><a href="/contact">Contact</a>`;
-    const d = detectStorefront({ html, links: [link('https://www.hicustom.com/about')] });
+    const d = detectStorefront({ html, links: [link('https://supplier.example/about')] });
     expect(d.detected).toBe(false);
     expect(d.platform).toBeNull();
   });
@@ -58,6 +58,24 @@ describe('detectStorefront — heuristics without a platform', () => {
     expect(d.detected).toBe(true);
     expect(d.platform).toBeNull();
     expect(d.signals).toEqual(expect.arrayContaining(['product_links:2', 'cart_link', 'add_to_cart_text']));
+  });
+
+  it('a goods catalog path plus bare cart text is a store (hicustom.com: /productType/allGoods + 购物车)', () => {
+    const d = detectStorefront({
+      html: '<nav><a href="/productType/allGoods">商品</a></nav><span>购物车</span>',
+      links: [link('https://www.hicustom.com/productType/allGoods'), link('https://www.hicustom.com/frontend/index/aboutUs')],
+    });
+    expect(d.detected).toBe(true);
+    expect(d.platform).toBeNull();
+    expect(d.signals).toEqual(expect.arrayContaining(['collection_links:1', 'cart_text']));
+  });
+
+  it('a goods catalog path WITHOUT any cart evidence is not enough on its own', () => {
+    const d = detectStorefront({
+      html: '<nav><a href="/catalog">Catalog</a></nav>',
+      links: [link('https://x.example/catalog')],
+    });
+    expect(d.detected).toBe(false);
   });
 
   it('Chinese add-to-cart text counts as the cart signal', () => {

@@ -75,6 +75,92 @@ function productHref(p: Product) {
   return p.slug ? `/p/${encodeURIComponent(p.slug)}` : `/product/${encodeURIComponent(p.id)}`;
 }
 
+/** Display-only snapshot item (a store we read but did not provision). */
+type SnapshotProduct = {
+  id: string;
+  title: string;
+  price_cents: number;
+  image_url?: string | null;
+  currency?: string | null;
+  price_from?: boolean;
+  compare_at_cents?: number | null;
+  product_url?: string | null;
+};
+
+function readSnapshot(c: any): SnapshotProduct[] {
+  const list = Array.isArray(c?.products) ? c.products : [];
+  return list.filter((p: any) => p && typeof p.title === 'string' && p.title.trim());
+}
+
+/** Money in the product's OWN currency — a ¥ price is never printed with a $. */
+export function formatSnapshotPrice(p: Pick<SnapshotProduct, 'price_cents' | 'currency' | 'price_from'>): string {
+  const currency = (p.currency || 'USD').toUpperCase();
+  const zeroDecimal = currency === 'JPY' || currency === 'KRW';
+  const amount = zeroDecimal ? p.price_cents : p.price_cents / 100;
+  let s: string;
+  try {
+    s = new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: zeroDecimal ? 0 : 2 }).format(amount);
+  } catch {
+    s = `${currency} ${amount.toFixed(zeroDecimal ? 0 : 2)}`;
+  }
+  return p.price_from ? `from ${s}` : s;
+}
+
+/**
+ * The product GALLERY: what the grid shows when products were read from a store but never
+ * provisioned — real titles, real prices in the store's own currency, real images where the
+ * store had any, and NO cart button, because there is nothing wired to sell yet.
+ */
+function SnapshotGallery({ title, columns, products, isEditor }: { title?: string; columns: number; products: SnapshotProduct[]; isEditor: boolean }) {
+  return (
+    <section className="py-8" data-products-grid="snapshot">
+      {title && <h2 className="text-2xl font-bold mb-4">{title}</h2>}
+      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+        {products.map((p) => {
+          const body = (
+            <>
+              <div className="aspect-[4/3] mb-3 overflow-hidden rounded">
+                {p.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.image_url} alt={p.title} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="h-full w-full bg-muted" />
+                )}
+              </div>
+              <h3 className="font-medium">{p.title}</h3>
+              <div className="mt-1 text-sm text-muted-foreground">
+                <span className={p.compare_at_cents ? 'font-medium text-foreground' : undefined}>{formatSnapshotPrice(p)}</span>
+                {p.compare_at_cents ? (
+                  <span className="ml-1.5 line-through opacity-70">
+                    {formatSnapshotPrice({ price_cents: p.compare_at_cents, currency: p.currency })}
+                  </span>
+                ) : null}
+              </div>
+            </>
+          );
+          return (
+            <article key={p.id} className="rounded-lg border border-border bg-card text-card-foreground p-3">
+              {p.product_url ? (
+                <a href={p.product_url} target="_blank" rel="noreferrer noopener" className="block">
+                  {body}
+                </a>
+              ) : (
+                <div className="block">{body}</div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+      {isEditor && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          These are the products we read from the original store, shown for display. Connect a store in
+          this block&apos;s panel to sell them here.
+        </p>
+      )}
+    </section>
+  );
+}
+
 function emitAddToCart(detail: CartAddPayload) {
   try {
     window.dispatchEvent(new CustomEvent('qs:cart:add', { detail }));
@@ -160,6 +246,13 @@ export default function RenderProductsGrid({ block }: { block: Block }) {
     return isEditor ? <div className="text-sm text-muted-foreground">Loading products…</div> : null;
   }
   if (products.length === 0) {
+    // Nothing wired, but the block carries a display-only snapshot (products read from the
+    // original store) → the product gallery. Only when NO catalog ids are set: once ids exist
+    // the live catalog is the truth and a stale snapshot must not shadow it.
+    const snapshot = ids.length ? [] : readSnapshot(content);
+    if (snapshot.length) {
+      return <SnapshotGallery title={content.title} columns={columns} products={snapshot} isEditor={isEditor} />;
+    }
     if (!isEditor) return null;
     return (
       <div className="text-sm text-muted-foreground">

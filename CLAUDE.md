@@ -221,8 +221,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   **empty Shop block + `meta.ecom.import_status='no_readable_products'`**, and `/rebuild` says so
   in the summary. ⚠️ `products_grid` **renders NOTHING in public when empty** — "No products found
   for this merchant." had been SSR'd to visitors of every unwired grid since the block existed;
-  guarded by `editorHintsStayInEditor.test.ts`. The JS-rendering rung is unbuilt; its trigger is
-  the `storefront_detected && products_imported=0` count on `rebuild_completed`, not a guess.
+  guarded by `editorHintsStayInEditor.test.ts`. **Rung 4 (same day): a browser-rendered read**
+  (`lib/rebuild/renderedCatalog.ts`, reusing the headless Chromium `lib/verify/render.ts` already
+  runs on Vercel via `renderEvaluate`) finds product CARDS by shape — a product-ish link inside a
+  container with an image and a price — on the homepage, then up to two listing pages; hicustom.com
+  yields 8 products this way (titles + "从 ¥21.01 起" from-prices; its own `<img src="undefined/">`
+  imports as *no image*, never a guessed one). ⚠️ **Currency is part of the price**: `catalog_items`
+  are minor units against the merchant's currency (USD), so products in any other currency are
+  NOT provisioned — they stay a **display-only snapshot** on the grid (`import_status='display_only'`,
+  `display_only_reason='currency:CNY'`), which `products_grid` renders as a **product gallery**
+  (own-currency prices via `Intl`, "from" honoured, no cart) whenever no ids are wired. Opt-out
+  `REBUILD_BROWSER_CATALOG_ENABLED=0`; route `maxDuration` 120. A render failure is logged as a
+  failure, never read as "no products". FOYTEA remains empty after rendering: it lists no products.
   China-facing sellers (buyer / merchant / partner are three different Stripe problems):
   [`docs/CHINA_PAYMENTS_PLAN.md`](docs/CHINA_PAYMENTS_PLAN.md).
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).

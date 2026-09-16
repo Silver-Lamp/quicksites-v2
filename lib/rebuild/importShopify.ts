@@ -38,6 +38,8 @@ export type ProductVariantSpec = {
 export type ProductSpec = {
   title: string;
   handle: string;
+  /** The listed price was a "from" price ("￥21.01起") — the lowest variant, not the only one. */
+  priceFrom?: boolean;
   description: string; // plain text (from body_html)
   productType?: string;
   vendor?: string;

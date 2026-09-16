@@ -24,7 +24,15 @@ type Summary = {
   heroImage: string | null;
   // Present when the source was a store. `productsImported: 0` with `productsReadable: false`
   // means we saw a shop and could not read its catalog — said out loud, never hidden.
-  storefront?: { platform: string | null; productsImported: number; productsReadable: boolean };
+  storefront?: {
+    platform: string | null;
+    productsImported: number;
+    /** Read from the store but not provisioned (e.g. a CNY catalog): shown as a gallery. */
+    productsDisplayed?: number;
+    productsReadable: boolean;
+    source?: string | null;
+    displayOnlyReason?: string;
+  };
 };
 
 const PLATFORM_LABEL: Record<string, string> = {
@@ -159,6 +167,14 @@ export default function RebuildTool({ initialUrl = '' }: { initialUrl?: string }
                 🛍 {s.storefront.productsImported} product{s.storefront.productsImported === 1 ? '' : 's'}{' '}
                 imported — the Shop section in your draft is real and purchasable once payouts are
                 connected.
+              </>
+            ) : (s.storefront.productsDisplayed ?? 0) > 0 ? (
+              <>
+                🛍 {s.storefront.productsDisplayed} product{s.storefront.productsDisplayed === 1 ? '' : 's'} read
+                from your store and shown in a Shop gallery — titles, prices and photos as listed.
+                {s.storefront.displayOnlyReason?.startsWith('currency:')
+                  ? ` They're priced in ${s.storefront.displayOnlyReason.slice('currency:'.length)}, so they're display-only until you set your store's currency and connect payouts.`
+                  : ' Connect a store in the editor to sell them.'}
               </>
             ) : (
               <>

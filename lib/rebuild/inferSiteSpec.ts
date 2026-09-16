@@ -79,7 +79,12 @@ export type RebuildSpec = {
   // the model). With `products` empty beside it, the shop existed but its catalog was not
   // machine-readable (client-rendered, e.g. Shoptop): assembleDraft then places an EMPTY Shop
   // block and records the gap in meta.ecom rather than shipping a brochure that hides it.
-  storefront?: { platform: string | null; productsReadable: boolean };
+  storefront?: {
+    platform: string | null;
+    productsReadable: boolean;
+    /** Which rung read the products: exact feed, structured data, subpage crawl, or a browser render. */
+    source?: 'shopify' | 'jsonld' | 'crawl' | 'rendered';
+  };
 };
 
 /** Infer a full QuickSites draft spec from scraped site signals (one metered call).

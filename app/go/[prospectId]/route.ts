@@ -12,6 +12,8 @@ import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { resolveCampaignBrand, defaultOutreachOrgSlug } from '@/lib/outreach/campaignBrand';
 import { publicSiteUrl } from '@/lib/sites/publicUrl';
 import { tradeSiteBaseUrl } from '@/lib/tradeSites/config';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,6 +36,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ prospectId: st
       .update({ claim_link_visits: (p.claim_link_visits ?? 0) + 1, claim_link_visited_at: new Date().toISOString() })
       .eq('id', prospectId);
   } catch { /* the counter is advisory */ }
+  // PostHog mirror of the counter (the guest card already had one; the trade card did not, so
+  // "did anyone scan a card" had no answer outside a SQL query). distinctId = the card, not a person.
+  try {
+    await captureServer(EVENTS.TRADE_CARD_LINK_VISITED, { prospect_id: p.id, template_id: p.template_id, visit_n: (p.claim_link_visits ?? 0) + 1 }, `trade-card:${p.id}`);
+  } catch { /* advisory */ }
 
   const { data: t } = await supabaseAdmin
     .from('templates')

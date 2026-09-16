@@ -4,7 +4,7 @@
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, Dispatch, SetStateAction, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { TemplateEditorToolbar } from './template-editor-toolbar';
+import { TemplateEditorToolbar, draftPreviewUrl } from './template-editor-toolbar';
 import { useTemplateEditorState } from './use-template-editor-state';
 import EditorContent from '@/components/admin/templates/template-editor-content';
 import { Drawer } from '@/components/ui/drawer';
@@ -395,6 +395,39 @@ export default function TemplateEditor({
     );
   });
 
+  /**
+   * Preview = save, then open the watermarked draft in a new tab.
+   *
+   * The tab is opened SYNCHRONOUSLY in the click handler and pointed at the URL after the
+   * save resolves — a `window.open` that happens after an `await` is a pop-up to the browser
+   * and gets blocked, which would make the button look dead exactly when the save was slow.
+   * If autosave already reports the draft saved, nothing is written again.
+   */
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const handlePreview = () => {
+    const id = (template as any)?.id as string | undefined;
+    if (!id) return toast.error('Missing template id');
+    const url = draftPreviewUrl(id);
+    const tab = typeof window !== 'undefined' ? window.open('about:blank', '_blank') : null;
+    const go = () => {
+      if (tab && !tab.closed) tab.location.href = url;
+      else if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener');
+    };
+    if (autosave === 'saved') return go();
+    setPreviewBusy(true);
+    void (async () => {
+      try {
+        await commitNow(id, (template as any).data);
+      } catch (err: any) {
+        console.error('[preview] save before preview failed', err);
+        toast.error(err?.message || 'Could not save before previewing — showing the last saved version');
+      } finally {
+        setPreviewBusy(false);
+        go();
+      }
+    })();
+  };
+
   const handleCleanSaveDraft = async () => {
     try {
       const id = (template as any)?.id;
@@ -428,6 +461,8 @@ export default function TemplateEditor({
           setShowNameError={() => {}}
           onSaveAndPublish={handleSaveAndPublish}
           busy={saveAndPublishBusy}
+          onPreview={handlePreview}
+          previewBusy={previewBusy}
         />
 
         {Object.keys(blockErrors).length > 0 && (

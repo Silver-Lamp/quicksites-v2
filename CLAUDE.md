@@ -210,6 +210,21 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   is LIVE.** The loop is drawn on `/business-plan?v=trade_sites` (`components/business-plan/trade-sites-flow.tsx`,
   pure SVG, counts from `planEvidence`, no price, one amber "operator decides" node — a test pins that
   it never claims more automation than exists).
+- **Store detection ≠ store import (2026-09-16)**: the URL rebuild now decides *"was this a
+  store?"* statically (`lib/rebuild/storefrontDetect.ts` — code/CDN signatures for
+  Shopify/Shoptop/Shoplazza/Shopline/WooCommerce/…, product-path + cart heuristics, Product
+  JSON-LD; **never a brand name in prose** — hicustom.com says "Shopify" in a form label and is
+  not a store) and reads the catalog on a three-rung ladder: Shopify `/products.json` → homepage
+  JSON-LD/OG → **product/collection subpages** (`lib/rebuild/importProductPages.ts`, same-origin,
+  8 pages, 4-wide, beside the AI call). A store detected but unreadable (FOYTEA on Shoptop is
+  client-rendered — the first partner rebuild ever, and it came out as a brochure) now gets an
+  **empty Shop block + `meta.ecom.import_status='no_readable_products'`**, and `/rebuild` says so
+  in the summary. ⚠️ `products_grid` **renders NOTHING in public when empty** — "No products found
+  for this merchant." had been SSR'd to visitors of every unwired grid since the block existed;
+  guarded by `editorHintsStayInEditor.test.ts`. The JS-rendering rung is unbuilt; its trigger is
+  the `storefront_detected && products_imported=0` count on `rebuild_completed`, not a guess.
+  China-facing sellers (buyer / merchant / partner are three different Stripe problems):
+  [`docs/CHINA_PAYMENTS_PLAN.md`](docs/CHINA_PAYMENTS_PLAN.md).
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

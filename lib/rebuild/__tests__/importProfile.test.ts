@@ -31,6 +31,7 @@ const base = (over: Partial<ScrapedSite> = {}): ScrapedSite => ({
   colorMode: 'light',
   structuredData: [],
   productMeta: null,
+  storefront: { detected: false, platform: null, signals: [] },
   ...over,
 });
 

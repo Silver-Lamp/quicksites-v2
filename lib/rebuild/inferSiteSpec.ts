@@ -75,6 +75,11 @@ export type RebuildSpec = {
   // — NOT AI-generated. When present, assembleDraft builds a real storefront (products
   // become catalog_items wired into cart/checkout) instead of a services brochure.
   products?: ProductSpec[];
+  // The source site was a STORE (set by the route from scrapeSite's static detection — never by
+  // the model). With `products` empty beside it, the shop existed but its catalog was not
+  // machine-readable (client-rendered, e.g. Shoptop): assembleDraft then places an EMPTY Shop
+  // block and records the gap in meta.ecom rather than shipping a brochure that hides it.
+  storefront?: { platform: string | null; productsReadable: boolean };
 };
 
 /** Infer a full QuickSites draft spec from scraped site signals (one metered call).

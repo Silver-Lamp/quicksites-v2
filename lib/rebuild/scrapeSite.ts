@@ -16,6 +16,7 @@
 // same user who submitted the URL.
 
 import * as cheerio from 'cheerio';
+import { detectStorefront, type StorefrontDetection } from '@/lib/rebuild/storefrontDetect';
 
 export type ScrapedSite = {
   sourceUrl: string;
@@ -33,6 +34,10 @@ export type ScrapedSite = {
   colorMode: 'light' | 'dark'; // the original site's scheme (best guess; defaults light)
   structuredData: any[]; // parsed application/ld+json blocks (for product extraction)
   productMeta: { priceAmount?: string; priceCurrency?: string; availability?: string } | null; // og product:* tags
+  // Was this a STORE? Decided statically from platform signatures / product links / structured
+  // data — independent of whether the catalog could be imported, so a client-rendered shop still
+  // yields a Shop block + a reported gap instead of a brochure (lib/rebuild/storefrontDetect.ts).
+  storefront: StorefrontDetection;
 };
 
 export class ScrapeError extends Error {
@@ -137,8 +142,8 @@ export async function scrapeSite(
   return parseHtml(html, u.toString(), res.url || u.toString());
 }
 
-/** Read a response body but bail out past a byte cap. */
-async function readCapped(res: Response, maxBytes: number): Promise<string> {
+/** Read a response body but bail out past a byte cap. Shared with the subpage crawlers. */
+export async function readCapped(res: Response, maxBytes: number): Promise<string> {
   const reader = res.body?.getReader();
   if (!reader) {
     const text = await res.text();
@@ -239,6 +244,15 @@ export function parseHtml(html: string, sourceUrl: string, finalUrl: string): Sc
       ? { priceAmount, priceCurrency, availability: meta('product:availability') || undefined }
       : null;
 
+  // Store detection — from the RAW html (platform signatures live in <script> tags we are about
+  // to strip) + the links + the structured data. Cheap, static, and independent of import.
+  const storefront = detectStorefront({
+    html,
+    links,
+    structuredData,
+    hasOgProduct: !!productMeta,
+  });
+
   // Body text — drop non-content nodes, collapse whitespace, truncate.
   $('script, style, noscript, svg, template, iframe').remove();
   const bodyText = collapse($('body').text()).slice(0, MAX_BODY_CHARS);
@@ -277,6 +291,7 @@ export function parseHtml(html: string, sourceUrl: string, finalUrl: string): Sc
     colorMode,
     structuredData,
     productMeta,
+    storefront,
   };
 }
 

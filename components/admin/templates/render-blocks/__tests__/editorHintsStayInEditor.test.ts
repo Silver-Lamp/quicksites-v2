@@ -94,7 +94,9 @@ describe('no renderer publishes a setup instruction unconditionally', () => {
   it.each(files as string[])('%s', (f) => {
     const body = code(readFileSync(String(f), 'utf8'));
     // Phrases that are unambiguously addressed to the site's owner.
-    const owner = /(No \w+ configured\.|not configured\b|Set in Template Identity)/g;
+    // "No products found for this merchant." reached visitors from products-grid.tsx for as long
+    // as the block existed (SSR'd on every site whose grid had nothing wired yet). Added 2026-09-16.
+    const owner = /(No \w+ configured\.|not configured\b|Set in Template Identity|No products (?:found|yet))/g;
 
     for (const m of body.matchAll(owner)) {
       // ⚠️ PROXIMITY, NOT PRESENCE. The first version of this asserted only that the FILE

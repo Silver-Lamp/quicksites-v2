@@ -22,6 +22,24 @@ type Summary = {
   services: string[];
   sourceUrl: string;
   heroImage: string | null;
+  // Present when the source was a store. `productsImported: 0` with `productsReadable: false`
+  // means we saw a shop and could not read its catalog — said out loud, never hidden.
+  storefront?: { platform: string | null; productsImported: number; productsReadable: boolean };
+};
+
+const PLATFORM_LABEL: Record<string, string> = {
+  shopify: 'Shopify',
+  shoptop: 'Shoptop',
+  shoplazza: 'Shoplazza',
+  shopline: 'Shopline',
+  woocommerce: 'WooCommerce',
+  bigcommerce: 'BigCommerce',
+  squarespace_commerce: 'Squarespace',
+  wix_stores: 'Wix Stores',
+  magento: 'Magento',
+  prestashop: 'PrestaShop',
+  ecwid: 'Ecwid',
+  ueeshop: 'Ueeshop',
 };
 
 // Staged status copy shown while the request is in flight (the real work is one
@@ -133,6 +151,24 @@ export default function RebuildTool({ initialUrl = '' }: { initialUrl?: string }
               </li>
             ))}
           </ul>
+        )}
+        {s.storefront && (
+          <p className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-300">
+            {s.storefront.productsImported > 0 ? (
+              <>
+                🛍 {s.storefront.productsImported} product{s.storefront.productsImported === 1 ? '' : 's'}{' '}
+                imported — the Shop section in your draft is real and purchasable once payouts are
+                connected.
+              </>
+            ) : (
+              <>
+                🛍 This is a store
+                {s.storefront.platform ? ` on ${PLATFORM_LABEL[s.storefront.platform] ?? s.storefront.platform}` : ''}
+                , but its product pages are built in the browser, so we couldn&apos;t read the
+                catalog. The draft has an empty Shop section — add your items in the editor.
+              </>
+            )}
+          </p>
         )}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button

@@ -76,7 +76,7 @@ const CATEGORY_META: Record<OpsCategory, { label: string; emoji: string }> = {
 };
 
 export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot }) {
-  const { inventory, revenue, clients, markets, guestFunnel } = snapshot;
+  const { inventory, revenue, clients, markets, guestFunnel, cardResponse } = snapshot;
 
   const [gscByDomain, setGscByDomain] = useState<Record<string, GscStat> | undefined>(undefined);
   const [gscLoaded, setGscLoaded] = useState(false);
@@ -217,6 +217,53 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
         <p className="mt-2 text-xs text-neutral-500">
           To contact them: <code className="rounded bg-neutral-800 px-1">npm run guests:contacts</code> lists each guest site with what it recorded and what its source website shows.
         </p>
+      </div>
+
+      {/* Claim postcards → QR scans → claims. The response rate of the automated trade-site loop.
+          On 2026-09-16, 72 real cards were in the mail and the only way to see whether one QR had
+          been scanned was a SQL query. "Arrived" is Lob's forecast; "delivered" stays 0 until the
+          Lob webhook is registered — the tile says which is which. */}
+      <div className="mt-8">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Claim cards → scans → claims</h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          Every card's QR is a tracked link. A scan counts on the prospect; a claim is the site changing hands. Test rows are excluded.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <KpiTile label="Cards mailed" value={cardResponse.mailed} tone="info" sub={`${cardResponse.byDay.length} mailing day${cardResponse.byDay.length === 1 ? '' : 's'}`} href="/admin/outreach" />
+          <KpiTile label="Should have arrived" value={cardResponse.arrived} tone={cardResponse.arrived > 0 ? 'info' : 'neutral'} sub="by Lob's forecast date" />
+          <KpiTile label="Delivered (known)" value={cardResponse.delivered} tone={cardResponse.delivered > 0 ? 'good' : 'warn'} sub={cardResponse.delivered > 0 ? `${cardResponse.returned} returned` : 'Lob webhook not registered'} />
+          <KpiTile label="QR scanned" value={cardResponse.visited - cardResponse.preDeliveryVisited} tone={cardResponse.visited - cardResponse.preDeliveryVisited > 0 ? 'good' : cardResponse.arrived > 0 ? 'warn' : 'neutral'} sub={cardResponse.preDeliveryVisited > 0 ? `+${cardResponse.preDeliveryVisited} scanned before delivery (tests)` : `${cardResponse.visits} scan${cardResponse.visits === 1 ? '' : 's'} total`} />
+          <KpiTile label="Claimed" value={cardResponse.claimed} tone={cardResponse.claimed > 0 ? 'good' : cardResponse.arrived > 0 ? 'warn' : 'neutral'} sub={cardResponse.arrived ? `${Math.round((100 * cardResponse.claimed) / cardResponse.arrived)}% of arrived` : '—'} />
+          <KpiTile label="Last scan" value={cardResponse.lastVisitAt ? new Date(cardResponse.lastVisitAt).toLocaleDateString() : '—'} tone="neutral" sub={cardResponse.firstVisitAt ? `first ${new Date(cardResponse.firstVisitAt).toLocaleDateString()}` : 'no scans yet'} />
+        </div>
+        {cardResponse.byMetro.length > 0 && (
+          <div className="mt-3 overflow-x-auto rounded-xl border border-zinc-800">
+            <table className="w-full text-xs">
+              <thead className="bg-zinc-900/60 text-neutral-400">
+                <tr>
+                  <th className="px-3 py-1.5 text-left font-medium">Metro</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Mailed</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Arrived</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Scanned</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Scans</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Claimed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cardResponse.byMetro.map((m) => (
+                  <tr key={`${m.city}|${m.region}`} className="border-t border-zinc-800/80">
+                    <td className="px-3 py-1.5 text-neutral-200">{m.city}{m.region ? `, ${m.region}` : ''}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-neutral-300">{m.mailed}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-neutral-300">{m.arrived}</td>
+                    <td className={`px-3 py-1.5 text-right tabular-nums ${m.visited > 0 ? 'text-emerald-300' : 'text-neutral-500'}`}>{m.visited}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums text-neutral-400">{m.visits}</td>
+                    <td className={`px-3 py-1.5 text-right tabular-nums ${m.claimed > 0 ? 'text-emerald-300' : 'text-neutral-500'}`}>{m.claimed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Holistic Top 5 */}

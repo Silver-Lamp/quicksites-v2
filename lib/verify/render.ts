@@ -29,14 +29,22 @@ const VIEWPORT = { width: 1280, height: 900 };
 /** Fonts and late layout shift settle here; a snapshot mid-swap describes a page nobody sees. */
 const SETTLE_MS = 1200;
 
+/**
+ * When navigation counts as done. `networkidle` (the verifier's default) is the honest choice for
+ * "what a stranger sees", but a store with analytics/captcha beacons NEVER goes idle: hicustom.com
+ * timed out at 30s on the production function (2026-09-16) while Chromium itself was fine. Callers
+ * whose page-side script does its own settling pass `domcontentloaded`.
+ */
+export type WaitUntil = 'networkidle' | 'load' | 'domcontentloaded';
+
 /** Local + CI. Playwright is a dev dependency, so this cannot run in the deployed runtime. */
-async function viaPlaywright<T>(url: string, js: string, timeoutMs: number): Promise<EvaluateResult<T>> {
+async function viaPlaywright<T>(url: string, js: string, timeoutMs: number, waitUntil: WaitUntil): Promise<EvaluateResult<T>> {
   let browser: any;
   try {
     const { chromium } = await import('playwright');
     browser = await chromium.launch();
     const page = await browser.newPage({ viewport: VIEWPORT });
-    await page.goto(url, { waitUntil: 'networkidle', timeout: timeoutMs });
+    await page.goto(url, { waitUntil, timeout: timeoutMs });
     await page.waitForTimeout(SETTLE_MS);
     const raw = await page.evaluate(js);
     return { ok: true, value: raw as T, driver: 'playwright' };
@@ -55,7 +63,7 @@ async function viaPlaywright<T>(url: string, js: string, timeoutMs: number): Pro
  * is not "it renders here". `GET /api/admin/verify/probe` exists to answer that from the running
  * process rather than from package.json — which is a claim about the repo, not about the runtime.
  */
-async function viaServerless<T>(url: string, js: string, timeoutMs: number): Promise<EvaluateResult<T>> {
+async function viaServerless<T>(url: string, js: string, timeoutMs: number, waitUntil: WaitUntil): Promise<EvaluateResult<T>> {
   let browser: any;
   try {
     const chromium = (await import('@sparticuz/chromium')).default as any;
@@ -67,7 +75,8 @@ async function viaServerless<T>(url: string, js: string, timeoutMs: number): Pro
       headless: true,
     });
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: timeoutMs });
+    // puppeteer spells network-idle differently from playwright; the other two are shared.
+    await page.goto(url, { waitUntil: waitUntil === 'networkidle' ? 'networkidle0' : waitUntil, timeout: timeoutMs });
     await new Promise((r) => setTimeout(r, SETTLE_MS));
     const raw = await page.evaluate(js);
     return { ok: true, value: raw as T, driver: 'serverless' };
@@ -91,15 +100,16 @@ async function viaServerless<T>(url: string, js: string, timeoutMs: number): Pro
 export async function renderEvaluate<T>(
   url: string,
   js: string,
-  opts: { prefer?: 'playwright' | 'serverless'; timeoutMs?: number } = {},
+  opts: { prefer?: 'playwright' | 'serverless'; timeoutMs?: number; waitUntil?: WaitUntil } = {},
 ): Promise<EvaluateResult<T>> {
   const timeoutMs = opts.timeoutMs ?? 60_000;
-  if (opts.prefer === 'serverless') return viaServerless<T>(url, js, timeoutMs);
-  if (opts.prefer === 'playwright') return viaPlaywright<T>(url, js, timeoutMs);
+  const waitUntil = opts.waitUntil ?? 'networkidle';
+  if (opts.prefer === 'serverless') return viaServerless<T>(url, js, timeoutMs, waitUntil);
+  if (opts.prefer === 'playwright') return viaPlaywright<T>(url, js, timeoutMs, waitUntil);
 
-  const pw = await viaPlaywright<T>(url, js, timeoutMs);
+  const pw = await viaPlaywright<T>(url, js, timeoutMs, waitUntil);
   if (pw.ok) return pw;
-  const sl = await viaServerless<T>(url, js, timeoutMs);
+  const sl = await viaServerless<T>(url, js, timeoutMs, waitUntil);
   if (sl.ok) return sl;
   // Both failed: report BOTH reasons. "could not render" without saying what was tried sends the
   // next person to debug the wrong half.

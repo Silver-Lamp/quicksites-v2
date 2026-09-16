@@ -89,9 +89,13 @@ export const CATALOG_EXTRACT_JS = `(function () {
     } catch (e) { return false; }
   }
   return (async function () {
-    for (var y = 0; y < 4000; y += 700) { window.scrollTo(0, y); await sleep(200); }
+    // Navigation resolves on DOMContentLoaded (a store with analytics beacons never reaches
+    // network-idle), so hydration + the first catalog fetch settle HERE, then the scroll
+    // triggers lazy images. ~4s total, bounded, the same in both drivers.
+    await sleep(1800);
+    for (var y = 0; y < 4000; y += 700) { window.scrollTo(0, y); await sleep(250); }
     window.scrollTo(0, 0);
-    await sleep(400);
+    await sleep(600);
     var anchors = Array.prototype.slice.call(document.querySelectorAll('a[href]')).filter(function (a) {
       var h = a.getAttribute('href') || '';
       return HREF.test(h) && sameSite(a.href);
@@ -294,9 +298,13 @@ export async function importRenderedCatalog(
   for (const url of urls) {
     const left = budgetMs - (Date.now() - started);
     if (left < 8_000) break;
+    // ⚠️ domcontentloaded, not network-idle: hicustom.com's beacons never go quiet and the
+    // production function timed out at 30s with Chromium perfectly healthy. The page-side
+    // script does its own settling.
     const r = await render<CatalogExtract>(url, CATALOG_EXTRACT_JS, {
       prefer: opts.prefer,
-      timeoutMs: Math.min(30_000, left - 3_000),
+      timeoutMs: Math.min(25_000, left - 3_000),
+      waitUntil: 'domcontentloaded',
     });
     rendered.push(url);
     if (!r.ok) {

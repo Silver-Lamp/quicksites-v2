@@ -70,6 +70,9 @@ type AdminUserRow = {
   id: string;
   email?: string | null;
   name?: string | null;
+  /** Where the name came from (`site` = the business name on their newest site, a guess). */
+  name_source?: 'account' | 'profile' | 'merchant' | 'chef' | 'site' | null;
+  email_source?: 'account' | 'profile' | null;
   created_at?: string | null;
   last_sign_in_at?: string | null;
   /** A guest-build session (Supabase anonymous sign-in) — no email, real templates. */
@@ -654,8 +657,24 @@ export default function UsersPlansManager() {
                     <div key={u.id} className="border-b border-zinc-500/30">
                     <TableRow className="align-top">
                       <TableCell>
-                        <div className="font-medium">{u.name ?? '—'}</div>
-                        <div className="text-muted-foreground text-sm">{u.email ?? '—'}</div>
+                        <div className="font-medium">
+                          {u.name ?? <span className="text-muted-foreground">no name</span>}
+                          {u.name && u.name_source && u.name_source !== 'account' && (
+                            <span
+                              className="ml-1.5 rounded bg-muted px-1 py-px align-middle text-[10px] font-normal uppercase tracking-wide text-muted-foreground"
+                              title={u.name_source === 'site' ? 'Business name on their newest site — a guess about the person, not a name they gave' : `From their ${u.name_source} record`}
+                            >
+                              {u.name_source === 'site' ? 'via site' : u.name_source}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-muted-foreground text-sm">
+                          {u.email ? (
+                            <a href={`mailto:${u.email}`} className="underline-offset-2 hover:underline" title="Email them">{u.email}</a>
+                          ) : (
+                            <span title={u.is_anonymous ? 'Anonymous guest session — no email' : 'No email on the account or profile'}>no email</span>
+                          )}
+                        </div>
                         <div className="mt-1 text-xs text-muted-foreground">{u.id}</div>
                       </TableCell>
 

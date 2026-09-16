@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { summarizeUserSites, authProvider, NO_SITES, type OwnedTemplateRow } from '@/lib/admin/userSites';
+import { resolveUserIdentity } from '@/lib/admin/userIdentity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -164,6 +165,14 @@ export async function GET(req: NextRequest) {
   const sitesByUser = summarizeUserSites(templateRows);
   const sitesCapped = templateRows.length >= TEMPLATE_ROW_CAP;
 
+  // 2b') profiles — the name/email a user set on their profile page; most sign-ups never set
+  // `user_metadata.name`, so without this the User column was a dash for nearly everyone.
+  const profileByUser = new Map<string, { name: string | null; email: string | null }>();
+  try {
+    const { data: profs } = await (admin as any).from('user_profiles').select('user_id, name, email').in('user_id', userIds);
+    (profs ?? []).forEach((p: any) => p?.user_id && profileByUser.set(p.user_id, { name: p.name ?? null, email: p.email ?? null }));
+  } catch { /* tolerate */ }
+
   // 2c) platform admins — so the list can tell an operator account from a customer.
   const adminIds = new Set<string>();
   try {
@@ -219,11 +228,25 @@ export async function GET(req: NextRequest) {
       (prof ? 'pending' : 'none');
 
     const plan = planByUser.get(u.id) ?? null;
+    const sites = sitesByUser.get(u.id) ?? NO_SITES;
+    const profile = profileByUser.get(u.id) ?? null;
+    const identity = resolveUserIdentity({
+      authEmail: u.email,
+      metaName: (u.user_metadata as any)?.name,
+      metaFullName: (u.user_metadata as any)?.full_name,
+      profileName: profile?.name,
+      profileEmail: profile?.email,
+      merchantName: merch?.display_name ?? merch?.name,
+      chefName: chef?.display_name ?? chef?.name,
+      siteBusinessName: sites.latest[0]?.name,
+    });
 
     const row = {
       id: u.id,
-      email: u.email,
-      name: (u.user_metadata as any)?.name ?? (u.user_metadata as any)?.full_name ?? null,
+      email: identity.email,
+      email_source: identity.email_source,
+      name: identity.name,
+      name_source: identity.name_source,
       created_at: (u as any).created_at ?? null,
       last_sign_in_at: (u as any).last_sign_in_at ?? null,
       is_anonymous: !!(u as any).is_anonymous,

@@ -114,7 +114,9 @@ export function formatSnapshotPrice(p: Pick<SnapshotProduct, 'price_cents' | 'cu
 function SnapshotGallery({ title, columns, products, isEditor }: { title?: string; columns: number; products: SnapshotProduct[]; isEditor: boolean }) {
   return (
     <section className="py-8" data-products-grid="snapshot">
-      {title && <h2 className="text-2xl font-bold mb-4">{title}</h2>}
+      {/* text-foreground: the heading inherited no color and rendered dark-on-dark on the first
+          production gallery (CLAUDE.md §7 — semantic tokens, never an inherited default). */}
+      {title && <h2 className="text-2xl font-bold mb-4 text-foreground">{title}</h2>}
       <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
         {products.map((p) => {
           const body = (
@@ -263,7 +265,7 @@ export default function RenderProductsGrid({ block }: { block: Block }) {
 
   return (
     <section className="py-8">
-      {content.title && <h2 className="text-2xl font-bold mb-4">{content.title}</h2>}
+      {content.title && <h2 className="text-2xl font-bold mb-4 text-foreground">{content.title}</h2>}
       <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
         {products.map((p) => {
           const href = productHref(p);

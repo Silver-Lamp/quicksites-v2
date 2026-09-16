@@ -26,9 +26,34 @@
 // the merchant's; otherwise the products stay a DISPLAY-ONLY snapshot on the grid (the "product
 // gallery" — real products, real prices, no cart) until the owner sets a currency.
 
-import { renderEvaluate } from '@/lib/verify/render';
+import { renderEvaluate, type EvaluateResult, type WaitUntil } from '@/lib/verify/render';
+import { renderViaQueue, defaultRenderQueueDeps } from '@/lib/jobs/renderQueue';
 import type { ProductSpec } from '@/lib/rebuild/importShopify';
 import type { ScrapedSite } from '@/lib/rebuild/scrapeSite';
+
+/**
+ * The default renderer: an owner-run worker when one is alive (RENDER_WORKERS_ENABLED and a
+ * fresh heartbeat), else this process — same script, same options, same result shape.
+ */
+async function queuedCatalogRender<T>(
+  url: string,
+  js: string,
+  opts: { prefer?: 'playwright' | 'serverless'; timeoutMs?: number; waitUntil?: WaitUntil } = {},
+): Promise<EvaluateResult<T>> {
+  const r = await renderViaQueue<T>(
+    'catalog',
+    url,
+    { timeoutMs: opts.timeoutMs, waitUntil: opts.waitUntil, requestedBy: '/api/rebuild' },
+    () => renderEvaluate<T>(url, js, opts),
+    defaultRenderQueueDeps(),
+  );
+  // A fallback while the feature is ON is worth one log line: it is the only way to tell
+  // "no worker was alive" from "the queue itself broke" without opening the DB.
+  if (r.via === 'local' && r.reason && r.reason !== 'disabled') {
+    console.info('[rebuild] render queue fell back to local', { url, reason: r.reason });
+  }
+  return r;
+}
 
 /** Opt-out flag: rendering is ON unless explicitly disabled (no keys to be incomplete). */
 export function renderedCatalogEnabled(): boolean {
@@ -274,7 +299,7 @@ export function pickListingCandidates(scraped: Pick<ScrapedSite, 'finalUrl' | 's
 export type RenderedCatalogResult = {
   products: ProductSpec[];
   rendered: string[];
-  driver: 'playwright' | 'serverless' | 'none';
+  driver: 'playwright' | 'serverless' | 'worker' | 'none';
   error?: string;
 };
 
@@ -288,7 +313,8 @@ export async function importRenderedCatalog(
   opts: { budgetMs?: number; prefer?: 'playwright' | 'serverless'; renderer?: typeof renderEvaluate } = {},
 ): Promise<RenderedCatalogResult> {
   const budgetMs = opts.budgetMs ?? 40_000;
-  const render = opts.renderer ?? renderEvaluate;
+  // A forced driver (the probe, local scripts) bypasses the queue; otherwise worker-or-local.
+  const render = opts.renderer ?? (opts.prefer ? renderEvaluate : queuedCatalogRender);
   const started = Date.now();
   const rendered: string[] = [];
   let driver: RenderedCatalogResult['driver'] = 'none';

@@ -20,10 +20,11 @@ export type RenderResult =
   | { ok: true; page: RenderedPage; driver: 'playwright' | 'serverless' }
   | { ok: false; error: string; driver: 'playwright' | 'serverless' | 'none' };
 
-/** Generic form: whatever the evaluated script returned. */
+/** Generic form: whatever the evaluated script returned. `worker` = an owner-run machine
+ *  (lib/jobs/renderQueue.ts) evaluated the same string and handed the value back. */
 export type EvaluateResult<T> =
-  | { ok: true; value: T; driver: 'playwright' | 'serverless' }
-  | { ok: false; error: string; driver: 'playwright' | 'serverless' | 'none' };
+  | { ok: true; value: T; driver: 'playwright' | 'serverless' | 'worker' }
+  | { ok: false; error: string; driver: 'playwright' | 'serverless' | 'worker' | 'none' };
 
 const VIEWPORT = { width: 1280, height: 900 };
 /** Fonts and late layout shift settle here; a snapshot mid-swap describes a page nobody sees. */
@@ -122,6 +123,7 @@ export async function renderPage(
   prefer?: 'playwright' | 'serverless',
 ): Promise<RenderResult> {
   const r = await renderEvaluate<RenderedPage>(url, EXTRACT_JS, { prefer });
-  if (r.ok) return { ok: true, page: r.value, driver: r.driver };
-  return { ok: false, error: r.error, driver: r.driver };
+  // renderEvaluate never returns 'worker' itself; narrow for the verifier's own result type.
+  if (r.ok) return { ok: true, page: r.value, driver: r.driver === 'worker' ? 'serverless' : r.driver };
+  return { ok: false, error: r.error, driver: r.driver === 'worker' ? 'none' : r.driver };
 }

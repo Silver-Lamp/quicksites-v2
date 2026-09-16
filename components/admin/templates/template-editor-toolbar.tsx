@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Trash2,
   ExternalLink,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -34,14 +35,33 @@ type Props = {
   /** Live URL of the published site, if any — renders a persistent "View live site" link. */
   liveUrl?: string | null;
   busy?: boolean;
+  /**
+   * Open a watermarked preview of the CURRENT draft (`/preview?template_id=…`) in a new tab.
+   * The editor saves first so what opens is what's on screen. This is the one way to see an
+   * unpublished draft as a visitor would: the public routes 404 for it until it is published.
+   */
+  onPreview?: () => void;
+  previewBusy?: boolean;
 };
 
-function extractTemplateIdFromPath(pathname: string | null): string | null {
+/** The only URL that renders an unpublished draft as a visitor would see it (watermarked, noindex). */
+export function draftPreviewUrl(templateId: string): string {
+  return `/preview?template_id=${encodeURIComponent(templateId)}`;
+}
+
+/**
+ * The template id from the editor path. The editor lives at `/admin/templates/<id>` (plural);
+ * this used to look for a singular `template` segment only, so on the real editor route the id
+ * resolved to null — the name-resolve effect never ran and Archive toasted "Missing template id".
+ * Accepts both spellings; ignores the list/new/tool pages that share the prefix.
+ */
+export function extractTemplateIdFromPath(pathname: string | null): string | null {
   if (!pathname) return null;
   const parts = pathname.split('/').filter(Boolean);
-  const i = parts.indexOf('template');
-  if (i >= 0 && parts[i + 1]) return parts[i + 1];
-  return null;
+  const i = parts.findIndex((p) => p === 'template' || p === 'templates');
+  const candidate = i >= 0 ? parts[i + 1] : undefined;
+  if (!candidate || ['list', 'new', 'gsc-bulk-stats'].includes(candidate)) return null;
+  return candidate;
 }
 
 export function TemplateEditorToolbar({
@@ -60,6 +80,8 @@ export function TemplateEditorToolbar({
   onSaveAndPublish,
   liveUrl,
   busy = false,
+  onPreview,
+  previewBusy = false,
 }: Props) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const pathname = usePathname();
@@ -297,6 +319,23 @@ export function TemplateEditorToolbar({
         <div className="flex items-center gap-2">
           {renderAutosaveBadge()}
 
+          {/* Preview leads the action group: "what does this look like?" is the question an
+              owner asks before Save or Publish, and until today the only answer for an
+              unpublished draft was a copy-the-link line in the guest banner. */}
+          {onPreview && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={onPreview}
+              disabled={previewBusy || archiving}
+              title="Save and open a preview of this draft in a new tab"
+              className="gap-2 border border-sky-400/50 bg-sky-500/15 px-4 font-semibold text-sky-100 shadow-[0_0_0_1px_rgba(56,189,248,0.15)] hover:bg-sky-500/30 hover:text-white"
+            >
+              {previewBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+              {previewBusy ? 'Opening…' : 'Preview'}
+            </Button>
+          )}
+
           {handleSaveDraft && (
             <Button type="button" size="sm" onClick={handleSaveDraft} disabled={busy || archiving} title="Save current draft" className="gap-2">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <SaveIcon className="h-4 w-4" />}
@@ -345,8 +384,15 @@ export function TemplateEditorToolbar({
       {isRenaming && (
         <div className="mb-2">
           <p className="text-xs text-muted-foreground">
-            Preview URL:{' '}
-            <code className="bg-muted px-2 py-1 rounded">/templates/{slugPreview}</code>
+            {/* `/templates/<slug>` was printed here for months and never existed as a route. */}
+            Site address once published:{' '}
+            <code className="bg-muted px-2 py-1 rounded">https://{slugPreview || '<slug>'}.quicksites.ai</code>
+            {currentId && (
+              <>
+                {' '}· preview now:{' '}
+                <code className="bg-muted px-2 py-1 rounded">{draftPreviewUrl(currentId)}</code>
+              </>
+            )}
           </p>
         </div>
       )}

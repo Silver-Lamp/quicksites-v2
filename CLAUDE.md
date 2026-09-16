@@ -235,6 +235,21 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   failure, never read as "no products". FOYTEA remains empty after rendering: it lists no products.
   China-facing sellers (buyer / merchant / partner are three different Stripe problems):
   [`docs/CHINA_PAYMENTS_PLAN.md`](docs/CHINA_PAYMENTS_PLAN.md).
+- **Owner-run render workers — the Mac minis (2026-09-16)**: headless-browser work can run on
+  machines the owner runs at home instead of Vercel serverless Chromium. **An optimisation with a
+  hard fallback, never a dependency**: `lib/jobs/renderQueue.ts#renderViaQueue` inserts a
+  `render_jobs` row only when `RENDER_WORKERS_ENABLED=1` **and** a `render_workers` heartbeat is
+  <30s old; not claimed in 6s → expired + local; worker failure or deadline → local. Workers
+  (`scripts/render-worker.ts`, `npm run render:worker`) claim with `claim_render_job()`
+  (`SKIP LOCKED`), run a **fixed script chosen by `kind`** (`catalog` / `verify` — the row carries
+  a URL and options, never JavaScript) through the SAME `assertPublicHttpUrl()` SSRF guard, so a
+  row cannot run code on the mini or browse its LAN. Migration `20260842` (applied; both tables
+  service-role only). Admin: `GET /api/admin/render-workers`; `/status` gate `render_workers`.
+  Proven locally: a worker on this Mac took a HiCustom catalog job in 0.6s and finished in 17s.
+  ⚠️ **Scripts on Node 20 need the `ws` polyfill BEFORE the admin client is imported** — without
+  it `createClient` throws "without native WebSocket support" and the queue reads as
+  `workers_unreadable` (a fallback that looks like "no worker"). Setup, launchd, and what NOT to
+  move (Postgres, public hosting): [`docs/RENDER_WORKERS.md`](docs/RENDER_WORKERS.md).
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

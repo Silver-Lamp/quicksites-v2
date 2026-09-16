@@ -356,6 +356,18 @@ export const CONFIG_GATES: ConfigGate[] = [
     degradeOnly: true,
     breaks: 'The listen launcher does not render on public pages. No TTS is billed.',
   },
+  {
+    key: 'render_workers',
+    label: 'Owner-run render workers (Mac minis)',
+    enabledBy: 'RENDER_WORKERS_ENABLED',
+    // Nothing to require: the queue reads the service-role client every route already has.
+    // "Ready" here means the ROUTING is on; whether a worker is alive is a runtime fact —
+    // see GET /api/admin/render-workers.
+    requires: [],
+    degradeOnly: true,
+    breaks:
+      'Browser renders (rebuild catalog reads) run on Vercel serverless Chromium instead of an owner-run worker. Slower and metered, nothing broken.',
+  },
 ];
 
 export type GateReport = {

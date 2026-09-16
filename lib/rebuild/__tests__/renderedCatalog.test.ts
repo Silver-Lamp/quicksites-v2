@@ -111,6 +111,19 @@ describe('importRenderedCatalog', () => {
     expect(calls).toEqual(['https://www.hicustom.com/']);
   });
 
+  it('navigates on domcontentloaded, never network-idle (a store with beacons never goes idle)', async () => {
+    // Production, 2026-09-16: Chromium launched fine and then "Navigation timeout of 30000 ms
+    // exceeded" on hicustom.com under networkidle0. The extractor settles the page itself.
+    let seen: any = null;
+    const renderer = (async (_url: string, _js: string, opts: any) => {
+      seen = opts;
+      return { ok: true, driver: 'serverless', value: { lang: '', anchors: 0, cards: hicustomCards } };
+    }) as any;
+    await importRenderedCatalog(scraped, { renderer });
+    expect(seen.waitUntil).toBe('domcontentloaded');
+    expect(seen.timeoutMs).toBeLessThanOrEqual(25_000);
+  });
+
   it('falls through to a listing page when the homepage shows no cards', async () => {
     const calls: string[] = [];
     const renderer = (async (url: string) => {

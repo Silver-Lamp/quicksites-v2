@@ -250,6 +250,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   it `createClient` throws "without native WebSocket support" and the queue reads as
   `workers_unreadable` (a fallback that looks like "no worker"). Setup, launchd, and what NOT to
   move (Postgres, public hosting): [`docs/RENDER_WORKERS.md`](docs/RENDER_WORKERS.md).
+- **Venue sweep for HiveJournal (2026-09-16)**: `POST /api/tools/venue-sweep` — live-music venues
+  near a city from our Places seam (`lib/venues/venueSweep.ts`), consumed by HJ's Cornerstone
+  Display "Live music" panel; contract **`crosstalk/contracts/venue-sweep.md`** (single source of
+  truth — link, never fork). Public + 20/hr/IP, optional `QS_TOOLS_TOKEN` bearer gate. ⚠️ **Places
+  text search treats the radius as a bias, not a fence** — the first Laguna Beach sweep led with
+  House of Blues Anaheim (40 km); results outside 1.25× the radius are dropped on coordinates.
+  A listing is not a schedule; the `note` field says so. Same call a QS venue vertical would use.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

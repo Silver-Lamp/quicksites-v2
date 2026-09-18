@@ -4,7 +4,8 @@ export const revalidate = 0;
 
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
-import { notFound } from 'next/navigation';
+import { notFound, redirect, permanentRedirect } from 'next/navigation';
+import { resolvePublicPath } from '@/lib/sites/redirects';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { getServerSupabase } from '@/lib/supabase/server';
@@ -587,7 +588,17 @@ export default async function SitePreviewPage({
 
   if (!normalized) return notFound();
 
-  const pageSlug = rest?.[0] ?? firstPageSlug(normalized);
+  // Redirects → page → reserved app path → 404 (lib/sites/redirects.ts). Cart/checkout/thank-you
+  // were handled above; everything else that is not a page of this site is now a real 404
+  // instead of the home page under a self-canonical URL.
+  const decision = resolvePublicPath(normalized as any, rest);
+  if (decision.kind === 'redirect') {
+    if (decision.permanent) permanentRedirect(decision.to);
+    redirect(decision.to);
+  }
+  if (decision.kind === 'not_found') return notFound();
+
+  const pageSlug = decision.kind === 'page' ? decision.slug : rest?.[0] ?? firstPageSlug(normalized);
   const colorMode = (normalized.color_mode ?? 'light') as 'light' | 'dark';
   // Absolute public URL of THIS page — used as the `url` in the JSON-LD blocks below, which is an
   // address a search engine will follow. It must be the visitor's URL, not our rewrite target.

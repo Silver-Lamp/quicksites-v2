@@ -3,7 +3,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 
-import { notFound } from 'next/navigation';
+import { notFound, redirect, permanentRedirect } from 'next/navigation';
+import { resolvePublicPath } from '@/lib/sites/redirects';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Script from 'next/script';
@@ -274,7 +275,18 @@ export default async function HostSitePage({
   if (!payload) return notFound();
 
   const { site } = payload;
-  const pageSlug = (params?.rest && params.rest[0]) || firstPageSlug(site);
+
+  // Redirects → page → reserved app path → 404. Before this, an unknown path rendered the home
+  // page with a 200 (lib/sites/redirects.ts explains what that cost). Reserved paths keep their
+  // previous behaviour on this route, deliberately: not changed here.
+  const decision = resolvePublicPath(site as any, params?.rest);
+  if (decision.kind === 'redirect') {
+    if (decision.permanent) permanentRedirect(decision.to);
+    redirect(decision.to);
+  }
+  if (decision.kind === 'not_found') return notFound();
+
+  const pageSlug = decision.kind === 'page' ? decision.slug : (params?.rest && params.rest[0]) || firstPageSlug(site);
   const colorMode = (site.color_mode ?? 'light') as 'light' | 'dark';
   const baseUrl = await originFromHeaders();
 

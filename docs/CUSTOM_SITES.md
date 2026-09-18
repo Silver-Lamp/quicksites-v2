@@ -486,3 +486,41 @@ The manual path above is the specification. It would wrap it as:
 
 The dashboard's real job is **making the checklist in §7 unskippable**, because every item on it
 was learned by shipping its absence.
+
+---
+
+## 9. Migrating a client off an old site: redirects and the 404
+
+A refresh of an existing site (the Tampa law firm, 2026-09-17: WordPress since 2019) carries a
+promise the platform could not keep until now — "redirects from any older pages we replace".
+Both public routes took the first path segment as a page slug and **served the home page with
+a 200 for anything else**, so an old `/practice-areas/personal-injury/` neither redirected nor
+404'd; it quietly rendered home under a self-canonical URL, and Google indexed such paths.
+
+`lib/sites/redirects.ts` now decides **redirect → page → reserved app path → 404**:
+
+```json
+// data.meta.redirects — paths are normalised (lowercase, no trailing slash, no query)
+[
+  { "from": "/practice-areas/personal-injury/", "to": "/civil-litigation" },
+  { "from": "/practice-areas/dui/",              "to": "/criminal-defense" },
+  { "from": "/index.php",                        "to": "/" },
+  { "from": "/old-blog/",                        "to": "https://example.com/archive", "permanent": false }
+]
+```
+
+Recipe:
+1. **Inventory the old URLs before DNS moves.** Their sitemap (`/sitemap.xml`, `/sitemap_index.xml`
+   on WordPress) plus Search Console's Pages report is the list. Anything with impressions gets a
+   row; the rest may 404.
+2. `PUT /api/admin/templates/<id>/redirects` with `{ redirects: [...] }` (admin). Invalid rows are
+   dropped and counted in `dropped`, never thrown. The root cannot be redirected; a row that maps a
+   path to itself is dropped.
+3. **Republish.** A published site serves its snapshot, so the map reaches visitors on the next
+   publish, not on save.
+4. Verify from outside: `curl -sI https://<domain>/old-path` → `308` + `location:`; an unmapped
+   junk path → `404`; every page in the nav → `200`.
+
+Reserved first segments (`cart`, `checkout`, `thank-you`, `p`, `verbatim`, `resume`, `go`, …) are
+never 404'd by this and keep whatever the route did before — the list is in
+`RESERVED_FIRST_SEGMENTS`, one line to extend.

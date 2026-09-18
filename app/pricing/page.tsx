@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SiteHeader from '@/components/site/site-header';
+import { AGENCY_FOUNDER, AGENCY_PUBLIC } from '@/lib/billing/planPricing';
 import PageBackdrop from '@/components/site/page-backdrop';
 import SiteFooter from '@/components/site/site-footer';
 
@@ -67,8 +68,11 @@ const ORDER_FEE_PCT = GENERAL_FEE_PERCENT; // most storefronts
 const FOOD_FEE_PCT = RESTAURANT_FEE_PERCENT; // any site with a menu block
 const FOOD_FEE_MIN = RESTAURANT_FEE_MIN_CENTS; // per-order floor, in cents
 const AI_ADDON_PER_USER = 10; // $/user/mo
-const FOUNDER_PLAN = { platform: 15, perSite: 5 }; // Path B (agency) — beta
-const PUBLIC_PLAN = { platform: 19, perSite: 6 };
+// ⚠️ Imported, not typed: the Gemini case study quotes these to reconcile a third party's
+// assumptions against our real price, and two copies of a price is how a page and a proposal end
+// up disagreeing in front of a customer. Source of truth: lib/billing/planPricing.ts.
+const FOUNDER_PLAN = AGENCY_FOUNDER; // Path B (agency) — beta
+const PUBLIC_PLAN = AGENCY_PUBLIC;
 // Path D (lead-gen / no online store): flat monthly on a premium local domain, at a
 // founder rate that steps up to the full rate once the site reaches page 1. Varies by
 // trade — see lib/outreach/geoPricing.ts / docs/GEO_DOMAIN_MONETIZATION.md.
@@ -872,7 +876,13 @@ export default function PricingPage() {
           <p className="mb-6 max-w-2xl text-sm text-muted-foreground">
             Prefer flat, predictable costs to a per-order fee? The Agency plan bills per user + per
             site with <span className="text-foreground font-medium">no platform fee on orders</span>
-            .
+            .{' '}
+            <Link
+              href="/pricing/gemini-case-study"
+              className="text-sky-400 underline underline-offset-4 hover:text-sky-300"
+            >
+              See how Google’s Gemini modelled agency margins across QuickSites, 10Web and Framer →
+            </Link>
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <AgencyPlanCard mode={mode} />

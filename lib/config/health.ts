@@ -139,6 +139,16 @@ export const CONFIG_GATES: ConfigGate[] = [
       'The post-claim page sells a custom domain, Stripe charges for it monthly, and nothing is written back: no subscription row, no payment count, no domain provisioned. Events for this rail arrive on the geo-rental webhook endpoint, so the geo secret is the one that must be set.',
   },
   {
+    key: 'ppl',
+    label: 'Pay-per-call lead billing on geo tracking numbers',
+    enabledBy: 'PPL_ENABLED',
+    // Twilio signs the billing callback; Stripe charges the reload and the geo webhook credits
+    // the deposit; Resend carries the statements. All four or the money is wrong in some way.
+    requires: ['TWILIO_AUTH_TOKEN', 'STRIPE_SECRET_KEY', 'STRIPE_GEO_WEBHOOK_SECRET', 'RESEND_API_KEY'],
+    breaks:
+      'A campaign marked pricing_model=ppl bridges calls but cannot bill them (no signed callback), cannot credit a deposit (webhook secret), or bills silently (no statement email). With the flag off, ppl campaigns fall back to the plain forward-and-log path and nothing is charged.',
+  },
+  {
     key: 'trade_pipeline',
     label: 'Auto-built trade sites — nightly sweep-and-build cron',
     enabledBy: 'TRADE_PIPELINE_ENABLED',

@@ -210,6 +210,24 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   is LIVE.** The loop is drawn on `/business-plan?v=trade_sites` (`components/business-plan/trade-sites-flow.tsx`,
   pure SVG, counts from `planEvidence`, no price, one amber "operator decides" node — a test pins that
   it never claims more automation than exists).
+- **Pay-per-call leads — the eighth vertical (2026-09-18, flag-gated OFF)**: the ranked geo
+  site's tracking number sold **per call** instead of the domain per month. A business prepays a
+  balance (`ppl_accounts`); each answered call ≥ 90 s deducts one lead price (default $85);
+  under $300 the card on file reloads $1,200; at zero the line stops connecting **and says so**.
+  Map: **[`docs/PPL_VERTICAL.md`](docs/PPL_VERTICAL.md)**. ⚠️ **The ledger is the truth and the
+  DB enforces the two idempotency rules** — one charge per `call_sid`, one credit per
+  `stripe_payment_intent_id` (partial unique indexes, migration `20260843`; `ppl_post_ledger`
+  row-locks and returns NULL for "already posted", which callers read as done, never as error).
+  The one place a charge posts is the **signed** `<Dial action>` callback
+  `app/api/twilio/ppl/complete` (signature over the full URL *including the query string*);
+  the balance gate is the `pricing_model==='ppl'` branch of `app/api/twilio/geo/[campaignId]`;
+  deposits ride the **geo Stripe webhook** on `metadata.ppl_account_id`. Reload idempotency key
+  = `ppl_reload_<account>_<chargeLedgerId>` — deterministic per triggering charge, never a time
+  bucket. ⚠️ **The IVR copy is the honesty surface**: `FORBIDDEN_IVR_PHRASES` (`lib/ppl/ivr.ts`)
+  is grepped in tests — no "licensed/insured/specialist", no "at capacity" when the real reason
+  is the business's balance, and it is a *prepaid balance*, never "escrow". Adapted from a Gemini
+  draft that never wired its billing step, accepted unsigned Stripe events, and could credit a
+  reload twice; each is a constraint or a test here. Flag `PPL_ENABLED`; gate `ppl` on `/status`.
 - **Store detection ≠ store import (2026-09-16)**: the URL rebuild now decides *"was this a
   store?"* statically (`lib/rebuild/storefrontDetect.ts` — code/CDN signatures for
   Shopify/Shoptop/Shoplazza/Shopline/WooCommerce/…, product-path + cart heuristics, Product

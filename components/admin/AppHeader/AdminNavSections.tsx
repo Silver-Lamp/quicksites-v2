@@ -181,6 +181,13 @@ const NAV_ADMIN: NavItem[] = [
   },
   {
     type: 'item',
+    label: 'Analytics',
+    href: '/admin/analytics',
+    icon: <ChartBar size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
     label: 'Site Tour',
     href: '/admin/talking-demo',
     icon: <PlayCircle size={18} />,

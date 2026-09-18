@@ -114,23 +114,40 @@ also filed on `/admin/tasks` (`source='session:2026-09-18'`) so they outlive thi
 
 ### Phase 1 — prove the rail takes money (owner, ~1 hour + 30 days of waiting)
 
-0. ⚠️ **No campaign has a tracking number** (checked 2026-09-18: `0 of 103`, and 0 of the 32
-   `call_logs` rows are tagged to a campaign). The call-tracking code (`provision-number`,
-   `/api/twilio/geo/<id>`) has never been run in production. So "the campaign whose phone
-   already rings" does not exist yet; the pitch site's visible phone is the business's own.
-1. **Pick the campaign by rank, not by calls.** `select domain, rank_position from
-   geo_industry_campaigns where rank_status='page1' order by rank_position` — on 2026-09-18
-   that is `ashland-city-towing.com` (position 1), then `franklin-towing.com` (7.8). Confirm
-   it is not rented (`subscription_status` is empty for all three).
-1b. **Provision the number** (admin session, ~$1.15/mo Twilio): `POST
-   /api/admin/prospects/geo-campaign/provision-number` for that campaign, which buys a local
-   number, points its voice URL at `/api/twilio/geo/<id>`, and writes `tracking_number` +
-   `forward_to`. Then **re-publish the pitch site with the tracking number as its phone** —
-   otherwise callers dial the business directly and nothing is ever measured or billed.
-   Expect a few weeks of `call_logs` before the pitch has a number in it.
-2. **Have the conversation.** The pitch is one sentence: *"Your line gets N calls a month; pay
-   $85 only for the ones that reach you and last 90 seconds, contest any within 72 hours."*
-   Ask for the number calls should bridge to (E.164) and the email statements go to.
+0. ⚠️ **Three facts checked 2026-09-18 that set the order.** (a) `0 of 103` geo campaigns has a
+   tracking number and 0 of 32 `call_logs` rows is tagged to one — the call-tracking code has
+   never run in production. (b) **Production has no `TWILIO_*` env at all** (`/status` → `sms:
+   incomplete`); the forwarding that exists lives in Sandon's Twilio console, not in this app.
+   (c) **graftontowing.com** is live on a custom domain (a legacy `sites` row, not a campaign)
+   showing **262-228-2491** — per Sandon, a Twilio number forwarding to an existing Grafton
+   towing business. That is the only ranked-site phone that already rings through Twilio.
+   ⚠️ **Consent boundary.** Several pitch sites (towing, `pnw-exteriorcleaning.com`) carry a
+   **real local provider's own number**, placed so a visitor who calls is not let down. Those
+   providers never asked for anything. PPL bridges to, records for, and bills **only the account
+   holder's `contact_phone`** — the route never falls back to a campaign's `forward_to` (source
+   guard in `rules.test.ts`). The goodwill numbers stay exactly as they are.
+1. **Phase 1 campaign = graftontowing.com**, not the page-one geo row. It already has a Twilio
+   number in front of a real business that has been receiving its calls — the pitch writes
+   itself ("you have been getting these calls free; here is the meter"), and the business's
+   agreement IS the consent event. Fallback if they decline: `ashland-city-towing.com`
+   (page one, position 1, unrented) with a freshly provisioned number.
+1b. **Owner: put the Twilio account that owns 262-228-2491 into Vercel production**
+   (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`) and redeploy — nothing in
+   this vertical (or claim verification, or demand-capture SMS) works without it. Also note
+   the number's current voice configuration in the console (a plain forward? a TwiML bin?
+   does it record?) — a session needs that to repoint it without dropping calls.
+1c. **Session: make Grafton a campaign.** Insert a `geo_industry_campaigns` row (`kind
+   geo_services`, `domain graftontowing.com`, `template_id` = the published `graftontowing`
+   template) with `tracking_number = +12622282491`, then repoint the number's voice URL at
+   `/api/twilio/geo/<campaignId>` via the Twilio API. Calls keep forwarding exactly as before
+   (plus the recording notice) and start landing in `call_logs`. **A week of those is the
+   pitch's proof number.**
+2. **Have the conversation** — with the Grafton business, after a week of `call_logs`. The
+   pitch is one sentence: *"Your line has been getting N calls a week from graftontowing.com;
+   pay $85 only for the ones that reach you and last 90 seconds, contest any within 72 hours."*
+   Ask for the number calls should bridge to (E.164 — this becomes `contact_phone`, the ONLY
+   number PPL will ever dial) and the email statements go to. If they say no, the number keeps
+   forwarding for free as it does today, and the fallback campaign gets a fresh number.
 3. **Open the account** (admin session): `POST /api/admin/ppl/accounts` with
    `{ geo_campaign_id, business_name, contact_email, contact_phone, deposit_cents: 50000 }`.
    A smaller first deposit ($500) than the reload default is deliberate — proof before volume.

@@ -111,3 +111,26 @@ describe('the IVR never lies to the caller', () => {
     expect(t).toContain('action="https://x/a?b=1&amp;c=2"');
   });
 });
+
+describe('the voice route bridges a PPL call only to the account holder', () => {
+  // Some pitch sites carry a real local provider's number placed for visitor goodwill. That
+  // provider never consented to be bridged with a recording notice, metered, or billed — so
+  // the PPL branch may never fall back to the campaign's forward_to. A source guard, because
+  // a unit test cannot see a `|| forwardTo` that someone adds back for convenience.
+  const { readFileSync } = require('node:fs') as typeof import('node:fs');
+  const src = readFileSync('app/api/twilio/geo/[campaignId]/route.ts', 'utf8');
+  const pplBlock = src.slice(
+    src.indexOf("pricing_model === 'ppl'"),
+    src.indexOf('if (!forwardTo)')
+  );
+  it('the PPL destination is account.contact_phone or nothing', () => {
+    expect(pplBlock).toContain('account?.contact_phone || null');
+    expect(pplBlock).not.toMatch(/contact_phone \|\| forwardTo/);
+    expect(pplBlock).not.toMatch(/forwardTo:\s*forwardTo/);
+  });
+  it('the plain forward path says the recording notice before it dials', () => {
+    const plain = src.slice(src.indexOf('if (!forwardTo)'));
+    expect(plain.indexOf('may be recorded')).toBeGreaterThan(0);
+    expect(plain.indexOf('may be recorded')).toBeLessThan(plain.indexOf('<Dial record='));
+  });
+});

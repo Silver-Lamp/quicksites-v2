@@ -64,7 +64,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   if (pplEnabled() && campaign?.pricing_model === 'ppl') {
     const account = await getPplAccountByCampaign(campaignId).catch(() => null);
     const businessName = account?.business_name || campaign.domain || 'this business';
-    const dest = account?.contact_phone || forwardTo;
+    // ⚠️ ONLY the account holder's number — never the campaign's forward_to. Some pitch sites
+    // carry a real local provider's number placed for visitor goodwill; that provider never
+    // agreed to be bridged with a recording notice, metered, or billed. An account with no
+    // contact_phone connects nothing rather than guessing.
+    const dest = account?.contact_phone || null;
     if (!account || !canRouteCall(account) || !dest) {
       return xml(notConnectingTwiml({ businessName, recordActionUrl: `${base}/api/twilio-callback` }));
     }
@@ -88,9 +92,12 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
 
   const whisper = `New lead from ${campaign?.domain ?? 'your QuickSites site'}.`;
   const whisperUrl = `${base}/api/twilio/whisper?message=${encodeURIComponent(whisper)}`;
+  // The bridged leg is recorded, so the caller hears the notice first — Washington and other
+  // two-party-consent states require it, and the forwarded business may not be a client.
   return xml(
     `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+  <Say voice="polly.Joanna">This call may be recorded. Please hold while we connect you.</Say>
   <Dial record="record-from-answer-dual" answerOnBridge="true" action="${base}/api/twilio-callback" method="POST" recordingStatusCallback="${base}/api/twilio-callback" recordingStatusCallbackMethod="POST">
     <Number url="${esc(whisperUrl)}">${esc(forwardTo)}</Number>
   </Dial>

@@ -15,14 +15,15 @@ import { marketingOg } from '@/lib/marketingOg';
 import { COMPETITORS, PRICES_VERIFIED } from '@/lib/compare/competitors';
 import SiteFooter from '@/components/site/site-footer';
 import PersonaTestingPromo from '@/components/promo/persona-testing-promo';
+import { CaseStudyEconomicsSection } from '@/components/compare/case-study-callout';
 
 const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
 const keepPct = Math.round(PARTNER_FEE_SHARE * 100);
 
 export const metadata = marketingOg({
-  title: 'QuickSites vs Wix, Squarespace, Shopify, Duda & more — an honest comparison',
+  title: 'QuickSites vs Wix, Squarespace, Shopify, Duda, 10Web, Framer & more — an honest comparison',
   description:
-    'How QuickSites compares to the major website builders. We host free and monetize commerce with a take-rate + a lifetime reseller residual on GMV — the model the subscription builders structurally chose not to build.',
+    'How QuickSites compares to the major website builders, feature by feature — plus what an agency actually keeps, as Google’s Gemini modelled it, published with our corrections. We host free and monetize commerce with a take-rate + a lifetime reseller residual on GMV.',
   path: '/compare',
   ogEyebrow: 'Compare',
   ogTitle: 'How QuickSites compares',
@@ -88,6 +89,9 @@ export default function CompareHubPage() {
           </div>
         </section>
 
+        {/* The economics axis the feature grid lacks — the Gemini deck, corrections attached */}
+        <CaseStudyEconomicsSection />
+
         {/* Honest note + CTA */}
         <section className="mx-auto max-w-4xl px-6 pb-16">
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6 text-center">
@@ -111,7 +115,7 @@ export default function CompareHubPage() {
           </div>
 
           <p className="mt-6 text-center text-xs text-zinc-600">
-            Competitor pricing is public pricing as of {PRICES_VERIFIED} and changes over time — each comparison links its sources.
+            Competitor pricing is public pricing as of {PRICES_VERIFIED} (later additions carry their own date) and changes over time — each comparison links its sources.
           </p>
         </section>
       </main>

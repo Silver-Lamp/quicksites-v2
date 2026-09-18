@@ -14,12 +14,13 @@ import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import SiteFooter from '@/components/site/site-footer';
 import { CompareTable } from '@/components/compare/compare-table';
+import { CaseStudyVendorCallout } from '@/components/compare/case-study-callout';
 import { marketingOg } from '@/lib/marketingOg';
 import {
   COMPETITORS,
   COMPETITOR_SLUGS,
-  PRICES_VERIFIED,
   competitorBySlug,
+  pricesVerifiedFor,
 } from '@/lib/compare/competitors';
 
 export function generateStaticParams() {
@@ -126,6 +127,9 @@ export default async function CompareCompetitorPage({
           <CompareTable competitor={c} />
         </section>
 
+        {/* Agency economics — only for the vendors the Gemini deck modelled; null otherwise */}
+        <CaseStudyVendorCallout slug={c.slug} />
+
         {/* Honest two-sided verdict */}
         <section className="mx-auto max-w-4xl px-6 py-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -166,7 +170,7 @@ export default async function CompareCompetitorPage({
             </Link>
           </div>
           <p className="mt-6 text-xs leading-relaxed text-zinc-600">
-            Pricing is {c.name}’s public pricing as of {PRICES_VERIFIED} and changes over time — check their site for current details. Sources:{' '}
+            Pricing is {c.name}’s public pricing as of {pricesVerifiedFor(c)} and changes over time — check their site for current details. Sources:{' '}
             {c.sources.map((s, i) => (
               <span key={s.url}>
                 <a href={s.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-400">{s.label}</a>

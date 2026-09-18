@@ -393,6 +393,13 @@ const NAV_ADMIN: NavItem[] = [
   },
   {
     type: 'item',
+    label: 'Pay-per-call',
+    href: '/admin/ppl',
+    icon: <Phone size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
     label: 'Twilio Call Logs',
     href: '/admin/call-logs',
     icon: <Phone size={18} />,

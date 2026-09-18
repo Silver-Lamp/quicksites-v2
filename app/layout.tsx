@@ -20,6 +20,7 @@ import RouteChangeOverlayClient from '@/components/ui/RouteChangeOverlayClient';
 import CartEventsWire from '@/components/cart/cart-events-wire';
 import CartFab from '@/components/cart/cart-fab';
 import HearThisPage from '@/components/hear-this-page';
+import VercelAnalytics from '@/components/analytics/vercel-analytics';
 import { HEAR_THIS_PAGE_ENABLED } from '@/lib/hearThisPage/config';
 import { getHearThisPageSettings } from '@/lib/hearThisPage/settings';
 import { resolveOrg } from '@/lib/org/resolveOrg';
@@ -94,6 +95,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               public pathname + the super-admin per-surface config (lib/hearThisPage/*).
               Flag OFF by default; flipping it on = QS-billed renders. */}
           <HearThisPage settings={hearThisPageSettings} />
+          {/* Vercel Web Analytics — pageviews. Wrapped so automation (HJ personas, our own
+              Playwright runs) is dropped before send, the same rule PostHog already follows. */}
+          <VercelAnalytics />
         </Providers>
       </body>
     </html>

@@ -257,6 +257,17 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   text search treats the radius as a bias, not a fence** — the first Laguna Beach sweep led with
   House of Blues Anaheim (40 km); results outside 1.25× the radius are dropped on coordinates.
   A listing is not a schedule; the `note` field says so. Same call a QS venue vertical would use.
+- **Per-site redirects + a real 404 on public sites (2026-09-17)**: both public routes used to
+  take the first path segment as a page slug and **fall back to the home page with a 200** when
+  nothing matched — every `/anything` on every live site rendered home under a self-canonical
+  URL (Google indexed `decatur-towing.com/gigs`), and a WordPress migration could not honour
+  "redirect the old URLs". Now `lib/sites/redirects.ts#resolvePublicPath` decides
+  **redirect → page → reserved app path → 404** from `data.meta.redirects`
+  (`[{from,to,permanent?}]`, normalised paths, 308 default), used by `app/host/[[...rest]]` and
+  `app/sites/[slug]/[[...rest]]`. Reserved first segments (`cart`, `checkout`, `p`, …) keep their
+  old behaviour on purpose. Admin: `GET/PUT /api/admin/templates/[id]/redirects` (commits via the
+  RPC; **republish** for the map to reach the served snapshot). Migration recipe in
+  [`docs/CUSTOM_SITES.md`](docs/CUSTOM_SITES.md) §9.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

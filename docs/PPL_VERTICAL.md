@@ -203,6 +203,41 @@ also filed on `/admin/tasks` (`source='session:2026-09-18'`) so they outlive thi
   account and to Stripe's PaymentIntents by `stripe_payment_intent_id`; file an `admin_task`
   on drift. Same shape as `app/api/admin/commerce/reconcile`.
 
+## 9. Mass deploy — the strategy at fleet scale (owner direction, 2026-09-18)
+
+Sandon: *"I can buy numbers as needed for area codes … so that we can mass-deploy this strategy."*
+The strategy is the goodwill pattern he already runs by hand, as a pipeline:
+
+```
+ranked geo site ──► tracking number (auto-provisioned, local area code)
+                ──► forwards FREE to a real local provider (picked from the sweep data)
+                ──► every call logged to the campaign
+                ──► after N calls: "you've been getting these free — here is the meter"
+                ──► PPL account (consent) ──► ledger
+```
+
+Free calls first, metered calls second; the receiving business's *yes* is the only thing that
+ever turns a forward into a charge. What has to be true for this to be honest at scale, and
+what each piece needs:
+
+| Step | Exists? | Needs |
+|---|---|---|
+| Twilio creds in prod (`TWILIO_*`) + `CALL_TRACKING_ENABLED=1` | ✗ | **owner** |
+| Auto-provision a local number per campaign (`provision-number`, area code from `forward_to`) | ✓ code, never run | creds; ~$1.15/number/mo + minutes — **owner approves the spend** (103 campaigns ≈ $120/mo before minutes) |
+| Attach a hand-bought number (`attach-number`) | ✗ | session (filed) |
+| **Pick the forward-to business** for a campaign from the sweep's Places data (open, rated, has a phone, in that city × industry) — the choice Sandon makes by hand today | ✗ | session. Rule must be a pure function with a test; the fallback is "no forward, take a message", never a guess |
+| Push the tracking number into the pitch site's phone + republish (all three content copies) | ✗ | session (filed) |
+| Recording notice before every bridge | ✓ (#972) | — |
+| **Tell the receiving business once**, by SMS to the forwarded number: "calls from <domain> are being forwarded to you free; reply STOP to stop" + honour STOP by clearing `forward_to` | ✗ | session. **Not optional at scale** — one provider at a time is goodwill; a hundred without a word is a list nobody consented to be on |
+| Per-campaign proof number: calls ≥ 90 s last 30 days, from `call_logs` | ✗ (counts exist, not the ≥ 90 s cut) | session — the same figure the pitch and the ops tile use |
+| The pitch at N calls: email/SMS/postcard "N calls in 30 days, here is the meter" → deposit link | ✗ | session, rides `lib/outreach/*`; **no printed price on a postcard** (the claim-postcard rule) |
+| PPL account on yes; nothing changes on no | ✓ (#972) | — |
+| Fleet view on `/admin/growth`: number / forward-to / calls-30d / pitched / account per campaign | ✗ | session |
+
+Order for the sessions once creds land: attach-number → pick-forward-to → push-number-into-site
+→ notice + STOP → proof number → pitch. Grafton is the first row through every step by hand
+before any of it runs unattended.
+
 ### Explicitly not planned
 
 - ZIP/intent IVR menus before the bridge (friction; disputes cover it).

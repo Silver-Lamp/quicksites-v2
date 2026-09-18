@@ -10,6 +10,10 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
+import { pplEnabled } from '@/lib/ppl/billing';
+import { getPplAccountByCampaign } from '@/lib/ppl/accounts';
+import { canRouteCall } from '@/lib/ppl/rules';
+import { bridgeTwiml, notConnectingTwiml } from '@/lib/ppl/ivr';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,6 +55,28 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
     }
   } catch {
     /* logging is best-effort */
+  }
+
+  // Pay-per-call campaigns (docs/PPL_VERTICAL.md): the balance gate runs BEFORE the bridge, and
+  // the bridged leg's outcome goes to the signed /api/twilio/ppl/complete callback, which bills.
+  // A campaign with pricing_model='ppl' but no account (or a paused one) connects nothing —
+  // the caller is told the line is not connecting, never a made-up reason.
+  if (pplEnabled() && campaign?.pricing_model === 'ppl') {
+    const account = await getPplAccountByCampaign(campaignId).catch(() => null);
+    const businessName = account?.business_name || campaign.domain || 'this business';
+    const dest = account?.contact_phone || forwardTo;
+    if (!account || !canRouteCall(account) || !dest) {
+      return xml(notConnectingTwiml({ businessName, recordActionUrl: `${base}/api/twilio-callback` }));
+    }
+    const whisper = `New lead from ${campaign.domain ?? 'your QuickSites site'}.`;
+    return xml(
+      bridgeTwiml({
+        businessName,
+        forwardTo: dest,
+        actionUrl: `${base}/api/twilio/ppl/complete?campaignId=${encodeURIComponent(campaignId)}`,
+        whisperUrl: `${base}/api/twilio/whisper?message=${encodeURIComponent(whisper)}`,
+      }),
+    );
   }
 
   if (!forwardTo) {

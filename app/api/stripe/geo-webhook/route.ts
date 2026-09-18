@@ -15,6 +15,7 @@ import {
   recordCampaignPayment,
 } from '@/lib/outreach/geoCampaigns';
 import { recordRentalCommissions, voidRentalCommissions } from '@/lib/commerce/rentalCommissions';
+import { applyPplCheckoutCompleted } from '@/lib/ppl/billing';
 import {
   applyCheckoutCompleted as applyTradeSiteCheckoutCompleted,
   applySubscriptionStatus as applyTradeSiteSubscriptionStatus,
@@ -52,6 +53,8 @@ export async function POST(req: Request) {
       // secret to configure, not two). Their metadata carries trade_site_template_id; a geo rental
       // never does, so the branch is unambiguous.
       if (await applyTradeSiteCheckoutCompleted(s)) return NextResponse.json({ received: true });
+      // Pay-per-call deposits ride the same endpoint; their metadata carries ppl_account_id.
+      if (await applyPplCheckoutCompleted(s)) return NextResponse.json({ received: true });
       const campaignId = s.metadata?.geo_campaign_id || s.client_reference_id;
       if (campaignId) {
         await setCampaignSubscription(campaignId, {

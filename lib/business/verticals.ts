@@ -22,7 +22,7 @@
 // deployed chunk — but the page was broken from the day it shipped.
 
 export type VerticalKey =
-  | 'rental' | 'commerce' | 'agency' | 'restaurant' | 'pod' | 'partners' | 'trade_sites';
+  | 'rental' | 'commerce' | 'agency' | 'restaurant' | 'pod' | 'partners' | 'trade_sites' | 'ppl';
 
 export type Stage = 'proven' | 'live-untested' | 'built-inert' | 'planned';
 
@@ -115,6 +115,34 @@ export const VERTICALS: Vertical[] = [
       'The test is running rather than planned: the cron mails the claim card to every no-website business in the queued trades, ten a night, and the two numbers to count are on this page — how many claim a free site, and how many of those pay for a domain. The first tests whether the site is wanted; the second tests whether it is worth money. They are different questions and the first is cheap.',
     costToTest:
       'Production is paid for and the checkout is built. The spend that remains is what the cron does each night — Places calls and cents of AI per draft, then postage at ten cards a night — and the only decision left is which cities to queue.',
+  },
+  {
+    key: 'ppl',
+    name: 'Pay-per-call Leads',
+    oneLiner:
+      'The same ranked geo site and the same tracking number as the rental — but the business pays for each call that reaches it, from a prepaid balance, instead of renting the domain by the month.',
+    stage: 'built-inert',
+    mechanics: [
+      'A business prepays a balance. Every call to the campaign’s tracking number that is answered and lasts at least 90 seconds deducts one lead price (default $85). Under a threshold, the card on file tops the balance up; at zero, the line stops connecting and says so.',
+      'Same asset as the rental, a different price shape. A shop that will not sign a $99/month subscription for a domain it does not understand will pay $85 for a ringing phone it just answered. Rent sells scarcity; this sells outcomes.',
+      'The business can contest any charge for 72 hours — out of area, wrong service, duplicate, existing customer, spam, too short. An approved dispute credits the balance against that call. The recording is the evidence for both sides.',
+      'Honesty is structural: the caller is never told a false reason when the balance is out, and the IVR makes no claim about the business it bridges to — a test greps the copy for “licensed”, “insured”, “capacity” and friends.',
+    ],
+    built: [
+      'The full money path behind a flag: ledger tables where the database, not the app, guarantees one charge per call and one credit per PaymentIntent; the balance gate before the bridge; a signed Twilio callback that bills; off-session auto-reload with a deterministic idempotency key; deposit via Stripe Checkout on the existing geo webhook; statements by email and SMS.',
+      'Operator routes to open an account on any campaign with a tracking number, mint a deposit link, read the ledger, credit a dispute.',
+      'Adapted from a third-party (Gemini) design whose draft never wired the billing step, accepted unsigned Stripe events, and could credit a reload twice — each of those is now a test or a DB constraint here.',
+    ],
+    unproven: [
+      'Nobody has been offered it. Zero accounts, zero deposits, zero billed calls. The flag is off.',
+      'Whether a business trusts a per-call meter it cannot see. The dispute window and the recording are the answer on paper; a first dispute is the answer in practice.',
+      'Call volume on our ranked geo domains is proven for some (the rank sync has real page-one numbers) and unknown for most. A prepaid balance that never drains is a refund waiting to happen, not revenue.',
+      'The rental and PPL compete for the same domain. Which one to pitch first per campaign is a judgement nobody has had to make yet.',
+    ],
+    decisiveTest:
+      'Open one account on the campaign with the most measured calls, send the deposit link, and count billed calls and disputes over 30 days. Revenue is the ledger’s lead_charge rows minus dispute credits — a number the DB computes, not one anyone remembers.',
+    costToTest:
+      'Nothing new: the tracking number already rings, Stripe and Twilio are already paid for. One conversation with one business and the flag flipped for that campaign.',
   },
   {
     key: 'commerce',

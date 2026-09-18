@@ -10,6 +10,9 @@ import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { assemblePplOps, type PplStep } from '@/lib/ppl/ops';
 import { usd } from '@/lib/ppl/rules';
 import PplAccountActions from '@/components/admin/ppl-account-actions';
+import PplAttachNumberForm from '@/components/admin/ppl-attach-number-form';
+import { listTrackingNumbers, twilioConfigured } from '@/lib/outreach/callTracking';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -66,6 +69,13 @@ export default async function PplOpsPage() {
   const admin = await getAdminUser();
   if (!admin) return <div className="p-8 text-muted-foreground">Forbidden.</div>;
   const s = await assemblePplOps();
+  // Twilio's own view, read from the running process (the creds are write-only in Vercel, so
+  // this page is the only place a person can see what Twilio holds without the console).
+  const twilioNumbers = twilioConfigured() ? await listTrackingNumbers().catch(() => []) : [];
+  const { data: allCampaigns } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('id, domain, forward_to, tracking_number')
+    .order('domain');
   const gateTone = (st: string | undefined) =>
     st === 'ready' ? 'good' : st === 'off' ? undefined : 'warn';
 
@@ -374,6 +384,71 @@ export default async function PplOpsPage() {
             </table>
           </div>
         )}
+      </section>
+
+      {/* Twilio inventory + attach */}
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Twilio numbers</h2>
+        <p className="text-sm text-muted-foreground">
+          What the account holds and where each number points, read live. A number bound to a Studio
+          flow shows the flow SID; attaching it below moves it to our voice route (the flow stays as
+          a fallback), sets the SMS webhook for STOP, and writes the number to the campaign.
+        </p>
+        {!twilioConfigured() ? (
+          <p className="mt-2 text-sm text-amber-300">
+            Twilio is not configured in this environment.
+          </p>
+        ) : twilioNumbers.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            No numbers on the account (or the list failed).
+          </p>
+        ) : (
+          <div className="mt-3 overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2">Number</th>
+                  <th className="px-3 py-2">Name</th>
+                  <th className="px-3 py-2">Voice</th>
+                  <th className="px-3 py-2">SMS</th>
+                  <th className="px-3 py-2">Campaign</th>
+                </tr>
+              </thead>
+              <tbody>
+                {twilioNumbers.map((n) => {
+                  const c = (allCampaigns ?? []).find((x) => x.tracking_number === n.phoneNumber);
+                  return (
+                    <tr key={n.sid} className="border-t border-border">
+                      <td className="px-3 py-2 tabular-nums">{n.phoneNumber}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{n.friendlyName ?? '—'}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                        {n.voiceApplicationSid
+                          ? `flow ${n.voiceApplicationSid}`
+                          : (n.voiceUrl ?? '—')}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">{n.smsUrl ?? '—'}</td>
+                      <td className="px-3 py-2">
+                        {c ? c.domain : <span className="text-amber-300">unattached</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <h3 className="mt-5 text-base font-semibold">Attach a number to a campaign</h3>
+        <PplAttachNumberForm
+          campaigns={
+            (allCampaigns ?? []) as Array<{
+              id: string;
+              domain: string;
+              forward_to: string | null;
+              tracking_number: string | null;
+            }>
+          }
+          numbers={twilioNumbers.map((n) => n.phoneNumber)}
+        />
       </section>
 
       {/* Open tasks */}

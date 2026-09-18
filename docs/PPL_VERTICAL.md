@@ -238,6 +238,36 @@ Order for the sessions once creds land: attach-number → pick-forward-to → pu
 → notice + STOP → proof number → pitch. Grafton is the first row through every step by hand
 before any of it runs unattended.
 
+## 10. Next steps, in order — the sequence the board cannot show
+
+Every item below is an `admin_tasks` row (`source='session:2026-09-18'`, 25 rows); the board
+sorts by status and priority, so this is the dependency order. **O** = owner, **S** = session.
+A step is not started until the one above it is done, except where marked ∥ (parallel).
+
+| # | Step | Who | Unblocks |
+|---|---|---|---|
+| 0 | `TWILIO_*` creds for the account that owns 262-228-2491 into Vercel prod; how that number is configured today; the list of goodwill-number sites | **O** | everything |
+| 0∥ | Decide the first cohort + spend (recommend: meter every ranked domain free for 30 d); `CALL_TRACKING_ENABLED=1` | **O** | 4, 6 |
+| 0∥ | Reload/deposit defaults ($500 / $300 / $150 recommended until disputes are self-serve) | **O** | 8 |
+| 1 | `attach-number` admin action; make graftontowing.com a campaign; repoint 262-228-2491 | S | 2, 3, 5 |
+| 2 | Push tracking number into the pitch site + the "calls answered by / connected to a local provider" label; republish | S | 3 |
+| 3 | One-time SMS notice to the forwarded business + STOP handling | S | 4 (nothing forwards at scale before this) |
+| 4 | `pick-forward-to` rule over sweep data (pure, tested; fallback = voicemail) → cohort gets numbers | S | 5 |
+| 5 | Proof number (calls ≥ 90 s / 30 d) per campaign; fleet view on `/admin/growth` | S | 6, 7 |
+| 6 | **30 days of free forwarding on the cohort.** Read the distribution. Nothing is sold yet. | — | 7, 8 |
+| 7 | The Grafton conversation → account → deposit → `PPL_ENABLED=1` → one test call → 30 d | **O** | 8, 9 |
+| 8 | Pitch at N calls (email/SMS/postcard, no printed price) with the deposit link | S | scale |
+| 9 | Phase 2: statement page, self-serve dispute, `/admin/ppl`, voicemail-while-paused notice | S | 10 |
+| 10 | Partner residual on lead charges (`commission_ledger`) — the channel sells it | S | reps |
+| 11 | Phase 3: `/pricing` path D copy, pitch page, rental-vs-PPL rule (needs step 6 data) | S | — |
+| 12 | Phase 4: statement cron, ledger↔Stripe reconciliation; stale-balance policy (**O** decides) | S/O | — |
+| 13 | Overflow marketplace (second account per city); auto-shop cohort; demand map → planner | S | later |
+
+Also on the board from this session, unrelated to PPL: Lob webhook secret (**O**, high),
+Agency plan not billable (**O**), Vercel Analytics toggle (**O**), HJ rehearsal run (**O**),
+43 unmailable trade drafts (**O** decides), delete the dead $500 checkout route (S), save
+Gemini's prose (**O**, low).
+
 ### Explicitly not planned
 
 - ZIP/intent IVR menus before the bridge (friction; disputes cover it).

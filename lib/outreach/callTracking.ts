@@ -46,7 +46,11 @@ export async function provisionTrackingNumber(opts: {
   try {
     const list = await c
       .availablePhoneNumbers('US')
-      .local.list({ areaCode: opts.areaCode ? Number(opts.areaCode) : undefined, voiceEnabled: true, limit: 5 });
+      .local.list({
+        areaCode: opts.areaCode ? Number(opts.areaCode) : undefined,
+        voiceEnabled: true,
+        limit: 5,
+      });
     candidate = list?.[0]?.phoneNumber;
   } catch {
     /* fall through to a broader search */
@@ -72,4 +76,62 @@ export async function releaseTrackingNumber(sid?: string | null): Promise<void> 
   } catch {
     /* best-effort — a failed release just leaves the number billing until cleaned up */
   }
+}
+
+export type TwilioNumberSummary = {
+  sid: string;
+  phoneNumber: string;
+  friendlyName: string | null;
+  voiceUrl: string | null;
+  voiceApplicationSid: string | null;
+  smsUrl: string | null;
+};
+
+/**
+ * Every number on the account and where its voice/SMS webhooks point — read-only. The ops page
+ * shows this so "what does Twilio have" is answered from the running process, never from a
+ * screenshot or a memory. Returns [] when Twilio is not configured.
+ */
+export async function listTrackingNumbers(): Promise<TwilioNumberSummary[]> {
+  if (!twilioConfigured()) return [];
+  const list = await client().incomingPhoneNumbers.list({ limit: 200 });
+  return list.map((n) => ({
+    sid: n.sid,
+    phoneNumber: n.phoneNumber,
+    friendlyName: n.friendlyName ?? null,
+    voiceUrl: n.voiceUrl || null,
+    voiceApplicationSid: n.voiceApplicationSid || null,
+    smsUrl: n.smsUrl || null,
+  }));
+}
+
+/**
+ * Point an EXISTING number (bought by hand, or one already forwarding) at a campaign's voice
+ * route. Costs nothing, so it is gated only on Twilio being configured — not on
+ * CALL_TRACKING_ENABLED, which guards purchases. Returns the number's SID and what it pointed
+ * at before, so the change can be undone by hand if a call stops arriving.
+ */
+export async function attachTrackingNumber(opts: {
+  phoneNumber: string;
+  voiceUrl: string;
+}): Promise<{
+  sid: string;
+  previousVoiceUrl: string | null;
+  previousVoiceApplicationSid: string | null;
+}> {
+  if (!twilioConfigured()) throw new Error('Twilio is not configured.');
+  const c = client();
+  const matches = await c.incomingPhoneNumbers.list({ phoneNumber: opts.phoneNumber, limit: 1 });
+  const n = matches[0];
+  if (!n) throw new Error(`${opts.phoneNumber} is not a number on this Twilio account.`);
+  const previousVoiceUrl = n.voiceUrl || null;
+  const previousVoiceApplicationSid = n.voiceApplicationSid || null;
+  await c.incomingPhoneNumbers(n.sid).update({
+    voiceUrl: opts.voiceUrl,
+    voiceMethod: 'GET',
+    // A Studio flow is bound through voiceApplicationSid; clearing it is what actually moves
+    // the number off the flow. The flow itself is left in place as a fallback.
+    voiceApplicationSid: '',
+  });
+  return { sid: n.sid, previousVoiceUrl, previousVoiceApplicationSid };
 }

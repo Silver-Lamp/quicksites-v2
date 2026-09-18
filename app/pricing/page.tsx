@@ -14,6 +14,7 @@ import {
   Globe,
   BadgeCheck,
   Phone,
+  Wrench,
 } from 'lucide-react';
 
 // shadcn/ui — adjust imports if your paths differ
@@ -72,6 +73,10 @@ const PUBLIC_PLAN = { platform: 19, perSite: 6 };
 // founder rate that steps up to the full rate once the site reaches page 1. Varies by
 // trade — see lib/outreach/geoPricing.ts / docs/GEO_DOMAIN_MONETIZATION.md.
 const LEADGEN_PLAN = { founderFrom: 49, fullFrom: 99, premiumFull: 399 };
+// Done-for-you: a person builds and maintains the site. Hosting stays free on every plan; these
+// pay for design, migration and support hours, never for servers. The figures here are the ones
+// quoted in proposals (first: a Tampa law firm, 2026-09-17) — change them here, never in an email.
+const DONE_FOR_YOU = { buildFrom: 1995, careSelfService: 49, careManaged: 149 };
 const PARTNER_FEE_SHARE = 0.8; // partners keep 80% of the order fee
 
 const CTA = {
@@ -164,9 +169,16 @@ function PathChooser() {
       href: '#partner',
       tag: 'Partners',
     },
+    {
+      icon: Wrench,
+      title: 'Have it built for me',
+      blurb: `Fixed-price build from ${usd0.format(DONE_FOR_YOU.buildFrom)}. Hosting stays free.`,
+      href: '#done-for-you',
+      tag: 'Done for you',
+    },
   ];
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       {paths.map((p) => (
         <Link key={p.title} href={p.href} className="group">
           <Card className="h-full border-zinc-800/60 transition hover:border-sky-500/50 hover:bg-sky-500/[0.03]">
@@ -562,9 +574,9 @@ function AddOns() {
     {
       icon: Globe,
       title: 'Custom domain',
-      price: 'Paid plans',
+      price: 'Paid + care plans',
       blurb:
-        'Publish to your own domain (free sites use a quicksites.ai subdomain). Auto DNS + SSL.',
+        'Publish to your own domain (free sites use a quicksites.ai subdomain). Auto DNS + SSL. Included in every care plan.',
     },
     {
       icon: BadgeCheck,
@@ -593,6 +605,98 @@ function AddOns() {
   );
 }
 
+// ---- Done for you ----
+//
+// ⚠️ The one place a monthly figure that is NOT "free hosting" appears on this page, so it must
+// say what the money is for. A visitor who read a proposal ($1,995 build, $49 / $149 a month) and
+// then this page must find the same numbers with the same explanation: hosting is free everywhere;
+// a care plan buys a custom domain, backups, support and — on Managed — someone else making the
+// changes. Figures come from DONE_FOR_YOU; never type them into JSX.
+function DoneForYouSection() {
+  const tiers = [
+    {
+      title: 'Build',
+      price: `from ${usd0.format(DONE_FOR_YOU.buildFrom)}`,
+      cadence: 'one-time, fixed price',
+      features: [
+        'A modern design around your actual services or practice areas',
+        'Your existing content migrated and cleaned up; your domain kept',
+        'Mobile-first, with a consultation or contact form on every page',
+        'Basic SEO: titles and descriptions, sitemap, structured data, redirects from old URLs',
+        'You approve every word before launch',
+      ],
+    },
+    {
+      title: 'Care — self-service',
+      price: `${usd0.format(DONE_FOR_YOU.careSelfService)}/mo`,
+      cadence: 'after launch, cancel any time',
+      features: [
+        'Hosting (free, as on every plan) on your own domain with SSL',
+        'Version history and backups',
+        'Editor access so you make routine changes yourself',
+        'Email support',
+      ],
+    },
+    {
+      title: 'Care — managed',
+      price: `${usd0.format(DONE_FOR_YOU.careManaged)}/mo`,
+      cadence: 'after launch, cancel any time',
+      features: [
+        'Everything in self-service',
+        'Send us the change; we make it — text, photos, staff, service pages',
+        'No SEO or marketing retainer required, ever',
+      ],
+    },
+  ];
+  return (
+    <section
+      id="done-for-you"
+      className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60"
+    >
+      <div className="mb-3 flex items-center gap-2">
+        <Wrench className="h-6 w-6 text-sky-400" />
+        <h2 className="text-2xl font-semibold">Have it built for me</h2>
+        <Badge variant="secondary" className="ml-2">
+          Done for you
+        </Badge>
+      </div>
+      <p className="mb-6 max-w-2xl text-sm text-muted-foreground">
+        Hosting is free on every QuickSites plan. What a done-for-you project pays for is{' '}
+        <span className="text-foreground font-medium">people</span> — design, migration, copy, and
+        someone to send changes to — not servers. A fixed build price, then a care plan if you want
+        one.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {tiers.map((t) => (
+          <Card key={t.title} className="border-zinc-800/60">
+            <CardHeader>
+              <CardTitle className="text-base">{t.title}</CardTitle>
+              <div className="text-2xl font-semibold">{t.price}</div>
+              <CardDescription>{t.cadence}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {t.features.map((f) => (
+                <Feature key={f} text={f} />
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <Link href={CTA.contactHref}>
+          <Button>
+            Ask for a quote
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
+        <span className="text-xs text-muted-foreground">
+          Larger or custom-designed projects are quoted individually.
+        </span>
+      </div>
+    </section>
+  );
+}
+
 // ---- FAQs ----
 const FAQS: { q: string; a: string }[] = [
   {
@@ -614,6 +718,10 @@ const FAQS: { q: string; a: string }[] = [
   {
     q: 'What about payment processing fees?',
     a: 'Standard Stripe processing fees apply on top of our platform fee, the same as any checkout. You’ll always see fees before you publish.',
+  },
+  {
+    q: 'Can you just build it for me?',
+    a: `Yes. A done-for-you build is a fixed price from ${usd0.format(DONE_FOR_YOU.buildFrom)}: design, content migration, your domain, mobile, basic SEO and redirects from your old URLs, launched with your approval. Hosting stays free; an optional care plan (${usd0.format(DONE_FOR_YOU.careSelfService)}/mo self-service, ${usd0.format(DONE_FOR_YOU.careManaged)}/mo managed) covers your own domain, backups, support and — on managed — us making the changes for you.`,
   },
   {
     q: 'I don’t sell online — how does pricing work?',
@@ -744,6 +852,9 @@ export default function PricingPage() {
             <OrderFeeCalc />
           </div>
         </section>
+
+        {/* Path E — Done for you (a person builds it; hosting still free) */}
+        <DoneForYouSection />
 
         {/* Path D — Lead-gen / no online store */}
         <LeadGenSection />

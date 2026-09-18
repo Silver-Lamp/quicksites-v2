@@ -92,8 +92,13 @@ export default function SiteHeader({
           <span className="text-sm text-zinc-300">{logoText}</span>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-4 text-sm">
+        {/* Desktop nav.
+            ⚠️ `lg:` not `md:`. The nav has grown with the marketing pages (Features, Restaurants,
+            Realtors, Auto Shops, Job Seekers, Lemonade Stands, Partners, Pricing, Compare, Book,
+            Contact) and now measures ~805px, so switching it on at md (768px) overflowed the page
+            horizontally on every surface between 768 and ~805px — found 2026-09-18 while checking
+            the templates against foldable widths. The burger menu now holds until there is room. */}
+        <nav className="hidden lg:flex items-center gap-4 text-sm">
           {links.map((l) =>
             l.button ? (
               <Link
@@ -128,8 +133,8 @@ export default function SiteHeader({
           <CartButton />
         </nav>
 
-        {/* Mobile menu */}
-        <div className="md:hidden">
+        {/* Mobile menu — must be the exact complement of the nav breakpoint above. */}
+        <div className="lg:hidden">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Open menu">

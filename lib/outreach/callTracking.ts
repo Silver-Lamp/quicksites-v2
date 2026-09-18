@@ -40,17 +40,17 @@ export function areaCodeFromPhone(phone?: string | null): string | undefined {
 export async function provisionTrackingNumber(opts: {
   voiceUrl: string;
   areaCode?: string;
+  /** Inbound SMS webhook (STOP handling). */
+  smsUrl?: string;
 }): Promise<{ phoneNumber: string; sid: string }> {
   const c = client();
   let candidate: string | undefined;
   try {
-    const list = await c
-      .availablePhoneNumbers('US')
-      .local.list({
-        areaCode: opts.areaCode ? Number(opts.areaCode) : undefined,
-        voiceEnabled: true,
-        limit: 5,
-      });
+    const list = await c.availablePhoneNumbers('US').local.list({
+      areaCode: opts.areaCode ? Number(opts.areaCode) : undefined,
+      voiceEnabled: true,
+      limit: 5,
+    });
     candidate = list?.[0]?.phoneNumber;
   } catch {
     /* fall through to a broader search */
@@ -65,6 +65,7 @@ export async function provisionTrackingNumber(opts: {
     phoneNumber: candidate,
     voiceUrl: opts.voiceUrl,
     voiceMethod: 'GET',
+    ...(opts.smsUrl ? { smsUrl: opts.smsUrl, smsMethod: 'POST' as const } : {}),
   });
   return { phoneNumber: bought.phoneNumber, sid: bought.sid };
 }
@@ -114,6 +115,8 @@ export async function listTrackingNumbers(): Promise<TwilioNumberSummary[]> {
 export async function attachTrackingNumber(opts: {
   phoneNumber: string;
   voiceUrl: string;
+  /** Inbound SMS webhook (STOP handling). Optional so a caller can leave an existing SMS route alone. */
+  smsUrl?: string;
 }): Promise<{
   sid: string;
   previousVoiceUrl: string | null;
@@ -132,6 +135,9 @@ export async function attachTrackingNumber(opts: {
     // A Studio flow is bound through voiceApplicationSid; clearing it is what actually moves
     // the number off the flow. The flow itself is left in place as a fallback.
     voiceApplicationSid: '',
+    ...(opts.smsUrl
+      ? { smsUrl: opts.smsUrl, smsMethod: 'POST' as const, smsApplicationSid: '' }
+      : {}),
   });
   return { sid: n.sid, previousVoiceUrl, previousVoiceApplicationSid };
 }

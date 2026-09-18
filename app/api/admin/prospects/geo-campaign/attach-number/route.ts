@@ -16,6 +16,7 @@ import { getGeoCampaign, setCampaignTracking } from '@/lib/outreach/geoCampaigns
 import { attachTrackingNumber, twilioConfigured } from '@/lib/outreach/callTracking';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { sendForwardNotice } from '@/lib/ppl/forwardNotice';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,8 @@ const Body = z.object({
     .string()
     .regex(/^\+[1-9]\d{7,14}$/, 'E.164 phone')
     .optional(),
+  /** Send the one-time "calls are being forwarded to you" SMS to forwardTo. Default true. */
+  sendNotice: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -84,15 +87,24 @@ export async function POST(req: Request) {
     );
 
   const voiceUrl = `${publicBaseUrl()}/api/twilio/geo/${campaignId}`;
+  const smsUrl = `${publicBaseUrl()}/api/twilio/sms/inbound`;
   try {
-    const r = await attachTrackingNumber({ phoneNumber: b.phoneNumber, voiceUrl });
+    const r = await attachTrackingNumber({ phoneNumber: b.phoneNumber, voiceUrl, smsUrl });
     await setCampaignTracking(campaignId, { number: b.phoneNumber, sid: r.sid, forwardTo });
+    // The forwarded business is told once (§9). The operator can hold it back at attach time,
+    // e.g. when the business has already agreed in person.
+    const notice =
+      b.sendNotice === false
+        ? { sent: false as const, reason: 'skipped' as const }
+        : await sendForwardNotice(campaignId);
     return NextResponse.json({
       ok: true,
       campaignId,
       number: b.phoneNumber,
       forwardTo,
       voiceUrl,
+      smsUrl,
+      notice,
       previous: {
         voiceUrl: r.previousVoiceUrl,
         voiceApplicationSid: r.previousVoiceApplicationSid,

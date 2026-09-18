@@ -36,6 +36,8 @@ Not a generic website builder — a **schema-driven site builder fused with a mu
 | Reseller marketplace | Vendasta | Resell 3rd-party tools; margin shrinks w/ clients | Indirect |
 | Commerce / payments | Square | 2.9%+30¢; $0/$49/$149 tiers | Adjacent rail (we ride Stripe) |
 | AI site builders | Durable, Wix AI, Hostinger | Flat subscription | Commoditizes our AI feature |
+| **AI WordPress builder** | **10Web** | Per-bundle-of-sites subscription incl. hosting; agency plans brand the dashboard (~$80/mo for 20 sites) | Direct on the agency-portfolio pitch — but it is still WordPress, so the maintenance labour is the client's. On `/compare/10web` (added 2026-09 because the Gemini case study modelled it; pricing sourced by us) |
+| Design-first builder | Framer | Free on a subdomain; per-site plan + per-editor seat | Indirect — bespoke design labour + a seat floor make a $0-down WaaS model slow to pay back. On `/compare/framer` (same provenance as 10Web) |
 | Print-on-demand | Lulu, Gelato | Print/ship cost | **Partners, not competitors** (we embed them) |
 
 Detail on Square / AI builders / Vendasta is in §6. The deep dives that matter are Duda and GHL.

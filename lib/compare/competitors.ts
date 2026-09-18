@@ -5,13 +5,19 @@
 //   /compare/<slug>          — one page per competitor ("QuickSites vs Wix", etc.)
 //
 // Pattern borrowed (reimplemented, not shared) from HiveJournal's family-wall/journaling
-// compare clusters: ONE data file drives the per-competitor route, the hub matrix, AND the
-// sitemap — adding a competitor = one entry here. Honesty-first (the brand rule): every
-// competitor gets a fair one-liner, real strengths, and an honest "pick them if" — the
-// credibility is the whole point of the wedge.
+// compare clusters: ONE data file drives the per-competitor route, the hub cards, and
+// /best-website-builders-2026 — adding a competitor = one entry here. Honesty-first (the
+// brand rule): every competitor gets a fair one-liner, real strengths, and an honest "pick
+// them if" — the credibility is the whole point of the wedge.
 //
 // Positioning grounded in docs/COMPETITIVE_LANDSCAPE.md. Pricing is the competitors' public
-// pricing as of PRICES_VERIFIED — plans change, so each competitor carries its source links.
+// pricing as of PRICES_VERIFIED (or the entry's own `pricesVerified` when it was added
+// later) — plans change, so each competitor carries its source links.
+//
+// ⚠️ A competitor gets in here ONLY with pricing we read on the vendor's own page. 10Web and
+// Framer were added because the Gemini case study (lib/caseStudies/geminiAgencyEconomics)
+// compares us to them — and their figures here were sourced by us, NOT lifted from that
+// analysis, which is exactly the shortcut the deck itself warns against.
 
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE } from '@/lib/commerce/partner-terms';
 
@@ -71,6 +77,8 @@ export interface Competitor {
   sources: Array<{ label: string; url: string }>;
   /** Mark/note per FEATURE_ROWS key. Missing keys render as an em-dash. */
   marks: Record<string, { mark: Mark; note: string }>;
+  /** When this entry's pricing was last read on the vendor's page, if later than PRICES_VERIFIED. */
+  pricesVerified?: string;
 }
 
 export const COMPETITORS: Competitor[] = [
@@ -385,9 +393,113 @@ export const COMPETITORS: Competitor[] = [
       crm: { mark: 'yes', note: 'Dominant — SMS, pipelines, unified inbox' },
     },
   },
+  {
+    slug: '10web',
+    name: '10Web',
+    category: 'AI WordPress builder + hosting',
+    oneLiner:
+      'AI that generates a full WordPress site — or clones one from a URL — on managed Google Cloud hosting, with agency plans that brand the dashboard.',
+    pricing:
+      '~$10–$22.50/mo billed yearly for 1–4 sites (about double month-to-month); agency plans ~$42.50/mo for 10 sites and ~$80/mo for 20, custom above 50',
+    freeTier:
+      'No permanent free plan — a “get started for free” trial, then a paid plan backed by a 30-day money-back guarantee.',
+    strengths: [
+      'The output is real WordPress — you own it, and it moves anywhere WordPress runs',
+      'Genuinely fast AI generation, plus an AI “recreate any site from a URL” that is rare in the field',
+      'Managed hosting, CDN, and page-speed tuning bundled into the plan',
+      'Agency plans are cheap per site, with a branded dashboard and builder from ~$80/mo',
+    ],
+    tradeoffs: [
+      'It is still WordPress: plugins, updates, and the maintenance hours that come with them are yours',
+      'A per-plan subscription per bundle of sites — hosting is never free',
+      'No take-rate or reseller residual; the agency billing tool charges you a fee rather than paying you one',
+      'Generic WordPress themes and plugins — nothing trade-specific like menu-ordering, an estimator, or owner-voice audio',
+    ],
+    pickThemIf: [
+      'You want to own a portable WordPress site and the plugin ecosystem that comes with it',
+      'You already run a WordPress agency and want AI to speed up the builds you do today',
+      'Cheap-per-site managed hosting for a large portfolio matters more than a revenue share',
+    ],
+    pickUsIf: [
+      'You want client sites that clients cannot break, with no plugin maintenance queue',
+      'You want to earn a lifetime % of client GMV instead of paying per bundle of sites',
+      'You want free hosting, trade-specific blocks, and print-on-demand built in',
+    ],
+    sources: [
+      { label: '10Web pricing', url: 'https://10web.io/pricing/' },
+      { label: '10Web AI website builder', url: 'https://10web.io/ai-website-builder/' },
+    ],
+    pricesVerified: 'September 2026',
+    marks: {
+      hosting: { mark: 'no', note: '~$10–$80/mo per plan, billed yearly' },
+      takeRate: { mark: 'no', note: '0% to you (their agency billing carries its own 7% fee)' },
+      residual: { mark: 'no', note: 'Not a reseller-residual model' },
+      store: { mark: 'yes', note: 'WooCommerce, set up by the AI' },
+      pod: { mark: 'partial', note: 'Via WooCommerce plugins' },
+      aiSite: { mark: 'yes', note: 'Generates a full WordPress site' },
+      rebuild: { mark: 'yes', note: 'AI recreates a site from a URL — into WordPress' },
+      blocks: { mark: 'partial', note: 'WordPress themes/plugins; not trade-specific' },
+      audio: { mark: 'no', note: 'Not offered' },
+      whiteLabel: { mark: 'yes', note: 'Branded dashboard + builder on Agency Core' },
+      crm: { mark: 'partial', note: 'Via WordPress plugins' },
+    },
+  },
+  {
+    slug: 'framer',
+    name: 'Framer',
+    category: 'design-first website builder',
+    oneLiner:
+      'The designer’s canvas — the best animation and layout control in no-code, with a free tier to prototype and per-site plans to publish.',
+    pricing:
+      'Free on a framer subdomain; ~$10/mo Basic and ~$30/mo Pro per site (billed yearly, custom domain included); extra editors ~$20/mo each; Enterprise custom',
+    freeTier:
+      'Yes — publish free on a Framer subdomain with a bandwidth cap; a paid site plan to connect your own domain.',
+    strengths: [
+      'Unmatched motion and layout control for bespoke marketing sites',
+      'A real free tier — prototype and even publish before paying anything',
+      'A fast CMS, a large template marketplace, and a strong design community',
+      'AI helps draft pages and sections without leaving the canvas',
+    ],
+    tradeoffs: [
+      'Every published client site is its own plan, plus a per-editor seat — a floor that grows with the team, not the revenue',
+      'Bespoke design is bespoke labour: each site is built, not generated, so payback on a $0-down site takes longer',
+      'No native store — cart and checkout come from third-party plugins',
+      'No take-rate, no reseller residual, no rebranded builder, no trade-specific blocks',
+    ],
+    pickThemIf: [
+      'You are a designer and the site’s look and motion are the product',
+      'You are building one bespoke marketing site and want total canvas control',
+      'You want to prototype free and publish on a subdomain before committing',
+    ],
+    pickUsIf: [
+      'You are an agency whose margin depends on build hours and per-seat fees staying low',
+      'You want to earn on client GMV and resell under your own brand',
+      'You want a working local-business site with a native store in minutes, not a design project',
+    ],
+    sources: [{ label: 'Framer pricing', url: 'https://www.framer.com/pricing/' }],
+    pricesVerified: 'September 2026',
+    marks: {
+      hosting: { mark: 'partial', note: 'Free on a framer subdomain; ~$10–$30/mo per site on your domain' },
+      takeRate: { mark: 'no', note: '0% — you don’t earn on client sales' },
+      residual: { mark: 'no', note: 'Not a reseller-residual model' },
+      store: { mark: 'no', note: 'No native checkout — third-party plugins' },
+      pod: { mark: 'no', note: 'Not offered' },
+      aiSite: { mark: 'partial', note: 'AI drafts pages/sections; you design the site' },
+      rebuild: { mark: 'no', note: 'Manual rebuild' },
+      blocks: { mark: 'partial', note: 'Design anything; nothing trade-specific prebuilt' },
+      audio: { mark: 'no', note: 'Not offered' },
+      whiteLabel: { mark: 'no', note: 'Per-site plans under Framer; no rebranded builder' },
+      crm: { mark: 'no', note: 'Bring your own' },
+    },
+  },
 ];
 
 export const COMPETITOR_SLUGS = COMPETITORS.map((c) => c.slug);
+
+/** The stamp a competitor page should show: its own read date when it was added after the sweep. */
+export function pricesVerifiedFor(c: Competitor): string {
+  return c.pricesVerified ?? PRICES_VERIFIED;
+}
 
 export function competitorBySlug(slug: string): Competitor | undefined {
   return COMPETITORS.find((c) => c.slug === slug);

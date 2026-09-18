@@ -34,8 +34,8 @@ export const COMPARE_REGISTRY: CompareRegistryEntry[] = [
     clusterPath: '/compare',
     libFile: 'lib/compare/competitors.ts',
     competitors: COMPETITOR_SLUGS,
-    pricesVerified: '2026-07-01', // mirrors PRICES_VERIFIED = 'July 2026'
-    notes: 'Wix, Squarespace, GoDaddy, Webflow, Shopify, Duda, GoHighLevel',
+    pricesVerified: '2026-07-01', // mirrors PRICES_VERIFIED = 'July 2026' — the OLDEST read in the cluster; 10Web + Framer carry their own 2026-09 stamp
+    notes: 'Wix, Squarespace, GoDaddy, Webflow, Shopify, Duda, GoHighLevel, 10Web, Framer',
   },
   // Add CANDIDATE entries (a product/set worth comparing but with no cluster yet) to have the
   // audit file a "Build compare cluster: X" task. None today.

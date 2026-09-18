@@ -57,7 +57,7 @@ export function buildSlides(): Slide[] {
         'Google’s Gemini was asked to compare website platforms on agency unit economics — QuickSites against 10Web (WordPress) and Framer. It concluded QuickSites has the strongest margins for a volume SMB agency. We are publishing it because it is useful, and publishing it with its seams showing because it is not ours.',
       points: [
         'Gemini’s figures are quoted as it produced them, marked “Gemini’s model”.',
-        'We did not verify its 10Web or Framer pricing, nor its labour-hour estimates. Neither vendor is in our own comparison registry.',
+        'We did not verify its 10Web or Framer figures, nor its labour-hour estimates. Both vendors now have entries on our comparison pages — sourced by us from their own pricing pages, not from this analysis.',
         'Two slides exist only to show where its assumptions do not match what we actually charge.',
       ],
       source: 'gemini',
@@ -166,3 +166,58 @@ export const SOURCE_LABEL: Record<Slide['source'], string> = {
   reconciliation: 'Our correction — checked against the code that bills',
   quicksites: 'QuickSites’ own claim',
 };
+
+/** Where the deck lives. Every surface that promotes it links here. */
+export const CASE_STUDY_PATH = '/pricing/gemini-case-study';
+
+/**
+ * The competitors the analysis modelled, keyed by their lib/compare slug. Both have FULL,
+ * separately-sourced entries in lib/compare/competitors.ts — the case study is why they were
+ * added, but nothing in their registry entry comes from it. A test pins that every key here is
+ * a real competitor slug.
+ */
+export const CASE_STUDY_COMPETITORS: Record<string, { label: string }> = {
+  '10web': { label: '10Web' },
+  framer: { label: 'Framer' },
+};
+
+export type CaseStudyFigure = { label: string; value: string; note?: string };
+
+/**
+ * What the deck says about one competitor, for the /compare/<slug> callout — READ from the
+ * slides, never retyped, so the callout cannot quote a number the deck no longer shows.
+ * Returns null for a competitor the analysis did not model.
+ */
+export function caseStudyFiguresFor(slug: string): {
+  label: string;
+  margin: { theirs: CaseStudyFigure; ours: CaseStudyFigure };
+  payback?: { theirs: CaseStudyFigure; ours: CaseStudyFigure };
+} | null {
+  const entry = CASE_STUDY_COMPETITORS[slug];
+  if (!entry) return null;
+  const slides = buildSlides();
+  const headline = slides.find((s) => s.id === 'headline');
+  const payback = slides.find((s) => s.id === 'payback');
+  const byLabel = (figs: CaseStudyFigure[] | undefined, startsWith: string) =>
+    figs?.find((f) => f.label.startsWith(startsWith));
+  const marginTheirs = byLabel(headline?.figures, entry.label);
+  const marginOurs = byLabel(headline?.figures, 'QuickSites');
+  if (!marginTheirs || !marginOurs) return null;
+  const paybackTheirs = byLabel(payback?.figures, entry.label);
+  const paybackOurs = byLabel(payback?.figures, 'QuickSites');
+  return {
+    label: entry.label,
+    margin: { theirs: marginTheirs, ours: marginOurs },
+    payback: paybackTheirs && paybackOurs ? { theirs: paybackTheirs, ours: paybackOurs } : undefined,
+  };
+}
+
+/**
+ * The deck's correcting slides, for any surface that promotes the flattering headline: the
+ * rule is that the corrections travel WITH the headline, never behind a click.
+ */
+export function caseStudyCorrections(): Pick<Slide, 'id' | 'title' | 'body'>[] {
+  return buildSlides()
+    .filter((s) => s.source === 'reconciliation')
+    .map(({ id, title, body }) => ({ id, title, body }));
+}

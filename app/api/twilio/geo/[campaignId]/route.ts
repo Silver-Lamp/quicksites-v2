@@ -103,7 +103,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   if (!forwardTo) {
     // No destination yet (unclaimed / no fallback) — take a message instead of failing.
     return xml(
-      `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="polly.Joanna">Thanks for calling. Please leave a message after the tone.</Say><Record maxLength="120" action="${base}/api/twilio-callback" method="POST"/></Response>`
+      `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">Thanks for calling. Please leave a message after the tone.</Say><Record maxLength="120" action="${base}/api/twilio-callback" method="POST"/></Response>`
     );
   }
 
@@ -121,7 +121,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   return xml(
     `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="polly.Joanna">This call may be recorded. Please hold while we connect you.</Say>
+  <Say voice="Polly.Joanna">This call may be recorded. Please hold while we connect you.</Say>
   <Dial record="record-from-answer-dual" answerOnBridge="true"${callerIdAttr} action="${base}/api/twilio-callback" method="POST" recordingStatusCallback="${base}/api/twilio-callback" recordingStatusCallbackMethod="POST">
     <Number url="${esc(whisperUrl)}">${esc(forwardTo)}</Number>
   </Dial>

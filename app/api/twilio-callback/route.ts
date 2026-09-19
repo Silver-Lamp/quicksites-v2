@@ -77,7 +77,10 @@ export async function POST(req: Request) {
   if (matchedDomain) row.custom_domain = matchedDomain;
   if (RecordingUrl) row.recording_url = RecordingUrl;
 
-  const { error } = await supabase.from('call_logs').upsert(row);
+  // onConflict is load-bearing: without it upsert resolves on the primary key, a fresh row never
+  // matches, and the unique index on call_sid turns every update into a 23505 — the reason 18
+  // old Grafton rows carry no status and the 2026-09-19 test calls stayed "ringing".
+  const { error } = await supabase.from('call_logs').upsert(row, { onConflict: 'call_sid' });
 
   if (error) {
     console.error('[Twilio webhook] Supabase insert failed:', error);

@@ -21,14 +21,17 @@ export const dynamic = 'force-dynamic';
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!,
-  { auth: { persistSession: false } },
+  { auth: { persistSession: false } }
 );
 
 function xml(twiml: string) {
   return new NextResponse(twiml, { headers: { 'Content-Type': 'text/xml' } });
 }
 function esc(s: string) {
-  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c] as string);
+  return s.replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c] as string
+  );
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ campaignId: string }> }) {
@@ -43,15 +46,18 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   try {
     const callSid = searchParams.get('CallSid');
     if (callSid) {
-      await admin.from('call_logs').upsert({
-        call_sid: callSid,
-        from_number: searchParams.get('From'),
-        to_number: searchParams.get('To'),
-        direction: searchParams.get('Direction') || 'inbound',
-        call_status: searchParams.get('CallStatus') || 'ringing',
-        geo_campaign_id: campaignId,
-        custom_domain: campaign?.domain ?? null,
-      });
+      await admin.from('call_logs').upsert(
+        {
+          call_sid: callSid,
+          from_number: searchParams.get('From'),
+          to_number: searchParams.get('To'),
+          direction: searchParams.get('Direction') || 'inbound',
+          call_status: searchParams.get('CallStatus') || 'ringing',
+          geo_campaign_id: campaignId,
+          custom_domain: campaign?.domain ?? null,
+        },
+        { onConflict: 'call_sid' }
+      );
     }
   } catch {
     /* logging is best-effort */
@@ -70,7 +76,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
     // contact_phone connects nothing rather than guessing.
     const dest = account?.contact_phone || null;
     if (!account || !canRouteCall(account) || !dest) {
-      return xml(notConnectingTwiml({ businessName, recordActionUrl: `${base}/api/twilio-callback` }));
+      return xml(
+        notConnectingTwiml({ businessName, recordActionUrl: `${base}/api/twilio-callback` })
+      );
     }
     const whisper = `New lead from ${campaign.domain ?? 'your QuickSites site'}.`;
     return xml(
@@ -79,14 +87,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
         forwardTo: dest,
         actionUrl: `${base}/api/twilio/ppl/complete?campaignId=${encodeURIComponent(campaignId)}`,
         whisperUrl: `${base}/api/twilio/whisper?message=${encodeURIComponent(whisper)}`,
-      }),
+      })
     );
   }
 
   if (!forwardTo) {
     // No destination yet (unclaimed / no fallback) — take a message instead of failing.
     return xml(
-      `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="polly.Joanna">Thanks for calling. Please leave a message after the tone.</Say><Record maxLength="120" action="${base}/api/twilio-callback" method="POST"/></Response>`,
+      `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="polly.Joanna">Thanks for calling. Please leave a message after the tone.</Say><Record maxLength="120" action="${base}/api/twilio-callback" method="POST"/></Response>`
     );
   }
 
@@ -101,6 +109,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   <Dial record="record-from-answer-dual" answerOnBridge="true" action="${base}/api/twilio-callback" method="POST" recordingStatusCallback="${base}/api/twilio-callback" recordingStatusCallbackMethod="POST">
     <Number url="${esc(whisperUrl)}">${esc(forwardTo)}</Number>
   </Dial>
-</Response>`,
+</Response>`
   );
 }

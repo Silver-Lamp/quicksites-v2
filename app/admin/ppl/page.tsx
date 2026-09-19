@@ -11,7 +11,7 @@ import { assemblePplOps, type PplStep } from '@/lib/ppl/ops';
 import { usd } from '@/lib/ppl/rules';
 import PplAccountActions from '@/components/admin/ppl-account-actions';
 import PplAttachNumberForm from '@/components/admin/ppl-attach-number-form';
-import { listTrackingNumbers, twilioConfigured } from '@/lib/outreach/callTracking';
+import { accountFamily, listTrackingNumbers, twilioConfigured } from '@/lib/outreach/callTracking';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
@@ -72,6 +72,7 @@ export default async function PplOpsPage() {
   // Twilio's own view, read from the running process (the creds are write-only in Vercel, so
   // this page is the only place a person can see what Twilio holds without the console).
   const twilioNumbers = twilioConfigured() ? await listTrackingNumbers().catch(() => []) : [];
+  const family = twilioConfigured() ? await accountFamily().catch(() => null) : null;
   const { data: allCampaigns } = await supabaseAdmin
     .from('geo_industry_campaigns')
     .select('id, domain, forward_to, tracking_number')

@@ -92,24 +92,39 @@ export type TwilioNumberSummary = {
   inSubaccount: boolean;
 };
 
+export type TwilioAccountFamily = {
+  accounts: Array<{ sid: string; name: string | null; status: string | null; isParent: boolean }>;
+  /** Why the walk may be incomplete — shown on the ops page, never swallowed. */
+  listError: string | null;
+};
+
 /** The parent account plus every subaccount it owns (Twilio's console can create these silently). */
-async function accountFamily(): Promise<Array<{ sid: string; name: string | null }>> {
+export async function accountFamily(): Promise<TwilioAccountFamily> {
   const parent = process.env.TWILIO_ACCOUNT_SID!;
-  const out: Array<{ sid: string; name: string | null }> = [{ sid: parent, name: null }];
+  const accounts: TwilioAccountFamily['accounts'] = [
+    { sid: parent, name: null, status: null, isParent: true },
+  ];
+  let listError: string | null = null;
   try {
     const subs = await client().api.v2010.accounts.list({ limit: 50 });
     for (const a of subs) {
       if (a.sid === parent) {
-        out[0].name = a.friendlyName ?? null;
+        accounts[0].name = a.friendlyName ?? null;
+        accounts[0].status = a.status ?? null;
         continue;
       }
       if (a.status === 'closed') continue;
-      out.push({ sid: a.sid, name: a.friendlyName ?? null });
+      accounts.push({
+        sid: a.sid,
+        name: a.friendlyName ?? null,
+        status: a.status ?? null,
+        isParent: false,
+      });
     }
-  } catch {
-    /* no permission to list subaccounts → the parent alone */
+  } catch (e: any) {
+    listError = e?.message || 'accounts.list failed';
   }
-  return out;
+  return { accounts, listError };
 }
 
 /**
@@ -124,7 +139,7 @@ export async function listTrackingNumbers(): Promise<TwilioNumberSummary[]> {
   const parent = process.env.TWILIO_ACCOUNT_SID!;
   const c = client();
   const out: TwilioNumberSummary[] = [];
-  for (const acct of await accountFamily()) {
+  for (const acct of (await accountFamily()).accounts) {
     let list: Awaited<ReturnType<typeof c.incomingPhoneNumbers.list>> = [];
     try {
       list = await c.api.v2010.accounts(acct.sid).incomingPhoneNumbers.list({ limit: 200 });
@@ -178,7 +193,7 @@ export async function attachTrackingNumber(opts: {
     voiceUrl: string | null;
     voiceApplicationSid: string | null;
   } | null = null;
-  for (const acct of await accountFamily()) {
+  for (const acct of (await accountFamily()).accounts) {
     const matches = await c.api.v2010
       .accounts(acct.sid)
       .incomingPhoneNumbers.list({ phoneNumber: opts.phoneNumber, limit: 1 })

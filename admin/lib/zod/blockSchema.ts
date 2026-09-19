@@ -657,16 +657,42 @@ export const blockContentSchemaMap = {
     schema: z.object({
       title: z.string().optional().default('Estimate your monthly payment'),
       subtitle: z.string().optional().default(''),
-      price: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('$500,000')),
-      down_payment_percent: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 20 : v), z.number().min(0).max(100).optional().default(20)),
-      interest_rate: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 6.8 : v), z.number().min(0).max(25).optional().default(6.8)),
-      loan_term_years: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 30 : v), z.number().min(1).max(40).optional().default(30)),
-      property_tax_rate: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 0 : v), z.number().min(0).max(10).optional().default(0)),
-      home_insurance_monthly: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 0 : v), z.number().min(0).optional().default(0)),
-      hoa_monthly: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 0 : v), z.number().min(0).optional().default(0)),
+      price: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('$500,000')
+      ),
+      down_payment_percent: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 20 : v),
+        z.number().min(0).max(100).optional().default(20)
+      ),
+      interest_rate: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 6.8 : v),
+        z.number().min(0).max(25).optional().default(6.8)
+      ),
+      loan_term_years: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 30 : v),
+        z.number().min(1).max(40).optional().default(30)
+      ),
+      property_tax_rate: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 0 : v),
+        z.number().min(0).max(10).optional().default(0)
+      ),
+      home_insurance_monthly: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 0 : v),
+        z.number().min(0).optional().default(0)
+      ),
+      hoa_monthly: z.preprocess(
+        (v) => (typeof v === 'string' ? Number(v) || 0 : v),
+        z.number().min(0).optional().default(0)
+      ),
       cta_text: z.string().optional().default('Get pre-approved'),
       cta_link: z.string().optional().default('#contact'),
-      disclaimer: z.string().optional().default('Estimate only — not a loan offer or a commitment to lend. Actual rates, taxes, and insurance vary.'),
+      disclaimer: z
+        .string()
+        .optional()
+        .default(
+          'Estimate only — not a loan offer or a commitment to lend. Actual rates, taxes, and insurance vary.'
+        ),
     }),
   },
 
@@ -685,7 +711,9 @@ export const blockContentSchemaMap = {
       provider_name: z.string().default(''),
       provider_claim: z.string().default(''),
       fee_disclosure: z.string().default(''),
-      proof_points: z.array(z.object({ label: z.string(), detail: z.string().default('') })).default([]),
+      proof_points: z
+        .array(z.object({ label: z.string(), detail: z.string().default('') }))
+        .default([]),
     }),
   },
 
@@ -966,9 +994,18 @@ export const blockContentSchemaMap = {
             kinds: z.array(z.string()).optional().default([]),
             source_label: z.string().optional().default(''),
             source_url: z.string().optional().default(''),
+            /** A referral/affiliate link for this org, used IN PLACE of `website` when set. Disclosed. */
+            affiliate_url: z.string().optional().default(''),
           })
         )
         .default([]),
+      /** Shown whenever any entry carries an affiliate_url. Never hidden; FTC + plain honesty. */
+      affiliate_disclosure: z
+        .string()
+        .optional()
+        .default(
+          'Links marked “affiliate” are referral links: if you buy through one, we may earn a commission at no cost to you. It does not change which builders are listed or how.'
+        ),
       /** The lead magnet, e.g. the DomeSketch calculator. */
       cta_label: z.string().optional().default(''),
       cta_link: z.string().optional().default(''),
@@ -1220,11 +1257,26 @@ export const blockContentSchemaMap = {
       title: z.string().optional().default(''),
       address: z.string().optional().default(''),
       price_per_night: z.string().optional().default(''),
-      beds: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
-      bathrooms: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
-      max_guests: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
-      min_stay: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
-      max_stay: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      beds: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
+      bathrooms: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
+      max_guests: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
+      min_stay: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
+      max_stay: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
       amenities: z.array(z.string()).default([]),
       description: z.string().optional().default(''),
       images: z.array(z.string()).default([]),
@@ -1233,7 +1285,10 @@ export const blockContentSchemaMap = {
        *  HJ About That render); OR paste an About That embed id to use the QS player. */
       host_audio_url: z.string().optional().default(''),
       about_that_embed_id: z.string().optional().default(''),
-      about_that_width: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      about_that_width: z.preprocess(
+        (v) => (typeof v === 'number' ? String(v) : v),
+        z.string().optional().default('')
+      ),
       cta_text: z.string().optional().default('Check availability'),
       cta_link: z.string().optional().default('#contact'),
       /** Bind to a live PorchHearth property (crosstalk/contracts/neighborhood-stay-embed.md): when
@@ -1655,7 +1710,10 @@ export const blockContentSchemaMap = {
               // Display-only snapshot fields (a store we read but could not provision, e.g. a
               // CNY catalog against a USD merchant): the grid renders these as a product gallery
               // — real products, real prices in their own currency, no cart — until ids are wired.
-              currency: z.string().regex(/^[A-Z]{3}$/).optional(),
+              currency: z
+                .string()
+                .regex(/^[A-Z]{3}$/)
+                .optional(),
               price_from: z.boolean().optional(),
               compare_at_cents: z.number().int().min(0).optional(),
               product_url: z.union([RelativeOrAbsoluteUrl, z.literal('')]).optional(),
@@ -2012,7 +2070,7 @@ export const blockContentSchemaMap = {
             // Measured at authoring time, never guessed — an optional field that is wrong is
             // worse than one that is absent.
             size: z.string().optional(),
-          }),
+          })
         )
         .default([]),
     }),

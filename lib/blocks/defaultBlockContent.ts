@@ -164,7 +164,8 @@ export const DEFAULT_BLOCK_CONTENT = {
     hoa_monthly: 0,
     cta_text: 'Get pre-approved',
     cta_link: '#contact',
-    disclaimer: 'Estimate only — not a loan offer or a commitment to lend. Actual rates, taxes, and insurance vary.',
+    disclaimer:
+      'Estimate only — not a loan offer or a commitment to lend. Actual rates, taxes, and insurance vary.',
   },
 
   /* ───────── testimonial (avatar_url per schema) ───────── */
@@ -196,6 +197,8 @@ export const DEFAULT_BLOCK_CONTENT = {
     trade_label: 'builders',
     region_label: '',
     entries: [],
+    affiliate_disclosure:
+      'Links marked “affiliate” are referral links: if you buy through one, we may earn a commission at no cost to you. It does not change which builders are listed or how.',
     cta_label: '',
     cta_link: '',
     listing_cta_label: '',
@@ -583,8 +586,13 @@ export const DEFAULT_BLOCK_CONTENT = {
     subtitle: 'Every one of our agents will walk you through their listings — in their own voice.',
     columns: 3,
     agents: [] as Array<{
-      name: string; title: string; photo_url: string; bio: string;
-      phone: string; email: string; about_that_embed_id: string;
+      name: string;
+      title: string;
+      photo_url: string;
+      bio: string;
+      phone: string;
+      email: string;
+      about_that_embed_id: string;
     }>,
   },
 
@@ -597,7 +605,14 @@ export const DEFAULT_BLOCK_CONTENT = {
     max_guests: '4',
     min_stay: '2',
     max_stay: '14',
-    amenities: ['Full kitchen', 'Wi-Fi', 'Wood stove', 'Creek-side deck', 'Free parking', 'Pet friendly'],
+    amenities: [
+      'Full kitchen',
+      'Wi-Fi',
+      'Wood stove',
+      'Creek-side deck',
+      'Free parking',
+      'Pet friendly',
+    ],
     description:
       'A hand-built tiny home tucked among the cedars, steps from the creek. Wake up to birdsong, cook in a full kitchen, and unwind on the deck under the stars. Minutes to trailheads and downtown.',
     images: [],

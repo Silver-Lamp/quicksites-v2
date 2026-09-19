@@ -57,15 +57,18 @@ export async function POST(req: Request) {
 
   // Keep the call log the rest of the admin reads (best-effort, never blocks billing).
   try {
-    await admin.from('call_logs').upsert({
-      call_sid: callSid,
-      from_number: from,
-      to_number: params.To || params.Called || null,
-      direction: 'inbound',
-      call_status: dialStatus === 'completed' ? 'completed' : `dial-${dialStatus || 'unknown'}`,
-      call_duration: dialDuration,
-      geo_campaign_id: campaignId,
-    });
+    await admin.from('call_logs').upsert(
+      {
+        call_sid: callSid,
+        from_number: from,
+        to_number: params.To || params.Called || null,
+        direction: 'inbound',
+        call_status: dialStatus === 'completed' ? 'completed' : `dial-${dialStatus || 'unknown'}`,
+        call_duration: dialDuration,
+        geo_campaign_id: campaignId,
+      },
+      { onConflict: 'call_sid' }
+    );
   } catch {
     /* logging is best-effort */
   }

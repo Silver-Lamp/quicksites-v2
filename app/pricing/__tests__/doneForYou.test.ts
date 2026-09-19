@@ -11,15 +11,22 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const src = readFileSync(join(process.cwd(), 'app/pricing/page.tsx'), 'utf8');
-const code = src
-  .split('\n')
-  .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/*'))
-  .join('\n');
+const strip = (s: string) =>
+  s
+    .split('\n')
+    .filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/*'))
+    .join('\n');
+const code = strip(readFileSync(join(process.cwd(), 'app/pricing/page.tsx'), 'utf8'));
+// The constant moved to lib/billing/planPricing and the path chooser to a shared component
+// (rendered on /pricing AND /build) on 2026-09-19 — same intent, two more files to read.
+const pricing = strip(readFileSync(join(process.cwd(), 'lib/billing/planPricing.ts'), 'utf8'));
+const chooser = strip(readFileSync(join(process.cwd(), 'components/pricing/path-chooser.tsx'), 'utf8'));
 
 describe('/pricing — done-for-you figures', () => {
-  it('declares the three figures in one constant', () => {
-    expect(code).toMatch(/const DONE_FOR_YOU = \{ buildFrom: 1995, careSelfService: 49, careManaged: 149 \}/);
+  it('declares the three figures in one constant (lib/billing/planPricing), which the page imports', () => {
+    expect(pricing).toMatch(/export const DONE_FOR_YOU = \{ buildFrom: 1995, careSelfService: 49, careManaged: 149 \}/);
+    expect(code).toMatch(/import \{[^}]*DONE_FOR_YOU[^}]*\} from '@\/lib\/billing\/planPricing'/);
+    expect(code).not.toMatch(/const DONE_FOR_YOU =/);
   });
 
   it('never types the figures into JSX or FAQ prose (they must come from the constant)', () => {
@@ -40,8 +47,11 @@ describe('/pricing — done-for-you figures', () => {
     expect(section).toMatch(/not servers/);
   });
 
-  it('is reachable from the path chooser and has its own anchor', () => {
-    expect(code).toContain("href: '#done-for-you'");
+  it('is reachable from the shared path chooser and has its own anchor', () => {
+    expect(chooser).toContain("hash: '#done-for-you'");
+    expect(chooser).toMatch(/usd0\.format\(DONE_FOR_YOU\.buildFrom\)/);
+    expect(chooser).not.toMatch(/\$1,995/);
+    expect(code).toContain('<PathChooser />');
     expect(code).toContain('id="done-for-you"');
   });
 

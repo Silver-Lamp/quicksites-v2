@@ -85,6 +85,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
       bridgeTwiml({
         businessName,
         forwardTo: dest,
+        callerId: searchParams.get('From'),
         actionUrl: `${base}/api/twilio/ppl/complete?campaignId=${encodeURIComponent(campaignId)}`,
         whisperUrl: `${base}/api/twilio/whisper?message=${encodeURIComponent(whisper)}`,
       })
@@ -100,13 +101,17 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
 
   const whisper = `New lead from ${campaign?.domain ?? 'your QuickSites site'}.`;
   const whisperUrl = `${base}/api/twilio/whisper?message=${encodeURIComponent(whisper)}`;
+  // Caller ID = the inbound caller (what the Studio flows did); the default — the Twilio number
+  // itself — came back dial-failed on the first route-bridged call. See lib/ppl/ivr.ts.
+  const from = searchParams.get('From');
+  const callerIdAttr = from ? ` callerId="${esc(from)}"` : '';
   // The bridged leg is recorded, so the caller hears the notice first — Washington and other
   // two-party-consent states require it, and the forwarded business may not be a client.
   return xml(
     `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="polly.Joanna">This call may be recorded. Please hold while we connect you.</Say>
-  <Dial record="record-from-answer-dual" answerOnBridge="true" action="${base}/api/twilio-callback" method="POST" recordingStatusCallback="${base}/api/twilio-callback" recordingStatusCallbackMethod="POST">
+  <Dial record="record-from-answer-dual" answerOnBridge="true"${callerIdAttr} action="${base}/api/twilio-callback" method="POST" recordingStatusCallback="${base}/api/twilio-callback" recordingStatusCallbackMethod="POST">
     <Number url="${esc(whisperUrl)}">${esc(forwardTo)}</Number>
   </Dial>
 </Response>`

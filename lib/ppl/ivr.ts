@@ -33,15 +33,22 @@ export function bridgeTwiml(args: {
   actionUrl: string;
   whisperUrl?: string;
   timeoutSeconds?: number;
+  /** The inbound caller's number, presented to the business as caller ID (see below). */
+  callerId?: string | null;
 }): string {
   const timeout = args.timeoutSeconds ?? 25;
+  // Present the CALLER's number, not the tracking number. Twilio permits the inbound From as
+  // callerId on a forward; the old Studio flow did exactly this and connected, and the first
+  // route-bridged call (2026-09-19, default caller ID = the Twilio number) came back
+  // dial-failed to a number directories list as live. The business also sees who is calling.
+  const callerId = args.callerId ? ` callerId="${esc(args.callerId)}"` : '';
   const num = args.whisperUrl
     ? `<Number url="${esc(args.whisperUrl)}">${esc(args.forwardTo)}</Number>`
     : `<Number>${esc(args.forwardTo)}</Number>`;
   return (
     `${HEADER}<Response>` +
     `<Say voice="${VOICE}">${esc(recordingNotice(args.businessName))}</Say>` +
-    `<Dial record="record-from-answer-dual" answerOnBridge="true" timeout="${timeout}" ` +
+    `<Dial record="record-from-answer-dual" answerOnBridge="true" timeout="${timeout}"${callerId} ` +
     `action="${esc(args.actionUrl)}" method="POST">${num}</Dial>` +
     `</Response>`
   );

@@ -489,6 +489,13 @@ was learned by shipping its absence.
 
 ---
 
+> **Section links (2026-09-19).** A single-segment path that names no page but DOES name a
+> section of the home page (`/contact` → the first `contact_form` block, `/services` → the first
+> `services` block, …) is a **temporary redirect to `/#<section>`**, not a 404. 121 of 143 live
+> sites had hero/nav links of this shape; they fell through to home with a 200 before the real-404
+> change and 404'd after it. The rule mirrors the renderer's anchor rule exactly
+> (`lib/sites/redirects.ts#sectionAnchorOnHome`).
+
 ## 9. Migrating a client off an old site: redirects and the 404
 
 A refresh of an existing site (the Tampa law firm, 2026-09-17: WordPress since 2019) carries a

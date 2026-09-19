@@ -24,6 +24,12 @@ const admin = createClient(
   { auth: { persistSession: false } }
 );
 
+/** "+12623028118" → "262 302 8118", read as digits by the whisper voice. */
+function spokenNumber(e164: string | null): string {
+  const d = (e164 ?? '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  return d.length === 10 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : d;
+}
+
 function xml(twiml: string) {
   return new NextResponse(twiml, { headers: { 'Content-Type': 'text/xml' } });
 }
@@ -80,12 +86,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
         notConnectingTwiml({ businessName, recordActionUrl: `${base}/api/twilio-callback` })
       );
     }
-    const whisper = `New lead from ${campaign.domain ?? 'your QuickSites site'}.`;
+    const caller = searchParams.get('From');
+    const whisper = `New lead from ${campaign.domain ?? 'your QuickSites site'}${caller ? `, calling from ${spokenNumber(caller)}` : ''}.`;
     return xml(
       bridgeTwiml({
         businessName,
         forwardTo: dest,
-        callerId: searchParams.get('From'),
+        // Our own number as caller ID (full STIR/SHAKEN attestation); the caller's number is in the whisper.
+        callerId: campaign.tracking_number ?? searchParams.get('To'),
         actionUrl: `${base}/api/twilio/ppl/complete?campaignId=${encodeURIComponent(campaignId)}`,
         whisperUrl: `${base}/api/twilio/whisper?message=${encodeURIComponent(whisper)}`,
       })
@@ -99,12 +107,15 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
     );
   }
 
-  const whisper = `New lead from ${campaign?.domain ?? 'your QuickSites site'}.`;
-  const whisperUrl = `${base}/api/twilio/whisper?message=${encodeURIComponent(whisper)}`;
-  // Caller ID = the inbound caller (what the Studio flows did); the default — the Twilio number
-  // itself — came back dial-failed on the first route-bridged call. See lib/ppl/ivr.ts.
   const from = searchParams.get('From');
-  const callerIdAttr = from ? ` callerId="${esc(from)}"` : '';
+  const whisper = `New lead from ${campaign?.domain ?? 'your QuickSites site'}${from ? `, calling from ${spokenNumber(from)}` : ''}.`;
+  const whisperUrl = `${base}/api/twilio/whisper?message=${encodeURIComponent(whisper)}`;
+  // Caller ID = OUR tracking number, never the inbound caller's. Twilio's default on a forward is
+  // the caller's number, and on 2026-09-19 every such leg failed in 0 s with no SIP response and no
+  // STIR attestation — Twilio refused to place a call presenting a number the account does not
+  // own. Our own number carries full attestation; the caller's number rides in the whisper.
+  const ownNumber = campaign?.tracking_number ?? searchParams.get('To');
+  const callerIdAttr = ownNumber ? ` callerId="${esc(ownNumber)}"` : '';
   // The bridged leg is recorded, so the caller hears the notice first — Washington and other
   // two-party-consent states require it, and the forwarded business may not be a client.
   return xml(

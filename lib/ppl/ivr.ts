@@ -33,14 +33,15 @@ export function bridgeTwiml(args: {
   actionUrl: string;
   whisperUrl?: string;
   timeoutSeconds?: number;
-  /** The inbound caller's number, presented to the business as caller ID (see below). */
+  /** The number presented to the business — OUR tracking number (see below), never the caller's. */
   callerId?: string | null;
 }): string {
   const timeout = args.timeoutSeconds ?? 25;
-  // Present the CALLER's number, not the tracking number. Twilio permits the inbound From as
-  // callerId on a forward; the old Studio flow did exactly this and connected, and the first
-  // route-bridged call (2026-09-19, default caller ID = the Twilio number) came back
-  // dial-failed to a number directories list as live. The business also sees who is calling.
+  // Present OUR tracking number. Twilio's default on a forward is the caller's number, and on
+  // 2026-09-19 every such leg failed in 0 s with no SIP response and no STIR attestation — Twilio
+  // refused to place a call presenting a number the account does not own (an Aug-20 call through
+  // the old flow still got attestation C; that window has closed). The caller's number is spoken
+  // in the whisper so the business still hears who is calling.
   const callerId = args.callerId ? ` callerId="${esc(args.callerId)}"` : '';
   const num = args.whisperUrl
     ? `<Number url="${esc(args.whisperUrl)}">${esc(args.forwardTo)}</Number>`

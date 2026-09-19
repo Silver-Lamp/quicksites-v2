@@ -19,7 +19,7 @@ function esc(s: string) {
   );
 }
 
-const VOICE = 'polly.Joanna';
+const VOICE = 'Polly.Joanna';
 const HEADER = '<?xml version="1.0" encoding="UTF-8"?>';
 
 export function recordingNotice(businessName: string): string {

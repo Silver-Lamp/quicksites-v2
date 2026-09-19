@@ -32,3 +32,22 @@ describe('attachTrackingNumber', () => {
     expect(route).toContain("code: 'already_tracked'");
   });
 });
+
+describe('subaccounts', () => {
+  // The Grafton number lives in a subaccount of the account whose creds are in production
+  // (found 2026-09-18 when the inventory listed one number). Webhooks are signed with the
+  // OWNING account's token, so a subaccount number cannot be attached in place.
+  it('the inventory walks the parent and its subaccounts', () => {
+    const fn = lib.slice(lib.indexOf('export async function listTrackingNumbers'));
+    expect(fn).toContain('accountFamily()');
+    expect(fn).toContain('inSubaccount');
+  });
+  it('attach transfers a subaccount number to the parent BEFORE pointing it at our route', () => {
+    const fn = lib.slice(lib.indexOf('export async function attachTrackingNumber'));
+    const transfer = fn.indexOf('update({ accountSid: parent })');
+    const point = fn.indexOf('voiceUrl: opts.voiceUrl');
+    expect(transfer).toBeGreaterThan(0);
+    expect(transfer).toBeLessThan(point);
+    expect(fn).toContain('transferredFrom');
+  });
+});

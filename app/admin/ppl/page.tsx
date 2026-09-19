@@ -409,6 +409,7 @@ export default async function PplOpsPage() {
                 <tr>
                   <th className="px-3 py-2">Number</th>
                   <th className="px-3 py-2">Name</th>
+                  <th className="px-3 py-2">Account</th>
                   <th className="px-3 py-2">Voice</th>
                   <th className="px-3 py-2">SMS</th>
                   <th className="px-3 py-2">Campaign</th>
@@ -421,6 +422,16 @@ export default async function PplOpsPage() {
                     <tr key={n.sid} className="border-t border-border">
                       <td className="px-3 py-2 tabular-nums">{n.phoneNumber}</td>
                       <td className="px-3 py-2 text-muted-foreground">{n.friendlyName ?? '—'}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                        {n.inSubaccount ? (
+                          <span className="text-amber-300">
+                            subaccount {n.accountName ?? n.accountSid.slice(0, 10)} — attach moves
+                            it to the parent
+                          </span>
+                        ) : (
+                          'parent'
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">
                         {n.voiceApplicationSid
                           ? `flow ${n.voiceApplicationSid}`

@@ -86,31 +86,75 @@ export type TwilioNumberSummary = {
   voiceUrl: string | null;
   voiceApplicationSid: string | null;
   smsUrl: string | null;
+  /** The account that owns it — the parent, or one of its subaccounts. */
+  accountSid: string;
+  accountName: string | null;
+  inSubaccount: boolean;
 };
 
+/** The parent account plus every subaccount it owns (Twilio's console can create these silently). */
+async function accountFamily(): Promise<Array<{ sid: string; name: string | null }>> {
+  const parent = process.env.TWILIO_ACCOUNT_SID!;
+  const out: Array<{ sid: string; name: string | null }> = [{ sid: parent, name: null }];
+  try {
+    const subs = await client().api.v2010.accounts.list({ limit: 50 });
+    for (const a of subs) {
+      if (a.sid === parent) {
+        out[0].name = a.friendlyName ?? null;
+        continue;
+      }
+      if (a.status === 'closed') continue;
+      out.push({ sid: a.sid, name: a.friendlyName ?? null });
+    }
+  } catch {
+    /* no permission to list subaccounts → the parent alone */
+  }
+  return out;
+}
+
 /**
- * Every number on the account and where its voice/SMS webhooks point — read-only. The ops page
- * shows this so "what does Twilio have" is answered from the running process, never from a
- * screenshot or a memory. Returns [] when Twilio is not configured.
+ * Every number across the parent AND its subaccounts, with where its voice/SMS webhooks point
+ * — read-only. The ops page shows this so "what does Twilio have" is answered from the running
+ * process, never from a screenshot or a memory. Returns [] when Twilio is not configured.
+ * ⚠️ A number in a subaccount signs its webhooks with THAT subaccount's token, which we do not
+ * hold — so it cannot be attached where it is; attachTrackingNumber moves it to the parent first.
  */
 export async function listTrackingNumbers(): Promise<TwilioNumberSummary[]> {
   if (!twilioConfigured()) return [];
-  const list = await client().incomingPhoneNumbers.list({ limit: 200 });
-  return list.map((n) => ({
-    sid: n.sid,
-    phoneNumber: n.phoneNumber,
-    friendlyName: n.friendlyName ?? null,
-    voiceUrl: n.voiceUrl || null,
-    voiceApplicationSid: n.voiceApplicationSid || null,
-    smsUrl: n.smsUrl || null,
-  }));
+  const parent = process.env.TWILIO_ACCOUNT_SID!;
+  const c = client();
+  const out: TwilioNumberSummary[] = [];
+  for (const acct of await accountFamily()) {
+    let list: Awaited<ReturnType<typeof c.incomingPhoneNumbers.list>> = [];
+    try {
+      list = await c.api.v2010.accounts(acct.sid).incomingPhoneNumbers.list({ limit: 200 });
+    } catch {
+      continue;
+    }
+    for (const n of list) {
+      out.push({
+        sid: n.sid,
+        phoneNumber: n.phoneNumber,
+        friendlyName: n.friendlyName ?? null,
+        voiceUrl: n.voiceUrl || null,
+        voiceApplicationSid: n.voiceApplicationSid || null,
+        smsUrl: n.smsUrl || null,
+        accountSid: acct.sid,
+        accountName: acct.name,
+        inSubaccount: acct.sid !== parent,
+      });
+    }
+  }
+  return out;
 }
 
 /**
  * Point an EXISTING number (bought by hand, or one already forwarding) at a campaign's voice
  * route. Costs nothing, so it is gated only on Twilio being configured — not on
- * CALL_TRACKING_ENABLED, which guards purchases. Returns the number's SID and what it pointed
- * at before, so the change can be undone by hand if a call stops arriving.
+ * CALL_TRACKING_ENABLED, which guards purchases. A number found in a SUBACCOUNT is first
+ * transferred to the parent (Twilio's "exchanging numbers between subaccounts"), because
+ * webhooks are signed with the owning account's token and the parent's is the one we hold.
+ * Returns the number's SID and what it pointed at before, so the change can be undone by hand.
  */
 export async function attachTrackingNumber(opts: {
   phoneNumber: string;
@@ -121,15 +165,49 @@ export async function attachTrackingNumber(opts: {
   sid: string;
   previousVoiceUrl: string | null;
   previousVoiceApplicationSid: string | null;
+  transferredFrom: string | null;
 }> {
   if (!twilioConfigured()) throw new Error('Twilio is not configured.');
+  const parent = process.env.TWILIO_ACCOUNT_SID!;
   const c = client();
-  const matches = await c.incomingPhoneNumbers.list({ phoneNumber: opts.phoneNumber, limit: 1 });
-  const n = matches[0];
-  if (!n) throw new Error(`${opts.phoneNumber} is not a number on this Twilio account.`);
-  const previousVoiceUrl = n.voiceUrl || null;
-  const previousVoiceApplicationSid = n.voiceApplicationSid || null;
-  await c.incomingPhoneNumbers(n.sid).update({
+
+  // Find it anywhere in the family.
+  let found: {
+    sid: string;
+    accountSid: string;
+    voiceUrl: string | null;
+    voiceApplicationSid: string | null;
+  } | null = null;
+  for (const acct of await accountFamily()) {
+    const matches = await c.api.v2010
+      .accounts(acct.sid)
+      .incomingPhoneNumbers.list({ phoneNumber: opts.phoneNumber, limit: 1 })
+      .catch(() => []);
+    if (matches[0]) {
+      found = {
+        sid: matches[0].sid,
+        accountSid: acct.sid,
+        voiceUrl: matches[0].voiceUrl || null,
+        voiceApplicationSid: matches[0].voiceApplicationSid || null,
+      };
+      break;
+    }
+  }
+  if (!found)
+    throw new Error(
+      `${opts.phoneNumber} is not a number on this Twilio account or its subaccounts.`
+    );
+
+  let transferredFrom: string | null = null;
+  if (found.accountSid !== parent) {
+    await c.api.v2010
+      .accounts(found.accountSid)
+      .incomingPhoneNumbers(found.sid)
+      .update({ accountSid: parent });
+    transferredFrom = found.accountSid;
+  }
+
+  await c.incomingPhoneNumbers(found.sid).update({
     voiceUrl: opts.voiceUrl,
     voiceMethod: 'GET',
     // A Studio flow is bound through voiceApplicationSid; clearing it is what actually moves
@@ -139,5 +217,10 @@ export async function attachTrackingNumber(opts: {
       ? { smsUrl: opts.smsUrl, smsMethod: 'POST' as const, smsApplicationSid: '' }
       : {}),
   });
-  return { sid: n.sid, previousVoiceUrl, previousVoiceApplicationSid };
+  return {
+    sid: found.sid,
+    previousVoiceUrl: found.voiceUrl,
+    previousVoiceApplicationSid: found.voiceApplicationSid,
+    transferredFrom,
+  };
 }

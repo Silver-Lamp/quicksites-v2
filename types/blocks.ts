@@ -35,6 +35,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   testimonial: 'interactive',
   footer: 'meta',
   service_areas: 'meta',
+  builders_directory: 'content',
   header: 'meta',
   contact_form: 'interactive',
   cta: 'interactive',

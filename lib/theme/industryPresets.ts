@@ -53,6 +53,7 @@ export const industryPresets: Record<string, SiteTheme> = {
   junk_removal: rugged('lime-500'),
   general_contractor: rugged('orange-500'),
   deck_builder: rugged('amber-600'), // warm wood tone — decks, cedar, outdoor living
+  dome_builder: rugged('teal-600'), // directory pages for <state>domebuilders.com (DomeSketch)
   fencing: rugged('emerald-600'),
   concrete: rugged('slate-500'),
   turf: homeService('green-600'),

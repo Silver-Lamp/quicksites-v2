@@ -26,6 +26,8 @@ export const SWEEP_CATEGORIES: SweepCategory[] = [
   // Instant-estimator trades — each auto-builds a quote_estimator site + a
   // <city>-<trade>.com geo-vertical (all 9 trades live on the DeckSketch endpoint).
   { label: 'Deck builder', textQuery: 'deck builder', industry: 'deck_builder' },
+  // Dome builders: state-level directory domains (<state>domebuilders.com) with DomeSketch.
+  { label: 'Dome builder', textQuery: 'geodesic dome builder', industry: 'dome_builder' },
   { label: 'Fencing', textQuery: 'fence contractor', industry: 'fencing' },
   { label: 'Concrete', textQuery: 'concrete contractor', industry: 'concrete' },
   { label: 'Artificial turf', textQuery: 'artificial turf installer', industry: 'turf' },

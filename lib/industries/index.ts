@@ -17,6 +17,7 @@ export type IndustryKey =
   | 'painting'
   | 'general_contractor'
   | 'deck_builder'
+  | 'dome_builder'
   // Instant-estimator trades (quote_estimator block; each a <city>-<trade>.com vertical)
   | 'fencing'
   | 'concrete'
@@ -79,6 +80,7 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'painting',             label: 'Painting' },
   { key: 'general_contractor',   label: 'General Contractor' },
   { key: 'deck_builder',         label: 'Deck Builder' },
+  { key: 'dome_builder',         label: 'Dome Builder' },
   { key: 'fencing',              label: 'Fencing' },
   { key: 'concrete',             label: 'Concrete' },
   { key: 'turf',                 label: 'Artificial Turf' },
@@ -228,6 +230,7 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   if (x.includes('paint')) return 'painting';
   if (x.includes('church') || x.includes('faith') || x.includes('ministry') || x.includes('ministries') || x.includes('worship') || x.includes('congregation') || x.includes('parish') || x.includes('synagogue') || x.includes('mosque') || x.includes('temple')) return 'faith';
   if (x.includes('about me') || x.includes('about.me') || x.includes('personal brand') || x.includes('personal site')) return 'personal';
+  if (x.includes('dome') || x.includes('geodesic')) return 'dome_builder';
   if (x.includes('deck') || x.includes('pergola')) return 'deck_builder';
   // Estimator trades (checked before the generic roof/contract fallbacks below)
   if (x.includes('roof')) return 'roofing'; // any non-cleaning roof term → install/replace

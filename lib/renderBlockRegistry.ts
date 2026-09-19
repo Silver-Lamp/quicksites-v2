@@ -130,6 +130,7 @@ export const DYNAMIC_RENDERERS: Record<
   testimonial: () => import('@/components/admin/templates/render-blocks/testimonial'),
   footer: () => import('@/components/admin/templates/render-blocks/footer'),
   service_areas: () => import('@/components/admin/templates/render-blocks/service-areas'),
+  builders_directory: () => import('@/components/admin/templates/render-blocks/builders-directory'),
   header: () => import('@/components/admin/templates/render-blocks/header'),
   faq: () => import('@/components/admin/templates/render-blocks/faq'),
   agreement: () => import('@/components/admin/templates/render-blocks/agreement'),

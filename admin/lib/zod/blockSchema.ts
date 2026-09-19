@@ -938,6 +938,46 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Builders Directory — a directory of EXTERNAL businesses for one trade in one region
+  // (first use: <state>domebuilders.com, docs/PPL_VERTICAL.md §9 + the DomeSketch proposal).
+  // Unlike auto_shops_directory (our own built sites), every entry is someone else's business
+  // and carries where the fact came from: `source_url`/`source_label` are rendered, not hidden.
+  // No entry may state licensing, insurance, hours or prices — only name, place, what they do,
+  // and how to reach them. `kinds` are labels from a controlled list the page explains.
+  builders_directory: {
+    label: 'Builders Directory',
+    icon: '🏗️',
+    schema: z.object({
+      title: z.string().optional().default(''),
+      subtitle: z.string().optional().default(''),
+      /** e.g. "dome builders" — used in the empty state and the "get listed" line. */
+      trade_label: z.string().optional().default('builders'),
+      /** e.g. "Texas" */
+      region_label: z.string().optional().default(''),
+      entries: z
+        .array(
+          z.object({
+            name: z.string(),
+            city: z.string().optional().default(''),
+            region: z.string().optional().default(''),
+            phone: z.string().optional().default(''),
+            website: z.string().optional().default(''),
+            summary: z.string().optional().default(''),
+            kinds: z.array(z.string()).optional().default([]),
+            source_label: z.string().optional().default(''),
+            source_url: z.string().optional().default(''),
+          })
+        )
+        .default([]),
+      /** The lead magnet, e.g. the DomeSketch calculator. */
+      cta_label: z.string().optional().default(''),
+      cta_link: z.string().optional().default(''),
+      /** Supply-side capture: "Are you a builder here? Get listed." */
+      listing_cta_label: z.string().optional().default(''),
+      listing_cta_link: z.string().optional().default(''),
+    }),
+  },
+
   // Service Transparency (SecondSet) — a shop's "we show you the work" trust block on its
   // own site. Pure marketing copy; never exposes captures (those stay in the per-job portal).
   service_transparency: {

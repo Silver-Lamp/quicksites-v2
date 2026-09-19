@@ -21,7 +21,7 @@ export default function PplAttachNumberForm({
 }) {
   const router = useRouter();
   const [domain, setDomain] = useState('');
-  const [phone, setPhone] = useState(numbers[0] ?? '');
+  const [phone, setPhone] = useState('');
   const [forwardTo, setForwardTo] = useState('');
   const [sendNotice, setSendNotice] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -99,19 +99,21 @@ export default function PplAttachNumberForm({
         </datalist>
       </label>
       <label className="grid gap-1 text-xs text-muted-foreground">
-        Twilio number (E.164)
-        <input
-          list="ppl-twilio-numbers"
+        Twilio number
+        {/* A real <select>, not a datalist: Chrome filters datalist suggestions by the text
+            already in the box, so a prefilled number hid every other number on the account. */}
+        <select
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="+12622282491"
           className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground"
-        />
-        <datalist id="ppl-twilio-numbers">
+        >
+          <option value="">Choose a number…</option>
           {numbers.map((n) => (
-            <option key={n} value={n} />
+            <option key={n} value={n}>
+              {n}
+            </option>
           ))}
-        </datalist>
+        </select>
       </label>
       <label className="grid gap-1 text-xs text-muted-foreground">
         Forward to (E.164){picked?.forward_to ? ` — campaign has ${picked.forward_to}` : ''}

@@ -134,3 +134,22 @@ describe('the voice route bridges a PPL call only to the account holder', () => 
     expect(plain.indexOf('may be recorded')).toBeLessThan(plain.indexOf('<Dial record='));
   });
 });
+
+describe('caller ID on the bridge', () => {
+  it('presents the inbound caller, escaped, when given; omits the attribute otherwise', () => {
+    const withId = bridgeTwiml({
+      businessName: 'X',
+      forwardTo: '+1',
+      actionUrl: 'https://x/a',
+      callerId: '+15551234567',
+    });
+    expect(withId).toContain('callerId="+15551234567"');
+    const without = bridgeTwiml({ businessName: 'X', forwardTo: '+1', actionUrl: 'https://x/a' });
+    expect(without).not.toContain('callerId');
+  });
+  it('the plain forward path sets callerId from the inbound From too', () => {
+    const src = require('node:fs').readFileSync('app/api/twilio/geo/[campaignId]/route.ts', 'utf8');
+    expect(src).toContain("searchParams.get('From')");
+    expect(src).toMatch(/callerIdAttr/);
+  });
+});

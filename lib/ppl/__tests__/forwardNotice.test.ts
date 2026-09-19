@@ -15,7 +15,20 @@ import {
 import { FORBIDDEN_IVR_PHRASES } from '@/lib/ppl/ivr';
 
 describe('the notice', () => {
-  const t = forwardNoticeText('graftontowing.com');
+  const t = forwardNoticeText('graftontowing.com', {
+    senderName: 'Sandon Jurowski',
+    industryLabel: 'Towing',
+  });
+  it('is the operator’s wording, first name only, calls not leads', () => {
+    expect(t).toBe(
+      'Hey, Sandon here from QuickSites. Towing calls that come in to graftontowing.com are being forwarded to you at no charge. ' +
+        'Callers hear a short "this call may be recorded" notice first. Reply STOP any time to stop receiving them.'
+    );
+  });
+  it('degrades honestly without a sender name or industry', () => {
+    const plain = forwardNoticeText('example.com');
+    expect(plain).toMatch(/^Hey, this is QuickSites\. Calls that come in to example\.com/);
+  });
   it('names the domain, says it is free, says who, and says how to stop', () => {
     expect(t).toContain('graftontowing.com');
     expect(t).toMatch(/no charge/i);
@@ -23,7 +36,7 @@ describe('the notice', () => {
     expect(t).toMatch(/Reply STOP/);
   });
   it('mentions the recording notice callers hear', () => {
-    expect(t).toMatch(/recording notice/i);
+    expect(t).toMatch(/may be recorded/i);
   });
   it('makes no pitch and no claim', () => {
     for (const p of ['$', 'lead', 'pay', 'price', 'customer', ...FORBIDDEN_IVR_PHRASES]) {

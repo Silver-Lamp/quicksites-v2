@@ -2,7 +2,7 @@
 //
 // Shared public/marketing footer. The load-bearing bit is the "made by Point Seven Studio" link →
 // the cross-product studio hub on HiveJournal (parity with hivejournal.com's own footer), tying
-// QuickSites into the Point Seven Studio family (HiveJournal, delivered.menu, DeckSketch, …).
+// QuickSites into the Point Seven Studio family (HiveJournal, delivered.menu, DeckSketch, DomeSketch — domesketch.ai, "dome design + a builders directory" — …).
 // Drop <SiteFooter /> at the bottom of any SiteHeader-fronted marketing page.
 
 import Link from 'next/link';

@@ -190,6 +190,18 @@ export const DEFAULT_BLOCK_CONTENT = {
     links: [{ label: 'Home', href: '/', appearance: 'default' }],
   },
 
+  builders_directory: {
+    title: '',
+    subtitle: '',
+    trade_label: 'builders',
+    region_label: '',
+    entries: [],
+    cta_label: '',
+    cta_link: '',
+    listing_cta_label: '',
+    listing_cta_link: '',
+  },
+
   service_areas: {
     // normalized shape the schema’s preprocessor expects
     cities: [],

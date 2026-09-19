@@ -228,6 +228,15 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   is the business's balance, and it is a *prepaid balance*, never "escrow". Adapted from a Gemini
   draft that never wired its billing step, accepted unsigned Stripe events, and could credit a
   reload twice; each is a constraint or a test here. Flag `PPL_ENABLED`; gate `ppl` on `/status`.
+- **Dome builders — directory sites on `<state>domebuilders.com` with DomeSketch (2026-09-19)**:
+  the first pay-per-call mass-deploy cohort (`docs/PPL_VERTICAL.md` §9). 13 state + 8 national
+  exact-match domains bought after a Places sweep showed supply per state; a **directory** site
+  per state (`lib/domeBuilders/buildDirectorySite.ts`, new block `builders_directory`, industry
+  `dome_builder`, launcher `scripts/dome-builders-launch.mts`). ⚠️ **A directory is not a
+  business**: no services, phone or "free quote" copy under a name nobody owns — the pure
+  builder swaps the scaffold's blocks and a test pins the page shape; every entry renders its
+  `source_url`. DomeSketch (`domesketch.ai`, a mesh peer since 2026-09-18) supplies the
+  calculator CTA and, once it answers the crosstalk proposal, a directory feed.
 - **Store detection ≠ store import (2026-09-16)**: the URL rebuild now decides *"was this a
   store?"* statically (`lib/rebuild/storefrontDetect.ts` — code/CDN signatures for
   Shopify/Shoptop/Shoplazza/Shopline/WooCommerce/…, product-path + cart heuristics, Product

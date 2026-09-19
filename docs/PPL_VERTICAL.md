@@ -268,6 +268,23 @@ Agency plan not billable (**O**), Vercel Analytics toggle (**O**), HJ rehearsal 
 43 unmailable trade drafts (**O** decides), delete the dead $500 checkout route (S), save
 Gemini's prose (**O**, low).
 
+### Dome builders — the first mass-deploy cohort, LIVE 2026-09-19
+
+Sandon: *"work with DomeSketch (new to the grid) to corner the market on 'dome builders near me'."*
+Measured first (a Places sweep per state, in-state, dome-named — supply, not demand), then bought
+**13 state + 8 national** exact-match `.com`s ($236.25, Vercel registrar, auto-renew), then built
+and published a **directory** site per state (`lib/domeBuilders/buildDirectorySite.ts`, block
+`builders_directory`, industry `dome_builder`, script `scripts/dome-builders-launch.mts`): hero →
+sourced builders (Google Maps listing or DomeSketch's `orgs.json` `sources[]`) → dome FAQ → "are
+you a builder here? get listed". ⚠️ **A directory page must never speak as a business** — no
+services, no phone, no "free quote"; the scaffold's first-person copy is exactly the invented-
+business failure, so the builder replaces the blocks and a test pins hero→directory→faq→contact.
+Live: `texasdomebuilders.com` (9 entries), `floridadomebuilders.com` (7), … 41 entries across 13
+states. The DomeSketch calculator is the CTA (UTM `utm_source=<domain>`). Proposal to DomeSketch
+in crosstalk (2026-09-19 21:41); their feed URL + region data will replace the repo read. Next:
+a tracking number per state page → free forward to the best listed builder → notice → PPL at a
+dome lead price. National domains (`domebuildersnearme.com`, …) are registered but unpointed.
+
 ### Explicitly not planned
 
 - ZIP/intent IVR menus before the bridge (friction; disputes cover it).

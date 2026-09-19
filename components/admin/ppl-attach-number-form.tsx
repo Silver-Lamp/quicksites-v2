@@ -68,7 +68,7 @@ export default function PplAttachNumberForm({
         ? 'notice sent'
         : `notice not sent (${j.notice?.reason ?? '?'})`;
       setResult(
-        `attached — voice → ${j.voiceUrl}; was ${j.previous?.voiceApplicationSid ? `flow ${j.previous.voiceApplicationSid}` : j.previous?.voiceUrl || 'unset'}; ${notice}`
+        `attached — voice → ${j.voiceUrl}; was ${j.previous?.voiceApplicationSid ? `flow ${j.previous.voiceApplicationSid}` : j.previous?.voiceUrl || 'unset'}${j.previous?.accountSid ? `; moved from subaccount ${j.previous.accountSid}` : ''}; ${notice}`
       );
       router.refresh();
     } catch (err: any) {

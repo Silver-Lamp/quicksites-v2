@@ -108,6 +108,7 @@ export async function POST(req: Request) {
       previous: {
         voiceUrl: r.previousVoiceUrl,
         voiceApplicationSid: r.previousVoiceApplicationSid,
+        accountSid: r.transferredFrom,
       },
     });
   } catch (e: any) {

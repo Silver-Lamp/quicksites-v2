@@ -9,11 +9,25 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { sendSms } from '@/lib/sms/sendSms';
+import { getSenderProfile } from '@/lib/outreach/senderProfile';
+import { KEY_TO_LABEL } from '@/lib/industries';
 
-export function forwardNoticeText(domain: string): string {
+/**
+ * The notice, in the operator's voice (Sandon's wording, 2026-09-18). "Calls", never "leads":
+ * a lead is our word for what we might sell later; a call is what is literally landing on their
+ * phone today, so the message stays a notice and not the start of a pitch. `senderName` comes
+ * from the outreach sender profile so a reseller's notice carries their name, not ours.
+ */
+export function forwardNoticeText(
+  domain: string,
+  opts: { senderName?: string | null; industryLabel?: string | null } = {}
+): string {
+  const first = (opts.senderName ?? '').trim().split(/\s+/)[0] || '';
+  const who = first ? `Hey, ${first} here from QuickSites.` : 'Hey, this is QuickSites.';
+  const kind = opts.industryLabel ? `${opts.industryLabel} calls` : 'Calls';
   return (
-    `Calls to the phone number on ${domain} are being forwarded to you at no charge by QuickSites (quicksites.ai). ` +
-    `Callers hear a recording notice first. Reply STOP to stop receiving these calls.`
+    `${who} ${kind} that come in to ${domain} are being forwarded to you at no charge. ` +
+    `Callers hear a short "this call may be recorded" notice first. Reply STOP any time to stop receiving them.`
   );
 }
 
@@ -53,9 +67,7 @@ export async function isOptedOut(phone: string): Promise<boolean> {
  * Send the notice once per campaign. Returns why it did not send when it did not; never throws
  * for a business reason (opted out / already sent / no number) — those are outcomes, not errors.
  */
-export async function sendForwardNotice(
-  campaignId: string
-): Promise<
+export async function sendForwardNotice(campaignId: string): Promise<
   | { sent: true }
   | {
       sent: false;
@@ -65,7 +77,7 @@ export async function sendForwardNotice(
 > {
   const { data: c, error } = await supabaseAdmin
     .from('geo_industry_campaigns')
-    .select('id, domain, forward_to, forward_notice_sent_at')
+    .select('id, domain, industry_key, forward_to, forward_notice_sent_at')
     .eq('id', campaignId)
     .maybeSingle();
   if (error || !c) throw new Error(`campaign lookup failed: ${error?.message ?? 'not found'}`);
@@ -73,7 +85,14 @@ export async function sendForwardNotice(
   if (c.forward_notice_sent_at) return { sent: false, reason: 'already_sent' };
   if (await isOptedOut(c.forward_to)) return { sent: false, reason: 'opted_out' };
 
-  const r = await sendSms(c.forward_to, forwardNoticeText(c.domain));
+  const sender = await getSenderProfile().catch(() => null);
+  const industryLabel = c.industry_key
+    ? ((KEY_TO_LABEL as Record<string, string>)[c.industry_key] ?? null)
+    : null;
+  const r = await sendSms(
+    c.forward_to,
+    forwardNoticeText(c.domain, { senderName: sender?.name ?? null, industryLabel })
+  );
   if (!r.ok) return { sent: false, reason: 'sms_failed', detail: r.error };
   await supabaseAdmin
     .from('geo_industry_campaigns')

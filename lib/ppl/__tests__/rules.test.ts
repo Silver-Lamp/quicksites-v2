@@ -147,9 +147,12 @@ describe('caller ID on the bridge', () => {
     const without = bridgeTwiml({ businessName: 'X', forwardTo: '+1', actionUrl: 'https://x/a' });
     expect(without).not.toContain('callerId');
   });
-  it('the plain forward path sets callerId from the inbound From too', () => {
+  it('both bridge paths present OUR number as caller ID and speak the caller’s number in the whisper', () => {
     const src = require('node:fs').readFileSync('app/api/twilio/geo/[campaignId]/route.ts', 'utf8');
-    expect(src).toContain("searchParams.get('From')");
-    expect(src).toMatch(/callerIdAttr/);
+    expect(src).toContain('callerId: campaign.tracking_number');
+    expect(src).toContain('const ownNumber = campaign?.tracking_number');
+    expect(src).not.toMatch(/callerId: searchParams\.get\('From'\)/);
+    expect(src).not.toMatch(/callerId="\$\{esc\(from\)\}"/);
+    expect(src).toContain('calling from ${spokenNumber(');
   });
 });

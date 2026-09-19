@@ -34,7 +34,19 @@ export async function POST(req: Request) {
     Direction,
     CallStatus,
     CallDuration,
+    DialCallStatus,
+    DialCallDuration,
+    RecordingUrl,
   } = callData;
+
+  // This URL is hit three ways: a status callback (CallStatus/CallDuration), a <Dial action>
+  // when the bridged leg ends (DialCallStatus/DialCallDuration — the parent call is still
+  // "in-progress" at that moment, so CallStatus is useless here), and a recording status
+  // callback (RecordingUrl, no status fields at all). Read whichever arrived; never overwrite
+  // a real value with undefined.
+  const status = DialCallStatus ? `dial-${DialCallStatus}` : CallStatus || undefined;
+  const durationRaw = DialCallDuration ?? CallDuration;
+  const duration = durationRaw ? parseInt(durationRaw, 10) : undefined;
 
   // 🔍 Lookup template by phone
   let matchedSlug: string | null = null;
@@ -55,21 +67,30 @@ export async function POST(req: Request) {
     matchedDomain = match.custom_domain || null;
   }
 
-  const { error } = await supabase.from('call_logs').upsert({
-    call_sid: CallSid,
-    from_number: From,
-    to_number: To,
-    direction: Direction,
-    call_status: CallStatus,
-    call_duration: CallDuration ? parseInt(CallDuration, 10) : null,
-    template_slug: matchedSlug,
-    custom_domain: matchedDomain,
-  });
+  const row: Record<string, unknown> = { call_sid: CallSid };
+  if (From) row.from_number = From;
+  if (To) row.to_number = To;
+  if (Direction) row.direction = Direction;
+  if (status) row.call_status = status;
+  if (duration !== undefined && !Number.isNaN(duration)) row.call_duration = duration;
+  if (matchedSlug) row.template_slug = matchedSlug;
+  if (matchedDomain) row.custom_domain = matchedDomain;
+  if (RecordingUrl) row.recording_url = RecordingUrl;
+
+  const { error } = await supabase.from('call_logs').upsert(row);
 
   if (error) {
     console.error('[Twilio webhook] Supabase insert failed:', error);
-    return NextResponse.json({ error: 'Insert failed' }, { status: 500 });
+    // Still TwiML: a logging failure is ours, and must not make Twilio play "an application
+    // error has occurred" to the caller.
   }
 
-  return NextResponse.json({ success: true });
+  // ⚠️ TwiML, not JSON. As a <Dial action> URL this response is parsed as TwiML; a JSON body
+  // is a parse error (Twilio 12100) and the caller hears "an application error has occurred,
+  // goodbye" — which is exactly what the first real call through a tracking number got on
+  // 2026-09-19. Status/recording callbacks ignore the body, so TwiML is right for all three.
+  return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><Response/>', {
+    status: 200,
+    headers: { 'Content-Type': 'text/xml' },
+  });
 }

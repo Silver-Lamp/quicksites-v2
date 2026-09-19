@@ -24,6 +24,9 @@ export const AGENCY_FOUNDER: AgencyPlanPrice = { platform: 15, perSite: 5 };
 /** The published rate a new agency pays today. */
 export const AGENCY_PUBLIC: AgencyPlanPrice = { platform: 19, perSite: 6 };
 
+/** "Have it built for me" — the done-for-you build + care plans on /pricing (USD, whole dollars). */
+export const DONE_FOR_YOU = { buildFrom: 1995, careSelfService: 49, careManaged: 149 } as const;
+
 /** What an agency pays us for `sites` client sites on a tier, per month. Pure. */
 export function agencyMonthlyCost(sites: number, plan: AgencyPlanPrice = AGENCY_PUBLIC): number {
   const n = Math.max(0, Math.floor(sites));

@@ -28,10 +28,11 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { PathChooser } from '@/components/pricing/path-chooser';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import SiteHeader from '@/components/site/site-header';
-import { AGENCY_FOUNDER, AGENCY_PUBLIC } from '@/lib/billing/planPricing';
+import { AGENCY_FOUNDER, AGENCY_PUBLIC, DONE_FOR_YOU } from '@/lib/billing/planPricing';
 import PageBackdrop from '@/components/site/page-backdrop';
 import SiteFooter from '@/components/site/site-footer';
 
@@ -80,7 +81,6 @@ const LEADGEN_PLAN = { founderFrom: 49, fullFrom: 99, premiumFull: 399 };
 // Done-for-you: a person builds and maintains the site. Hosting stays free on every plan; these
 // pay for design, migration and support hours, never for servers. The figures here are the ones
 // quoted in proposals (first: a Tampa law firm, 2026-09-17) — change them here, never in an email.
-const DONE_FOR_YOU = { buildFrom: 1995, careSelfService: 49, careManaged: 149 };
 const PARTNER_FEE_SHARE = 0.8; // partners keep 80% of the order fee
 
 const CTA = {
@@ -142,70 +142,7 @@ function Feature({ text }: { text: string }) {
   );
 }
 
-// ---- Top-of-page path chooser ----
-function PathChooser() {
-  const paths = [
-    {
-      icon: Store,
-      title: 'Build my own site',
-      blurb: 'Free to build & host. Pay only when you sell.',
-      href: '#merchant',
-      tag: 'Most popular',
-    },
-    {
-      icon: Phone,
-      title: 'No online store',
-      blurb: 'Service trades: flat monthly on a premium local domain.',
-      href: '#leadgen',
-      tag: 'Lead-gen',
-    },
-    {
-      icon: Users,
-      title: 'Run sites for clients',
-      blurb: 'Flat, predictable pricing for agencies.',
-      href: '#agency',
-      tag: 'Agencies',
-    },
-    {
-      icon: Handshake,
-      title: 'Resell under my brand',
-      blurb: 'White-label and earn 80% on every order, for life.',
-      href: '#partner',
-      tag: 'Partners',
-    },
-    {
-      icon: Wrench,
-      title: 'Have it built for me',
-      blurb: `Fixed-price build from ${usd0.format(DONE_FOR_YOU.buildFrom)}. Hosting stays free.`,
-      href: '#done-for-you',
-      tag: 'Done for you',
-    },
-  ];
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-      {paths.map((p) => (
-        <Link key={p.title} href={p.href} className="group">
-          <Card className="h-full border-zinc-800/60 transition hover:border-sky-500/50 hover:bg-sky-500/[0.03]">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <p.icon className="h-6 w-6 text-sky-400" />
-                <Badge variant="secondary">{p.tag}</Badge>
-              </div>
-              <CardTitle className="mt-2 text-lg">{p.title}</CardTitle>
-              <CardDescription>{p.blurb}</CardDescription>
-            </CardHeader>
-            <CardFooter>
-              <span className="inline-flex items-center text-sm font-medium text-sky-400">
-                See details{' '}
-                <ArrowRight className="ml-1 h-4 w-4 transition group-hover:translate-x-0.5" />
-              </span>
-            </CardFooter>
-          </Card>
-        </Link>
-      ))}
-    </div>
-  );
-}
+// ---- Top-of-page path chooser: shared with /build (components/pricing/path-chooser) ----
 
 // ---- Path A: Merchant order-fee calculator ----
 function OrderFeeCalc() {

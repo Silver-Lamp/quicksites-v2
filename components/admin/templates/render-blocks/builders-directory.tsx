@@ -21,6 +21,7 @@ type Entry = {
   kinds?: string[];
   source_label?: string;
   source_url?: string;
+  affiliate_url?: string;
 };
 
 type Props = {
@@ -46,6 +47,8 @@ function pick(block: Block, override?: any) {
     ctaLink: String(src.cta_link ?? ''),
     listingCtaLabel: String(src.listing_cta_label ?? ''),
     listingCtaLink: String(src.listing_cta_link ?? ''),
+    affiliateDisclosure: String(src.affiliate_disclosure ?? ''),
+    hasAffiliate: entries.some((e) => !!e.affiliate_url),
   };
 }
 
@@ -136,7 +139,19 @@ export default function RenderBuildersDirectory({
                       {e.phone}
                     </a>
                   ) : null}
-                  {e.website ? (
+                  {e.affiliate_url ? (
+                    <a
+                      href={e.affiliate_url}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
+                      {hostOf(e.website || e.affiliate_url)}
+                      <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                        (affiliate)
+                      </span>
+                    </a>
+                  ) : e.website ? (
                     <a
                       href={e.website}
                       target="_blank"
@@ -168,6 +183,12 @@ export default function RenderBuildersDirectory({
             ))}
           </ul>
         )}
+
+        {d.hasAffiliate && d.affiliateDisclosure ? (
+          <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+            {d.affiliateDisclosure}
+          </p>
+        ) : null}
 
         {d.listingCtaLink && d.listingCtaLabel ? (
           <p className="mt-6 text-sm text-muted-foreground">

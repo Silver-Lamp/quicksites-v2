@@ -11,6 +11,10 @@ import { assemblePplOps, type PplStep } from '@/lib/ppl/ops';
 import { usd } from '@/lib/ppl/rules';
 import PplAccountActions from '@/components/admin/ppl-account-actions';
 import PplAttachNumberForm from '@/components/admin/ppl-attach-number-form';
+import PplDisputeActions from '@/components/admin/ppl-dispute-actions';
+import { listOpenDisputes, DISPUTE_CATEGORIES } from '@/lib/ppl/disputes';
+import { statementUrl } from '@/lib/ppl/statementToken';
+import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import { accountFamily, listTrackingNumbers, twilioConfigured } from '@/lib/outreach/callTracking';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
@@ -73,6 +77,8 @@ export default async function PplOpsPage() {
   // this page is the only place a person can see what Twilio holds without the console).
   const twilioNumbers = twilioConfigured() ? await listTrackingNumbers().catch(() => []) : [];
   const family = twilioConfigured() ? await accountFamily().catch(() => null) : null;
+  const openDisputes = await listOpenDisputes().catch(() => []);
+  const base = publicBaseUrl();
   const { data: allCampaigns } = await supabaseAdmin
     .from('geo_industry_campaigns')
     .select('id, domain, forward_to, tracking_number')
@@ -313,13 +319,72 @@ export default async function PplOpsPage() {
                       )}
                     </td>
                     <td className="px-3 py-2">
-                      <PplAccountActions id={a.id} status={a.status} />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <PplAccountActions id={a.id} status={a.status} />
+                        <a
+                          href={statementUrl(a.id, base)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded border border-border px-2 py-1 text-xs hover:bg-muted"
+                          title="The business's own statement page (signed link — send it to them)"
+                        >
+                          Statement ↗
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        )}
+      </section>
+
+      {/* Open disputes */}
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Open disputes</h2>
+        <p className="text-sm text-muted-foreground">
+          A business contested a charge from its statement page. Listen to the recording, then
+          decide; approval credits the full amount and both outcomes email the business.
+        </p>
+        {openDisputes.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">None open.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {openDisputes.map((d) => (
+              <li
+                key={d.id}
+                className="rounded-xl border border-amber-500/30 bg-card p-3 text-sm text-card-foreground"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div>
+                    <span className="font-medium">{d.business_name}</span>
+                    <span className="text-muted-foreground">
+                      {' '}
+                      · {DISPUTE_CATEGORIES[d.category] ?? d.category} · {usd(-d.amount_cents)}
+                    </span>
+                    {d.caller_number ? (
+                      <span className="text-muted-foreground"> · from {d.caller_number}</span>
+                    ) : null}
+                    {d.duration_seconds ? (
+                      <span className="text-muted-foreground"> · {d.duration_seconds}s</span>
+                    ) : null}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{ago(d.created_at)}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{d.explanation}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <a
+                    href={`/api/leads/recording/${encodeURIComponent(d.call_sid)}?t=${encodeURIComponent(statementUrl(d.account_id, base).split('/leads/')[1] ?? '')}`}
+                    className="text-xs text-sky-400 hover:text-sky-300"
+                  >
+                    ▶ recording
+                  </a>
+                  <PplDisputeActions id={d.id} />
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

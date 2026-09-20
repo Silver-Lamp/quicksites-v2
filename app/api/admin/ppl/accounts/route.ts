@@ -12,6 +12,8 @@ import { getGeoCampaign, setCampaignPricing } from '@/lib/outreach/geoCampaigns'
 import { createPplAccount, getPplAccountByCampaign, listPplAccounts } from '@/lib/ppl/accounts';
 import { createDepositCheckout, pplEnabled } from '@/lib/ppl/billing';
 import { PPL_DEFAULTS } from '@/lib/ppl/rules';
+import { statementUrl } from '@/lib/ppl/statementToken';
+import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -84,5 +86,10 @@ export async function POST(req: Request) {
 
   const deposit = b.deposit_cents ?? PPL_DEFAULTS.reloadAmountCents;
   const checkout = await createDepositCheckout(account, deposit);
-  return NextResponse.json({ account, deposit_cents: deposit, checkout_url: checkout.url });
+  return NextResponse.json({
+    account,
+    deposit_cents: deposit,
+    checkout_url: checkout.url,
+    statement_url: statementUrl(account.id, publicBaseUrl()),
+  });
 }

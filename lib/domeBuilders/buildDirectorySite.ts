@@ -14,6 +14,7 @@
 // blocks do not. Pure: returns template data, writes nothing.
 
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
+import { DIRECTORY_ORDERING_NOTE, sortAlphabetically } from '@/lib/domeBuilders/domesketchFeed';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 
 export type DirectoryEntry = {
@@ -82,11 +83,10 @@ export function buildDirectorySite(input: DirectorySiteInput) {
   const directory: any = createDefaultBlock('builders_directory');
   directory.content = {
     title: `Builders serving ${state}`,
-    subtitle:
-      'Every listing names where the information came from. We do not claim licensing, insurance or prices for anyone — ask the builder.',
+    subtitle: `${DIRECTORY_ORDERING_NOTE} Every listing names where the information came from. We do not claim licensing, insurance or prices for anyone — ask the builder.`,
     trade_label: 'dome builders',
     region_label: state,
-    entries,
+    entries: sortAlphabetically(entries),
     cta_label: 'Open the DomeSketch calculator',
     cta_link: calculatorUrl,
     listing_cta_label: `Are you a dome builder in ${state}? Get listed →`,

@@ -3,7 +3,8 @@
 // Launch the <state>domebuilders.com directory sites (docs/PPL_VERTICAL.md §9; DomeSketch
 // proposal 2026-09-19). For each state: sweep Google Places for dome builders IN the state,
 // keep only what looks like a builder (never a glamping rental, a stadium, a conservatory),
-// add DomeSketch's directory entries whose regions name the state, build the directory site
+// add DomeSketch's directory entries whose regions name the state (live feed, terms honoured —
+// lib/domeBuilders/domesketchFeed.ts), build the directory site
 // (lib/domeBuilders/buildDirectorySite), insert the template, attach the domain to the Vercel
 // project, record the campaign, publish.
 //
@@ -18,12 +19,10 @@
 import ws from 'ws';
 (globalThis as any).WebSocket ??= ws;
 
-import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 
 const APPLY = process.argv.includes('--apply');
 const OPERATOR_ID = 'fbde34ec-16e7-4dfe-94b5-ca2cc4d448d2';
-const DOMESKETCH_ORGS = '/Users/sandonjurowski/Desktop/_SilverLamp/domesketch/data/orgs.json';
 
 const STATES: Array<{ state: string; code: string }> = [
   { state: 'Texas', code: 'TX' },
@@ -119,28 +118,20 @@ async function placesSweep(state: string, code: string): Promise<Entry[]> {
   return [...out.values()];
 }
 
-function domesketchEntries(code: string): Entry[] {
-  const orgs = JSON.parse(readFileSync(DOMESKETCH_ORGS, 'utf8')) as any[];
-  return orgs
-    .filter(
-      (o) =>
-        (o.regions ?? []).includes(`US-${code}`) && Array.isArray(o.sources) && o.sources.length
-    )
-    .map((o) => {
-      const src = o.sources[0];
-      const kinds = [...(o.categories ?? [])]
-        .map((c: string) => c.replace(/-/g, ' '))
-        .map((c) => c[0].toUpperCase() + c.slice(1));
-      return {
-        name: o.name,
-        region: code,
-        website: o.url ?? '',
-        summary: o.summary ?? '',
-        kinds,
-        source_label: `DomeSketch directory${src?.label ? ` · ${src.label}` : ''}`,
-        source_url: typeof src === 'string' ? src : (src?.url ?? o.url ?? ''),
-      } as Entry;
-    });
+let FEED_ORGS: import('@/lib/domeBuilders/domesketchFeed').DomesketchOrg[] | null = null;
+
+/** DomeSketch orgs whose regions name the state — from the live feed (contract: terms block). */
+async function domesketchEntries(code: string): Promise<Entry[]> {
+  const { fetchDomesketchFeed, orgEntryFields } = await import('@/lib/domeBuilders/domesketchFeed');
+  FEED_ORGS ??= (await fetchDomesketchFeed()).orgs;
+  return FEED_ORGS.filter(
+    (o) => (o.regions ?? []).includes(`US-${code}`) && Array.isArray(o.sources) && o.sources.length
+  ).map((o) => {
+    const kinds = [...(o.categories ?? [])]
+      .map((c: string) => c.replace(/-/g, ' '))
+      .map((c) => c[0].toUpperCase() + c.slice(1));
+    return { ...orgEntryFields(o), region: code, kinds } as Entry;
+  });
 }
 
 async function main() {
@@ -150,6 +141,7 @@ async function main() {
   );
   const { createGeoCampaign } = await import('@/lib/outreach/geoCampaigns');
   const { addProjectDomain } = await import('@/lib/domains/vercel');
+  const { calculatorUrl: calcUrl } = await import('@/lib/domeBuilders/domesketchFeed');
 
   for (const { state, code } of STATES) {
     const domain = `${state.toLowerCase().replace(/[^a-z]/g, '')}domebuilders.com`;
@@ -162,7 +154,7 @@ async function main() {
       console.log(`${domain}: campaign exists (${existing.id}) — skip`);
       continue;
     }
-    const fromDs = domesketchEntries(code);
+    const fromDs = await domesketchEntries(code);
     const norm = (n: string) =>
       n
         .toLowerCase()
@@ -172,7 +164,7 @@ async function main() {
       (e) => !fromDs.some((d) => norm(d.name) === norm(e.name))
     );
     const entries = [...fromDs, ...fromPlaces].filter(entryIsClean);
-    const calculatorUrl = `https://domesketch.ai/?utm_source=${domain}&utm_medium=directory&utm_campaign=dome_builders`;
+    const calculatorUrl = calcUrl(domain);
     const site = buildDirectorySite({ state, stateCode: code, domain, entries, calculatorUrl });
     console.log(
       `${domain}: ${entries.length} entries (${fromDs.length} DomeSketch, ${fromPlaces.length} Places) — ${entries.map((e) => e.name).join('; ')}`

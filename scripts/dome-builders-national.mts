@@ -23,7 +23,6 @@ import { join } from 'node:path';
 
 const APPLY = process.argv.includes('--apply');
 const OPERATOR_ID = 'fbde34ec-16e7-4dfe-94b5-ca2cc4d448d2';
-const DOMESKETCH_ORGS = '/Users/sandonjurowski/Desktop/_SilverLamp/domesketch/data/orgs.json';
 const KIT = 'geodesicdomebuilders.com';
 const CHOOSER = 'domebuildersnearme.com';
 const REDIRECTS = [
@@ -104,9 +103,10 @@ async function main() {
     );
     states.push({ state: c.city, domain: c.domain, count: dir?.content?.entries?.length ?? 0 });
   }
-  const orgs = JSON.parse(readFileSync(DOMESKETCH_ORGS, 'utf8'));
-  const utm = (d: string) =>
-    `https://domesketch.ai/?utm_source=${d}&utm_medium=directory&utm_campaign=dome_builders`;
+  const { fetchDomesketchFeed, calculatorUrl: utm } = await import(
+    '@/lib/domeBuilders/domesketchFeed'
+  );
+  const orgs = (await fetchDomesketchFeed()).orgs;
   const kit = buildKitMakersSite({ domain: KIT, orgs, calculatorUrl: utm(KIT), states });
   const chooser = buildStateChooserSite({
     domain: CHOOSER,

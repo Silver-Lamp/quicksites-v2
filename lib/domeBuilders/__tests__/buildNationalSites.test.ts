@@ -10,6 +10,7 @@ import {
 
 const orgs = [
   {
+    id: 'pacific-domes',
     name: 'Pacific Domes',
     url: 'https://pacificdomes.com/',
     regions: ['US-OR', 'US', 'worldwide'],
@@ -18,6 +19,7 @@ const orgs = [
     sources: [{ url: 'https://pacificdomes.com/', note: 'x' }],
   },
   {
+    id: 'domerama',
     name: 'Domerama',
     url: 'https://www.domerama.com/',
     regions: ['online'],
@@ -25,6 +27,7 @@ const orgs = [
     sources: [{ url: 'https://www.domerama.com/' }],
   },
   {
+    id: 'no-source-co',
     name: 'No Source Co',
     url: 'https://x.test',
     regions: ['US'],
@@ -41,7 +44,10 @@ describe('orgsToEntries', () => {
   it('keeps buyer-facing orgs with a source; drops software and unsourced ones', () => {
     const e = orgsToEntries(orgs);
     expect(e.map((x) => x.name)).toEqual(['Pacific Domes']);
-    expect(e[0].source_url).toBe('https://pacificdomes.com/');
+    // Feed terms: attribution names the directory and links to THEIR listing, not the org's page.
+    expect(e[0].source_label).toBe('Listing from the DomeSketch builders directory');
+    expect(e[0].source_url).toBe('https://domesketch.ai/builders#pacific-domes');
+    expect(e[0].website).toBe('https://pacificdomes.com/');
     expect(e[0].region).toContain('OR');
     expect(BUYER_FACING_CATEGORIES.has('software')).toBe(false);
   });

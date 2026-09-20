@@ -27,6 +27,7 @@ const LAPSED_DAYS = 90;
 import { loadGuestFunnel } from '@/lib/admin/guestFunnelServer';
 import type { GuestFunnel } from '@/lib/admin/guestFunnel';
 import { loadCardResponse } from '@/lib/outreach/cardResponseServer';
+import { fetchFoundingFamilyStats, type FoundingFamilyStats } from '@/lib/mesh/hjFoundingFamilies';
 import type { CardResponse } from '@/lib/outreach/cardResponse';
 
 export type OpsClients = {
@@ -57,6 +58,8 @@ export type OpsSnapshot = {
   guestFunnel: GuestFunnel;
   /** Claim-postcard response: mailed → arrived → QR scans → claims (lib/outreach/cardResponse.ts). */
   cardResponse: CardResponse;
+  /** HiveJournal's Cornerstone founding-families pilot (lib/mesh/hjFoundingFamilies.ts) — counts only. */
+  hjFoundingFamilies: FoundingFamilyStats;
 };
 
 /** Platform revenue roll-up from paid orders + attributed commissions. */
@@ -117,14 +120,16 @@ async function loadClients(nowMs: number): Promise<OpsClients> {
 /** Assemble the full server-side snapshot for the ops dashboard. */
 export async function assembleOpsSnapshot(): Promise<OpsSnapshot> {
   const nowMs = Date.now();
-  const [inv, revenue, clients, market, guestFunnel, cardResponse] = await Promise.all([
-    assembleOwnedInventory(12),
-    loadRevenue(),
-    loadClients(nowMs),
-    loadProspectsWorkspaceData(),
-    loadGuestFunnel(),
-    loadCardResponse(),
-  ]);
+  const [inv, revenue, clients, market, guestFunnel, cardResponse, hjFoundingFamilies] =
+    await Promise.all([
+      assembleOwnedInventory(12),
+      loadRevenue(),
+      loadClients(nowMs),
+      loadProspectsWorkspaceData(),
+      loadGuestFunnel(),
+      loadCardResponse(),
+      fetchFoundingFamilyStats(),
+    ]);
 
   return {
     inventory: {
@@ -143,5 +148,6 @@ export async function assembleOpsSnapshot(): Promise<OpsSnapshot> {
     },
     guestFunnel,
     cardResponse,
+    hjFoundingFamilies,
   };
 }

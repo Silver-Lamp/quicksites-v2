@@ -18,6 +18,7 @@ import DomainSpendChart from '@/components/admin/domain-spend-chart';
 import RevenueSimulator from '@/components/admin/ops/revenue-simulator';
 import { GuestReachableTile } from '@/components/admin/ops/guest-leads-panel';
 import { KpiTile, Gauge, SegmentBar, SeverityTag, formatMoney, type Tone } from '@/components/admin/ops/ops-widgets';
+import { HJ_FOUNDING_FAMILY_LINKS, statsUnavailableText } from '@/lib/mesh/hjFoundingFamilies';
 import SuperAdminSetupAlerts from '@/components/admin/super-admin-setup-alerts';
 
 /** Count no-website competition clusters (city×industry, ≥2) with no live campaign. */
@@ -76,7 +77,7 @@ const CATEGORY_META: Record<OpsCategory, { label: string; emoji: string }> = {
 };
 
 export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot }) {
-  const { inventory, revenue, clients, markets, guestFunnel, cardResponse } = snapshot;
+  const { inventory, revenue, clients, markets, guestFunnel, cardResponse, hjFoundingFamilies } = snapshot;
 
   const [gscByDomain, setGscByDomain] = useState<Record<string, GscStat> | undefined>(undefined);
   const [gscLoaded, setGscLoaded] = useState(false);
@@ -264,6 +265,47 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
             </table>
           </div>
         )}
+      </div>
+
+      {/* HiveJournal's founding-families pilot (the iPad program), mirrored here so the queue is
+          visible from either product. COUNTS ONLY — no applicant name, email or phone crosses the
+          seam (lib/mesh/hjFoundingFamilies.ts). Until HJ accepts the partner key on its counts
+          endpoint, the tiles say "not connected" rather than showing zeros. */}
+      <div className="mt-8">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Cornerstone founding families (HiveJournal)</h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          The iPad pilot: applications, who is waiting on hardware, and how long the oldest has waited. The same numbers HJ&apos;s admin board shows — edits happen there.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {hjFoundingFamilies.ok ? (
+            <>
+              <KpiTile label="Applications" value={hjFoundingFamilies.counts.applications} tone="info" href={HJ_FOUNDING_FAMILY_LINKS[0].href} />
+              <KpiTile label="Waiting on an iPad" value={hjFoundingFamilies.counts.waiting} tone={hjFoundingFamilies.counts.waiting > 0 ? 'warn' : 'good'} sub={hjFoundingFamilies.counts.waiting > 0 ? 'applied, not yet moved' : 'queue clear'} href={HJ_FOUNDING_FAMILY_LINKS[0].href} />
+              <KpiTile label="Oldest waiting" value={hjFoundingFamilies.counts.waiting > 0 ? `${hjFoundingFamilies.counts.oldest_waiting_days}d` : '—'} tone={hjFoundingFamilies.counts.oldest_waiting_days >= 7 ? 'bad' : hjFoundingFamilies.counts.oldest_waiting_days > 0 ? 'warn' : 'neutral'} sub="days since they applied" />
+              <KpiTile label="iPads shipped" value={hjFoundingFamilies.counts.ipads_shipped} tone={hjFoundingFamilies.counts.ipads_shipped > 0 ? 'good' : 'neutral'} sub="shipped, active or completed" />
+              <KpiTile label="Active" value={hjFoundingFamilies.counts.active} tone={hjFoundingFamilies.counts.active > 0 ? 'good' : 'neutral'} sub="inside the two-week window" href={HJ_FOUNDING_FAMILY_LINKS[1].href} />
+            </>
+          ) : (
+            <div className="col-span-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs text-amber-200 sm:col-span-3 lg:col-span-5">
+              <span className="font-semibold">Counts not connected.</span> {statsUnavailableText(hjFoundingFamilies)}
+            </div>
+          )}
+        </div>
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {HJ_FOUNDING_FAMILY_LINKS.map((l) => (
+            <li key={l.href}>
+              <a
+                href={l.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={l.hint}
+                className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-sky-500/50 hover:text-sky-300"
+              >
+                {l.label} <span aria-hidden className="text-zinc-500">↗</span>
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* Holistic Top 5 */}

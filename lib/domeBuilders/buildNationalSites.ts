@@ -15,15 +15,15 @@
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { DOME_FAQ, type DirectoryEntry } from '@/lib/domeBuilders/buildDirectorySite';
+import {
+  DIRECTORY_ORDERING_NOTE,
+  orgEntryFields,
+  sortAlphabetically,
+  type DomesketchOrg,
+} from '@/lib/domeBuilders/domesketchFeed';
 
-export type DomeOrg = {
-  name: string;
-  url?: string;
-  regions?: string[];
-  categories?: string[];
-  summary?: string;
-  sources?: Array<{ url?: string; note?: string } | string>;
-};
+/** @deprecated alias — the feed's record shape lives in lib/domeBuilders/domesketchFeed.ts */
+export type DomeOrg = DomesketchOrg;
 
 /** Categories a person building a dome would contact. Software, open-source and associations are not sellers. */
 export const BUYER_FACING_CATEGORIES = new Set([
@@ -65,19 +65,11 @@ export function orgsToEntries(orgs: DomeOrg[]): DirectoryEntry[] {
   return orgs
     .filter((o) => (o.categories ?? []).some((c) => BUYER_FACING_CATEGORIES.has(c)))
     .filter((o) => Array.isArray(o.sources) && o.sources.length > 0)
-    .map((o) => {
-      const s = o.sources![0];
-      const srcUrl = typeof s === 'string' ? s : (s.url ?? o.url ?? '');
-      return {
-        name: o.name,
-        region: regionLabel(o.regions),
-        website: o.url ?? '',
-        summary: o.summary ?? '',
-        kinds: kindLabels(o.categories),
-        source_label: 'DomeSketch directory',
-        source_url: srcUrl,
-      };
-    });
+    .map((o) => ({
+      ...orgEntryFields(o),
+      region: regionLabel(o.regions),
+      kinds: kindLabels(o.categories),
+    }));
 }
 
 function baseSite(businessName: string) {
@@ -109,7 +101,7 @@ export function buildKitMakersSite(input: {
 }) {
   const businessName = 'Geodesic Dome Builders & Kit Makers';
   const { tpl, page } = baseSite(businessName);
-  const entries = orgsToEntries(input.orgs);
+  const entries = sortAlphabetically(orgsToEntries(input.orgs));
 
   const hero: any = createDefaultBlock('hero');
   hero.content = {
@@ -125,8 +117,7 @@ export function buildKitMakersSite(input: {
   const directory: any = createDefaultBlock('builders_directory');
   directory.content = {
     title: 'Kit makers and suppliers',
-    subtitle:
-      'Every listing names where the information came from. We do not claim licensing, insurance or prices for anyone — ask the company.',
+    subtitle: `${DIRECTORY_ORDERING_NOTE} Every listing names where the information came from. We do not claim licensing, insurance or prices for anyone — ask the company.`,
     trade_label: 'dome kit makers',
     region_label: '',
     entries,

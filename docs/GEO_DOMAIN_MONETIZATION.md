@@ -88,10 +88,14 @@ raw land (unranked) → ranking → page 1 → rented → (churn → re-rent to 
 
 This yields **two pricing windows**:
 
-- **Pre-rank "founder rate" (lock-in):** *"boston-towing.com isn't ranking yet — grab it
-  now at $99/mo, locked for life. Once it's on page 1 it lists at $399."* Monetizes even
-  unranked inventory and locks the customer **before a competitor and before we've done
-  the expensive part (ranking).**
+- **Pre-rank "founder rate":** *"boston-towing.com isn't ranking yet — take it now at
+  $99/mo. Once it's on page 1 it steps up to the $399 list rate."* Monetizes even unranked
+  inventory and lands the customer **before a competitor and before we've done the
+  expensive part (ranking).** ⚠️ **Not "locked for life."** An earlier draft of this line
+  promised that, and the sales rate card repeated it, while `lib/outreach/geoPricing.ts` +
+  the `geo-rank-sync` cron step the subscription up on page one (the owner's own test
+  rental was stepped to $399 on 2026-09-20 when boston-plumbing.com hit position 1). One
+  promise, on every surface: **founder rate until page one, then list.**
 - **Post-rank premium (proof):** *"renton-plumbing.com is #3 for 'plumber near me,' ~320
   impressions/mo, 28 clicks — $399/mo."* Receipts justify the premium to a fresh prospect.
 

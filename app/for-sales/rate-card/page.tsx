@@ -245,7 +245,7 @@ export default async function RateCardPage() {
                 <div className="mt-0.5 text-[10px] uppercase tracking-wider text-zinc-500">
                   per month at the founder rate
                 </div>
-                <div className="mt-1 font-mono text-xs text-zinc-500">locked for life once signed</div>
+                <div className="mt-1 font-mono text-xs text-zinc-500">until the domain reaches page one</div>
               </div>
               <div>
                 <div className="font-mono text-2xl font-bold tabular-nums text-zinc-300">
@@ -311,9 +311,10 @@ export default async function RateCardPage() {
             </table>
           </div>
           <p className="mt-3 max-w-2xl text-xs leading-relaxed text-zinc-500">
-            The lock is the close, not a promise: whoever rents at the founder rate keeps paying it
-            after the domain reaches page one. That makes a ranking a benefit they own rather than a
-            result you owe.
+            The founder rate is what they pay <em>until</em> the domain reaches page one; on page one
+            it steps up to the list rate, and Search Console is the trigger. Say that in the first
+            sentence &mdash; the discount is for the wait, not for life. (The same rule is on{' '}
+            <code>/local-services</code> and <code>/pricing</code>, and it is what the billing code does.)
           </p>
         </Section>
 
@@ -325,7 +326,7 @@ export default async function RateCardPage() {
                 <li>&ldquo;Search <em className="font-mono not-italic text-emerald-200">{pitchable[0]?.proofQuery ?? 'the phrase above'}</em> right now — go ahead, I&apos;ll wait.&rdquo;</li>
                 <li>&ldquo;That&apos;s us on page one today. I&apos;ll send the screenshot with the date on it.&rdquo;</li>
                 <li>&ldquo;That domain goes to exactly one business in town. Right now that could be you.&rdquo;</li>
-                <li>&ldquo;Your rate locks at signup and never moves.&rdquo;</li>
+                <li>&ldquo;It&apos;s the founder rate until the domain reaches page one, then the list rate &mdash; Search Console decides, not us.&rdquo;</li>
               </ul>
             </div>
             <div className="rounded border border-red-900 bg-red-950/20 p-4">
@@ -335,6 +336,7 @@ export default async function RateCardPage() {
                 <li>&ldquo;This&apos;ll get you on page one.&rdquo;</li>
                 <li>&ldquo;You&apos;ll rank for towing in Covington.&rdquo;</li>
                 <li>&ldquo;You&apos;ll get X calls a month.&rdquo; — or any number of calls, leads or jobs.</li>
+                <li>&ldquo;Your rate locks at signup and never moves.&rdquo; — the founder rate steps up on page one, and the billing code does it without asking you.</li>
               </ul>
               <p className="mt-3 border-t border-red-900 pt-2 text-xs leading-relaxed text-zinc-400">
                 Each is a <strong>future</strong> claim about a result you do not control; the first three are

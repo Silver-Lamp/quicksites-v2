@@ -262,6 +262,14 @@ export const CONFIG_GATES: ConfigGate[] = [
       'Owner-voice audio cannot be provisioned. config.ts fails closed, so /merchant/audio looks present but every call is rejected. The shared secret must hold the SAME value in HiveJournal\'s env.',
   },
   {
+    key: 'hj_founding_family_counts',
+    label: 'Founding-family counts on /admin/ops (HiveJournal)',
+    requires: ['PARTNER_QUICKSITES_SECRET'],
+    degradeOnly: true,
+    breaks:
+      'The Cornerstone founding-families tiles on /admin/ops read "not connected"; the deep links beside them still work. Same shared secret as partner audio — one value, both envs.',
+  },
+  {
     key: 'rehearsal_practice',
     label: 'Sales-call rehearsal engine (HiveJournal)',
     enabledBy: 'REHEARSAL_PRACTICE_ENABLED',

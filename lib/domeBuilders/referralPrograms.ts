@@ -59,7 +59,9 @@ export const REFERRAL_PROGRAMS: ReferralProgram[] = [
     programUrl: 'https://domespaces.com/affiliate-area/?affiliates-dashboard-section=registration',
     terms:
       'Self-serve affiliate registration (WordPress Affiliates); terms shown after registering.',
-    status: 'found',
+    status: 'declined',
+    notes:
+      '2026-09-19: the registration page says "registration currently closed". Re-check in a month, or ask via their contact form; they are also a Florida listing.',
   },
   {
     org: 'Pacific Domes',

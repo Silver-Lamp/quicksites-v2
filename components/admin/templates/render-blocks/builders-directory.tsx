@@ -11,6 +11,9 @@ import * as React from 'react';
 import type { Block } from '@/types/blocks';
 import SectionShell from '@/components/ui/section-shell';
 
+export const DEFAULT_AFFILIATE_DISCLOSURE =
+  'Links marked “affiliate” are referral links: if you buy through one, we may earn a commission at no cost to you. It does not change which builders are listed or how.';
+
 type Entry = {
   name: string;
   city?: string;
@@ -47,7 +50,10 @@ function pick(block: Block, override?: any) {
     ctaLink: String(src.cta_link ?? ''),
     listingCtaLabel: String(src.listing_cta_label ?? ''),
     listingCtaLink: String(src.listing_cta_link ?? ''),
-    affiliateDisclosure: String(src.affiliate_disclosure ?? ''),
+    // Always present when any link is an affiliate link — a page built before the field existed
+    // must still disclose. The default matches the schema's.
+    affiliateDisclosure:
+      String(src.affiliate_disclosure ?? '').trim() || DEFAULT_AFFILIATE_DISCLOSURE,
     hasAffiliate: entries.some((e) => !!e.affiliate_url),
   };
 }

@@ -27,18 +27,28 @@ describe('the registry', () => {
 });
 
 describe('applyReferrals', () => {
-  const entries: Array<{ name: string; affiliate_url?: string }> = [
+  const noProgram: Array<{ name: string; affiliate_url?: string }> = [
     { name: 'Florida Domes' },
-    { name: 'Glamping Dome Store' },
-    { name: 'Ekodome' },
+    { name: 'Carolina Domes' },
   ];
-  it('is a no-op while nothing is active — no link, no reorder', () => {
-    const out = applyReferrals(entries);
-    expect(out.map((e) => e.name)).toEqual(entries.map((e) => e.name));
-    expect(out).toEqual(entries);
-    expect(out.every((e, i) => e === entries[i])).toBe(true);
+  it('is the identity for entries with no active program — same objects, same order', () => {
+    const out = applyReferrals(noProgram);
+    expect(out).toEqual(noProgram);
+    expect(out.every((e, i) => e === noProgram[i])).toBe(true);
   });
-  it('never returns null for an org with no program', () => {
+  it('sets affiliate_url from an ACTIVE program and touches nothing else', () => {
+    const active = REFERRAL_PROGRAMS.filter((p) => p.status === 'active' && p.affiliateUrl);
+    for (const p of active) {
+      const out = applyReferrals<{ name: string; affiliate_url?: string }>([
+        { name: 'Florida Domes' },
+        { name: p.org },
+      ]);
+      expect(out[0]).toEqual({ name: 'Florida Domes' });
+      expect(out[1].affiliate_url).toBe(p.affiliateUrl);
+      expect(out.map((e) => e.name)).toEqual(['Florida Domes', p.org]);
+    }
+  });
+  it('never returns a program for an org with none', () => {
     expect(activeReferralFor('Florida Domes')).toBeNull();
   });
 });
@@ -52,5 +62,7 @@ describe('the renderer', () => {
     expect(src).toContain('rel="noopener noreferrer sponsored"');
     expect(src).toContain('(affiliate)');
     expect(src).toContain('d.hasAffiliate && d.affiliateDisclosure');
+    // A page built before the field existed still discloses: the renderer falls back to the default.
+    expect(src).toContain('|| DEFAULT_AFFILIATE_DISCLOSURE');
   });
 });

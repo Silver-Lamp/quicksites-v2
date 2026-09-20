@@ -40,7 +40,10 @@ export const REFERRAL_PROGRAMS: ReferralProgram[] = [
     programUrl: 'https://ekodome.com/affiliates/',
     terms:
       'Marketing affiliate program with a dashboard (referral ID, custom links, click/purchase tracking). Rate is in the agreement, which is login-gated.',
-    status: 'found',
+    status: 'active',
+    affiliateUrl: 'https://ekodome.com/?ref=1052',
+    notes:
+      'Joined 2026-09-19 as Point Seven Studio (sandon@). Rate: read the agreement in the dashboard and record it here.',
   },
   {
     org: 'Growing Spaces (Growing Dome)',

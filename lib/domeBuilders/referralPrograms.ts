@@ -50,8 +50,9 @@ export const REFERRAL_PROGRAMS: ReferralProgram[] = [
     programUrl: 'https://growingspaces.com/ambassadors',
     terms:
       'Ambassador program: a cash reward per closed referral, scaled by dome size; personal page, link, code and QR. Open to organizations (creators need 1,000+ followers).',
-    status: 'found',
-    notes: 'Apply as an organization (Point Seven Studio / the directory), not as a creator.',
+    status: 'applied',
+    notes:
+      'Applied 2026-09-19 as an organization (Point Seven Studio, sandon@). Awaiting their reply with the ambassador link + code.',
   },
   {
     org: 'Domespaces',

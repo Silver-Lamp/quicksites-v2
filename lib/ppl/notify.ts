@@ -12,6 +12,8 @@ import { sendEmail } from '@/lib/email';
 import { sendSms } from '@/lib/sms/sendSms';
 import { estimateLeadsRemaining, usd } from '@/lib/ppl/rules';
 import type { PplAccount } from '@/lib/ppl/accounts';
+import { statementUrl } from '@/lib/ppl/statementToken';
+import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 
 function esc(s: string) {
   return s.replace(
@@ -59,7 +61,8 @@ export async function notifyReloaded(
         ],
         ['Reference', args.paymentIntentId],
       ],
-      `Your balance dropped under ${usd(a.reload_threshold_cents)}, so we charged the card on file as you asked. Calls to your number keep connecting.`
+      `Your balance dropped under ${usd(a.reload_threshold_cents)}, so we charged the card on file as you asked. Calls to your number keep connecting.`,
+      { href: statementUrl(a.id, publicBaseUrl()), label: 'View your statement' }
     ),
   }).catch(() => {});
 }
@@ -115,7 +118,9 @@ export async function notifyPaused(a: PplAccount, args: { updateUrl: string | nu
             ['Status', 'Paused — calls not connecting'],
           ],
           body,
-          args.updateUrl ? { href: args.updateUrl, label: 'Top up and resume' } : undefined
+          args.updateUrl
+            ? { href: args.updateUrl, label: 'Top up and resume' }
+            : { href: statementUrl(a.id, publicBaseUrl()), label: 'View your statement' }
         ),
       })
     );

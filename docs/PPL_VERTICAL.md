@@ -163,7 +163,19 @@ also filed on `/admin/tasks` (`source='session:2026-09-18'`) so they outlive thi
 7. **Wait 30 days.** Revenue = the ledger. Disputes = phone calls to you for now (Phase 2 makes
    them self-serve).
 
-### Phase 2 — the business can see what it paid for (session, ~1 day)
+### Phase 2 — the business can see what it paid for — ✅ BUILT 2026-09-19 (PR: statement + disputes)
+
+Shipped: `/leads/<signed token>` (`lib/ppl/statementToken.ts`, one-year HMAC token, closing the
+account revokes it) shows balance, every charge with caller/duration/recording, credits, and a
+"Contest this charge" form inside the 72 h window → `POST /api/leads/dispute` (rate-limited,
+token + ownership + window checked in `lib/ppl/disputes.ts`) → `ppl_disputes`. Recordings stream
+through `GET /api/leads/recording/<callSid>?t=` (Twilio creds stay server-side; only a call
+charged to that account). `/admin/ppl` lists open disputes with **Approve + credit / Deny**
+(`PATCH /api/admin/ppl/disputes/<id>`) — approval posts a `dispute_credit` against the same
+call_sid; both outcomes email the business. Statement links ride the top-up and paused emails
+and the account-creation response. Original brief below.
+
+### (original) Phase 2 brief
 
 - **Owner-facing statement page** at `/leads/<token>`: balance, every charge with caller
   number, duration, recording link (Twilio `RecordingUrl` lands in `call_logs` via the existing

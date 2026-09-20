@@ -68,7 +68,9 @@ export const REFERRAL_PROGRAMS: ReferralProgram[] = [
     programUrl: 'https://store.pacificdomes.com/affiliate-home/',
     terms:
       'An "Affiliates Area" on the store; the store subdomain did not resolve from our side on 2026-09-19 — confirm in a browser.',
-    status: 'found',
+    status: 'declined',
+    notes:
+      '2026-09-19: Sandon confirmed store.pacificdomes.com is down in a browser. Their main site is up and lists "Affiliates Area" in the support menu; ask via pacificdomes.com contact (541-488-7737) or re-check the store host in a month. Oregon listing too.',
   },
 ];
 

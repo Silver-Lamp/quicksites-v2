@@ -62,5 +62,7 @@ describe('the renderer', () => {
     expect(src).toContain('rel="noopener noreferrer sponsored"');
     expect(src).toContain('(affiliate)');
     expect(src).toContain('d.hasAffiliate && d.affiliateDisclosure');
+    // A page built before the field existed still discloses: the renderer falls back to the default.
+    expect(src).toContain('|| DEFAULT_AFFILIATE_DISCLOSURE');
   });
 });

@@ -50,15 +50,18 @@ export const REFERRAL_PROGRAMS: ReferralProgram[] = [
     programUrl: 'https://growingspaces.com/ambassadors',
     terms:
       'Ambassador program: a cash reward per closed referral, scaled by dome size; personal page, link, code and QR. Open to organizations (creators need 1,000+ followers).',
-    status: 'found',
-    notes: 'Apply as an organization (Point Seven Studio / the directory), not as a creator.',
+    status: 'applied',
+    notes:
+      'Applied 2026-09-19 as an organization (Point Seven Studio, sandon@). Awaiting their reply with the ambassador link + code.',
   },
   {
     org: 'Domespaces',
     programUrl: 'https://domespaces.com/affiliate-area/?affiliates-dashboard-section=registration',
     terms:
       'Self-serve affiliate registration (WordPress Affiliates); terms shown after registering.',
-    status: 'found',
+    status: 'declined',
+    notes:
+      '2026-09-19: the registration page says "registration currently closed". Re-check in a month, or ask via their contact form; they are also a Florida listing.',
   },
   {
     org: 'Pacific Domes',

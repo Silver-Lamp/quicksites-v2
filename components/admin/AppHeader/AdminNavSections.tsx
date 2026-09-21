@@ -139,7 +139,7 @@ const NAV_MERCHANT: NavItem[] = [
   { type: 'item', label: 'Voice audio', href: '/merchant/audio', icon: <Mic size={18} /> },
 
   { type: 'section', label: 'Partner' },
-  { type: 'item', label: 'Referrals', href: '/rep/referrals', icon: <User size={18} /> },
+  { type: 'item', label: 'Referrals', href: '/referrals/dashboard', icon: <User size={18} /> },
   { type: 'item', label: 'Payouts', href: '/rep/payouts', icon: <DollarSign size={18} /> },
   { type: 'item', label: 'Taxes', href: '/rep/tax', icon: <FileText size={18} /> },
 ];

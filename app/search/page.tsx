@@ -1,3 +1,6 @@
+'use client';
+
+// Hooks need a client component; without this line the page 500s on every request.
 // app/search/page.tsx
 import { useSearchQuery } from '@/lib/querySchemas/search';
 

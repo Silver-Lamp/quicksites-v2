@@ -1,6 +1,17 @@
 // app/admin/referrals/page.tsx
+//
+// Month-end referral payout surface: every code with its pending / approved / paid totals,
+// a "mark approved → paid" form, and the payout-run wizard. Minting codes for a person is
+// the simpler /admin/referral-codes page; this one keeps the legacy owner-id form.
+//
+// Server component. Anything interactive is a client component (copy-link-button.tsx) —
+// an inline onClick here is a runtime crash, not a lint warning. The two forms are server
+// actions that write through the same service-role client as the read, and re-check admin
+// inside the action: a server action is an endpoint, and the page gate does not cover it.
 import { redirect } from 'next/navigation';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
+import CopyLinkButton from '@/components/admin/referrals/copy-link-button';
 
 function fmtCents(c: number, cur = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur }).format((c || 0) / 100);
@@ -9,6 +20,8 @@ function fmtCents(c: number, cur = 'USD') {
 export const dynamic = 'force-dynamic';
 
 export default async function AdminReferralsPage() {
+  const admin = await getAdminUser();
+  if (!admin) return <div className="p-8 text-neutral-400">Forbidden.</div>;
   const supabase = await getServerSupabase({ serviceRole: true });
 
   const [{ data: codes }, { data: ledger }] = await Promise.all([
@@ -76,10 +89,7 @@ export default async function AdminReferralsPage() {
                   <td>{fmtCents(a.paid, a.currency)}</td>
                   <td>
                     <a className="underline" href={link} target="_blank">open</a>
-                    <button className="ml-3 rounded bg-neutral-800 px-2 py-1 text-xs"
-                      onClick={async () => { await navigator.clipboard.writeText(link); }}>
-                      copy
-                    </button>
+                    <CopyLinkButton text={link} />
                   </td>
                 </tr>
               );
@@ -97,20 +107,22 @@ export default async function AdminReferralsPage() {
 function CreateCodeForm() {
   async function create(formData: FormData) {
     'use server';
-    await fetch(`${process.env.QS_PUBLIC_URL || ''}/api/referrals/create-code`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        code: String(formData.get('code') || '').trim(),
-        ownerType: String(formData.get('ownerType') || 'provider_rep'),
-        ownerId: String(formData.get('ownerId') || '').trim(),
-        plan: {
-          type: 'percent',
-          rate: Number(formData.get('rate') || 20) / 100,
-          duration_months: Number(formData.get('duration') || 12),
-        },
-      }),
-      cache: 'no-store',
+    // Was a self-HTTP call to /api/referrals/create-code — which carries no session cookie
+    // from a server action, so it answered 401 and the page reloaded looking like success.
+    if (!(await getAdminUser())) return;
+    const code = String(formData.get('code') || '').trim().toUpperCase();
+    const ownerId = String(formData.get('ownerId') || '').trim();
+    if (!code || !ownerId) return;
+    const supabase = await getServerSupabase({ serviceRole: true });
+    await supabase.from('referral_codes').upsert({
+      code,
+      owner_type: String(formData.get('ownerType') || 'provider_rep'),
+      owner_id: ownerId,
+      plan: {
+        type: 'percent',
+        rate: Number(formData.get('rate') || 20) / 100,
+        duration_months: Number(formData.get('duration') || 12),
+      },
     });
     redirect('/admin/referrals');
   }
@@ -153,17 +165,22 @@ function CreateCodeForm() {
 function MarkPaidPanel({ codes }: { codes: string[] }) {
   async function markPaid(fd: FormData) {
     'use server';
-    const body = {
-      code: String(fd.get('code') || ''),
-      start: String(fd.get('start') || '') || undefined,
-      end: String(fd.get('end') || '') || undefined,
-    };
-    await fetch(`${process.env.QS_PUBLIC_URL || ''}/api/referrals/mark-paid`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      cache: 'no-store',
-    });
+    // Same fix as `create`: the old self-HTTP to /api/referrals/mark-paid was admin-gated
+    // and got no cookie, so nothing was ever marked paid from this form.
+    if (!(await getAdminUser())) return;
+    const code = String(fd.get('code') || '');
+    if (!code) return;
+    const start = String(fd.get('start') || '');
+    const end = String(fd.get('end') || '');
+    const supabase = await getServerSupabase({ serviceRole: true });
+    let q = supabase
+      .from('commission_ledger')
+      .update({ status: 'paid' })
+      .eq('referral_code', code)
+      .eq('status', 'approved');
+    if (start) q = q.gte('created_at', start);
+    if (end) q = q.lte('created_at', end);
+    await q;
     redirect('/admin/referrals');
   }
 

@@ -115,6 +115,39 @@ const nextConfig = {
     // /sign-in are all URLs people type and code links to — three of them WERE linked from
     // upgrade prompts and every one 404'd, so a visitor trying to pay us hit a dead end.
     // Applied in every environment: a 404 in dev is the same bug found later.
+    // The owner's personal page lived at /sites/sandon on the BUSINESS property, where it
+    // ranked at position 7.9 and carried 614 impressions — 21% of every impression across all
+    // 92 connected domains — while sandonjurowski.com (the exact-match domain, served by
+    // HiveJournal) was a second, competing page for the same person. Two self-canonical pages
+    // split the signal, which is worse than one for the thing that page is FOR.
+    //
+    // A 301 rather than a noindex, deliberately: noindex discards the ranking the page has
+    // already earned, a 301 hands it to the exact-match domain, which is the stronger home for
+    // a name query. The per-site redirect map (lib/sites/redirects.ts) cannot express this —
+    // it refuses to redirect a site root on purpose — so it belongs here, at the platform route
+    // layer, next to the other host-level rules.
+    const personalPageConsolidation = [
+      {
+        source: '/sites/sandon',
+        destination: 'https://sandonjurowski.com',
+        permanent: true,
+      },
+      {
+        source: '/sites/sandon/:path*',
+        destination: 'https://sandonjurowski.com',
+        permanent: true,
+      },
+      // The same template also answers on its platform subdomain, which middleware rewrites to
+      // /sites/sandon — so without this rule the subdomain keeps serving the page the redirect
+      // above just retired.
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: '^sandon\\.quicksites\\.ai$' }],
+        destination: 'https://sandonjurowski.com',
+        permanent: true,
+      },
+    ];
+
     const authAliases = [
       { source: '/signup', destination: '/login?intent=signup', permanent: false },
       { source: '/sign-up', destination: '/login?intent=signup', permanent: false },
@@ -123,9 +156,10 @@ const nextConfig = {
     ];
 
     return isLocal
-      ? authAliases
+      ? [...authAliases, ...personalPageConsolidation]
       : [
           ...authAliases,
+          ...personalPageConsolidation,
           {
             source: '/:path*',
             has: [{ type: 'host', value: '^quicksites\\.ai$' }],

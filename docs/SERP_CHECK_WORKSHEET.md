@@ -7,6 +7,11 @@
 > **You are measuring ONE thing: what occupies the page above the first organic result.** Not
 > whether we could rank — whether ranking would be worth anything.
 
+**Screenshotting instead?** Scroll-capture the page (⌘⇧4 then space, a few times down the page)
+and say so — the `serp-screenshots` skill stitches them into one continuous SERP, removes the
+overlap, reads it, and hands you the values to confirm. It pre-fills; it never submits, because
+the point of a human run is that a person looked.
+
 **Do it in the app: [`/admin/serp-check`](/admin/serp-check).** One search on screen at a time,
 the query one click from your clipboard, number keys 0–3 for the pack size, and the verdict
 computed server-side by the same rule the automated runs use — so a disagreement is a finding

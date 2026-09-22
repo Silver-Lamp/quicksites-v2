@@ -14,6 +14,11 @@ import { marketingOg } from '@/lib/marketingOg';
 // ⚠️ Canonical URL, not a hand-written link. persona-testing-promo.tsx owns this string and says
 // why: three surfaces render it, and duplicating it is how the honesty wording rots.
 import { PERSONA_TESTING_URL } from '@/components/promo/persona-testing-promo';
+// Derived, never typed. This figure was wrong in the first draft (17 vs 14) and went stale three
+// more times in one week as gates were added — each caught only by the guard in
+// app/testing/__tests__/testingPageFigures.test.ts, which is the CLAUDE.md §4 lesson exactly:
+// a number survives if something re-derives it, not if someone remembers it.
+import { CONFIG_GATES } from '@/lib/config/health';
 
 export const metadata = marketingOg({
   title: 'How we test — the green-check problem',
@@ -280,7 +285,8 @@ export default function TestingPage() {
               <p>
                 A feature flag turned on with two of its three variables set is not off and not on
                 — it is silently broken. <code>CONFIG_GATES</code> declares{' '}
-                <strong>29 features</strong> with their required env, evaluated at startup, and a
+                <strong>{CONFIG_GATES.length} features</strong> with their required env, evaluated
+                at startup, and a
                 public <code>/status</code> endpoint answers &ldquo;is this actually live?&rdquo;
                 from the running process rather than from a config file.
               </p>

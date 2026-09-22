@@ -72,6 +72,8 @@ export default async function SerpCheckPage({
     location: s.location,
     isControl: s.isControl,
     searchUrl: s.searchUrl,
+    needsLocationOverride: s.needsLocationOverride,
+    coords: s.coords,
     human: human.get(key(s.query, s.location)) ?? null,
     machine: machine.get(key(s.query, s.location)) ?? null,
   }));

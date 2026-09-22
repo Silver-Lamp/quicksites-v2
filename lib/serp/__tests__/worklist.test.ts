@@ -136,3 +136,32 @@ describe('only "near me" rows need a location override', () => {
     for (const city of Object.keys(LOC)) expect(CITY_COORDS[city]).toBeTruthy();
   });
 });
+
+describe('rows are grouped by city', () => {
+  // A Sensors override survives retyping a query in the same tab but not a change of city, so
+  // interleaving cities means one trip through the DevTools panel per ROW instead of per city.
+  it('never returns to a city once it has left it', () => {
+    const w = nicheWorklist('treehouse', ['treehouse builder'], ['Austin', 'Denver', 'Seattle']);
+    const seen: string[] = [];
+    for (const s of w.slice(1)) {
+      if (seen[seen.length - 1] !== s.location) seen.push(s.location);
+    }
+    expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it('keeps the control first even though it has its own city', () => {
+    const w = nicheWorklist('treehouse', ['treehouse builder'], ['Austin', 'Denver']);
+    expect(w[0].isControl).toBe(true);
+  });
+
+  it('every near-me row carries a verified timezone id', () => {
+    const { CITY_LOCALES } = require('@/lib/serp/worklist') as typeof import('@/lib/serp/worklist');
+    for (const s of worksheetWorklist().filter((x) => x.needsLocationOverride)) {
+      expect(s.timezoneId).toMatch(/^America\/[A-Za-z_]+$/);
+    }
+    // The three people get wrong: Phoenix and Boise have their own ids, and Portland is Maine.
+    expect(CITY_LOCALES.phoenix.timezoneId).toBe('America/Phoenix');
+    expect(CITY_LOCALES.boise.timezoneId).toBe('America/Boise');
+    expect(CITY_LOCALES.portland.timezoneId).toBe('America/New_York');
+  });
+});

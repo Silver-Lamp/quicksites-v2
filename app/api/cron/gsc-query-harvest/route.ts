@@ -84,6 +84,13 @@ async function handle(req: NextRequest) {
           failed.push(domain);
           continue;
         }
+        await db
+          .from('gsc_queries')
+          .delete()
+          .eq('domain', domain)
+          .eq('start_date', startDate)
+          .eq('end_date', endDate)
+          .eq('page', '');
         harvested++;
         rowsWritten += payload.length;
         striking += summariseQueries(rows, domain).strikingDistance;

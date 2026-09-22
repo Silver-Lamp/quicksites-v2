@@ -65,6 +65,13 @@ async function main() {
           { onConflict: 'domain,query,page,start_date,end_date' },
         );
         if (error) { console.warn(`  ! ${short(domain)}: ${error.message}`); failed++; continue; }
+        await supabaseAdmin
+          .from('gsc_queries')
+          .delete()
+          .eq('domain', domain)
+          .eq('start_date', startDate)
+          .eq('end_date', endDate)
+          .eq('page', '');
         written += rows.length;
       }
       for (const r of rows) all.push({ domain, q: r.query, page: r.page, impr: r.impressions, pos: r.position, clicks: r.clicks });

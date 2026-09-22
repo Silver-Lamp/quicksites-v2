@@ -32,7 +32,7 @@
 export const NON_COMMERCIAL_PAGES: ReadonlyArray<{ path: string; why: string }> = [
   {
     path: '/sites/sandon',
-    why: "Personal page, 301'd to sandonjurowski.com. 613 impressions, 0 clicks.",
+    why: 'Personal page. 613 impressions at position ~7.8, 0 clicks — one of THREE owned results the owner holds on these searches, deliberately kept (see docs/PERSONAL_SEARCH_FOOTPRINT.md).',
   },
   {
     path: '/sandon-jurowski',

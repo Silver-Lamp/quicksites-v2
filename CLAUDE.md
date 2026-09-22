@@ -341,6 +341,15 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   Console call returned "invalid authentication credentials". **Vercel runs UTC, so local == UTC
   and production masked it** — which is why it survived; it bites the scripts. `parseExpiry()`
   now treats a zone-less timestamp as UTC regardless of the column.
+- **⚠️ The owner's three personal pages are deliberate — never "consolidate" them**
+  ([`docs/PERSONAL_SEARCH_FOOTPRINT.md`](docs/PERSONAL_SEARCH_FOOTPRINT.md)): three pages on three
+  properties rank **simultaneously for the same queries** (HJ 3.5 · QS 7.8 · the personal domain
+  7.2) — three of ten first-page slots, held on purpose to push court records down. The ordinary
+  instinct ("near-duplicates split authority, merge them") is the wrong rule for a goal measured
+  in SLOTS OCCUPIED, and the proof it does not apply is that all three already rank at once. A
+  session recommended consolidating, shipped a 301 and reverted it the same day. They stay
+  excluded from fleet aggregates (`lib/gsc/fleetScope.ts`) because the traffic is an automated
+  monitoring script, not demand — measurement hygiene, never suppression.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

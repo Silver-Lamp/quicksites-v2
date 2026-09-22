@@ -24,12 +24,19 @@ async function main() {
   const { defaultWindow, parseQueryRows, pickStrikingDistance, isSelfReferential } = await import(
     '@/lib/gsc/queryHarvest'
   );
+  const { listAllProperties, distinctGrants } = await import('@/lib/gsc/listProperties');
   const { isNonCommercialPage, whyExcluded } = await import('@/lib/gsc/fleetScope');
 
   const { startDate, endDate } = defaultWindow();
-  const { data: toks } = await supabaseAdmin.from('gsc_tokens').select('domain');
-  const domains = [...new Set((toks ?? []).map((t: { domain?: string }) => t.domain).filter(Boolean))] as string[];
-  console.log(`${domains.length} connected domains · window ${startDate} → ${endDate}${DRY ? ' · DRY RUN' : ''}\n`);
+  // Enumerate from the grants rather than from one row per domain: a property added in the GSC
+  // console has no row, so it was invisible — see lib/gsc/listProperties.ts.
+  const { data: toks } = await supabaseAdmin.from('gsc_tokens').select('domain, refresh_token');
+  const grants = distinctGrants(toks ?? []);
+  const { properties, failedGrants } = await listAllProperties(grants);
+  console.log(
+    `${grants.length} grant(s) → ${properties.length} readable propert${properties.length === 1 ? 'y' : 'ies'}` +
+      `${failedGrants.length ? ` (${failedGrants.length} grant(s) failed)` : ''} · window ${startDate} → ${endDate}${DRY ? ' · DRY RUN' : ''}\n`,
+  );
 
   type Row = { domain: string; q: string; page?: string; impr: number; pos: number; clicks: number };
   const all: Row[] = [];
@@ -37,9 +44,10 @@ async function main() {
   let written = 0;
   let failed = 0;
 
-  for (const domain of domains) {
+  for (const prop of properties) {
+    const domain = prop.siteUrl;
     try {
-      const auth = await getValidOAuthClient(domain);
+      const auth = await getValidOAuthClient(prop.viaGrant);
       const sc = google.searchconsole({ version: 'v1', auth });
       const res = await sc.searchanalytics.query({
         siteUrl: domain,

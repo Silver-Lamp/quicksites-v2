@@ -17,11 +17,34 @@
 // to contain a name, and keep a personal one phrased as a question. The page is a fact; the intent
 // behind a query string is an inference.
 
-/** Page paths whose traffic is real but is not a measurement of the business. */
+/**
+ * Page paths whose traffic is real but is not a measurement of the business.
+ *
+ * ⚠️ THE SAME PERSON HAS THREE PAGES ACROSS THREE PROPERTIES, and once the harvest started
+ * enumerating properties instead of iterating one row per domain, all three entered our
+ * aggregates at once — 3,825 impressions in 28 days with ZERO clicks between them. Excluding one
+ * and missing the others would have been worse than excluding none, because the number would look
+ * cleaned.
+ *
+ * ⚠️ Matched on path only, so a path here excludes it on EVERY property. `/sandon-jurowski` is
+ * specific enough to be safe; do not add a generic path like `/about` to this list.
+ */
 export const NON_COMMERCIAL_PAGES: ReadonlyArray<{ path: string; why: string }> = [
   {
     path: '/sites/sandon',
-    why: "Personal page. Ranks for the owner's name, not for anything we sell; 21% of all fleet impressions.",
+    why: "Personal page, 301'd to sandonjurowski.com. 613 impressions, 0 clicks.",
+  },
+  {
+    path: '/sandon-jurowski',
+    why: 'The same personal page on hivejournal.com — 3,057 impressions at position 3.5, 0 clicks. The largest single non-commercial source in the whole fleet.',
+  },
+];
+
+/** Hosts serving only a personal page: every path on them is excluded, not just one. */
+export const NON_COMMERCIAL_HOSTS: ReadonlyArray<{ host: string; why: string }> = [
+  {
+    host: 'sandonjurowski.com',
+    why: 'Personal exact-match domain. Every path on it is personal by definition.',
   },
 ];
 
@@ -33,15 +56,28 @@ const pathOf = (pageUrl: string): string => {
   }
 };
 
+const hostOf = (pageUrl: string): string => {
+  try {
+    return new URL(pageUrl).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+};
+
 /** True when this page is excluded from fleet aggregates. A row with no page is kept. */
 export function isNonCommercialPage(pageUrl: string | null | undefined): boolean {
   if (!pageUrl) return false;
+  const h = hostOf(pageUrl);
+  if (NON_COMMERCIAL_HOSTS.some((x) => h === x.host)) return true;
   const p = pathOf(pageUrl);
   return NON_COMMERCIAL_PAGES.some((x) => p === x.path || p.startsWith(`${x.path}/`));
 }
 
 export function whyExcluded(pageUrl: string | null | undefined): string | null {
   if (!pageUrl) return null;
+  const h = hostOf(pageUrl);
+  const byHost = NON_COMMERCIAL_HOSTS.find((x) => h === x.host);
+  if (byHost) return byHost.why;
   const p = pathOf(pageUrl);
   return NON_COMMERCIAL_PAGES.find((x) => p === x.path || p.startsWith(`${x.path}/`))?.why ?? null;
 }

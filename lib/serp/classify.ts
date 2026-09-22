@@ -150,6 +150,79 @@ function verdictFor(r: Omit<SerpReading, 'verdict' | 'reason'>): { verdict: Serp
   return { verdict: 'good', reason: `Pack has only ${r.packSize} — organic decides this page.` };
 }
 
+/**
+ * What a PERSON can see and count, scored by the SAME `verdictFor` the API path uses.
+ *
+ * ⚠️ THIS EXISTS SO HAND AND MACHINE CANNOT DRIFT. The worksheet is the calibration fixture for
+ * the automated reading; the moment a human score runs through a second copy of the rules, the
+ * comparison stops meaning anything and both sides can be wrong in the same direction without
+ * anyone noticing. So there is one `verdictFor`, private to this file, and two entry points.
+ *
+ * A person cannot count "blocks above organic" reliably, and after the 2026-09-22 calibration
+ * nothing needs them to: pack size decides. `blocksAbove` is optional here and defaults to 0.
+ */
+export function readHumanSerp(input: {
+  query: string;
+  location: string;
+  packSize: number;
+  firstOrganicKind: FirstOrganicKind;
+  firstOrganicDomain?: string | null;
+  /** Optional, and only ever used to demote a thin-pack page. */
+  blocksAbove?: number;
+  adCount?: number;
+  aiOverview?: boolean;
+  checkedAt?: string;
+}): SerpReading {
+  const reading: Omit<SerpReading, 'verdict' | 'reason'> = {
+    query: input.query,
+    location: input.location,
+    fetchedAt: input.checkedAt ?? new Date().toISOString(),
+    packSize: Math.max(0, Math.round(input.packSize)),
+    adCount: Math.max(0, Math.round(input.adCount ?? 0)),
+    aiOverview: !!input.aiOverview,
+    blocksAbove: Math.max(0, Math.round(input.blocksAbove ?? 0)),
+    firstOrganicDomain: input.firstOrganicDomain ?? null,
+    firstOrganicKind: input.firstOrganicKind,
+    // A person reporting a first organic result means there IS one; "none" is its own kind.
+    firstOrganicRank: input.firstOrganicKind === 'unknown' && !input.firstOrganicDomain ? 1 : 1,
+  };
+  return { ...reading, ...verdictFor(reading) };
+}
+
+/** A person saw no organic result at all above the fold — its own case, not a missing answer. */
+export function readHumanSerpNoOrganic(query: string, location: string, packSize: number): SerpReading {
+  const reading: Omit<SerpReading, 'verdict' | 'reason'> = {
+    query,
+    location,
+    fetchedAt: new Date().toISOString(),
+    packSize: Math.max(0, Math.round(packSize)),
+    adCount: 0,
+    aiOverview: false,
+    blocksAbove: 0,
+    firstOrganicDomain: null,
+    firstOrganicKind: 'unknown',
+    firstOrganicRank: null,
+  };
+  return { ...reading, ...verdictFor(reading) };
+}
+
+/**
+ * Does a person's reading agree with the machine's? The point of running the worksheet by hand.
+ * `verdictMatch` is what matters; a pack-size difference of one with the same verdict is noise,
+ * a different verdict on the same query is a finding.
+ */
+export function compareReadings(human: SerpReading, machine: SerpReading) {
+  return {
+    query: human.query,
+    location: human.location,
+    humanVerdict: human.verdict,
+    machineVerdict: machine.verdict,
+    verdictMatch: human.verdict === machine.verdict,
+    packDelta: human.packSize - machine.packSize,
+    kindMatch: human.firstOrganicKind === machine.firstOrganicKind,
+  };
+}
+
 /** 🟢 for the worksheet's tally. `mixed` is deliberately not green. */
 export const isGreen = (v: SerpVerdict) => v === 'best' || v === 'good';
 

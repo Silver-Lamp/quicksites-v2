@@ -7,8 +7,13 @@
 > **You are measuring ONE thing: what occupies the page above the first organic result.** Not
 > whether we could rank — whether ranking would be worth anything.
 
-Run it by hand for a niche the automation has not seen, or to re-check the automation after a
-Google layout change. Automated equivalent:
+**Do it in the app: [`/admin/serp-check`](/admin/serp-check).** One search on screen at a time,
+the query one click from your clipboard, number keys 0–3 for the pack size, and the verdict
+computed server-side by the same rule the automated runs use — so a disagreement is a finding
+about the tool, not a difference of opinion. The run ends with a *you vs the machine* table.
+
+This file is the reference for what the questions mean and why. Run it on paper if you prefer, or
+for a niche the console has no locations for yet. Automated equivalent:
 
 ```bash
 npx tsx --env-file=.env.local scripts/serp-check.mts --set=worksheet --dry

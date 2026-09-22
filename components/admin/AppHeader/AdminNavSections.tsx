@@ -208,6 +208,13 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'section', label: 'Growth', adminOnly: true },
   {
     type: 'item',
+    label: 'SERP check',
+    href: '/admin/serp-check',
+    icon: <Search size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
     label: 'Businesses Near Me',
     href: '/admin/growth?tab=prospects',
     icon: <MapPinned size={18} />,

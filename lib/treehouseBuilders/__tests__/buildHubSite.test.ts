@@ -12,7 +12,7 @@ const text = (site: any) => JSON.stringify(site.data).toLowerCase();
 
 describe('it is a directory, never a business', () => {
   it('has the directory shape and no services', () => {
-    expect(blocks(hub).map((b: any) => b.type)).toEqual(['hero', 'builders_directory', 'faq', 'contact_form']);
+    expect(blocks(hub).map((b: any) => b.type)).toEqual(['hero', 'treehouse_planner', 'builders_directory', 'faq', 'contact_form']);
     expect(hub.data.services).toBeUndefined();
   });
 
@@ -93,6 +93,17 @@ describe('the state page never implies a local builder it does not have', () => 
     expect(names).toContain('Creative Treehouse Design');
     expect(names).toContain('Treehouse Experts');
     expect(names).not.toContain('Nelson Treehouse');
+  });
+});
+
+describe('the planner is on the hub, and only there', () => {
+  it('the hub carries it and the hero points at it', () => {
+    expect(blocks(hub).map((b: any) => b.type)).toContain('treehouse_planner');
+    expect(blocks(hub)[0].content.cta_link).toBe('#planner');
+  });
+
+  it('a state page does not \u2014 one planner, on the page people research from', () => {
+    expect(blocks(nc).map((b: any) => b.type)).not.toContain('treehouse_planner');
   });
 });
 

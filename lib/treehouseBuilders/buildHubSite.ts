@@ -112,9 +112,16 @@ export function buildHubSite(input: { domain: string }) {
     headline: 'Custom treehouse builders in the United States',
     subheadline:
       'A sourced list of the companies that design and build treehouses. Most of them travel, so the nearest one is often not the closest one — each listing shows what that company says about where it works.',
-    cta_text: 'See the builders',
-    cta_link: '#builders',
+    cta_text: 'What will it cost?',
+    cta_link: '#planner',
     image_url: '',
+  };
+
+  const planner: any = createDefaultBlock('treehouse_planner');
+  planner.content = {
+    title: 'What will a treehouse cost?',
+    blurb:
+      'Six questions, and a range built from figures three builders publish on their own sites \u2014 plus what they will ask you on the first call.',
   };
 
   const directory: any = createDefaultBlock('builders_directory');
@@ -131,7 +138,7 @@ export function buildHubSite(input: { domain: string }) {
   const faq: any = createDefaultBlock('faq');
   faq.content = { ...faq.content, title: 'Before you call anyone', items: TREEHOUSE_FAQ };
 
-  page.blocks = [hero, directory, faq, contactBlock('Tell us where you build and link a page of your work. Listings are free; we check against your own site before adding you.')];
+  page.blocks = [hero, planner, directory, faq, contactBlock('Tell us where you build and link a page of your work. Listings are free; we check against your own site before adding you.')];
   if (Array.isArray(page.content_blocks)) page.content_blocks = page.blocks;
   tpl.data.meta = {
     ...(tpl.data.meta ?? {}),

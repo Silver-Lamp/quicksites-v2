@@ -732,6 +732,19 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  treehouse_planner: {
+    label: 'Treehouse Planner',
+    icon: '🪜',
+    // A cost-RANGE and question-list tool, not a designer. Every figure it shows is published by
+    // a named builder (lib/treehouseBuilders/costData.ts); the block itself carries only the
+    // words around it. ⚠️ It must never gain a field that outputs a structural design, an
+    // attachment method or a safety statement — see lib/treehouseBuilders/estimate.ts.
+    schema: z.object({
+      title: z.string().default('What will a treehouse cost?'),
+      blurb: z.string().default(''),
+    }),
+  },
+
   cta: {
     label: 'Call to Action',
     icon: '🔘',

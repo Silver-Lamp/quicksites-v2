@@ -36,6 +36,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   footer: 'meta',
   service_areas: 'meta',
   builders_directory: 'content',
+  treehouse_planner: 'interactive',
   header: 'meta',
   contact_form: 'interactive',
   cta: 'interactive',

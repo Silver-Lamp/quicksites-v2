@@ -1,7 +1,11 @@
 # Treehouse cohort — status, and the two things that decide it
 
-**Status: supply researched, four of five states clear the bar, no domains bought.** The market is
-confirmed open. The blocker is `DOMAIN_REGISTRANT_*`, not the research.
+**Status: supply researched, three states clear the bar, pages built, no domains bought.** The
+market is confirmed open. The only blocker is `DOMAIN_REGISTRANT_*`, not the research.
+
+**Buy list — 4 domains, $45.00:** `customtreehousebuilders.com` (national hub) plus
+`californiatreehousebuilders.com`, `northcarolinatreehousebuilders.com`,
+`washingtontreehousebuilders.com`. All confirmed available at $11.25 on 2026-09-22.
 
 ## Why this niche
 
@@ -50,13 +54,14 @@ also the way to fill a page honestly:
 | **CA** | 3 | O2 Treehouse (Oakland) · ArtisTree · Barbara Butler (Hayward) | buy |
 | **NC** | 2 | Creative Treehouse Design (Weaverville) · Treehouse Experts *names NC* | buy |
 | **WA** | 2 | Nelson Treehouse (Fall City) · Wild Tree Woodworks (Seattle) | buy |
-| **NY** | 2 | Buffalo Treehouse · Romero Studios | ⚠️ buy with a caveat |
+| NY | 1 | Buffalo Treehouse (Romero Studios dropped) | **no** |
 | **TN** | 1 | Treehouse Experts *names TN*; nobody based there | **no** |
 
-⚠️ **New York's second entry is weak.** Romero Studios' own site was read on 2026-09-22 and is now
-a near-empty redirect page; its New York City base comes from third-party profiles, not from them.
-A directory entry linking to a stub is poor value for a visitor. Re-check before the page goes
-live, or treat NY as coverage 1.
+**New York dropped, 2026-09-22.** Romero Studios' own site is a near-empty redirect page stating no
+base, no service area and no work; its New York City base came from third-party profiles, never
+from them. A directory entry sending a buyer to a stub is worse than no entry, so they are in
+`EXCLUDED_BUILDERS` with the reason rather than deleted — an absent entry looks like an oversight,
+and writing down that it was a decision is the only cure. That takes NY to 1, below the bar.
 
 ⚠️ **Tennessee rests entirely on one travelling firm** naming it in a sentence. There is no builder
 based in the state. That is the "near me" promise unkept, and it is a no.

@@ -213,19 +213,6 @@ export const TREEHOUSE_BUILDERS: TreehouseBuilder[] = [
     ],
   },
   {
-    id: 'romero-studios',
-    name: 'Romero Studios',
-    url: 'https://www.romerostudios.com/',
-    baseCity: 'New York City',
-    baseState: 'NY',
-    servesStates: [],
-    summary: 'Treehouse design and build, founded 1997, using largely reclaimed and salvaged material.',
-    sources: [
-      { url: 'https://thetreehouseguide.com/links-builders.htm', note: 'Listed among professional treehouse builders.', read: READ },
-      { url: 'https://www.romerostudios.com/', note: '⚠️ WEAK. Read 2026-09-22 and the site is now a near-empty redirect page reading "Roderick Wolgamott Treehouses / Wolgamott Works" — it states no base, no service area and no work. The New York City base comes from third-party profiles, NOT from them. Re-check before listing them anywhere public.', read: READ },
-    ],
-  },
-  {
     id: 'azzan-arts',
     name: 'Azzan Arts',
     url: 'https://www.azzanarts.com/',
@@ -236,6 +223,19 @@ export const TREEHOUSE_BUILDERS: TreehouseBuilder[] = [
     sources: [
       { url: 'https://thetreehouseguide.com/links-builders.htm', note: 'Listed as an Austin, Texas treehouse builder. ⚠️ Directory listing only — their own site has not been read yet.', read: READ },
     ],
+  },
+];
+
+/**
+ * Researched and deliberately NOT listed. Kept so the next session does not re-add them from the
+ * same directory that led here the first time — an absent entry looks like an oversight, and the
+ * only cure is writing down that it was a decision.
+ */
+export const EXCLUDED_BUILDERS: ReadonlyArray<{ name: string; url: string; why: string }> = [
+  {
+    name: 'Romero Studios',
+    url: 'https://www.romerostudios.com/',
+    why: "Listed in The Treehouse Guide, but their own site read 2026-09-22 is a near-empty redirect page (\u201cRoderick Wolgamott Treehouses / Wolgamott Works\u201d) stating no base, no service area and no work. A directory entry sending a buyer to a stub is worse than no entry. Their New York City base came from third-party profiles, never from them. Dropping it takes NY to coverage 1, below the bar \u2014 which is the honest number. Re-add only after reaching them directly.",
   },
 ];
 

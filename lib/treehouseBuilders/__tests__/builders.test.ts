@@ -80,6 +80,21 @@ describe('state coverage decides which domains are worth buying', () => {
   });
 });
 
+describe('deliberate exclusions stay visible', () => {
+  const { EXCLUDED_BUILDERS } = require('@/lib/treehouseBuilders/builders') as typeof import('@/lib/treehouseBuilders/builders');
+
+  it('an excluded builder is NOT in the registry but IS recorded with a reason', () => {
+    for (const x of EXCLUDED_BUILDERS) {
+      expect(TREEHOUSE_BUILDERS.map((b) => b.name)).not.toContain(x.name);
+      expect(x.why.length).toBeGreaterThan(60);
+    }
+  });
+
+  it('dropping Romero takes New York below the bar — that is the honest number', () => {
+    expect(stateCoverage('NY')).toBe(1);
+  });
+});
+
 describe('first-hand vs directory listings are distinguishable', () => {
   it('flags entries whose own site has not been read', () => {
     const firstHand = TREEHOUSE_BUILDERS.filter(isFirstHand);

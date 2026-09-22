@@ -16,6 +16,7 @@ export const INDUSTRY_DOMAIN_WORD: Partial<Record<IndustryKey, string>> = {
   general_contractor: 'contractor',
   deck_builder: 'decks',
   dome_builder: 'dome-builders',
+  treehouse_builder: 'treehouse-builders',
   fencing: 'fence',
   concrete: 'concrete',
   turf: 'turf',

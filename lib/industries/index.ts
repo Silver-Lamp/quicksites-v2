@@ -18,6 +18,7 @@ export type IndustryKey =
   | 'general_contractor'
   | 'deck_builder'
   | 'dome_builder'
+  | 'treehouse_builder'
   // Instant-estimator trades (quote_estimator block; each a <city>-<trade>.com vertical)
   | 'fencing'
   | 'concrete'
@@ -81,6 +82,7 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'general_contractor',   label: 'General Contractor' },
   { key: 'deck_builder',         label: 'Deck Builder' },
   { key: 'dome_builder',         label: 'Dome Builder' },
+  { key: 'treehouse_builder',    label: 'Treehouse Builder' },
   { key: 'fencing',              label: 'Fencing' },
   { key: 'concrete',             label: 'Concrete' },
   { key: 'turf',                 label: 'Artificial Turf' },

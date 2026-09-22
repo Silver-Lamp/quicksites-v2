@@ -22,7 +22,7 @@ const ICON: Record<string, string> = { best: 'BEST', good: 'GOOD', mixed: 'mixed
 
 async function main() {
   const { dataForSeoProvider, serpConfigured } = await import('@/lib/serp/dataforseo');
-  const { WORKSHEET_CHECKS, checksFor, LOC } = await import('@/lib/serp/checkSets');
+  const { WORKSHEET_CHECKS, checksFor, locationFor } = await import('@/lib/serp/checkSets');
   const { runChecks, readingsOf } = await import('@/lib/serp/runChecks');
   const { tally } = await import('@/lib/serp/classify');
   const { NICHE_CANDIDATES } = await import('@/lib/niches/candidates');
@@ -40,9 +40,10 @@ async function main() {
   if (niche) {
     const c = NICHE_CANDIDATES.find((x) => x.key === niche);
     if (!c) { console.error(`No candidate "${niche}".`); process.exit(1); }
-    const city = arg('city') ?? 'Austin';
-    const loc = (LOC as Record<string, string>)[city.toLowerCase()] ?? `${city},Texas,United States`;
-    checks = checksFor(c.key, c.queries, city, loc);
+    // Comma-separated cities: one run covers the spread, which is what makes a pattern rather
+    // than an anecdote. A city with no location entry throws instead of guessing a state.
+    const cities = (arg('city') ?? 'Austin').split(',').map((x) => x.trim()).filter(Boolean);
+    checks = cities.flatMap((city) => checksFor(c.key, c.queries, city, locationFor(city)));
   }
   const limit = Number(arg('limit') ?? checks.length);
 

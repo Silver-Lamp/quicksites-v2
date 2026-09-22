@@ -17,14 +17,37 @@
 
 export type SerpCheck = { nicheKey: string | null; query: string; location: string };
 
-/** DataForSEO wants "City,Region,Country" spelled out. */
-export const LOC = {
-  asheville: 'Asheville,North Carolina,United States',
-  austin: 'Austin,Texas,United States',
+/**
+ * DataForSEO wants "City,Region,Country" spelled out. Keyed by the same lowercase city name the
+ * supply probe uses (scripts/niche-probe.mts PROBE_METROS), so a niche can be probed and
+ * SERP-checked across the same metros without a second mapping to keep in step.
+ *
+ * ⚠️ There is no default. A city missing here is an error, not a guess — the first cut fell back
+ * to `<city>,Texas,United States`, which would have silently measured Seattle's SERP in Texas.
+ */
+export const LOC: Record<string, string> = {
   seattle: 'Seattle,Washington,United States',
+  austin: 'Austin,Texas,United States',
+  asheville: 'Asheville,North Carolina,United States',
   denver: 'Denver,Colorado,United States',
-  bonneyLake: 'Bonney Lake,Washington,United States',
-} as const;
+  orlando: 'Orlando,Florida,United States',
+  portland: 'Portland,Maine,United States',
+  madison: 'Madison,Wisconsin,United States',
+  boise: 'Boise,Idaho,United States',
+  phoenix: 'Phoenix,Arizona,United States',
+  nashville: 'Nashville,Tennessee,United States',
+  'bonney lake': 'Bonney Lake,Washington,United States',
+};
+
+/** Throws rather than guessing — see the warning on LOC. */
+export function locationFor(city: string): string {
+  const key = city.trim().toLowerCase();
+  const loc = LOC[key];
+  if (!loc) {
+    throw new Error(`No DataForSEO location for "${city}". Add it to LOC in lib/serp/checkSets.ts — do not guess a state.`);
+  }
+  return loc;
+}
 
 /** The ten from the worksheet, plus the towing control that must come back `skip`. */
 export const WORKSHEET_CHECKS: SerpCheck[] = [
@@ -39,7 +62,7 @@ export const WORKSHEET_CHECKS: SerpCheck[] = [
   { nicheKey: 'storm_shelter', query: 'storm shelter installer asheville nc', location: LOC.asheville },
   { nicheKey: 'storm_shelter', query: 'tornado shelter installation near me', location: LOC.austin },
   // The control. Not optional.
-  { nicheKey: 'towing', query: 'towing service near me', location: LOC.bonneyLake },
+  { nicheKey: 'towing', query: 'towing service near me', location: LOC['bonney lake'] },
 ];
 
 /** Build a niche's checks for a metro: "<query> <city>" plus the bare near-me form. */

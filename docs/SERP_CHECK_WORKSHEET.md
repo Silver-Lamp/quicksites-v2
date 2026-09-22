@@ -60,11 +60,32 @@ Regionally dense, nationally sparse. The supply probe could not see that; this c
    - **No DevTools:** run the search, then click **Update location** at the bottom of the results
      page (beside "Results for …") and enter the city.
    - **Chrome DevTools:** ⌥⌘I to open it, then **⌘⇧P** → type `sensors` → "Show Sensors" →
-     Location → "Other…" → paste the coordinates → reload. ⚠️ Sensors is a bottom-drawer panel,
-     not a tab, and the ⋮ menu is the one *inside* DevTools, not the browser's.
-   - Asheville `35.5951, -82.5515` · Austin `30.2672, -97.7431` · Denver `39.7392, -104.9903` ·
-     Seattle `47.6062, -122.3321` · Phoenix `33.4484, -112.0740` · Nashville `36.1627, -86.7816` ·
-     Bonney Lake `47.1854, -122.1868`
+     Location → "Other…" → fill **Lat/Long, Timezone ID and Locale** → reload. ⚠️ Sensors is a
+     bottom-drawer panel, not a tab, and the ⋮ menu is the one *inside* DevTools, not the
+     browser's.
+   - ⚠️ **The override lives with the DevTools session, not the profile** — incognito makes no
+     difference. It survives retyping a query in the **same tab**; it does not survive a new tab,
+     and may not survive closing DevTools. So keep one tab open and retype. The run is ordered by
+     city so you set it once per city.
+   - ⚠️ **Verify rather than trust:** Google prints the location it actually used at the **bottom
+     of the results page** ("Bonney Lake, Washington · From your device"). Check that line.
+
+   | city | Lat / Long | Timezone ID |
+   |---|---|---|
+   | Seattle · Bonney Lake, WA | `47.6062, -122.3321` · `47.1854, -122.1868` | `America/Los_Angeles` |
+   | Austin, TX | `30.2672, -97.7431` | `America/Chicago` |
+   | Madison, WI | `43.0731, -89.4012` | `America/Chicago` |
+   | Nashville, TN | `36.1627, -86.7816` | `America/Chicago` |
+   | Asheville, NC | `35.5951, -82.5515` | `America/New_York` |
+   | Orlando, FL | `28.5383, -81.3792` | `America/New_York` |
+   | Portland, **ME** | `43.6591, -70.2568` | `America/New_York` |
+   | Denver, CO | `39.7392, -104.9903` | `America/Denver` |
+   | Boise, ID | `43.6150, -116.2023` | `America/Boise` |
+   | Phoenix, AZ | `33.4484, -112.0740` | `America/Phoenix` |
+
+   Locale is `en-US` throughout. ⚠️ **Phoenix and Boise have their own timezone IDs** rather than
+   folding into `America/Denver` — Arizona skips DST, so `America/Denver` is an hour out for half
+   the year. And **Portland here is Maine**, not Oregon.
 3. **Laptop, not phone.** Phone SERPs show even less organic, which biases the answer pessimistic.
 
 ---

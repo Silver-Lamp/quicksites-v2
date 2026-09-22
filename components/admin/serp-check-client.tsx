@@ -30,6 +30,7 @@ type Row = {
   searchUrl: string;
   needsLocationOverride: boolean;
   coords?: string;
+  timezoneId?: string;
   human: { verdict: string; pack_size: number; reason: string; notes: string | null } | null;
   machine: { verdict: string; pack_size: number; first_organic_domain: string | null } | null;
 };
@@ -233,16 +234,30 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
               <ol className="list-decimal pl-4">
                 <li>Open DevTools — <kbd className="rounded bg-black/30 px-1">⌥⌘I</kbd></li>
                 <li>Press <kbd className="rounded bg-black/30 px-1">⌘⇧P</kbd>, type <em>sensors</em>, pick “Show Sensors”</li>
-                <li>Location → “Other…” → paste {row.coords ?? 'the city coordinates'}</li>
+                <li>Location → “Other…”, then fill the three fields below</li>
                 <li>Reload the search</li>
               </ol>
               {row.coords ? (
-                <button
-                  onClick={() => { navigator.clipboard?.writeText(row.coords!); }}
-                  className="self-start rounded border border-amber-500/50 px-2 py-1 text-[11px] hover:bg-amber-500/10"
-                >
-                  copy {row.coords}
-                </button>
+                <div className="rounded border border-amber-500/30 bg-black/20 p-2">
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11px]">
+                    <dt className="text-amber-200/70">Lat / Long</dt>
+                    <dd>{row.coords}</dd>
+                    <dt className="text-amber-200/70">Timezone ID</dt>
+                    <dd>{row.timezoneId ?? '—'}</dd>
+                    <dt className="text-amber-200/70">Locale</dt>
+                    <dd>en-US</dd>
+                  </dl>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(
+                        `${row.coords}\n${row.timezoneId ?? ''}\nen-US`,
+                      );
+                    }}
+                    className="mt-2 rounded border border-amber-500/50 px-2 py-1 text-[11px] hover:bg-amber-500/10"
+                  >
+                    copy all three
+                  </button>
+                </div>
               ) : null}
               <p className="text-amber-100/70">
                 Sensors is a bottom-drawer panel, not a tab — the ⋮ menu you want is the one

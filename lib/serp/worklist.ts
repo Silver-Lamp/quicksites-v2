@@ -33,31 +33,68 @@ export type WorklistStep = SerpCheck & {
   needsLocationOverride: boolean;
   /** Coordinates to paste into DevTools → Sensors, when this row needs them. */
   coords?: string;
+  /** The IANA timezone id Sensors asks for alongside them. */
+  timezoneId?: string;
 };
 
-/** Lat/long per city we run checks in, for the Sensors panel. */
-export const CITY_COORDS: Record<string, string> = {
-  seattle: '47.6062, -122.3321',
-  austin: '30.2672, -97.7431',
-  asheville: '35.5951, -82.5515',
-  denver: '39.7392, -104.9903',
-  orlando: '28.5383, -81.3792',
-  portland: '43.6591, -70.2568',
-  madison: '43.0731, -89.4012',
-  boise: '43.6150, -116.2023',
-  phoenix: '33.4484, -112.0740',
-  nashville: '36.1627, -86.7816',
-  'bonney lake': '47.1854, -122.1868',
+/**
+ * What Chrome's Sensors panel asks for, per city: coordinates AND an IANA timezone ID.
+ *
+ * ⚠️ THE TIMEZONE FIELD IS NOT OPTIONAL-LOOKING BUT IS EASY TO GET WRONG, and a wrong one is
+ * silent: the search still runs, Google still localises by coordinates, and nothing says the
+ * clock disagrees. Three of these are the ones people guess wrong —
+ *   - Phoenix has its OWN id (`America/Phoenix`), because Arizona skips DST; `America/Denver`
+ *     is an hour out for half the year.
+ *   - Boise has its own id too, rather than folding into `America/Denver`.
+ *   - Portland here is MAINE, not Oregon. `America/Los_Angeles` would be a different city.
+ * All eleven verified against /usr/share/zoneinfo on 2026-09-22.
+ */
+export type CityLocale = { coords: string; timezoneId: string };
+
+export const CITY_LOCALES: Record<string, CityLocale> = {
+  seattle: { coords: '47.6062, -122.3321', timezoneId: 'America/Los_Angeles' },
+  austin: { coords: '30.2672, -97.7431', timezoneId: 'America/Chicago' },
+  asheville: { coords: '35.5951, -82.5515', timezoneId: 'America/New_York' },
+  denver: { coords: '39.7392, -104.9903', timezoneId: 'America/Denver' },
+  orlando: { coords: '28.5383, -81.3792', timezoneId: 'America/New_York' },
+  // ⚠️ Portland, MAINE — the probe metro. Not Oregon.
+  portland: { coords: '43.6591, -70.2568', timezoneId: 'America/New_York' },
+  madison: { coords: '43.0731, -89.4012', timezoneId: 'America/Chicago' },
+  boise: { coords: '43.6150, -116.2023', timezoneId: 'America/Boise' },
+  phoenix: { coords: '33.4484, -112.0740', timezoneId: 'America/Phoenix' },
+  nashville: { coords: '36.1627, -86.7816', timezoneId: 'America/Chicago' },
+  'bonney lake': { coords: '47.1854, -122.1868', timezoneId: 'America/Los_Angeles' },
 };
+
+/** Kept for callers that only want the coordinates. */
+export const CITY_COORDS: Record<string, string> = Object.fromEntries(
+  Object.entries(CITY_LOCALES).map(([k, v]) => [k, v.coords]),
+);
 
 const googleUrl = (query: string) =>
   `https://www.google.com/search?q=${encodeURIComponent(query)}&pws=0`;
 
-/** Control first, then the rest in their given order. */
+/**
+ * Control first, then the rest GROUPED BY CITY.
+ *
+ * ⚠️ The grouping is not cosmetic. A Chrome Sensors location override lives with the DevTools
+ * session, so it survives retyping a query in the same tab but not a new tab — which means every
+ * change of city is a fresh trip through the Sensors panel. Interleaving cities turns an
+ * eleven-row run into eleven overrides; grouping turns it into one per city. The run is twenty
+ * minutes of repetitive work already, and every avoidable step is a chance to stop at row six.
+ */
 export function buildWorklist(checks: readonly SerpCheck[]): WorklistStep[] {
   const control = checks.filter((c) => c.nicheKey === 'towing');
   const rest = checks.filter((c) => c.nicheKey !== 'towing');
-  return [...control, ...rest].map((c, i) => {
+
+  // Stable: cities keep the order they first appear in, and rows keep their order within a city.
+  const order = new Map<string, number>();
+  for (const c of rest) if (!order.has(c.location)) order.set(c.location, order.size);
+  const grouped = [...rest].sort(
+    (a, b) => (order.get(a.location)! - order.get(b.location)!),
+  );
+
+  return [...control, ...grouped].map((c, i) => {
     const needsLocationOverride = /\bnear me\b/i.test(c.query);
     const city = c.location.split(',')[0].trim().toLowerCase();
     return {
@@ -66,7 +103,9 @@ export function buildWorklist(checks: readonly SerpCheck[]): WorklistStep[] {
       isControl: c.nicheKey === 'towing',
       searchUrl: googleUrl(c.query),
       needsLocationOverride,
-      ...(needsLocationOverride && CITY_COORDS[city] ? { coords: CITY_COORDS[city] } : {}),
+      ...(needsLocationOverride && CITY_LOCALES[city]
+        ? { coords: CITY_LOCALES[city].coords, timezoneId: CITY_LOCALES[city].timezoneId }
+        : {}),
     };
   });
 }

@@ -28,6 +28,10 @@ export const SWEEP_CATEGORIES: SweepCategory[] = [
   { label: 'Deck builder', textQuery: 'deck builder', industry: 'deck_builder' },
   // Dome builders: state-level directory domains (<state>domebuilders.com) with DomeSketch.
   { label: 'Dome builder', textQuery: 'geodesic dome builder', industry: 'dome_builder' },
+  // ⚠️ This sweep returns mostly treehouse RENTALS — cabins, Airbnb listings, an alpaca farm, a
+  // clothing store. Filter on the Places primary type and then have a person read the list;
+  // supply for this trade is national and lives in lib/treehouseBuilders/builders.ts, not here.
+  { label: 'Treehouse builder', textQuery: 'custom treehouse builder', industry: 'treehouse_builder' },
   { label: 'Fencing', textQuery: 'fence contractor', industry: 'fencing' },
   { label: 'Concrete', textQuery: 'concrete contractor', industry: 'concrete' },
   { label: 'Artificial turf', textQuery: 'artificial turf installer', industry: 'turf' },

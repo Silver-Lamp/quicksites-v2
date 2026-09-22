@@ -54,6 +54,7 @@ export const industryPresets: Record<string, SiteTheme> = {
   general_contractor: rugged('orange-500'),
   deck_builder: rugged('amber-600'), // warm wood tone — decks, cedar, outdoor living
   dome_builder: rugged('teal-600'), // directory pages for <state>domebuilders.com (DomeSketch)
+  treehouse_builder: rugged('lime-700'), // directory pages for customtreehousebuilders.com
   fencing: rugged('emerald-600'),
   concrete: rugged('slate-500'),
   turf: homeService('green-600'),

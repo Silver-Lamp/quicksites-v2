@@ -77,6 +77,25 @@ without ArtisTree, so nothing hangs on it — but the entry is marked weak.
   structures children climb into; repeating someone's safety claim on our page makes it ours.
   Link to them and let them say it. Pinned by a test.
 
+## The pages are built (not published)
+
+`lib/treehouseBuilders/buildHubSite.ts` renders both from the same registry:
+
+- **`buildHubSite()`** — the national list, alphabetical, every entry with its source, the date it
+  was read, and a marker when we have not confirmed it with the company.
+- **`buildStateSite()`** — the same for one state, and `stateSubtitle()` carries the honesty:
+  *"2 builders are based in Washington"* vs *"No treehouse builder we found is based in Tennessee.
+  This company names Tennessee as somewhere they build."* The second must never read like the first.
+
+⚠️ **`stateSubtitle` takes the state NAME and the CODE.** The first cut took only the name and
+passed it to `buildersForState`, which matches two-letter codes — so "Tennessee" never matched
+"TN" and **every state page claimed no builders**, coverage notwithstanding. A test caught it.
+
+⚠️ **A builder's first person is fine when quoted and attributed.** The voice test strips
+`They say they work: "…"` spans before checking, because Treehouse Experts' own *"we build all
+over North America"* is their sentence shown as theirs. What survives the strip is the page
+speaking as a business, which is what must never happen.
+
 ## Open
 
 1. Read the remaining builders' own sites (ArtisTree refused TLS on 2026-09-22 — retry).

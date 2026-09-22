@@ -313,6 +313,34 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   clicks**; `towing service near me` sits at position 10.9 with 69 impressions and **zero** clicks
   — the pack is full before our result appears. Hence the rule: **search for the structure, not
   the trade.**
+- **SERP checks — is the page winnable, not where do we rank (2026-09-22)**: `lib/serp/*` +
+  `scripts/serp-check.mts` + monthly cron `/api/cron/serp-recheck` (flag `SERP_RECHECK_ENABLED`,
+  cap `SERP_RECHECK_MAX`) record what sits ABOVE the first organic result into
+  `serp_observations` (migration `20260847`). Provider is **DataForSEO** (the credentials
+  `lib/prospects/keywordVolume.ts` already uses). ⚠️ **We do not browse Google and must not** —
+  automated querying is against its terms, and routing it through HJ's personas would be evasion
+  rather than compliance; the personas earn their keep on the NEXT question ("is the page
+  currently winning any good?"), a public non-Google page inside their contract. ⚠️
+  `MIXED_MAX_BLOCKS` stands in for "did you have to scroll", which an API cannot see —
+  `WORKSHEET_CHECKS` is the **calibration fixture** against a person's hand-scored run
+  (`docs/SERP_CHECK_WORKSHEET.md`), and the towing control must read `skip` or the classifier is
+  broken. ⚠️ A `local_pack` arrives as one block OR as consecutive siblings; uncollapsed it reads
+  as pack-of-1 AND 3 blocks above organic, flipping a skip into a best case — both halves wrong,
+  toward spending money.
+- **Fleet scope — exclude at READ, never at write (2026-09-22)**: `lib/gsc/fleetScope.ts`. One
+  personal page was **21% of every impression across 92 domains** and had been setting the fleet's
+  average position invisibly. Aggregates now drop `NON_COMMERCIAL_PAGES` and **say what they
+  dropped**; the rows are still harvested and stored. Matched on the PAGE, never the query — a
+  rule guessing which searches "look personal" is wrong in both directions. Needs the `page`
+  dimension (`20260848`; `page` is NOT NULL DEFAULT `''` per `20260850` because PostgREST upserts
+  name conflict COLUMNS and cannot match an **expression** index — `coalesce(page,'')` failed
+  every write).
+- **⚠️ `gsc_tokens.expiry` was timezone-naive and it only broke off-Vercel (fixed `20260849`)**:
+  Postgres returned a zone-less string, `new Date()` read it as LOCAL time, so on a UTC-7 machine
+  an expired token looked valid for seven more hours, the refresh never fired, and every Search
+  Console call returned "invalid authentication credentials". **Vercel runs UTC, so local == UTC
+  and production masked it** — which is why it survived; it bites the scripts. `parseExpiry()`
+  now treats a zone-less timestamp as UTC regardless of the column.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

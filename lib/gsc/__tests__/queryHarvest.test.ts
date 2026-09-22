@@ -91,3 +91,43 @@ describe('defaultWindow', () => {
     expect(w.startDate).toBe('2026-08-22');
   });
 });
+
+describe('fleet scope — the exclusion is on the page, never the query', () => {
+  const { isNonCommercialPage, fleetRows, whyExcluded } = require('@/lib/gsc/fleetScope') as typeof import('@/lib/gsc/fleetScope');
+
+  it('excludes the personal page and anything under it', () => {
+    expect(isNonCommercialPage('https://www.quicksites.ai/sites/sandon')).toBe(true);
+    expect(isNonCommercialPage('https://www.quicksites.ai/sites/sandon/')).toBe(true);
+    expect(isNonCommercialPage('https://www.quicksites.ai/sites/sandon/resume')).toBe(true);
+    expect(whyExcluded('https://www.quicksites.ai/sites/sandon')).toMatch(/Personal page/);
+  });
+
+  it('keeps commercial pages, including ones whose path merely starts similarly', () => {
+    expect(isNonCommercialPage('https://www.quicksites.ai/sites/sandon-towing')).toBe(false);
+    expect(isNonCommercialPage('https://www.quicksites.ai/pricing')).toBe(false);
+    expect(isNonCommercialPage(null)).toBe(false); // a row with no page is kept, never guessed at
+  });
+
+  it('reports what it dropped — an invisible exclusion is the bug it exists to fix', () => {
+    const { kept, excluded } = fleetRows([
+      { page: 'https://www.quicksites.ai/sites/sandon' },
+      { page: 'https://www.quicksites.ai/pricing' },
+    ]);
+    expect(kept).toHaveLength(1);
+    expect(excluded).toHaveLength(1);
+  });
+});
+
+describe('parseQueryRows with the page dimension', () => {
+  it('reads keys as [query, page] when both were requested', () => {
+    const parsed = parseQueryRows([
+      { keys: ['dome kits', 'https://x.test/a'], clicks: 1, impressions: 20, ctr: 0.05, position: 12 },
+    ]);
+    expect(parsed[0]).toMatchObject({ query: 'dome kits', page: 'https://x.test/a' });
+  });
+
+  it('omits page when only [query] was requested', () => {
+    const parsed = parseQueryRows([{ keys: ['dome kits'], clicks: 1, impressions: 20, ctr: 0.05, position: 12 }]);
+    expect(parsed[0].page).toBeUndefined();
+  });
+});

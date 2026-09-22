@@ -4,13 +4,21 @@
 // in step: the manual run is this module's ground truth, and if a hand-scored search disagrees
 // with what this returns, THIS is what is wrong.
 //
-// ⚠️ ONE SUBSTITUTION, AND IT IS THE HONEST WEAK POINT. The worksheet asks "is the first organic
-// result visible without scrolling", which is a question about pixels — screen size, device, how
-// tall Google drew the AI overview today. An API cannot answer it. So we count **how many blocks
-// sit above the first organic result** instead, which is what causes the scrolling rather than
-// the scrolling itself. `blocksAbove` is a proxy; `MIXED_MAX_BLOCKS` is where we drew the line
-// between "reachable" and "buried", and the ten manual searches exist to calibrate exactly that
-// number. If hand and machine disagree, move this threshold — do not re-word the worksheet.
+// ⚠️ CALIBRATED 2026-09-22 AGAINST A REAL RUN, AND THE FIRST MODEL WAS WRONG. The original rules
+// counted blocks above the first organic result as a stand-in for "did you have to scroll", and
+// treated a FULL local pack with few blocks above it as "winnable, lower ceiling". The towing
+// control — `towing service near me`, which we KNOW loses: position 10.9, 69 impressions, zero
+// clicks — came back `mixed`, and the run correctly refused to be trusted.
+//
+// The eleven rows showed why. `blocksAbove` was 1 or 2 on EVERY full-pack query; it does not
+// discriminate. `packSize` does: every thin-pack query was winnable and every full-pack one was
+// not. A full pack is not "one block" — it is a map, three businesses and a "More places" link,
+// and on a near-me query it IS the answer. So a full pack is now `skip` on its own, and
+// `blocksAbove` only demotes a thin-pack page.
+//
+// ⚠️ `THIN_PACK_MAX_BLOCKS` IS NOT CALIBRATED. No query in the run had a thin pack AND a crowded
+// page, so nothing has tested where that line belongs. It is a guess, and the next run that
+// produces such a row is what should settle it. The full-pack rule above is not a guess.
 //
 // ⚠️ AND WE CLASSIFY DOMAINS, NOT BUSINESSES. A hostname tells you Yelp is a directory. It does
 // NOT tell you whether `smokymountaintreehouses.com` is one carpenter or a national chain, so
@@ -24,8 +32,11 @@ export type FirstOrganicKind = 'directory' | 'forum' | 'video' | 'retail' | 'unk
 
 /** A full pack is three businesses; Google shows fewer only when it has fewer to show. */
 export const FULL_PACK = 3;
-/** Above this many blocks before the first organic result, treat it as buried. */
-export const MIXED_MAX_BLOCKS = 2;
+/**
+ * With a THIN pack, this many blocks above the first organic result still counts as reachable.
+ * ⚠️ Unvalidated — see the header. A full pack is decided by `FULL_PACK`, not by this.
+ */
+export const THIN_PACK_MAX_BLOCKS = 3;
 
 const DIRECTORY_HOSTS = [
   'yelp.com', 'angi.com', 'angieslist.com', 'thumbtack.com', 'houzz.com', 'bbb.org',
@@ -58,6 +69,12 @@ export type SerpReading = {
   fetchedAt: string;
   /** Businesses in the map pack; 0 when there is no pack. */
   packSize: number;
+  /**
+   * ⚠️ TREAT 0 AS "NOT REPORTED", NOT AS "NO ADS". Every row of the 2026-09-22 run came back with
+   * adCount 0 — including `towing service near me`, a query that certainly carries ads. The
+   * organic endpoint does not reliably return `paid` items, so this is recorded but deliberately
+   * NOT used by any verdict. Do not add a rule that reads it until a run proves it populates.
+   */
   adCount: number;
   aiOverview: boolean;
   /** Elements stacked above the first organic result — the proxy for "needs scrolling". */
@@ -102,28 +119,35 @@ function verdictFor(r: Omit<SerpReading, 'verdict' | 'reason'>): { verdict: Serp
   if (r.firstOrganicRank === null) {
     return { verdict: 'skip', reason: 'No organic result on the page at all.' };
   }
-  const thinPack = r.packSize < FULL_PACK;
+
+  // ⚠️ FIRST, AND BEFORE ANY RULE ABOUT WHAT RANKS. A full pack sinks the page whatever sits at
+  // #1 — the towing control is a full pack with a DIRECTORY first, which the thin-pack rules
+  // below would otherwise have called a best case.
+  if (r.packSize >= FULL_PACK) {
+    return {
+      verdict: 'skip',
+      reason: `Full ${r.packSize}-business pack — it is the answer for this query, and organic sits under it. This is the towing shape.`,
+    };
+  }
+
+  if (r.blocksAbove > THIN_PACK_MAX_BLOCKS) {
+    return {
+      verdict: 'mixed',
+      reason: `Pack is thin (${r.packSize}) but ${r.blocksAbove} blocks sit above the first organic result.`,
+    };
+  }
 
   // A forum at #1 means the buyer is researching and nobody has published the good answer.
-  if (r.firstOrganicKind === 'forum' && thinPack) {
-    return { verdict: 'best', reason: 'A forum ranks first with a thin pack — the good answer is unpublished.' };
+  if (r.firstOrganicKind === 'forum') {
+    return { verdict: 'best', reason: `A forum ranks first with a pack of ${r.packSize} — the good answer is unpublished.` };
   }
-  if (thinPack && (r.firstOrganicKind === 'directory' || r.firstOrganicKind === 'retail')) {
+  if (r.firstOrganicKind === 'directory' || r.firstOrganicKind === 'retail') {
     return {
       verdict: 'best',
       reason: `Pack has ${r.packSize} business${r.packSize === 1 ? '' : 'es'} and Google fell back to a ${r.firstOrganicKind} — a better list wins this.`,
     };
   }
-  if (thinPack) {
-    return { verdict: 'good', reason: `Pack has only ${r.packSize} — organic decides this page.` };
-  }
-  if (r.blocksAbove <= MIXED_MAX_BLOCKS) {
-    return { verdict: 'mixed', reason: `Full pack, but only ${r.blocksAbove} block(s) above organic — winnable, lower ceiling.` };
-  }
-  return {
-    verdict: 'skip',
-    reason: `Full pack and ${r.blocksAbove} blocks above the first organic result — this is the towing shape.`,
-  };
+  return { verdict: 'good', reason: `Pack has only ${r.packSize} — organic decides this page.` };
 }
 
 /** 🟢 for the worksheet's tally. `mixed` is deliberately not green. */

@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { classifyDomain, readSerp, tally, MIXED_MAX_BLOCKS } from '@/lib/serp/classify';
+import { classifyDomain, readSerp, tally } from '@/lib/serp/classify';
 import { collapseLocalPack, mapItems } from '@/lib/serp/dataforseo';
 import type { SerpElement, SerpSnapshot } from '@/lib/serp/types';
 
@@ -62,16 +62,46 @@ describe('the winnable shapes', () => {
     expect(r.reason).toMatch(/unpublished/);
   });
 
-  it('a full pack with organic still near the top is mixed, not green', () => {
+  // ⚠️ THIS TEST ASSERTED `mixed` UNTIL A REAL RUN DISAGREED. Every full-pack query in the
+  // 2026-09-22 calibration had 1–2 blocks above organic, including the towing control we know
+  // loses — so block count does not discriminate and pack size does.
+  it('a full pack is skip even with organic right beneath it', () => {
     const r = readSerp(
       snap([
         { kind: 'local_pack', rank: 1, entries: 3 },
         { kind: 'organic', rank: 2, domain: 'example.com' },
       ]),
     );
-    expect(r.blocksAbove).toBeLessThanOrEqual(MIXED_MAX_BLOCKS);
+    expect(r.blocksAbove).toBe(1);
+    expect(r.verdict).toBe('skip');
+    expect(tally([r]).green).toBe(0);
+  });
+
+  it('a full pack outranks the directory rule — order matters', () => {
+    // The towing control is exactly this: a full pack with Yelp at #1. Checked in the other
+    // order it would read `best`, which is how the first model got the control wrong.
+    const r = readSerp(
+      snap([
+        { kind: 'local_pack', rank: 1, entries: 3 },
+        { kind: 'organic', rank: 2, domain: 'yelp.com' },
+      ]),
+    );
+    expect(r.firstOrganicKind).toBe('directory');
+    expect(r.verdict).toBe('skip');
+  });
+
+  it('a thin pack under a crowded page is demoted, not green', () => {
+    const r = readSerp(
+      snap([
+        { kind: 'ai_overview', rank: 1 },
+        { kind: 'people_also_ask', rank: 2 },
+        { kind: 'video', rank: 3 },
+        { kind: 'images', rank: 4 },
+        { kind: 'organic', rank: 5, domain: 'example.com' },
+      ]),
+    );
+    expect(r.packSize).toBe(0);
     expect(r.verdict).toBe('mixed');
-    expect(tally([r]).green).toBe(0); // mixed is deliberately not green
   });
 
   it('a page with no organic result at all is a skip, not a crash', () => {
@@ -110,7 +140,7 @@ describe('local pack siblings are collapsed', () => {
     // "visible without scrolling" row) — it takes ads or a PAA box on top to make it the
     // towing shape, which the towing test above covers.
     expect(r.packSize).toBe(3);
-    expect(r.verdict).toBe('mixed');
+    expect(r.verdict).toBe('skip');
   });
 
   it('leaves a nested-items pack alone', () => {

@@ -21,6 +21,33 @@ export type WorklistStep = SerpCheck & {
   isControl: boolean;
   /** A ready-made Google URL with the location spelled out in the query, for the copy button. */
   searchUrl: string;
+  /**
+   * Does this row need the browser's location faked?
+   *
+   * ⚠️ ONLY "near me" ROWS DO, and saying so per row matters more than it sounds: the first
+   * version told people to set a location for all ten, most of which name the city in the query
+   * and do not need it. A setup step that is unnecessary two-thirds of the time is one people
+   * skip on the rows where it IS load-bearing — and a "near me" search from the wrong city is a
+   * measurement of the wrong market that looks exactly like a measurement of the right one.
+   */
+  needsLocationOverride: boolean;
+  /** Coordinates to paste into DevTools → Sensors, when this row needs them. */
+  coords?: string;
+};
+
+/** Lat/long per city we run checks in, for the Sensors panel. */
+export const CITY_COORDS: Record<string, string> = {
+  seattle: '47.6062, -122.3321',
+  austin: '30.2672, -97.7431',
+  asheville: '35.5951, -82.5515',
+  denver: '39.7392, -104.9903',
+  orlando: '28.5383, -81.3792',
+  portland: '43.6591, -70.2568',
+  madison: '43.0731, -89.4012',
+  boise: '43.6150, -116.2023',
+  phoenix: '33.4484, -112.0740',
+  nashville: '36.1627, -86.7816',
+  'bonney lake': '47.1854, -122.1868',
 };
 
 const googleUrl = (query: string) =>
@@ -30,12 +57,18 @@ const googleUrl = (query: string) =>
 export function buildWorklist(checks: readonly SerpCheck[]): WorklistStep[] {
   const control = checks.filter((c) => c.nicheKey === 'towing');
   const rest = checks.filter((c) => c.nicheKey !== 'towing');
-  return [...control, ...rest].map((c, i) => ({
-    ...c,
-    index: i + 1,
-    isControl: c.nicheKey === 'towing',
-    searchUrl: googleUrl(c.query),
-  }));
+  return [...control, ...rest].map((c, i) => {
+    const needsLocationOverride = /\bnear me\b/i.test(c.query);
+    const city = c.location.split(',')[0].trim().toLowerCase();
+    return {
+      ...c,
+      index: i + 1,
+      isControl: c.nicheKey === 'towing',
+      searchUrl: googleUrl(c.query),
+      needsLocationOverride,
+      ...(needsLocationOverride && CITY_COORDS[city] ? { coords: CITY_COORDS[city] } : {}),
+    };
+  });
 }
 
 export function worksheetWorklist(): WorklistStep[] {

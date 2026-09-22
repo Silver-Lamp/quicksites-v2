@@ -107,3 +107,32 @@ describe('progress is honest mid-run', () => {
     expect(s.recommendation).toBe('1 of 10 done.');
   });
 });
+
+describe('only "near me" rows need a location override', () => {
+  const { CITY_COORDS } = require('@/lib/serp/worklist') as typeof import('@/lib/serp/worklist');
+
+  // ⚠️ The first version told people to set a location on all ten rows, two-thirds of which name
+  // the city in the query. A setup step that is unnecessary most of the time gets skipped on the
+  // rows where it IS load-bearing — and a "near me" search run from the wrong city measures the
+  // wrong market while looking exactly like a measurement of the right one.
+  it('flags near-me rows and leaves city-qualified ones alone', () => {
+    const w = worksheetWorklist();
+    const nearMe = w.filter((s) => /near me/i.test(s.query));
+    const cityQualified = w.filter((s) => !/near me/i.test(s.query));
+    expect(nearMe.length).toBeGreaterThan(0);
+    expect(cityQualified.length).toBeGreaterThan(0);
+    for (const s of nearMe) expect(s.needsLocationOverride).toBe(true);
+    for (const s of cityQualified) expect(s.needsLocationOverride).toBe(false);
+  });
+
+  it('gives coordinates for every city a near-me row runs in', () => {
+    for (const s of worksheetWorklist().filter((x) => x.needsLocationOverride)) {
+      expect(s.coords).toMatch(/^-?\d+\.\d+, -?\d+\.\d+$/);
+    }
+  });
+
+  it('every LOC city has coordinates — a missing one silently drops the help', () => {
+    const { LOC } = require('@/lib/serp/checkSets') as typeof import('@/lib/serp/checkSets');
+    for (const city of Object.keys(LOC)) expect(CITY_COORDS[city]).toBeTruthy();
+  });
+});

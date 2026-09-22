@@ -28,6 +28,8 @@ type Row = {
   location: string;
   isControl: boolean;
   searchUrl: string;
+  needsLocationOverride: boolean;
+  coords?: string;
   human: { verdict: string; pack_size: number; reason: string; notes: string | null } | null;
   machine: { verdict: string; pack_size: number; first_organic_domain: string | null } | null;
 };
@@ -197,7 +199,9 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
       )}
 
       <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5">
-        <div className="text-xs uppercase tracking-wide text-neutral-500">Search this, with your location set to {city}</div>
+        <div className="text-xs uppercase tracking-wide text-neutral-500">
+          Search this{row.needsLocationOverride ? <> — location must be <strong className="text-amber-300">{city}</strong></> : null}
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <code className="rounded-lg bg-neutral-950 px-3 py-2 text-base text-sky-300">{row.query}</code>
           <button
@@ -210,10 +214,47 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
             open in Google ↗
           </a>
         </div>
-        <p className="mt-2 text-xs text-neutral-500">
-          Use an incognito window. Set the location in DevTools → Sensors, or trust the city in the
-          query — just be consistent across the run.
-        </p>
+        {row.needsLocationOverride ? (
+          <details className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-100">
+            <summary className="cursor-pointer select-none font-medium">
+              ⚠️ This row says “near me” — set your location to {city} first
+            </summary>
+            <div className="mt-2 flex flex-col gap-2 text-amber-100/90">
+              <p>
+                “Near me” uses where Google thinks you are, not the words you typed. From the wrong
+                city this measures the wrong market and looks identical to measuring the right one.
+              </p>
+              <p className="font-medium text-amber-50">Easiest, no DevTools:</p>
+              <p>
+                Run the search, then at the bottom of the results page click{' '}
+                <strong>Update location</strong> (beside “Results for …”) and enter {city}.
+              </p>
+              <p className="font-medium text-amber-50">Or in Chrome DevTools:</p>
+              <ol className="list-decimal pl-4">
+                <li>Open DevTools — <kbd className="rounded bg-black/30 px-1">⌥⌘I</kbd></li>
+                <li>Press <kbd className="rounded bg-black/30 px-1">⌘⇧P</kbd>, type <em>sensors</em>, pick “Show Sensors”</li>
+                <li>Location → “Other…” → paste {row.coords ?? 'the city coordinates'}</li>
+                <li>Reload the search</li>
+              </ol>
+              {row.coords ? (
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(row.coords!); }}
+                  className="self-start rounded border border-amber-500/50 px-2 py-1 text-[11px] hover:bg-amber-500/10"
+                >
+                  copy {row.coords}
+                </button>
+              ) : null}
+              <p className="text-amber-100/70">
+                Sensors is a bottom-drawer panel, not a tab — the ⋮ menu you want is the one
+                <em> inside</em> DevTools, not the browser’s.
+              </p>
+            </div>
+          </details>
+        ) : (
+          <p className="mt-2 text-xs text-neutral-500">
+            The city is in the query, so there is nothing to set — just use an incognito window.
+          </p>
+        )}
       </div>
 
       <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5">

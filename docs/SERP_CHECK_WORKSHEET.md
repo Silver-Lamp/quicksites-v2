@@ -48,10 +48,18 @@ Regionally dense, nationally sparse. The supply probe could not see that; this c
 
 1. **Open an incognito/private window.** Your logged-in results are personalised by your own
    search history.
-2. **Set location.** Google uses your real location regardless of the words you type. Either put
-   the city in the phrase (`treehouse builder asheville nc`), or in Chrome DevTools (⌥⌘I) → ⋮ →
-   More tools → Sensors → Location → Custom:
-   - **Asheville, NC** `35.5951, -82.5515` · **Austin, TX** `30.2672, -97.7431`
+2. **Set location — but only for the `near me` rows.** A search with the city in it
+   (`treehouse builder asheville nc`) needs nothing. A `near me` search uses where Google thinks
+   you are, and from the wrong city it measures the wrong market while looking identical to a
+   measurement of the right one.
+   - **No DevTools:** run the search, then click **Update location** at the bottom of the results
+     page (beside "Results for …") and enter the city.
+   - **Chrome DevTools:** ⌥⌘I to open it, then **⌘⇧P** → type `sensors` → "Show Sensors" →
+     Location → "Other…" → paste the coordinates → reload. ⚠️ Sensors is a bottom-drawer panel,
+     not a tab, and the ⋮ menu is the one *inside* DevTools, not the browser's.
+   - Asheville `35.5951, -82.5515` · Austin `30.2672, -97.7431` · Denver `39.7392, -104.9903` ·
+     Seattle `47.6062, -122.3321` · Phoenix `33.4484, -112.0740` · Nashville `36.1627, -86.7816` ·
+     Bonney Lake `47.1854, -122.1868`
 3. **Laptop, not phone.** Phone SERPs show even less organic, which biases the answer pessimistic.
 
 ---
@@ -64,7 +72,7 @@ trade words and keep the shape.
 | # | Search |
 |---|---|
 | 1 | `<niche> builder <city> <state>` |
-| 2 | `<niche> builders near me` *(location set to that city)* |
+| 2 | `<niche> builders near me` — **needs the location override** |
 | 3 | `custom <niche> company <state>` |
 | 4–5 | repeat 1–2 in a second, different metro |
 | 6–10 | the same five for a second niche |

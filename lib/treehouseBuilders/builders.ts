@@ -126,10 +126,14 @@ export const TREEHOUSE_BUILDERS: TreehouseBuilder[] = [
     id: 'o2-treehouse',
     name: 'O2 Treehouse',
     url: 'https://www.o2treehouse.com/',
+    baseCity: 'Oakland',
+    baseState: 'CA',
     servesStates: [],
-    summary: 'Luxury treehouses, described on their site as artisan craftsmanship with engineering-led design.',
+    summary:
+      'Luxury treehouses, geodesic garden domes, gazebos and treehouse kits, prefabricated in California and transported to the client\u2019s property.',
     sources: [
-      { url: 'https://www.o2treehouse.com/', note: 'What they build. Their site names a Santa Cruz, California project but states no base or service area.', read: READ },
+      { url: 'https://www.o2treehouse.com/', note: 'What they build. Their OWN site names a Santa Cruz project but states no base and no service area.', read: READ },
+      { url: 'https://www.houzz.com/professionals/architects-and-building-designers/o2-treehouse-pfvwus-pf~1202117464', note: '⚠️ Third-party listing (Houzz, corroborated by Yelp and a Dwell profile): Oakland, California base with a Petaluma workshop. Not the company\u2019s own words.', read: READ },
     ],
   },
   {
@@ -147,23 +151,27 @@ export const TREEHOUSE_BUILDERS: TreehouseBuilder[] = [
     id: 'treecraft-design-build',
     name: 'Treecraft Design-Build',
     url: 'https://www.treecraftdesignbuild.com/',
+    baseCity: 'Fort Collins',
     baseState: 'CO',
-    servesStates: [],
+    servesStates: ['CO'],
+    serviceAreaQuote: 'We work primarily in Colorado, and occasionally beyond. We are happy to travel for the right project!',
     summary:
-      'Design-build firm for custom treehouses, cabins, playhouses, playgrounds and other small-scale structures.',
+      'Design-build firm for custom treehouses, cabins, playhouses, playgrounds, skate ramps and related small-scale structures.',
     sources: [
-      { url: 'https://thetreehouseguide.com/links-builders.htm', note: 'Listed as a Colorado (Boulder/Fort Collins) treehouse builder. ⚠️ Directory listing only — their own site has not been read yet.', read: READ },
+      { url: 'https://www.treecraftdesignbuild.com/about', note: 'Fort Collins base, the Colorado service-area sentence in their own words, and what they build. No prices stated.', read: READ },
     ],
   },
   {
     id: 'creative-treehouse-design',
     name: 'Creative Treehouse Design',
     url: 'http://www.creativetreehousedesign.com/',
+    baseCity: 'Weaverville',
     baseState: 'NC',
-    servesStates: [],
-    summary: 'North Carolina treehouse design and build, listed by Google as a general contractor.',
+    servesStates: ['NC'],
+    serviceAreaQuote: 'western NC and surrounding areas',
+    summary: 'Treehouse, deck, platform and bridge construction and design.',
     sources: [
-      { url: 'https://www.google.com/maps', note: 'Google Places listing: North Carolina, primary type "General Contractor". ⚠️ Their own site has not been read yet.', read: READ },
+      { url: 'http://www.creativetreehousedesign.com/', note: 'Weaverville NC base, the "western NC and surrounding areas" service line, and what they build. No prices stated.', read: READ },
     ],
   },
   {
@@ -187,6 +195,34 @@ export const TREEHOUSE_BUILDERS: TreehouseBuilder[] = [
     summary: 'California treehouse builder listed in The Treehouse Guide’s directory.',
     sources: [
       { url: 'https://thetreehouseguide.com/links-builders.htm', note: 'Listed as a Sebastopol, California treehouse builder. ⚠️ Directory listing only — their own site has not been read yet.', read: READ },
+    ],
+  },
+  {
+    id: 'barbara-butler',
+    name: 'Barbara Butler Artist-Builder',
+    url: 'https://barbarabutler.com/',
+    baseCity: 'Hayward',
+    baseState: 'CA',
+    // "All over the country" names no state, so servesStates stays empty — same rule as Nelson.
+    servesStates: [],
+    serviceAreaQuote: 'all over the country and internationally',
+    summary:
+      'Custom treehouses, playhouses, play forts, climbing structures, swing sets, theatres and ziplines, built in redwood since 1987.',
+    sources: [
+      { url: 'https://barbarabutler.com/who-we-are', note: 'Hayward, California address, the "all over the country and internationally" wording, what they build and the redwood materials. No prices on that page.', read: READ },
+    ],
+  },
+  {
+    id: 'romero-studios',
+    name: 'Romero Studios',
+    url: 'https://www.romerostudios.com/',
+    baseCity: 'New York City',
+    baseState: 'NY',
+    servesStates: [],
+    summary: 'Treehouse design and build, founded 1997, using largely reclaimed and salvaged material.',
+    sources: [
+      { url: 'https://thetreehouseguide.com/links-builders.htm', note: 'Listed among professional treehouse builders.', read: READ },
+      { url: 'https://www.romerostudios.com/', note: '⚠️ WEAK. Read 2026-09-22 and the site is now a near-empty redirect page reading "Roderick Wolgamott Treehouses / Wolgamott Works" — it states no base, no service area and no work. The New York City base comes from third-party profiles, NOT from them. Re-check before listing them anywhere public.', read: READ },
     ],
   },
   {

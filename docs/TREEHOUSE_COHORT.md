@@ -1,7 +1,7 @@
 # Treehouse cohort — status, and the two things that decide it
 
-**Status: researching supply. No domains bought.** The market is confirmed open; whether we can
-fill pages honestly is still being measured.
+**Status: supply researched, four of five states clear the bar, no domains bought.** The market is
+confirmed open. The blocker is `DOMAIN_REGISTRANT_*`, not the research.
 
 ## Why this niche
 
@@ -43,17 +43,27 @@ also the way to fill a page honestly:
 - **State pages only where `stateCoverage(state) >= 2`**, counting builders *based* there plus
   builders who **themselves name that state**. `lib/treehouseBuilders/builders.ts` computes it.
 
-### Coverage as it stands (12 builders, 7 read first-hand)
+### Coverage after the research pass (14 builders, 10 read first-hand)
 
-| state | coverage | verdict |
-|---|---|---|
-| NC | 2 | buy |
-| WA | 2 | buy |
-| NY · CA · TN | 1 | **short** |
+| state | coverage | who | verdict |
+|---|---|---|---|
+| **CA** | 3 | O2 Treehouse (Oakland) · ArtisTree · Barbara Butler (Hayward) | buy |
+| **NC** | 2 | Creative Treehouse Design (Weaverville) · Treehouse Experts *names NC* | buy |
+| **WA** | 2 | Nelson Treehouse (Fall City) · Wild Tree Woodworks (Seattle) | buy |
+| **NY** | 2 | Buffalo Treehouse · Romero Studios | ⚠️ buy with a caveat |
+| **TN** | 1 | Treehouse Experts *names TN*; nobody based there | **no** |
 
-⚠️ **This is a floor, not a final answer** — five entries are still directory listings whose own
-sites have not been read, and any one of them may name a multi-state service area that lifts a
-state over the bar. Finishing that research is what settles NY, CA and TN.
+⚠️ **New York's second entry is weak.** Romero Studios' own site was read on 2026-09-22 and is now
+a near-empty redirect page; its New York City base comes from third-party profiles, not from them.
+A directory entry linking to a stub is poor value for a visitor. Re-check before the page goes
+live, or treat NY as coverage 1.
+
+⚠️ **Tennessee rests entirely on one travelling firm** naming it in a sentence. There is no builder
+based in the state. That is the "near me" promise unkept, and it is a no.
+
+⚠️ **Two entries still have no first-hand read.** ArtisTree refused a TLS connection on 2026-09-22,
+and Cape Cod Treehouse's own site says it is still in development. California clears the bar
+without ArtisTree, so nothing hangs on it — but the entry is marked weak.
 
 ## Rules this cohort inherits, plus one of its own
 

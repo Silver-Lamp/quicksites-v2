@@ -131,6 +131,7 @@ export const DYNAMIC_RENDERERS: Record<
   footer: () => import('@/components/admin/templates/render-blocks/footer'),
   service_areas: () => import('@/components/admin/templates/render-blocks/service-areas'),
   builders_directory: () => import('@/components/admin/templates/render-blocks/builders-directory'),
+  treehouse_planner: () => import('@/components/admin/templates/render-blocks/treehouse-planner'),
   header: () => import('@/components/admin/templates/render-blocks/header'),
   faq: () => import('@/components/admin/templates/render-blocks/faq'),
   agreement: () => import('@/components/admin/templates/render-blocks/agreement'),

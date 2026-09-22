@@ -191,6 +191,11 @@ export const DEFAULT_BLOCK_CONTENT = {
     links: [{ label: 'Home', href: '/', appearance: 'default' }],
   },
 
+  treehouse_planner: {
+    title: 'What will a treehouse cost?',
+    blurb: '',
+  },
+
   builders_directory: {
     title: '',
     subtitle: '',

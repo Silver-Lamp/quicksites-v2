@@ -295,6 +295,24 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   old behaviour on purpose. Admin: `GET/PUT /api/admin/templates/[id]/redirects` (commits via the
   RPC; **republish** for the map to reach the served snapshot). Migration recipe in
   [`docs/CUSTOM_SITES.md`](docs/CUSTOM_SITES.md) §9.
+- **Niche discovery — "can an organic result win this page at all?" (2026-09-22)**: two
+  measurements behind **[`docs/NICHE_DISCOVERY.md`](docs/NICHE_DISCOVERY.md)**. (1) The **GSC
+  query harvest** — every GSC call here asked for `dimensions: ['page']` or none, so we stored
+  totals and never learned a word anyone typed; `lib/gsc/queryHarvest.ts` + cron
+  `/api/cron/gsc-query-harvest` (07:40, no flag — read-only at Google, unlike `gsc-backfill` it
+  writes no DNS) + `gsc_queries` (migration `20260846`, service-role only) + the on-demand
+  `scripts/gsc-query-harvest.mts`. **Striking distance** = position 11–40, ≥10 impressions,
+  self-lookups excluded. ⚠️ **An average position is not a rank** (GSC averages over impressions;
+  `MIN_IMPRESSIONS` is why a 3-impression row is dropped), and a domain ranking for its own name
+  is us being looked up, not winnable demand. (2) The **supply-density probe**
+  (`lib/niches/{candidates,score}.ts`, `scripts/niche-probe.mts`) — Places supply per metro for
+  unusual STRUCTURES, scored against bands anchored to our own cohorts. ⚠️ **Density is a proxy
+  for local-pack strength, nobody has read a SERP**, so every verdict says "go read ten searches",
+  never "buy". Two controls (towing = known loss, decks = dense but we own the tool) must behave
+  or the probe is wrong. **The finding that motivated it:** 92 domains, 2,903 impressions, **18
+  clicks**; `towing service near me` sits at position 10.9 with 69 impressions and **zero** clicks
+  — the pack is full before our result appears. Hence the rule: **search for the structure, not
+  the trade.**
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).

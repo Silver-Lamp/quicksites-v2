@@ -81,6 +81,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/gsc-query-harvest",
+      "schedule": "40 7 * * *"
+    },
+    {
       "path": "/api/cron/geo-rank-sync",
       "schedule": "0 8 * * *"
     },

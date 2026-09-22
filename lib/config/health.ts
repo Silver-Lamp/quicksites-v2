@@ -262,6 +262,14 @@ export const CONFIG_GATES: ConfigGate[] = [
       'Owner-voice audio cannot be provisioned. config.ts fails closed, so /merchant/audio looks present but every call is rejected. The shared secret must hold the SAME value in HiveJournal\'s env.',
   },
   {
+    key: 'serp_recheck',
+    label: 'SERP re-check (DataForSEO)',
+    enabledBy: 'SERP_RECHECK_ENABLED',
+    requires: ['DATAFORSEO_LOGIN', 'DATAFORSEO_PASSWORD'],
+    breaks:
+      'The monthly SERP re-check skips with "unconfigured" and serp_observations stops accumulating, so a niche verdict silently ages — an AI overview can turn a winnable page unwinnable with nothing else changing. Costs money per check when on.',
+  },
+  {
     key: 'hj_founding_family_counts',
     label: 'Founding-family counts on /admin/ops (HiveJournal)',
     requires: ['PARTNER_QUICKSITES_SECRET'],

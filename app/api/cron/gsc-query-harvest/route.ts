@@ -58,7 +58,7 @@ async function handle(req: NextRequest) {
         const searchconsole = google.searchconsole({ version: 'v1', auth });
         const res = await searchconsole.searchanalytics.query({
           siteUrl: domain,
-          requestBody: { startDate, endDate, dimensions: ['query'], rowLimit: ROW_LIMIT },
+          requestBody: { startDate, endDate, dimensions: ['query', 'page'], rowLimit: ROW_LIMIT },
         });
         const rows = parseQueryRows(res.data.rows);
         if (!rows.length) {
@@ -68,6 +68,7 @@ async function handle(req: NextRequest) {
         const payload = rows.map((r) => ({
           domain,
           query: r.query,
+          page: r.page ?? '',
           clicks: r.clicks,
           impressions: r.impressions,
           ctr: r.ctr,
@@ -78,11 +79,18 @@ async function handle(req: NextRequest) {
         }));
         const { error: wErr } = await db
           .from('gsc_queries')
-          .upsert(payload, { onConflict: 'domain,query,start_date,end_date' });
+          .upsert(payload, { onConflict: 'domain,query,page,start_date,end_date' });
         if (wErr) {
           failed.push(domain);
           continue;
         }
+        await db
+          .from('gsc_queries')
+          .delete()
+          .eq('domain', domain)
+          .eq('start_date', startDate)
+          .eq('end_date', endDate)
+          .eq('page', '');
         harvested++;
         rowsWritten += payload.length;
         striking += summariseQueries(rows, domain).strikingDistance;

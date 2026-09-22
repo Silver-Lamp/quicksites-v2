@@ -85,6 +85,10 @@
       "schedule": "40 7 * * *"
     },
     {
+      "path": "/api/cron/serp-recheck",
+      "schedule": "0 9 3 * *"
+    },
+    {
       "path": "/api/cron/geo-rank-sync",
       "schedule": "0 8 * * *"
     },

@@ -81,11 +81,18 @@ describe('/testing — the counts it states', () => {
     expect(src).toContain('The real figure is 198');
   });
 
-  it('states the real number of config gates', () => {
+  // This one is DERIVED on the page (`{CONFIG_GATES.length} features`) rather than typed, after
+  // going stale three times in one week — every gate added broke the build until someone edited
+  // a number in prose. So the assertion changed too: pin that it is still derived. A literal
+  // here would pass on the day it was written and rot exactly as before.
+  it('derives the config-gate count instead of stating it', () => {
+    expect(shipped).toContain('{CONFIG_GATES.length} features');
+    expect(shipped).toMatch(/import \{ CONFIG_GATES \}/);
     const health = readFileSync(join(process.cwd(), 'lib/config/health.ts'), 'utf8');
     const gates = [...health.matchAll(/key: ['"]([^'"]+)['"]/g)].length;
     expect(gates).toBeGreaterThan(0);
-    expect(claims(`${gates} features`)).toBe(true);
+    // And no stale literal left behind next to it.
+    expect(shipped).not.toMatch(/<strong>\d+ features<\/strong>/);
   });
 
   it('states the real size of the undeclared-env baseline', () => {

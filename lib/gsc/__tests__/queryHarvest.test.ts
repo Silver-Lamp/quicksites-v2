@@ -91,3 +91,68 @@ describe('defaultWindow', () => {
     expect(w.startDate).toBe('2026-08-22');
   });
 });
+
+describe('fleet scope — the exclusion is on the page, never the query', () => {
+  const { isNonCommercialPage, fleetRows, whyExcluded } = require('@/lib/gsc/fleetScope') as typeof import('@/lib/gsc/fleetScope');
+
+  it('excludes the personal page and anything under it', () => {
+    expect(isNonCommercialPage('https://www.quicksites.ai/sites/sandon')).toBe(true);
+    expect(isNonCommercialPage('https://www.quicksites.ai/sites/sandon/')).toBe(true);
+    expect(isNonCommercialPage('https://www.quicksites.ai/sites/sandon/resume')).toBe(true);
+    expect(whyExcluded('https://www.quicksites.ai/sites/sandon')).toMatch(/Personal page/);
+  });
+
+  it('keeps commercial pages, including ones whose path merely starts similarly', () => {
+    expect(isNonCommercialPage('https://www.quicksites.ai/sites/sandon-towing')).toBe(false);
+    expect(isNonCommercialPage('https://www.quicksites.ai/pricing')).toBe(false);
+    expect(isNonCommercialPage(null)).toBe(false); // a row with no page is kept, never guessed at
+  });
+
+  it('reports what it dropped — an invisible exclusion is the bug it exists to fix', () => {
+    const { kept, excluded } = fleetRows([
+      { page: 'https://www.quicksites.ai/sites/sandon' },
+      { page: 'https://www.quicksites.ai/pricing' },
+    ]);
+    expect(kept).toHaveLength(1);
+    expect(excluded).toHaveLength(1);
+  });
+});
+
+describe('parseQueryRows with the page dimension', () => {
+  it('reads keys as [query, page] when both were requested', () => {
+    const parsed = parseQueryRows([
+      { keys: ['dome kits', 'https://x.test/a'], clicks: 1, impressions: 20, ctr: 0.05, position: 12 },
+    ]);
+    expect(parsed[0]).toMatchObject({ query: 'dome kits', page: 'https://x.test/a' });
+  });
+
+  it('omits page when only [query] was requested', () => {
+    const parsed = parseQueryRows([{ keys: ['dome kits'], clicks: 1, impressions: 20, ctr: 0.05, position: 12 }]);
+    expect(parsed[0].page).toBeUndefined();
+  });
+});
+
+describe('fleet scope covers all three personal pages, not just ours', () => {
+  const { isNonCommercialPage, whyExcluded } = require('@/lib/gsc/fleetScope') as typeof import('@/lib/gsc/fleetScope');
+
+  // Enumerating properties (rather than iterating one row per domain) brought HiveJournal's and
+  // the personal domain's pages into our aggregates at once. Excluding one and missing the others
+  // is worse than excluding none: the number looks cleaned.
+  it('excludes the page on every property it appears on', () => {
+    expect(isNonCommercialPage('https://www.quicksites.ai/sites/sandon')).toBe(true);
+    expect(isNonCommercialPage('https://www.hivejournal.com/sandon-jurowski')).toBe(true);
+    expect(isNonCommercialPage('https://sandonjurowski.com/')).toBe(true);
+    expect(isNonCommercialPage('https://sandonjurowski.com/anything')).toBe(true);
+  });
+
+  it('gives a reason for a host-matched exclusion too', () => {
+    expect(whyExcluded('https://sandonjurowski.com/')).toMatch(/exact-match domain/i);
+    expect(whyExcluded('https://www.hivejournal.com/sandon-jurowski')).toMatch(/3,057/);
+  });
+
+  it('still keeps the commercial pages of those same properties', () => {
+    expect(isNonCommercialPage('https://www.hivejournal.com/pricing')).toBe(false);
+    expect(isNonCommercialPage('https://www.hivejournal.com/sandon-jurowski-fan-club')).toBe(false);
+    expect(isNonCommercialPage('https://www.quicksites.ai/pricing')).toBe(false);
+  });
+});

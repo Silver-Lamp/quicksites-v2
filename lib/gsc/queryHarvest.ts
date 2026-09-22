@@ -17,6 +17,8 @@
 
 export type GscQueryRow = {
   query: string;
+  /** The page the query landed on, when the harvest asked for the `page` dimension too. */
+  page?: string;
   clicks: number;
   impressions: number;
   ctr: number;
@@ -42,7 +44,10 @@ export function defaultWindow(now: Date = new Date()): HarvestWindow {
   return { startDate: ymd(start), endDate: ymd(end) };
 }
 
-/** Google returns `keys: [query]` plus the metrics; anything malformed is dropped, never guessed. */
+/**
+ * Google returns `keys` in the order the dimensions were requested — `[query]`, or `[query, page]`
+ * when the page dimension is asked for too. Anything malformed is dropped, never guessed.
+ */
 export function parseQueryRows(rows: unknown): GscQueryRow[] {
   if (!Array.isArray(rows)) return [];
   const out: GscQueryRow[] = [];
@@ -50,9 +55,11 @@ export function parseQueryRows(rows: unknown): GscQueryRow[] {
     const row = r as { keys?: unknown[]; clicks?: unknown; impressions?: unknown; ctr?: unknown; position?: unknown };
     const query = typeof row?.keys?.[0] === 'string' ? (row.keys[0] as string).trim() : '';
     if (!query) continue;
+    const page = typeof row?.keys?.[1] === 'string' ? (row.keys[1] as string).trim() : undefined;
     const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
     out.push({
       query,
+      ...(page ? { page } : {}),
       clicks: Math.round(num(row.clicks)),
       impressions: Math.round(num(row.impressions)),
       ctr: Math.round(num(row.ctr) * 10000) / 10000,

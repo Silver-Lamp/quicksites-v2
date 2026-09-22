@@ -24,25 +24,34 @@ async function main() {
   const { defaultWindow, parseQueryRows, pickStrikingDistance, isSelfReferential } = await import(
     '@/lib/gsc/queryHarvest'
   );
+  const { listAllProperties, distinctGrants } = await import('@/lib/gsc/listProperties');
+  const { isNonCommercialPage, whyExcluded } = await import('@/lib/gsc/fleetScope');
 
   const { startDate, endDate } = defaultWindow();
-  const { data: toks } = await supabaseAdmin.from('gsc_tokens').select('domain');
-  const domains = [...new Set((toks ?? []).map((t: { domain?: string }) => t.domain).filter(Boolean))] as string[];
-  console.log(`${domains.length} connected domains · window ${startDate} → ${endDate}${DRY ? ' · DRY RUN' : ''}\n`);
+  // Enumerate from the grants rather than from one row per domain: a property added in the GSC
+  // console has no row, so it was invisible — see lib/gsc/listProperties.ts.
+  const { data: toks } = await supabaseAdmin.from('gsc_tokens').select('domain, refresh_token');
+  const grants = distinctGrants(toks ?? []);
+  const { properties, failedGrants } = await listAllProperties(grants);
+  console.log(
+    `${grants.length} grant(s) → ${properties.length} readable propert${properties.length === 1 ? 'y' : 'ies'}` +
+      `${failedGrants.length ? ` (${failedGrants.length} grant(s) failed)` : ''} · window ${startDate} → ${endDate}${DRY ? ' · DRY RUN' : ''}\n`,
+  );
 
-  type Row = { domain: string; q: string; impr: number; pos: number; clicks: number };
+  type Row = { domain: string; q: string; page?: string; impr: number; pos: number; clicks: number };
   const all: Row[] = [];
   const striking: Row[] = [];
   let written = 0;
   let failed = 0;
 
-  for (const domain of domains) {
+  for (const prop of properties) {
+    const domain = prop.siteUrl;
     try {
-      const auth = await getValidOAuthClient(domain);
+      const auth = await getValidOAuthClient(prop.viaGrant);
       const sc = google.searchconsole({ version: 'v1', auth });
       const res = await sc.searchanalytics.query({
         siteUrl: domain,
-        requestBody: { startDate, endDate, dimensions: ['query'], rowLimit: 500 },
+        requestBody: { startDate, endDate, dimensions: ['query', 'page'], rowLimit: 500 },
       });
       const rows = parseQueryRows(res.data.rows);
       if (!rows.length) continue;
@@ -50,22 +59,30 @@ async function main() {
       if (!DRY) {
         const { error } = await supabaseAdmin.from('gsc_queries').upsert(
           rows.map((r) => ({
-            domain, query: r.query, clicks: r.clicks, impressions: r.impressions,
+            domain, query: r.query, page: r.page ?? '', clicks: r.clicks, impressions: r.impressions,
             ctr: r.ctr, position: r.position, start_date: startDate, end_date: endDate,
           })),
-          { onConflict: 'domain,query,start_date,end_date' },
+          { onConflict: 'domain,query,page,start_date,end_date' },
         );
         if (error) { console.warn(`  ! ${short(domain)}: ${error.message}`); failed++; continue; }
+        await supabaseAdmin
+          .from('gsc_queries')
+          .delete()
+          .eq('domain', domain)
+          .eq('start_date', startDate)
+          .eq('end_date', endDate)
+          .eq('page', '');
         written += rows.length;
       }
-      for (const r of rows) all.push({ domain, q: r.query, impr: r.impressions, pos: r.position, clicks: r.clicks });
+      for (const r of rows) all.push({ domain, q: r.query, page: r.page, impr: r.impressions, pos: r.position, clicks: r.clicks });
       for (const r of pickStrikingDistance(rows)) {
-        if (!isSelfReferential(r.query, domain)) {
-          striking.push({ domain, q: r.query, impr: r.impressions, pos: r.position, clicks: r.clicks });
+        if (!isSelfReferential(r.query, domain) && !isNonCommercialPage(r.page)) {
+          striking.push({ domain, q: r.query, page: r.page, impr: r.impressions, pos: r.position, clicks: r.clicks });
         }
       }
-    } catch {
+    } catch (e) {
       failed++;
+      console.warn(`  ! ${short(domain)}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -73,8 +90,21 @@ async function main() {
     `${String(r.impr).padStart(5)} impr  pos ${String(r.pos).padStart(6)}  ${String(r.clicks).padStart(2)} clk  ${r.q}   [${short(r.domain)}]`;
 
   console.log(`domains with query data: ${new Set(all.map((r) => r.domain)).size} · rows ${DRY ? 'read' : 'written'}: ${DRY ? all.length : written} · failed: ${failed}`);
-  console.log(`\n=== What we are actually found for (top 25 by impressions)`);
-  [...all].sort((a, b) => b.impr - a.impr).slice(0, 25).forEach((r) => console.log(line(r)));
+  // Excluded at READ, never at write: the rows stay, they just never enter a fleet average.
+  const commercial = all.filter((r) => !isNonCommercialPage(r.page));
+  const dropped = all.filter((r) => isNonCommercialPage(r.page));
+  if (dropped.length) {
+    const di = dropped.reduce((s2, r) => s2 + r.impr, 0);
+    const ti = all.reduce((s2, r) => s2 + r.impr, 0) || 1;
+    console.log(
+      `\nExcluded from the fleet view: ${dropped.length} row(s), ${di} impressions (${Math.round((100 * di) / ti)}% of all).`,
+    );
+    for (const p2 of [...new Set(dropped.map((r) => r.page).filter(Boolean))]) {
+      console.log(`  ${p2} — ${whyExcluded(p2)}`);
+    }
+  }
+  console.log(`\n=== What we are actually found for (top 25 by impressions, fleet only)`);
+  [...commercial].sort((a, b) => b.impr - a.impr).slice(0, 25).forEach((r) => console.log(line(r)));
   console.log(`\n=== Striking distance — pos 11-40, >=10 impressions, self-lookups excluded (${striking.length})`);
   [...striking].sort((a, b) => b.impr - a.impr).slice(0, 25).forEach((r) => console.log(line(r)));
   if (!striking.length) console.log('  (none — either nothing ranks on page 2-4 yet, or impressions are too thin to read)');

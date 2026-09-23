@@ -53,6 +53,40 @@ const VERDICT_STYLE: Record<string, string> = {
   skip: 'border-red-500/40 bg-red-500/10 text-red-200',
 };
 
+/**
+ * One click-to-copy field.
+ *
+ * ⚠️ Chrome's Sensors panel has SEPARATE Latitude and Longitude inputs, so the old combined
+ * "35.5951, -82.5515" pasted into neither — it had to be re-typed by hand, which is both the
+ * slowest part of the row and the easiest place to fat-finger a digit. A wrong coordinate does
+ * not error; it measures a different place and looks exactly like measuring the right one.
+ */
+function CopyField({ label, value }: { label: string; value: string }) {
+  const [done, setDone] = React.useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        try {
+          navigator.clipboard?.writeText(value);
+          setDone(true);
+          setTimeout(() => setDone(false), 1200);
+        } catch {
+          /* clipboard blocked — the value is still selectable on screen */
+        }
+      }}
+      title={`Copy ${label}`}
+      className="group flex w-full items-baseline gap-3 rounded px-2 py-1 text-left transition hover:bg-amber-500/10"
+    >
+      <span className="w-[5.5rem] shrink-0 font-mono text-[11px] text-amber-200/70">{label}</span>
+      <span className="flex-1 font-mono text-[12px] text-amber-50">{value}</span>
+      <span className={`shrink-0 text-[10px] uppercase tracking-wide ${done ? 'text-emerald-300' : 'text-amber-200/40 group-hover:text-amber-200/80'}`}>
+        {done ? 'copied' : 'copy'}
+      </span>
+    </button>
+  );
+}
+
 export default function SerpCheckClient({ initialRows }: { initialRows: Row[] }) {
   const router = useRouter();
   const [rows, setRows] = React.useState<Row[]>(initialRows);
@@ -204,6 +238,8 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
    * stops being apples to apples while still producing two verdicts to compare.
    */
   const locationLabel = row.location.split(',').map((p) => p.trim()).join(', ');
+  // Sensors takes latitude and longitude separately; a combined string pastes into neither.
+  const [lat = '', lon = ''] = (row.coords ?? '').split(',').map((p) => p.trim());
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -299,15 +335,11 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
               <p className="font-medium text-amber-50">Easiest, no DevTools:</p>
               <p>
                 Run the search, then at the bottom of the results page click{' '}
-                <strong>Update location</strong> (beside “Results for …”) and enter{' '}
-                <strong className="text-amber-50">{locationLabel}</strong>.{' '}
-                <button
-                  onClick={() => { navigator.clipboard?.writeText(locationLabel); }}
-                  className="rounded border border-amber-500/50 px-1.5 py-0.5 text-[11px] hover:bg-amber-500/10"
-                >
-                  copy
-                </button>
+                <strong>Update location</strong> (beside “Results for …”) and paste:
               </p>
+              <div className="rounded border border-amber-500/30 bg-black/20 p-1.5">
+                <CopyField label="Location" value={locationLabel} />
+              </div>
               <p className="text-amber-100/70">
                 That is the exact location the automated run used. Setting a different one measures
                 a different market and the comparison stops meaning anything.
@@ -316,31 +348,18 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
               <ol className="list-decimal pl-4">
                 <li>Open DevTools — <kbd className="rounded bg-black/30 px-1">⌥⌘I</kbd></li>
                 <li>Press <kbd className="rounded bg-black/30 px-1">⌘⇧P</kbd>, type <em>sensors</em>, pick “Show Sensors”</li>
-                <li>Location → “Other…”, then fill the three fields below</li>
+                <li>Location → “Other…”, then fill each box from the values below</li>
                 <li>Reload the search</li>
               </ol>
               {row.coords ? (
-                <div className="rounded border border-amber-500/30 bg-black/20 p-2">
-                  <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11px]">
-                    <dt className="text-amber-200/70">Location</dt>
-                    <dd>{locationLabel}</dd>
-                    <dt className="text-amber-200/70">Lat / Long</dt>
-                    <dd>{row.coords}</dd>
-                    <dt className="text-amber-200/70">Timezone ID</dt>
-                    <dd>{row.timezoneId ?? '—'}</dd>
-                    <dt className="text-amber-200/70">Locale</dt>
-                    <dd>en-US</dd>
-                  </dl>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard?.writeText(
-                        `${locationLabel}\n${row.coords}\n${row.timezoneId ?? ''}\nen-US`,
-                      );
-                    }}
-                    className="mt-2 rounded border border-amber-500/50 px-2 py-1 text-[11px] hover:bg-amber-500/10"
-                  >
-                    copy all
-                  </button>
+                <div className="rounded border border-amber-500/30 bg-black/20 p-1.5">
+                  <p className="px-2 pb-1 text-[10px] uppercase tracking-wide text-amber-200/50">
+                    Click a value to copy it — Sensors has one box per field
+                  </p>
+                  <CopyField label="Latitude" value={lat} />
+                  <CopyField label="Longitude" value={lon} />
+                  <CopyField label="Timezone ID" value={row.timezoneId ?? ''} />
+                  <CopyField label="Locale" value="en-US" />
                 </div>
               ) : null}
               <p className="text-amber-100/70">

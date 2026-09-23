@@ -29,7 +29,7 @@ async function main() {
   const { NICHE_CANDIDATES } = await import('@/lib/niches/candidates');
   const { locationFor } = await import('@/lib/serp/checkSets');
   const { dataForSeoProvider } = await import('@/lib/serp/dataforseo');
-  const { readSerp, isGreen } = await import('@/lib/serp/classify');
+  const { readSerp, isGreen, isFeatureless } = await import('@/lib/serp/classify');
   const { supabaseAdmin } = await import('@/lib/supabase/admin');
 
   const cities = (arg('cities') ?? 'Austin,Denver').split(',').map((c) => c.trim()).filter(Boolean);
@@ -52,6 +52,7 @@ async function main() {
   // same query is a free read on how much of a niche's score is signal. Derived every run rather
   // than written down once, because the answer changes with the classifier and with Google.
   const repeat = { seen: 0, changed: 0, crossedGreen: 0, examples: [] as string[] };
+  const confirmed = { corrected: 0, agreed: 0, unresolved: 0 };
 
   for (const c of candidates) {
     const row: Row = { key: c.key, label: c.label, green: 0, total: 0, failed: 0, notes: [] };
@@ -74,7 +75,39 @@ async function main() {
         }
         try {
           if (!snap) throw new Error('failed after 3 attempts');
-          const r = readSerp(snap);
+          let used = snap;
+          let r = readSerp(used);
+
+          // ⚠️ CONFIRM A FEATURELESS GREEN, BECAUSE TRUNCATION SCORES AS OPPORTUNITY. See
+          // `isFeatureless`. In the first full sweep 4 of 108 readings were featureless and ALL
+          // FOUR were green; two were provably short responses (half the `se_results_count` and
+          // whole feature classes missing from `item_types`). One extra call on ~4% of rows is
+          // about $0.008 per sweep, and it only ever moves a verdict toward "skip".
+          if (isFeatureless(r) && isGreen(r.verdict)) {
+            let second: typeof used | null = null;
+            for (let attempt = 1; attempt <= 2 && !second; attempt++) {
+              try {
+                second = await dataForSeoProvider.fetchSerp(query, loc);
+              } catch {
+                if (attempt < 2) await new Promise((res) => setTimeout(res, 2000));
+              }
+            }
+            if (second) {
+              const r2 = readSerp(second);
+              // A feature SEEN is real; a feature missing may be truncation. So the read that
+              // found something wins, whichever order they arrived in.
+              if (!isFeatureless(r2)) {
+                r = r2;
+                used = second;
+                confirmed.corrected++;
+              } else {
+                confirmed.agreed++;
+              }
+            } else {
+              confirmed.unresolved++;
+            }
+          }
+
           const { data: prior } = await supabaseAdmin
             .from('serp_observations')
             .select('verdict')
@@ -97,7 +130,7 @@ async function main() {
             pack_size: r.packSize, ad_count: r.adCount, ai_overview: r.aiOverview,
             blocks_above: r.blocksAbove, first_organic_domain: r.firstOrganicDomain,
             first_organic_kind: r.firstOrganicKind, first_organic_rank: r.firstOrganicRank,
-            verdict: r.verdict, reason: r.reason, raw: snap.raw,
+            verdict: r.verdict, reason: r.reason, raw: used.raw,
           });
           row.total++;
           if (isGreen(r.verdict)) row.green++;
@@ -129,6 +162,14 @@ async function main() {
       `\n⚠️ ${thin.length} niche(s) landed fewer than 3 checks and their percentages mean nothing:` +
         `\n   ${thin.map((r) => `${r.label} (${r.total})`).join(', ')}` +
         `\n   Re-run those with --only=<keys> before reading anything into them.`,
+    );
+  }
+  const confirmTotal = confirmed.corrected + confirmed.agreed + confirmed.unresolved;
+  if (confirmTotal) {
+    console.log(
+      `\n🔎 ${confirmTotal} reading(s) showed NO page features at all and scored green, so each got a` +
+        `\n   second read. ${confirmed.corrected} turned out to be a short response and were replaced,` +
+        ` ${confirmed.agreed} confirmed,\n   ${confirmed.unresolved} could not be re-fetched (kept as read — treat as unconfirmed).`,
     );
   }
   if (repeat.seen) {

@@ -154,13 +154,40 @@ make. Towing (control) read 0%.
 with 13 state sites. A green rate is a statement about *these two cities and these three queries*,
 never about a niche; a niche that works can score low on a small sample of the wrong cities.
 
-⚠️ **THE SWEEP DISAGREES WITH ITSELF ABOUT 1 CHECK IN 5, AND THE MEASUREMENT IS FREE, SO TAKE IT.**
+⚠️ **THE SWEEP DISAGREES WITH ITSELF ABOUT 1 CHECK IN 5, AND CHASING THAT DOWN FOUND A REAL BUG.**
 Re-running the thin niches re-checked 21 queries that already had a reading: **4 came back with a
 different verdict, and 3 of those crossed the green/skip line** — the only difference that changes a
-decision. A SERP is not a constant, and the boundary case (a pack of 2 vs 3) is exactly where the
-verdict flips. The script now reports this every run rather than carrying the number in prose,
-because the answer changes with the classifier and with Google. **Consequence: rank on gaps wider
-than the noise, not on the ordering.** 100% vs 75% here is one check.
+decision. The script reports this every run rather than carrying the number here, because the answer
+changes with the classifier and with Google. **Consequence: rank on gaps wider than the noise, not
+on the ordering** — 100% vs 75% in the table above is one check.
+
+⚠️ **THE CAUSE WAS NOT SERP WOBBLE — IT WAS A SHORT PROVIDER RESPONSE THAT SCORES AS OPPORTUNITY,
+AND THAT IS THE MOST IMPORTANT LINE IN THIS FILE.** The first guess was that a pack of 2 vs 3
+flips at the boundary. It does not: all three crossings were **pack 3 ↔ pack 0** — the pack
+vanishing entirely. `dock builder austin`, read twice minutes apart:
+
+| | `item_types` | `se_results_count` | verdict |
+|---|---|---|---|
+| read A | `local_pack, organic, people_also_ask, related_searches` | 111 | `skip` |
+| read B | `organic, people_also_ask` | 57 | **`good`** |
+
+Read B is half a SERP. Nothing in it is *wrong* — it simply does not contain the blocks that decide
+the verdict, and **absence reads as "nothing is in our way."** In the first full sweep **4 of 108
+readings were featureless and all four were green**: the failure has a direction, and the direction
+is toward buying domains.
+
+The remedy is a second read, not a cleverer detector — a single response cannot distinguish a
+truncated SERP from a genuinely empty one, and a rule guessing which is which was tried and
+measured: *missing `related_searches`* looked diagnostic and was not (7 rows lack it, 5 of those saw
+a full pack). What is asymmetric is what the readings can prove: **a feature we SAW is real; a
+feature we did not see may just be missing.** So `isFeatureless()` (`lib/serp/classify.ts`) marks the
+suspect shape, the sweep re-fetches those rows, and the read that found something wins. About $0.008
+a sweep, and it only ever moves a verdict toward `skip`.
+
+⚠️ **`isFeatureless` is deliberately NOT wired into the scoring rule.** The classifier is correct
+given its input; the input was wrong. **A person cannot be served a truncated SERP**, so a hand-check
+reporting an empty page is reporting a real empty page, and compensating for a provider defect inside
+`verdictFor` would corrupt the human path to patch the API path. Pinned by a test.
 
 ⚠️ **A transient API failure looks exactly like a finding.** The first sweep lost ~30% of checks to
 DataForSEO's "Internal SE Server Error" and the losses *clustered* — domes came back 0% on a single

@@ -175,12 +175,47 @@ runs (horse barns and bunkers green in both, natural pools / sport courts / skat
 greenhouses / container builds 0% in both). It is the **middle of the table that is noise**, and the
 ordering within the top four means nothing at n=3–4.
 
-**What would fix it — not built, and it costs N×.** The right unit is not a verdict, it is a
-**rate**: read a query K times and record *what fraction of impressions showed a full pack*. That is
-the quantity that actually decides whether an organic result can win, and it is what the binary
-verdict has been standing in for. At K=5 a 92-check sweep is ~$0.90 — still cheap, and it would
-turn "is this niche green" into a number with an error bar. **Do that before any domain is bought
-on a sweep's ranking.**
+### The fix: a rate with an interval (`lib/serp/rate.ts`, built 2026-09-23)
+
+The right unit is not a verdict, it is a **rate** — read a query K times and record *what fraction
+of impressions showed no full pack*. That is the quantity that decides whether an organic result can
+win, and it is what the binary verdict was standing in for all along.
+
+```bash
+npx tsx --env-file=.env.local scripts/serp-rates.mts              # FREE — scores every row ever stored
+npx tsx --env-file=.env.local scripts/niche-serp-sweep.mts --reads=5 --dry   # 460 checks, ~$0.92
+```
+
+⚠️ **`scripts/serp-rates.mts` spends nothing.** Every read any sweep has ever taken is already a
+`serp_observations` row, so the scorer re-reads history instead of buying it again — which is also
+why no new table was added. Run it before spending to see which queries actually need more reads;
+it prints *"needs ~1 more read"* per query, so the next spend is aimed instead of uniform.
+
+⚠️ **THE INTERVAL IS THE THRESHOLD, NOT THE POINT ESTIMATE — that is the whole design.** `4/5 = 80%
+pack-free` sounds decisive and is not: its Wilson 95% interval runs **0.376 – 0.964**, so it does
+not even establish that the pack is absent more often than present. Calling that `winnable` is
+precisely the mistake the binary sweep made at n=3. Wilson rather than the normal approximation
+because the normal interval on 5/5 is **[1, 1]** — total certainty from five observations, an error
+bar that vanishes exactly when the sample is smallest, which is worse than none because it reads as
+proof.
+
+⚠️ **At K=5 only a UNANIMOUS query resolves; most rows read `contested`, and that is the true
+answer** rather than a failure of the niche or of the tool. `readsToResolve()` says how many more
+reads would settle it, and returns **null at exactly 50/50** — no amount of reading settles a real
+coin flip, and returning a number there would sell an unbounded budget.
+
+⚠️ **A niche is only as good as its worst resolved query.** One query that is definitively lost
+makes the niche `lost`, never an average — a cohort needs pages we can win, and averaging hides the
+one that cannot be. Queries are also weighted equally regardless of read count, so a query that
+happened to get re-read ten times cannot outvote the other two.
+
+⚠️ **The guard on the whole approach: if reads never vary, they are not independent.** A cached
+provider response produces identical readings, a tight interval and total confidence — this tool's
+own failure restored one level up. `varied` is recorded per query and the scorer stops and says so
+if *no* repeated query anywhere varied.
+
+**First scoring of the existing 189 readings: every niche `contested`.** Nothing yet has the reads
+to resolve, which is the correct state and exactly what the old table was hiding.
 
 ⚠️ **One of the nine WAS a short response, and that guard shipped anyway.** `dock builder austin`
 returned `item_types` of `[local_pack, organic, people_also_ask, related_searches]` with
@@ -212,13 +247,13 @@ before the percentage.**
 
 ```bash
 npx tsx --env-file=.env.local scripts/gsc-query-harvest.mts        # what we are found for
-npx tsx --env-file=.env.local scripts/niche-serp-sweep.mts --dry   # count + cost, spends nothing
-npx tsx --env-file=.env.local scripts/niche-serp-sweep.mts --cities=Austin,Denver --apply
-npx tsx --env-file=.env.local scripts/niche-serp-sweep.mts --only=bunker,equestrian --apply
+npx tsx --env-file=.env.local scripts/serp-rates.mts               # FREE — score what we already have
+npx tsx --env-file=.env.local scripts/niche-serp-sweep.mts --reads=5 --dry     # count + cost, spends nothing
+npx tsx --env-file=.env.local scripts/niche-serp-sweep.mts --only=bunker,equestrian --reads=5 --apply
 ```
 
-The sequence is **harvest → sweep → hand-check one or two rows at `/admin/serp-check` → then**
-decide whether a cohort is worth domains. ⚠️ **The sweep picks which searches a person runs; it does
+The sequence is **harvest → score for free → sweep the queries that need reads → hand-check one or
+two rows at `/admin/serp-check` → then** decide whether a cohort is worth domains. ⚠️ **The sweep picks which searches a person runs; it does
 not rank niches.** Two full sweeps disagreed on the middle of the table and moved the live-cohort
 control from 75% to 33% — see above. The classifier agreeing with a person on four rows is
 **calibration, not proof it cannot be wrong**, and a verdict that flips on a re-run of the same

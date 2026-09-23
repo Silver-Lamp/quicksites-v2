@@ -229,9 +229,32 @@ export const isGreen = (v: SerpVerdict) => v === 'best' || v === 'good';
 export type SerpTally = { total: number; green: number; recommendation: string };
 
 /** The worksheet's decision rule, over a set of readings for one niche. */
+export const CONTROL_QUERY = 'towing service near me';
+
+/**
+ * The control is a CHECK on the reading, never a candidate being scored.
+ * Tolerates a missing query: a tally that throws on one malformed row loses the whole run, which
+ * is a worse failure than silently not recognising a control.
+ */
+export const isControlReading = (r: { query?: string | null }) =>
+  String(r?.query ?? '').trim().toLowerCase() === CONTROL_QUERY;
+
+/**
+ * ⚠️ THE CONTROL IS EXCLUDED HERE, AND IT WAS NOT AT FIRST — THAT BUG CHANGED A DECISION.
+ * `towing service near me` is known to lose, so it scores `skip` every time by design. Counted in
+ * the denominator it permanently drags every run down by one row: the 2026-09-23 worksheet run
+ * read 6/9 = 67% ("Split result — probe the stronger half before spending") when the real figure
+ * was 6/8 = 75% ("Real cohort — price the domains"). The CLI said don't buy; the console's own
+ * summarise() had it right, and the two disagreeing is what surfaced it.
+ *
+ * Filtering happens INSIDE tally rather than being left to callers, because "remember to drop the
+ * control first" is exactly the instruction that gets forgotten at the one call site nobody
+ * re-reads.
+ */
 export function tally(readings: readonly SerpReading[]): SerpTally {
-  const total = readings.length;
-  const green = readings.filter((r) => isGreen(r.verdict)).length;
+  const scored = readings.filter((r) => !isControlReading(r));
+  const total = scored.length;
+  const green = scored.filter((r) => isGreen(r.verdict)).length;
   const ratio = total ? green / total : 0;
   const recommendation =
     total === 0

@@ -52,7 +52,7 @@ also the way to fill a page honestly:
 | state | coverage | who | verdict |
 |---|---|---|---|
 | **CA** | 3 | O2 Treehouse (Oakland) · ArtisTree · Barbara Butler (Hayward) | buy |
-| **NC** | 2 | Creative Treehouse Design (Weaverville) · Treehouse Experts *names NC* | buy |
+| **NC** | 3 | Creative Treehouse Design (Weaverville) · **World Treehouses (Asheville)** · Treehouse Experts *names NC* | buy |
 | **WA** | 2 | Nelson Treehouse (Fall City) · Wild Tree Woodworks (Seattle) | buy |
 | NY | 1 | Buffalo Treehouse (Romero Studios dropped) | **no** |
 | **TN** | 1 | Treehouse Experts *names TN*; nobody based there | **no** |
@@ -65,6 +65,12 @@ and writing down that it was a decision is the only cure. That takes NY to 1, be
 
 ⚠️ **Tennessee rests entirely on one travelling firm** naming it in a sentence. There is no builder
 based in the state. That is the "near me" promise unkept, and it is a no.
+
+⚠️ **A Places sweep measures who is listed a certain way, not who exists.** World Treehouses of
+Asheville ranks **first organically** for `treehouse builder asheville nc` and Google's own AI
+overview names them — and the state sweep that returned an alpaca farm and a clothing store missed
+them completely. They were found by READING A SERP during the hand check, which is an argument for
+running the manual rows on any cohort before concluding its supply is thin.
 
 ⚠️ **Two entries still have no first-hand read.** ArtisTree refused a TLS connection on 2026-09-22,
 and Cape Cod Treehouse's own site says it is still in development. California clears the bar

@@ -123,77 +123,88 @@ like a dead niche.
 by green rate. One DataForSEO call per (niche × query × city), about **$0.002 each**; it prints the
 count and the estimate and refuses to run without `--apply`.
 
-⚠️ **The probe is no longer a gate, and the reason matters more than the change.** The probe was a
-cheap proxy for local-pack strength, worth having *while a SERP read was unvalidated*. The
-classifier has since matched a person on four rows including a 2-entry and a 3-entry pack, and a
-SERP check costs less than a probe. The proxy also misled in **both** directions: `earth_natural`
+⚠️ **The probe is no longer a gate — but read the next section before treating the sweep as one
+either.** The probe was a cheap proxy for local-pack strength, worth having *while a SERP read was
+unvalidated*. The classifier has since matched a person on four rows including a 2-entry and a
+3-entry pack, and a SERP check costs less than a probe. **What the sweep then proved is that ONE
+read is not a measurement** — so today neither instrument gates a purchase; a hand check does. The proxy also misled in **both** directions: `earth_natural`
 read 16.2 per metro on a query that matches every general contractor, and the Places sweep missed
 World Treehouses — which ranks **first** for its own query. A proxy wrong in both directions is not
 worth gating on when the true measure is nearly free.
 
-### First sweep (2026-09-23, Austin + Denver, ~$0.20, 24 niches)
+### ⚠️ The sweep ran twice and disagreed with itself. Do not rank niches on it yet.
 
-| green | n | niche | |
+**Two full sweeps, Austin + Denver, ~$0.40 total.** The second was run specifically to re-measure
+the first. It did not confirm it.
+
+| niche | sweep 1 | sweep 2 |
+|---|---|---|
+| Horse barns / riding arenas | 3/3 | 4/4 |
+| Bunkers | 3/4 | 3/3 |
+| Wine cellars | 2/3 | 3/4 |
+| Yurts | 2/4 | 3/4 |
+| **Treehouses** *(the live cohort — the control)* | **6/8** | **1/3** |
+| Timber frame | 2/4 | 0/4 |
+| Storm shelters | 3/7 | 0/2 |
+
+**The control moved from 75% to 33%.** Treehouses is the cohort we bought, with four live sites and
+a builder ranking first for its own query. When the instrument says the thing you know works is now
+a third as good, the instrument is what moved.
+
+⚠️ **THE CAUSE IS GOOGLE SERVING TWO DIFFERENT PAGES FOR THE SAME QUERY, AND NO AMOUNT OF
+RE-READING FIXES IT.** Across both sweeps, **9 repeated queries returned a different verdict, 8 of
+them across the green/skip line.** Only ONE was a short provider response. The other eight came back
+the same size — and seven of them had an **AI overview in one read and a local pack in the other**:
+
+| `treehouse builder denver` | items | `se_results_count` | `item_types` |
 |---|---|---|---|
-| 100% | 3/3 | **Horse barns / riding arenas** | hand-check candidate |
-| 75% | 6/8 | Treehouses | *the live cohort — an internal control* |
-| 75% | 3/4 | **Bunkers & underground shelters** | hand-check candidate |
-| 67% | 2/3 | Wine cellars | |
-| 50% | | Timber frame · yurts · zip lines · observatories | |
-| 43% | 3/7 | Storm shelters | |
-| 33% | | Earth-sheltered · climbing walls · **domes** · grain bins · pole barns | |
-| 25% | 1/4 | Sport courts & batting cages | |
-| 0% | 4/4 | Natural swimming pools | |
-| 0% | | Container builds · backyard studios · skate ramps · greenhouses · earthbag · saunas | |
+| read A → `good` | 36 | 111 | `ai_overview, organic, people_also_ask, related_searches, google_reviews, knowledge_graph` |
+| read B → `skip` | 37 | 111 | `organic, local_pack, people_also_ask, related_searches` |
 
-**Treehouses at 75% is the load-bearing row.** It is the cohort we bought *before* the sweep
-existed, and the sweep independently ranks it second — the ranking reproduces a decision it did not
-make. Towing (control) read 0%.
+Same query, same location, same result count, half an hour apart. One page leads with an AI
+overview and has no local pack; the other leads with a pack and has no AI overview. Both are real.
+**A single read does not measure the query — it samples one of the layouts Google is serving.**
 
-⚠️ **Domes read 33% and that is a WARNING ABOUT THE METHOD, NOT ABOUT DOMES.** It is a live cohort
-with 13 state sites. A green rate is a statement about *these two cities and these three queries*,
-never about a niche; a niche that works can score low on a small sample of the wrong cities.
+The pack sizes say the same thing: across 81 readings, **26 at pack 0 and 54 at pack 3, with
+nothing at 1 or 2.** The pack is present or it is absent; it does not thin out. So `verdictFor`'s
+`packSize >= 3 → skip` is, on the API path, effectively *"was a pack served to this request?"* —
+and that is a coin whose bias we have not measured.
 
-⚠️ **THE SWEEP DISAGREES WITH ITSELF ABOUT 1 CHECK IN 5, AND CHASING THAT DOWN FOUND A REAL BUG.**
-Re-running the thin niches re-checked 21 queries that already had a reading: **4 came back with a
-different verdict, and 3 of those crossed the green/skip line** — the only difference that changes a
-decision. The script reports this every run rather than carrying the number here, because the answer
-changes with the classifier and with Google. **Consequence: rank on gaps wider than the noise, not
-on the ordering** — 100% vs 75% in the table above is one check.
+**What this costs and what it does not.** The sweep is not useless: the extremes held across both
+runs (horse barns and bunkers green in both, natural pools / sport courts / skate ramps / saunas /
+greenhouses / container builds 0% in both). It is the **middle of the table that is noise**, and the
+ordering within the top four means nothing at n=3–4.
 
-⚠️ **THE CAUSE WAS NOT SERP WOBBLE — IT WAS A SHORT PROVIDER RESPONSE THAT SCORES AS OPPORTUNITY,
-AND THAT IS THE MOST IMPORTANT LINE IN THIS FILE.** The first guess was that a pack of 2 vs 3
-flips at the boundary. It does not: all three crossings were **pack 3 ↔ pack 0** — the pack
-vanishing entirely. `dock builder austin`, read twice minutes apart:
+**What would fix it — not built, and it costs N×.** The right unit is not a verdict, it is a
+**rate**: read a query K times and record *what fraction of impressions showed a full pack*. That is
+the quantity that actually decides whether an organic result can win, and it is what the binary
+verdict has been standing in for. At K=5 a 92-check sweep is ~$0.90 — still cheap, and it would
+turn "is this niche green" into a number with an error bar. **Do that before any domain is bought
+on a sweep's ranking.**
 
-| | `item_types` | `se_results_count` | verdict |
-|---|---|---|---|
-| read A | `local_pack, organic, people_also_ask, related_searches` | 111 | `skip` |
-| read B | `organic, people_also_ask` | 57 | **`good`** |
-
-Read B is half a SERP. Nothing in it is *wrong* — it simply does not contain the blocks that decide
-the verdict, and **absence reads as "nothing is in our way."** In the first full sweep **4 of 108
-readings were featureless and all four were green**: the failure has a direction, and the direction
-is toward buying domains.
-
-The remedy is a second read, not a cleverer detector — a single response cannot distinguish a
-truncated SERP from a genuinely empty one, and a rule guessing which is which was tried and
-measured: *missing `related_searches`* looked diagnostic and was not (7 rows lack it, 5 of those saw
-a full pack). What is asymmetric is what the readings can prove: **a feature we SAW is real; a
-feature we did not see may just be missing.** So `isFeatureless()` (`lib/serp/classify.ts`) marks the
-suspect shape, the sweep re-fetches those rows, and the read that found something wins. About $0.008
-a sweep, and it only ever moves a verdict toward `skip`.
+⚠️ **One of the nine WAS a short response, and that guard shipped anyway.** `dock builder austin`
+returned `item_types` of `[local_pack, organic, people_also_ask, related_searches]` with
+`se_results_count` 111, then `[organic, people_also_ask]` with 57 and six fewer items, then 111
+again. Truncation reads as `good` — **the failure has a direction and it points at buying domains**.
+`isFeatureless()` (`lib/serp/classify.ts`) marks the shape and the sweep re-fetches those rows; the
+read that found a feature wins, because **a feature we SAW is real and a feature we did not see may
+just be missing.** It fired once in the second sweep and confirmed. Worth keeping, but it addresses
+1 of 9 flips — it is not the explanation.
 
 ⚠️ **`isFeatureless` is deliberately NOT wired into the scoring rule.** The classifier is correct
-given its input; the input was wrong. **A person cannot be served a truncated SERP**, so a hand-check
-reporting an empty page is reporting a real empty page, and compensating for a provider defect inside
-`verdictFor` would corrupt the human path to patch the API path. Pinned by a test.
+given its input; the input was wrong. **A person cannot be served a truncated SERP**, so a
+hand-check reporting an empty page is reporting a real empty page, and compensating for a provider
+defect inside `verdictFor` would corrupt the human path to patch the API path. Pinned by a test.
+
+⚠️ **A single-response truncation detector was tried and MEASURED rather than assumed.** *Missing
+`related_searches`* looked diagnostic and is not: 7 rows lack it and 5 of those saw a full pack.
+The predicate that survived is the narrow one above.
 
 ⚠️ **A transient API failure looks exactly like a finding.** The first sweep lost ~30% of checks to
 DataForSEO's "Internal SE Server Error" and the losses *clustered* — domes came back 0% on a single
 surviving check. A percentage over one sample prints identically to a percentage over four. Hence
-three retries with backoff, a thin-sample warning that names every niche under 3 checks, and the
-`n` column in the table above: **read it before the percentage.**
+three retries, a thin-sample warning naming every niche under 3 checks, and an `n` column: **read it
+before the percentage.**
 
 ---
 
@@ -207,9 +218,11 @@ npx tsx --env-file=.env.local scripts/niche-serp-sweep.mts --only=bunker,equestr
 ```
 
 The sequence is **harvest → sweep → hand-check one or two rows at `/admin/serp-check` → then**
-decide whether a cohort is worth domains. The sweep's job is to pick which searches a person runs,
-not to replace them: the classifier agreeing with a person on four rows is **calibration, not proof
-it cannot be wrong**, and a verdict that flips on a re-run is the standing evidence for that.
+decide whether a cohort is worth domains. ⚠️ **The sweep picks which searches a person runs; it does
+not rank niches.** Two full sweeps disagreed on the middle of the table and moved the live-cohort
+control from 75% to 33% — see above. The classifier agreeing with a person on four rows is
+**calibration, not proof it cannot be wrong**, and a verdict that flips on a re-run of the same
+query is the standing evidence for that.
 
 `scripts/niche-probe.mts` still works and is still useful for the question it actually answers —
 *how many of these businesses exist near here* — which is a supply question, not a ranking one.

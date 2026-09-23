@@ -12,7 +12,7 @@
 // run whose control disagrees is a run nobody should act on, and we want to know that at row one.
 
 import { WORKSHEET_CHECKS, checksFor, locationFor, type SerpCheck } from '@/lib/serp/checkSets';
-import type { SerpReading, SerpVerdict } from '@/lib/serp/classify';
+import { isControlReading, type SerpReading, type SerpVerdict } from '@/lib/serp/classify';
 
 export type WorklistStep = SerpCheck & {
   /** 1-based position in the run. */
@@ -145,9 +145,10 @@ export function summarise(
   rows: ReadonlyArray<{ check: SerpCheck; human: SerpReading; machine?: SerpReading | null }>,
   total: number,
 ): RunSummary {
-  const controlRow = rows.find((r) => r.check.nicheKey === 'towing');
+  // Same definition as tally()'s, so the console and the CLI cannot drift apart again.
+  const controlRow = rows.find((r) => r.check.nicheKey === 'towing' || isControlReading(r.human));
   const controlOk = controlRow ? controlRow.human.verdict === 'skip' : null;
-  const scored = rows.filter((r) => r.check.nicheKey !== 'towing');
+  const scored = rows.filter((r) => r.check.nicheKey !== 'towing' && !isControlReading(r.human));
   const green = scored.filter((r) => r.human.verdict === 'best' || r.human.verdict === 'good').length;
   const disagreements = rows
     .filter((r) => r.machine && r.machine.verdict !== r.human.verdict)

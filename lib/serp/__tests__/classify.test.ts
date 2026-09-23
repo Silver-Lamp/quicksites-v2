@@ -167,8 +167,11 @@ describe('mapItems', () => {
 });
 
 describe('tally follows the worksheet', () => {
+  // Carries a query, because tally() now reads one to spot the control. A fixture missing the
+  // field is how the first version of this looked fine and threw.
+  let n = 0;
   const r = (verdict: 'best' | 'good' | 'mixed' | 'skip') =>
-    ({ verdict }) as unknown as ReturnType<typeof readSerp>;
+    ({ verdict, query: `candidate ${++n}` }) as unknown as ReturnType<typeof readSerp>;
 
   it('7 of 10 green is a cohort; 3 of 10 says fix the scoring', () => {
     expect(tally([r('best'), r('best'), r('good'), r('good'), r('good'), r('good'), r('good'), r('skip'), r('skip'), r('mixed')]).recommendation).toMatch(/Real cohort/);
@@ -177,5 +180,39 @@ describe('tally follows the worksheet', () => {
 
   it('nothing measured is said plainly, never as a zero score', () => {
     expect(tally([]).recommendation).toMatch(/Nothing measured/);
+  });
+});
+
+describe('⚠️ the control is never counted as a candidate', () => {
+  const { tally: t, readHumanSerp } = require('@/lib/serp/classify') as typeof import('@/lib/serp/classify');
+  const row = (query: string, packSize: number) =>
+    readHumanSerp({ query, location: 'L', packSize, firstOrganicKind: 'unknown' });
+
+  // The 2026-09-23 run read 6/9 = 67% ("split — don't buy") when the real figure was 6/8 = 75%
+  // ("real cohort — price the domains"). The control scores `skip` by design, so counting it
+  // drags every run down by one row.
+  it('a run scores the same with or without the control in it', () => {
+    const candidates = [row('a', 0), row('b', 0), row('c', 0), row('d', 3)];
+    const withControl = t([...candidates, row('towing service near me', 3)]);
+    const without = t(candidates);
+    expect(withControl.total).toBe(without.total);
+    expect(withControl.green).toBe(without.green);
+    expect(withControl.recommendation).toBe(without.recommendation);
+  });
+
+  it('the exact run that exposed it now reads "real cohort"', () => {
+    const readings = [
+      row('1', 0), row('2', 0), row('3', 3), row('4', 0), row('5', 2),
+      row('7', 0), row('8', 0), row('10', 3),
+      row('towing service near me', 3),
+    ];
+    const r = t(readings);
+    expect(r.total).toBe(8);
+    expect(r.green).toBe(6);
+    expect(r.recommendation).toMatch(/Real cohort/);
+  });
+
+  it('matches case-insensitively and ignores surrounding whitespace', () => {
+    expect(t([row('  Towing Service Near Me  ', 3)]).total).toBe(0);
   });
 });

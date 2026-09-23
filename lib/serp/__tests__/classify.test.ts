@@ -216,3 +216,33 @@ describe('⚠️ the control is never counted as a candidate', () => {
     expect(t([row('  Towing Service Near Me  ', 3)]).total).toBe(0);
   });
 });
+
+describe('the console preview and the server agree by construction', () => {
+  const { readHumanSerp: rh } = require('@/lib/serp/classify') as typeof import('@/lib/serp/classify');
+
+  // The console previews what a save will record using this same function, so a preview can
+  // never promise something the stored row does not deliver. The bug it replaced was worse than
+  // a mismatch: the row rendered YESTERDAY'S saved verdict under today's selections, so a
+  // re-done control showed "BEST — pack has 0" while the form read 3 + directory.
+  it('the exact case that confused the operator now previews as skip', () => {
+    const r = rh({
+      query: 'towing service near me',
+      location: 'Bonney Lake,Washington,United States',
+      packSize: 3,
+      firstOrganicKind: 'directory',
+    });
+    expect(r.verdict).toBe('skip');
+    expect(r.reason).toMatch(/Full 3-business pack/);
+  });
+
+  it('and the stale answer it used to show is a different verdict entirely', () => {
+    const stale = rh({
+      query: 'towing service near me',
+      location: 'Bonney Lake,Washington,United States',
+      packSize: 0,
+      firstOrganicKind: 'directory',
+    });
+    expect(stale.verdict).toBe('best');
+    expect(stale.verdict).not.toBe('skip');
+  });
+});

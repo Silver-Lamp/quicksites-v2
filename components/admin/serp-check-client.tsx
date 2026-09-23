@@ -187,9 +187,54 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
         </span>
         <span className="text-xs text-neutral-500">{answered.length} answered</span>
       </div>
+
+      {/* ⚠️ Row navigation, added after the console shipped with only "skip" — i.e. forward and
+          nothing else. A person who mis-keyed a row (the control was saved with pack 0 when the
+          screenshots plainly showed 3) had NO way back to it short of answering every remaining
+          row. A one-way form is fine for a survey and wrong for a measurement you are meant to
+          correct. Answering a row again writes a new observation and the newest per query wins,
+          so re-doing one is always safe. */}
+      <nav aria-label="Jump to a search" className="mt-3 flex flex-wrap gap-1.5">
+        {rows.map((r, i) => {
+          const done = !!r.human;
+          const bad = r.isControl && r.human && r.human.verdict !== 'skip';
+          return (
+            <button
+              key={`${r.query}|${r.location}`}
+              onClick={() => { setCursor(i); reset(); }}
+              title={`${r.query} — ${r.location.split(',')[0]}${done ? ` — you said ${r.human!.verdict}` : ''}`}
+              aria-current={i === cursor ? 'step' : undefined}
+              className={`h-7 min-w-7 rounded px-1.5 text-xs transition ${
+                i === cursor ? 'ring-2 ring-sky-400 ' : ''
+              }${
+                bad
+                  ? 'border border-red-500/60 bg-red-500/20 text-red-200'
+                  : done
+                    ? 'border border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                    : 'border border-neutral-700 text-neutral-400 hover:border-neutral-500'
+              }`}
+            >
+              {r.isControl ? '★' : r.index}
+            </button>
+          );
+        })}
+      </nav>
+      <p className="mt-1.5 text-[11px] text-neutral-500">
+        ★ is the control. Click any number to go back and redo it — the newest answer wins.
+      </p>
       <div className="mt-2 h-1 w-full overflow-hidden rounded bg-neutral-800">
         <div className="h-full bg-sky-500 transition-all" style={{ width: `${(answered.length / rows.length) * 100}%` }} />
       </div>
+
+      {control?.human && control.human.verdict !== 'skip' && !row.isControl && (
+        <div className="mt-4 rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+          <strong>The control is answered wrong, so this run cannot be read yet.</strong> It scored{' '}
+          <code>{control.human.verdict}</code> and must be <code>skip</code>.{' '}
+          <button onClick={() => { setCursor(rows.findIndex((r) => r.isControl)); reset(); }} className="underline">
+            Go back and redo it →
+          </button>
+        </div>
+      )}
 
       {row.isControl && (
         <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
@@ -347,6 +392,11 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
             {saving ? 'Saving…' : 'Save and next'}
           </button>
           {pack === null && <span className="text-xs text-neutral-500">Pack size is the one answer that decides the verdict.</span>}
+          {cursor > 0 && (
+            <button onClick={() => { setCursor((c) => c - 1); reset(); }} className="text-xs text-neutral-400 underline">
+              ← back
+            </button>
+          )}
           {cursor < rows.length - 1 && (
             <button onClick={() => { setCursor((c) => c + 1); reset(); }} className="text-xs text-neutral-500 underline">
               skip this one

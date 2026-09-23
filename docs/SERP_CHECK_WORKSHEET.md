@@ -58,7 +58,12 @@ Regionally dense, nationally sparse. The supply probe could not see that; this c
    you are, and from the wrong city it measures the wrong market while looking identical to a
    measurement of the right one.
    - **No DevTools:** run the search, then click **Update location** at the bottom of the results
-     page (beside "Results for …") and enter the city.
+     page (beside "Results for …") and enter the **full location** — `Asheville, North Carolina,
+     United States`, not just "Asheville".
+   - ⚠️ **Use the whole string, because the automated run used it.** A different location measures
+     a different market, and the hand/machine comparison stops being apples to apples while still
+     producing two verdicts that look comparable. "Asheville" alone is also ambiguous in Google's
+     own box — and **Portland here is Maine**.
    - **Chrome DevTools:** ⌥⌘I to open it, then **⌘⇧P** → type `sensors` → "Show Sensors" →
      Location → "Other…" → fill **Lat/Long, Timezone ID and Locale** → reload. ⚠️ Sensors is a
      bottom-drawer panel, not a tab, and the ⋮ menu is the one *inside* DevTools, not the

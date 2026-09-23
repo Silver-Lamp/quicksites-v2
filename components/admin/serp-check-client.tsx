@@ -378,6 +378,14 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
       <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5">
         <div className="text-sm font-medium text-neutral-200">How many businesses in the map pack?</div>
         <p className="text-xs text-neutral-500">3 is full. Fewer means Google has nothing to fill it with. Press 0–3.</p>
+        {/* ⚠️ The one systematic way a person undercounts. Found 2026-09-23 on `custom treehouse
+            company north carolina`: the third entry sat behind the "More places" button, the
+            human read 2 (→ good) and the machine read 3 (→ skip). It biases toward calling a
+            page winnable when it is not, which is the expensive direction. */}
+        <p className="mt-1 rounded border border-amber-500/30 bg-amber-500/[0.06] px-2 py-1 text-xs text-amber-100/90">
+          ⚠️ The third entry is often half-hidden behind the <strong>“More places”</strong> button.
+          Scroll the block itself before counting — 2 and 3 give opposite verdicts.
+        </p>
         <div className="mt-3 flex gap-2">
           {[0, 1, 2, 3].map((n) => (
             <button

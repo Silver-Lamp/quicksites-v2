@@ -175,6 +175,25 @@ export const TREEHOUSE_BUILDERS: TreehouseBuilder[] = [
     ],
   },
   {
+    id: 'world-treehouses',
+    name: 'World Treehouses of Asheville',
+    url: 'https://www.asheville-treehouses.com/',
+    baseCity: 'Asheville',
+    baseState: 'NC',
+    // ⚠️ FOUND IN A SERP, NOT IN THE PLACES SWEEP. They rank FIRST organically for "treehouse
+    // builder asheville nc" and Google's AI overview names them — yet the state sweep that
+    // returned an alpaca farm and a clothing store missed them entirely. Worth remembering when
+    // the next cohort's supply looks thin: a Places sweep measures who is listed a certain way,
+    // not who exists.
+    servesStates: ['NC'],
+    serviceAreaQuote: 'Asheville, NC, Western NC beyond',
+    summary:
+      'Custom treehouses, suspension bridges, open-air pavilions, tree decks, playhouses and tree-access platforms. Run by Adam Laufer and Erin Everett.',
+    sources: [
+      { url: 'https://www.asheville-treehouses.com/', note: 'Asheville NC base, the "Asheville, NC, Western NC beyond" service line, what they build and the owners\u2019 names. No prices stated.', read: '2026-09-23' },
+    ],
+  },
+  {
     id: 'cape-cod-treehouse',
     name: 'Cape Cod Treehouse',
     url: 'https://capecodtreehouse.com/',

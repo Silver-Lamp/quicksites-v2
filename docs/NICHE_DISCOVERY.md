@@ -85,6 +85,9 @@ geographic spread of metros, counts local supply, and scores it.
 
 ⚠️ **Supply density is a PROXY for local-pack strength, not a measurement of it.** Nobody has read
 a SERP. Every verdict therefore says *"go read 10 real searches"* and never *"buy the domain"*.
+**Superseded as a gate 2026-09-23 — see §3.** The probe answers *how much supply is here*, which is
+a real question; it was only ever standing in for *can an organic result win*, which §3 measures
+directly for about the same money.
 
 ⚠️ **Two controls are in the list on purpose.** Towing (known loss) must rank last or the probe is
 wrong. Decks (dense, but we own DeckSketch) tests whether a tool can rescue a saturated niche.
@@ -113,13 +116,73 @@ like a dead niche.
 
 ---
 
+## 3. Direct SERP sweep — what replaced the probe as the gate
+
+**What it is.** `scripts/niche-serp-sweep.mts` runs the *real* check — the same
+`lib/serp/classify.ts` a person's worksheet answers go through — across every candidate, and ranks
+by green rate. One DataForSEO call per (niche × query × city), about **$0.002 each**; it prints the
+count and the estimate and refuses to run without `--apply`.
+
+⚠️ **The probe is no longer a gate, and the reason matters more than the change.** The probe was a
+cheap proxy for local-pack strength, worth having *while a SERP read was unvalidated*. The
+classifier has since matched a person on four rows including a 2-entry and a 3-entry pack, and a
+SERP check costs less than a probe. The proxy also misled in **both** directions: `earth_natural`
+read 16.2 per metro on a query that matches every general contractor, and the Places sweep missed
+World Treehouses — which ranks **first** for its own query. A proxy wrong in both directions is not
+worth gating on when the true measure is nearly free.
+
+### First sweep (2026-09-23, Austin + Denver, ~$0.20, 24 niches)
+
+| green | n | niche | |
+|---|---|---|---|
+| 100% | 3/3 | **Horse barns / riding arenas** | hand-check candidate |
+| 75% | 6/8 | Treehouses | *the live cohort — an internal control* |
+| 75% | 3/4 | **Bunkers & underground shelters** | hand-check candidate |
+| 67% | 2/3 | Wine cellars | |
+| 50% | | Timber frame · yurts · zip lines · observatories | |
+| 43% | 3/7 | Storm shelters | |
+| 33% | | Earth-sheltered · climbing walls · **domes** · grain bins · pole barns | |
+| 25% | 1/4 | Sport courts & batting cages | |
+| 0% | 4/4 | Natural swimming pools | |
+| 0% | | Container builds · backyard studios · skate ramps · greenhouses · earthbag · saunas | |
+
+**Treehouses at 75% is the load-bearing row.** It is the cohort we bought *before* the sweep
+existed, and the sweep independently ranks it second — the ranking reproduces a decision it did not
+make. Towing (control) read 0%.
+
+⚠️ **Domes read 33% and that is a WARNING ABOUT THE METHOD, NOT ABOUT DOMES.** It is a live cohort
+with 13 state sites. A green rate is a statement about *these two cities and these three queries*,
+never about a niche; a niche that works can score low on a small sample of the wrong cities.
+
+⚠️ **THE SWEEP DISAGREES WITH ITSELF ABOUT 1 CHECK IN 5, AND THE MEASUREMENT IS FREE, SO TAKE IT.**
+Re-running the thin niches re-checked 21 queries that already had a reading: **4 came back with a
+different verdict, and 3 of those crossed the green/skip line** — the only difference that changes a
+decision. A SERP is not a constant, and the boundary case (a pack of 2 vs 3) is exactly where the
+verdict flips. The script now reports this every run rather than carrying the number in prose,
+because the answer changes with the classifier and with Google. **Consequence: rank on gaps wider
+than the noise, not on the ordering.** 100% vs 75% here is one check.
+
+⚠️ **A transient API failure looks exactly like a finding.** The first sweep lost ~30% of checks to
+DataForSEO's "Internal SE Server Error" and the losses *clustered* — domes came back 0% on a single
+surviving check. A percentage over one sample prints identically to a percentage over four. Hence
+three retries with backoff, a thin-sample warning that names every niche under 3 checks, and the
+`n` column in the table above: **read it before the percentage.**
+
+---
+
 ## Using it
 
 ```bash
 npx tsx --env-file=.env.local scripts/gsc-query-harvest.mts        # what we are found for
-npx tsx --env-file=.env.local scripts/niche-probe.mts --metros=6   # ⚠️ costs Places calls
-npx tsx --env-file=.env.local scripts/niche-probe.mts --only=treehouse,yurt --metros=10
+npx tsx --env-file=.env.local scripts/niche-serp-sweep.mts --dry   # count + cost, spends nothing
+npx tsx --env-file=.env.local scripts/niche-serp-sweep.mts --cities=Austin,Denver --apply
+npx tsx --env-file=.env.local scripts/niche-serp-sweep.mts --only=bunker,equestrian --apply
 ```
 
-The intended sequence is **harvest → probe → read ten SERPs by hand → then** decide whether a
-cohort is worth domains. The probe's job is to make the hand-check cheap, not to replace it.
+The sequence is **harvest → sweep → hand-check one or two rows at `/admin/serp-check` → then**
+decide whether a cohort is worth domains. The sweep's job is to pick which searches a person runs,
+not to replace them: the classifier agreeing with a person on four rows is **calibration, not proof
+it cannot be wrong**, and a verdict that flips on a re-run is the standing evidence for that.
+
+`scripts/niche-probe.mts` still works and is still useful for the question it actually answers —
+*how many of these businesses exist near here* — which is a supply question, not a ranking one.

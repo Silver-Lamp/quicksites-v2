@@ -20,6 +20,9 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+// The SAME pure rule the server scores with. Used only to PREVIEW what a save will produce —
+// the stored verdict still comes from the server, so the two cannot disagree.
+import { readHumanSerp, readHumanSerpNoOrganic, type FirstOrganicKind } from '@/lib/serp/classify';
 
 type Row = {
   index: number;
@@ -84,6 +87,21 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [row]);
+
+  // Pure, and only a preview — the row that gets stored is scored server-side.
+  const preview = React.useMemo(() => {
+    if (pack === null) return null;
+    return noOrganic
+      ? readHumanSerpNoOrganic(row?.query ?? '', row?.location ?? '', pack)
+      : readHumanSerp({
+          query: row?.query ?? '',
+          location: row?.location ?? '',
+          packSize: pack,
+          firstOrganicKind: kind as FirstOrganicKind,
+          firstOrganicDomain: domain || null,
+          aiOverview: ai,
+        });
+  }, [pack, kind, noOrganic, domain, ai, row?.query, row?.location]);
 
   const reset = () => { setPack(null); setKind('unknown'); setNoOrganic(false); setAi(false); setNotes(''); setDomain(''); };
 
@@ -383,13 +401,27 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
             className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-200" />
         </label>
 
+        {/* ⚠️ What this ANSWER produces, shown before saving. The row used to render only the
+            PREVIOUSLY SAVED verdict underneath, so re-doing a row showed yesterday's answer
+            sitting under today's selections, contradicting them — which is what made "save or
+            skip?" an open question. Same pure rule as the server's, so a preview can never
+            promise something the save does not deliver. */}
+        {pack !== null && (
+          <div className={`mt-5 rounded-lg border p-3 text-sm ${VERDICT_STYLE[preview!.verdict] ?? ''}`}>
+            <strong className="uppercase">{preview!.verdict}</strong> — {preview!.reason}
+            <div className="mt-1 text-xs opacity-80">
+              This is what “Save and next” will record{row.human ? ', replacing your earlier answer' : ''}.
+            </div>
+          </div>
+        )}
+
         <div className="mt-5 flex items-center gap-3">
           <button
             onClick={save}
             disabled={pack === null || saving}
             className="rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white disabled:opacity-40"
           >
-            {saving ? 'Saving…' : 'Save and next'}
+            {saving ? 'Saving…' : row.human ? 'Save and next (replaces earlier answer)' : 'Save and next'}
           </button>
           {pack === null && <span className="text-xs text-neutral-500">Pack size is the one answer that decides the verdict.</span>}
           {cursor > 0 && (
@@ -399,15 +431,21 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
           )}
           {cursor < rows.length - 1 && (
             <button onClick={() => { setCursor((c) => c + 1); reset(); }} className="text-xs text-neutral-500 underline">
-              skip this one
+              skip without answering
             </button>
           )}
         </div>
       </div>
 
-      {row.human && (
+      {row.human && pack === null && (
         <div className={`mt-4 rounded-xl border p-4 text-sm ${VERDICT_STYLE[row.human.verdict] ?? ''}`}>
-          <strong className="uppercase">{row.human.verdict}</strong> — {row.human.reason}
+          <div className="text-xs uppercase tracking-wide opacity-70">Saved earlier</div>
+          <div className="mt-1">
+            <strong className="uppercase">{row.human.verdict}</strong> — {row.human.reason}
+          </div>
+          <div className="mt-1 text-xs opacity-80">
+            Answer above to replace it, or move on and it stays as it is.
+          </div>
         </div>
       )}
     </div>

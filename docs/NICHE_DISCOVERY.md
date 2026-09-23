@@ -204,10 +204,23 @@ answer** rather than a failure of the niche or of the tool. `readsToResolve()` s
 reads would settle it, and returns **null at exactly 50/50** — no amount of reading settles a real
 coin flip, and returning a number there would sell an unbounded budget.
 
-⚠️ **A niche is only as good as its worst resolved query.** One query that is definitively lost
-makes the niche `lost`, never an average — a cohort needs pages we can win, and averaging hides the
-one that cannot be. Queries are also weighted equally regardless of read count, so a query that
-happened to get re-read ten times cannot outvote the other two.
+⚠️ **The niche verdict asks "is there a page here we can win", and the first version got that wrong
+in a way the control caught within the hour.** It read *"a niche is only as good as its worst
+resolved query"* — any lost query made the niche `lost`. That scored **treehouses as lost**: a live
+cohort, four sites, a builder ranking first. The per-query readings underneath were correct and are
+the useful part:
+
+```
+treehouse builder austin          8 reads   100% pack-free [68–100]   winnable
+custom treehouse company austin   6 reads     0% pack-free [0–39]     lost
+```
+
+Both are true, and you build for the one you can win. **A lost query constrains WHICH page to
+target; it never disqualifies the niche.** Conflating those is the same error as averaging, arriving
+from the other side: one blends the distinction away, the other lets the worst row speak for the
+rest. So `winnable` = at least one query resolved winnable, `lost` = everything that resolved is
+lost, `contested` = nothing resolved yet. Queries weigh equally regardless of read count, so a query
+that happened to get re-read ten times cannot outvote the other two.
 
 ⚠️ **The guard on the whole approach: if reads never vary, they are not independent.** A cached
 provider response produces identical readings, a tight interval and total confidence — this tool's

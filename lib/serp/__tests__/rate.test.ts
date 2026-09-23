@@ -62,22 +62,31 @@ describe('the real treehouse pair', () => {
   });
 });
 
-describe('a niche is only as good as its worst resolved query', () => {
+describe('a niche verdict asks whether there is a page here we can win', () => {
   const winnable = rate([read(0), read(0), read(0), read(0), read(0)]);
   const lost = rate([read(3), read(3), read(3), read(3), read(3)]);
   const contested = rate([read(0), read(3)]);
 
-  it('one definitively lost query is a constraint, not an average', () => {
-    // The mean pack-free rate here is 50%, which would rank mid-table. It is not mid-table: one of
-    // the two pages cannot be won at all.
+  // ⚠️ This block asserted the OPPOSITE until 2026-09-23, and the control falsified it within the
+  // hour: "any lost query makes the niche lost" scored TREEHOUSES as lost — a live cohort, four
+  // sites, a builder ranking first — because `custom treehouse company austin` is unwinnable while
+  // `treehouse builder austin` is 100% pack-free over 8 reads. Both readings were correct; the
+  // rollup was not. A lost query says which page to target, never whether to enter the niche.
+  it('a lost query does not disqualify a niche that has a winnable one', () => {
     const n = rateNiche('k', [winnable, lost]);
     expect(n.packFreeRate).toBeCloseTo(0.5);
-    expect(n.verdict).toBe('lost');
+    expect(n.verdict).toBe('winnable');
+    expect(n.winnable).toBe(1);
+    expect(n.lost).toBe(1);
   });
 
-  it('needs every query to resolve before it claims winnable', () => {
-    expect(rateNiche('k', [winnable, contested]).verdict).toBe('contested');
-    expect(rateNiche('k', [winnable, winnable]).verdict).toBe('winnable');
+  it('is lost only when everything that resolved is lost', () => {
+    expect(rateNiche('k', [lost, lost]).verdict).toBe('lost');
+    expect(rateNiche('k', [lost, contested]).verdict).toBe('lost');
+  });
+
+  it('claims nothing while nothing has resolved', () => {
+    expect(rateNiche('k', [contested, contested]).verdict).toBe('contested');
   });
 
   it('weights queries equally so a re-read query cannot outvote the others', () => {
@@ -88,6 +97,7 @@ describe('a niche is only as good as its worst resolved query', () => {
 
   it('an empty niche claims nothing', () => {
     expect(rateNiche('k', []).verdict).toBe('contested');
+    expect(rateNiche('k', []).winnable).toBe(0);
   });
 });
 

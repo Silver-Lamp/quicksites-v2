@@ -63,8 +63,12 @@ export type NicheRate = {
   queries: number;
   /** Mean pack-free rate across this niche's queries, each query weighted equally. */
   packFreeRate: number;
-  /** Narrowest verdict supported by the queries: `lost` if any query is lost, etc. */
+  /** `winnable` if ANY query resolves winnable — see the note in `rateNiche`. */
   verdict: RateVerdict;
+  /** Queries that resolved winnable. This is the number to act on: it is how many pages to aim at. */
+  winnable: number;
+  /** Queries that resolved lost. A constraint on which page to target, not a disqualification. */
+  lost: number;
   resolved: number;
   contested: number;
 };
@@ -133,19 +137,36 @@ export function rateNiche(key: string, queries: readonly QueryRate[]): NicheRate
   const packFreeRate = queries.length
     ? queries.reduce((s, q) => s + q.packFreeRate, 0) / queries.length
     : 0;
-  // The niche is only as good as its worst resolved query: a cohort needs pages we can win, and
-  // one query that is definitively lost is a real constraint, not an average to be diluted.
-  const verdict: RateVerdict = queries.some((q) => q.verdict === 'lost')
-    ? 'lost'
-    : queries.every((q) => q.verdict === 'winnable') && queries.length > 0
-      ? 'winnable'
-      : 'contested';
+  const winnable = queries.filter((q) => q.verdict === 'winnable').length;
+  const lost = queries.filter((q) => q.verdict === 'lost').length;
+
+  // ⚠️ THE NICHE VERDICT ASKS "IS THERE A PAGE HERE WE CAN WIN", NOT "IS EVERY PAGE WINNABLE", AND
+  // THE FIRST VERSION GOT THAT WRONG IN A WAY THE CONTROL CAUGHT WITHIN THE HOUR.
+  //
+  // It read *"a niche is only as good as its worst resolved query"* — any lost query made the niche
+  // `lost`. That sounds prudent and is not: it scored TREEHOUSES as lost, a live cohort with four
+  // sites and a builder ranking first for its own query. The real measurement underneath was right
+  // and is the useful part:
+  //
+  //     treehouse builder austin        8 reads   100% pack-free [68-100]  winnable
+  //     custom treehouse company austin 6 reads     0% pack-free [0-39]    lost
+  //
+  // Both are true. You build for the query you can win and ignore the other — a lost query is a
+  // constraint on WHICH page to target, never a disqualification of the niche. Conflating the two
+  // is the same error as averaging, arriving from the opposite direction: one throws away the
+  // distinction by blending, the other by letting the worst row speak for the rest.
+  //
+  // So: `winnable` = at least one query resolves winnable. `lost` = something resolved and ALL of
+  // it lost (no page here to aim at). `contested` = nothing resolved yet, which is not a finding.
+  const verdict: RateVerdict = winnable > 0 ? 'winnable' : lost > 0 ? 'lost' : 'contested';
   return {
     key,
     reads,
     queries: queries.length,
     packFreeRate,
     verdict,
+    winnable,
+    lost,
     resolved: queries.filter((q) => q.verdict !== 'contested').length,
     contested: queries.filter((q) => q.verdict === 'contested').length,
   };

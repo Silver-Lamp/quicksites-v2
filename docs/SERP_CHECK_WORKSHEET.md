@@ -124,6 +124,7 @@ context worth noting but does not change the score.
 Search #__:  ______________________________________________
 
 MAP PACK — how many businesses listed?   ___   (3 = full, 1–2 = starved, none = best)
+   ⚠️ the third is often half-hidden behind "More places" — scroll the block before counting
 FIRST ORGANIC RESULT is:
   [ ] A directory (Yelp/Angi/Thumbtack/Houzz)   [ ] A forum (Reddit/Quora)
   [ ] A business's own site                     [ ] A national retailer

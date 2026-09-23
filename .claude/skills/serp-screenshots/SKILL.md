@@ -72,6 +72,14 @@ and DataForSEO returns it as `paid` rather than `local_pack` — so counting it 
 human row disagree with every machine row by one, for a reason nobody would find. In the test
 capture the pack read Cascade / Pure / BL **plus** a Sponsored entry: that is **3**.
 
+⚠️ **COUNT THE PACK CAREFULLY — THE THIRD ENTRY HIDES.** A "Places"/"Businesses" block usually
+shows three, and the third is frequently clipped by the **"More places"** button overlapping it.
+On `custom treehouse company north carolina` (2026-09-23) the visible entries read as two
+(World Treehouses, Falconhurst) with a third — Treehouse Customs — cut off behind the button and
+visible only as a map pin. Two and three give **opposite verdicts** (`good` vs `skip`), and the
+undercount biases toward calling a page winnable when it is not. Crop that region at full
+resolution before committing to a number, and cross-check the map pins.
+
 ⚠️ **The first organic is the first ordinary blue link, below everything else.** Not the pack, not
 the AI overview, not "People also ask". If an AI overview answers the question and the first blue
 link is far down, that is the finding — record it, do not skip past it.

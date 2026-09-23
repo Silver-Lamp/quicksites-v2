@@ -196,6 +196,14 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
   }
 
   const city = row.location.split(',')[0];
+  /**
+   * ⚠️ SHOW THE WHOLE LOCATION, NOT THE CITY. Two reasons, and the second is the load-bearing one:
+   * "Asheville" alone is ambiguous in Google's own location box, and "Portland" in this list is
+   * MAINE. But more importantly the automated run used this exact string — so a person who sets
+   * something different is measuring a different market, and the hand/machine comparison silently
+   * stops being apples to apples while still producing two verdicts to compare.
+   */
+  const locationLabel = row.location.split(',').map((p) => p.trim()).join(', ');
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -264,7 +272,7 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
 
       <div className="mt-5 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5">
         <div className="text-xs uppercase tracking-wide text-neutral-500">
-          Search this{row.needsLocationOverride ? <> — location must be <strong className="text-amber-300">{city}</strong></> : null}
+          Search this{row.needsLocationOverride ? <> — location must be <strong className="text-amber-300">{locationLabel}</strong></> : null}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <code className="rounded-lg bg-neutral-950 px-3 py-2 text-base text-sky-300">{row.query}</code>
@@ -281,7 +289,7 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
         {row.needsLocationOverride ? (
           <details className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-100">
             <summary className="cursor-pointer select-none font-medium">
-              ⚠️ This row says “near me” — set your location to {city} first
+              ⚠️ This row says “near me” — set your location to {locationLabel} first
             </summary>
             <div className="mt-2 flex flex-col gap-2 text-amber-100/90">
               <p>
@@ -291,7 +299,18 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
               <p className="font-medium text-amber-50">Easiest, no DevTools:</p>
               <p>
                 Run the search, then at the bottom of the results page click{' '}
-                <strong>Update location</strong> (beside “Results for …”) and enter {city}.
+                <strong>Update location</strong> (beside “Results for …”) and enter{' '}
+                <strong className="text-amber-50">{locationLabel}</strong>.{' '}
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(locationLabel); }}
+                  className="rounded border border-amber-500/50 px-1.5 py-0.5 text-[11px] hover:bg-amber-500/10"
+                >
+                  copy
+                </button>
+              </p>
+              <p className="text-amber-100/70">
+                That is the exact location the automated run used. Setting a different one measures
+                a different market and the comparison stops meaning anything.
               </p>
               <p className="font-medium text-amber-50">Or in Chrome DevTools:</p>
               <ol className="list-decimal pl-4">
@@ -303,6 +322,8 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
               {row.coords ? (
                 <div className="rounded border border-amber-500/30 bg-black/20 p-2">
                   <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11px]">
+                    <dt className="text-amber-200/70">Location</dt>
+                    <dd>{locationLabel}</dd>
                     <dt className="text-amber-200/70">Lat / Long</dt>
                     <dd>{row.coords}</dd>
                     <dt className="text-amber-200/70">Timezone ID</dt>
@@ -313,12 +334,12 @@ export default function SerpCheckClient({ initialRows }: { initialRows: Row[] })
                   <button
                     onClick={() => {
                       navigator.clipboard?.writeText(
-                        `${row.coords}\n${row.timezoneId ?? ''}\nen-US`,
+                        `${locationLabel}\n${row.coords}\n${row.timezoneId ?? ''}\nen-US`,
                       );
                     }}
                     className="mt-2 rounded border border-amber-500/50 px-2 py-1 text-[11px] hover:bg-amber-500/10"
                   >
-                    copy all three
+                    copy all
                   </button>
                 </div>
               ) : null}

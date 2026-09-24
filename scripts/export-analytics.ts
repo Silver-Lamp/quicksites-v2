@@ -1,3 +1,12 @@
+// ⚠️ THE POLYFILL MUST COME BEFORE THE CLIENT IS CONSTRUCTED. On Node 20 `createClient` throws
+// "Node.js 20 detected without native WebSocket support" at construction time (CLAUDE.md, render
+// workers). This was the SECOND wall behind the credential bug: once the secrets were set on
+// 2026-09-24 the job stopped saying "supabaseUrl is required" and started saying this instead.
+// Import order is load-bearing; do not let a formatter sort it.
+// @ts-expect-error - `ws` ships no bundled types; runtime-only polyfill for Node 20
+import ws from 'ws';
+(globalThis as any).WebSocket ??= ws;
+
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 import path from 'node:path';

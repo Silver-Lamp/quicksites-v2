@@ -43,9 +43,11 @@ import {
   MAX_PLATFORM_FEE_PERCENT,
   PARTNER_FEE_SHARE,
   QS_FEE_SHARE,
+  affiliateResidualCents,
   partnerCommissionCents,
   hubOverrideCents,
 } from '@/lib/commerce/partner-terms';
+import { allocateUplineOverrides } from '@/lib/commerce/uplineChain';
 
 const closerPct = Math.round(SPLIT.closer * 100);
 const standardPct = Math.round(SPLIT.managerStandard * 100);
@@ -84,6 +86,57 @@ const exFeeCents = Math.round(EX_GMV_CENTS * EX_FEE_PCT);
 const exPartnerCents = partnerCommissionCents(exFeeCents);
 /** The most an override could ever pay on that fee — at this value QS's own share is nothing. */
 const exQsCents = hubOverrideCents(exFeeCents, QS_FEE_SHARE);
+/** The shared slice, rounded the same way `allocateUplineOverrides` rounds its budget. */
+const sliceCents = Math.round(exFeeCents * QS_FEE_SHARE);
+
+/** Example team size for the "at scale" columns. A number to think with, not a forecast. */
+const EX_MERCHANTS = 10;
+
+/** ⚠️ Rates are ILLUSTRATIVE — hers is not set. Each row is computed, never typed. */
+const COMMERCE_RATES = [0.02, 0.05, 0.1, 0.15] as const;
+const commerceRows = COMMERCE_RATES.map((share) => {
+  const amy = allocateUplineOverrides(exFeeCents, [
+    { code: 'amy', overrideShare: share },
+  ]).totalCents;
+  return { share, amy, house: sliceCents - amy, atScale: amy * EX_MERCHANTS };
+});
+
+/**
+ * The chain case: Daryle directly above the sale, Amy above Daryle. Shows the cliff — nearest-first
+ * means a high rate on the near level can leave the far level with nothing.
+ */
+const CHAIN_CASES = [
+  [0.05, 0.05],
+  [0.1, 0.05],
+  [0.1, 0.1],
+  [0.15, 0.1],
+] as const;
+const chainRows = CHAIN_CASES.map(([dShare, aShare]) => {
+  const a = allocateUplineOverrides(exFeeCents, [
+    { code: 'daryle', overrideShare: dShare },
+    { code: 'amy', overrideShare: aShare },
+  ]);
+  const paid = new Map(a.payments.map((x) => [x.code, x.cents]));
+  return {
+    dShare,
+    aShare,
+    daryle: paid.get('daryle') ?? 0,
+    amy: paid.get('amy') ?? 0,
+    shorted: a.shorted.some((x) => x.code === 'amy'),
+  };
+});
+
+/** Rental second-level illustration. Rentals pay ONE level today; this is the shape of the trade. */
+const RENTAL_SECOND_LEVEL = [0.05, 0.1, 0.15] as const;
+const rentalRows = RENTAL_SECOND_LEVEL.map((share) => {
+  const amy = Math.floor(one.netCents * share);
+  return { share, amy, house: one.houseCents - amy, atScale: amy * teamAccounts };
+});
+
+/** What a downline's TIER leaves behind — the lever that moves more than a rate change. */
+const AVG_ORDER_CENTS = 4_500;
+const affiliateKeeps = affiliateResidualCents(exFeeCents, AVG_ORDER_CENTS, 0.25);
+const affiliateLeaves = exFeeCents - affiliateKeeps;
 
 const money = (cents: number) =>
   `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -152,6 +205,41 @@ function Card({
       </div>
       <div className="mt-2 text-sm leading-relaxed text-zinc-400">{children}</div>
       {more && <More>{more}</More>}
+    </div>
+  );
+}
+
+function Table({ head, rows }: { head: readonly string[]; rows: readonly React.ReactNode[][] }) {
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <table className="w-full min-w-[26rem] text-sm">
+        <thead>
+          <tr className="border-b border-zinc-700/70">
+            {head.map((h, i) => (
+              <th
+                key={h}
+                className={`pb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 ${i === 0 ? 'text-left' : 'text-right'}`}
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, ri) => (
+            <tr key={ri} className="border-b border-zinc-800/60 last:border-0">
+              {r.map((c, ci) => (
+                <td
+                  key={ci}
+                  className={`py-2 ${ci === 0 ? 'text-zinc-300' : 'text-right font-mono text-zinc-200'}`}
+                >
+                  {c}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -347,6 +435,140 @@ export default function ForAmyPage() {
                 <strong className="text-zinc-200">nothing has paid anyone on either rail</strong>.
                 See below — I&rsquo;m not going to let you build a plan on a number that has never
                 happened.
+              </p>
+            </Card>
+          </div>
+        </section>
+
+        {/* Run the numbers */}
+        <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+            Run the numbers
+          </h2>
+          <p className="mt-2 text-sm text-zinc-500">
+            ⚠️ Your commerce rate isn&rsquo;t set, so these are the <em>shapes</em>, not an offer. I
+            want you to see the arithmetic before we pick a number, so the number we pick makes
+            sense to both of us. The rental rate below the tables IS settled.
+          </p>
+          <div className="mt-4 space-y-3">
+            <Card title="Online orders — one merchant doing $10k/month" tone="sky">
+              <Table
+                head={['If your rate were', 'you/mo', 'house/mo', `× ${EX_MERCHANTS} merchants`]}
+                rows={commerceRows.map((r) => [
+                  `${(r.share * 100).toFixed(0)}% of the fee`,
+                  money(r.amy),
+                  money(r.house),
+                  `${money(r.atScale)}/mo`,
+                ])}
+              />
+              <p className="mt-3">
+                The fee on that merchant is {money(exFeeCents)}. {money(exPartnerCents)} of it
+                belongs to whoever signed them up and can&rsquo;t be touched, so you and I are
+                dividing {money(sliceCents)} — and the &ldquo;house&rdquo; column is what&rsquo;s
+                left to buy domains, pay for hosting and do the work of making them rank. I&rsquo;m
+                showing you my side because a constraint you can see is easier to trust than one I
+                assert.
+              </p>
+            </Card>
+
+            <Card
+              title="Where it gets sharp: when there's someone between you and the sale"
+              tag="read this"
+              tone="amber"
+            >
+              Daryle directly above the sale, you above Daryle. The software pays nearest-first, so
+              his rate comes out of the {money(sliceCents)} before yours does.
+              <Table
+                head={['Daryle / you', 'Daryle', 'you', '']}
+                rows={chainRows.map((r) => [
+                  `${(r.dShare * 100).toFixed(0)}% / ${(r.aShare * 100).toFixed(0)}%`,
+                  money(r.daryle),
+                  money(r.amy),
+                  r.shorted
+                    ? '⛔ nothing left for you'
+                    : r.amy + r.daryle >= sliceCents
+                      ? '⚠️ house at zero'
+                      : 'fits',
+                ])}
+              />
+              <p className="mt-3">
+                Two levels at 10% each uses up the whole slice. Past that,{' '}
+                <strong className="text-amber-300">
+                  you get nothing rather than a reduced amount
+                </strong>{' '}
+                — deliberately, because a rate that quietly shrinks when someone else is added is
+                worse than one that visibly doesn&rsquo;t fit. The system flags it at me when it
+                happens.
+              </p>
+              <p className="mt-3">
+                Practically: your rate and the rates of anyone between you and the work are the same
+                budget. That&rsquo;s a real tension in a team you&rsquo;re building, and it&rsquo;s
+                better on the table now.
+              </p>
+            </Card>
+
+            <Card
+              title="The thing that moves your ceiling more than your rate does"
+              tag="worth knowing"
+              tone="emerald"
+            >
+              It matters enormously <em>which kind</em> of person you recruit.
+              <Table
+                head={['Downline type', 'they keep', 'left for you + house']}
+                rows={[
+                  [
+                    `Reseller — runs the account (${partnerPct}%)`,
+                    money(exPartnerCents),
+                    money(sliceCents),
+                  ],
+                  ['Affiliate — just refers (25%)', money(affiliateKeeps), money(affiliateLeaves)],
+                ]}
+              />
+              <p className="mt-3">
+                An affiliate leaves{' '}
+                <strong className="text-emerald-300">{money(affiliateLeaves)}</strong> to share
+                instead of {money(sliceCents)}. So recruiting referrers rather than operators
+                changes what&rsquo;s available to you by more than tripling your rate would.
+              </p>
+              <p className="mt-3">
+                ⚠️ Being straight with you: the software currently caps every override at {qsPct}%
+                of the fee regardless of which type it is, so that headroom isn&rsquo;t reachable
+                yet. It&rsquo;s a deliberate conservative setting, not a bug, and lifting it is the
+                cheapest way to pay you more without taking it off me. That&rsquo;s a third thing on
+                my list, and you should hold me to it.
+              </p>
+            </Card>
+
+            <Card title="Rentals at your team's scale" tone="sky">
+              Your manager override is <strong className="text-zinc-200">settled</strong> at{' '}
+              {recruitPct}% — {money(one.managerCents)} per account per month. Across the{' '}
+              {teamAccounts} accounts in the example above that&rsquo;s{' '}
+              <strong className="text-sky-300">{money(teamMonthly)}/mo</strong>, or{' '}
+              {money(teamMonthly * 12)} a year while they stay active.
+              <p className="mt-3">
+                For completeness, here&rsquo;s the shape of a <em>second</em> level on rentals — the
+                thing that isn&rsquo;t built, so you can see why it&rsquo;s a decision and not a
+                quick job:
+              </p>
+              <Table
+                head={[
+                  'A 2nd level at',
+                  'them/account',
+                  'house left',
+                  `× ${teamAccounts} accounts`,
+                ]}
+                rows={rentalRows.map((r) => [
+                  `${(r.share * 100).toFixed(0)}% of net`,
+                  money(r.amy),
+                  money(r.house),
+                  `${money(r.atScale)}/mo`,
+                ])}
+              />
+              <p className="mt-3">
+                The house keeps {money(one.houseCents)} of a $99 rental, and that is what buys the
+                domain and funds getting it to rank in the first place. A second level at 15% leaves{' '}
+                {money(one.houseCents - Math.floor(one.netCents * 0.15))} per account to do all of
+                that — which is the honest reason it&rsquo;s a conversation rather than a setting.
               </p>
             </Card>
           </div>

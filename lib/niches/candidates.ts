@@ -155,6 +155,104 @@ export const NICHE_CANDIDATES: NicheCandidate[] = [
     note: 'Growing-dome overlap: DomeSketch already reaches it, and Growing Spaces is in the directory.',
   },
 
+  // ---- Wave 2 (2026-09-23). Added AFTER the classifier was validated against a human, which
+  // changed the method: the supply probe was only ever a cheap pre-filter to avoid spending on
+  // an untrusted SERP read. A SERP check costs about $0.002, so these go straight to the real
+  // measurement. ⚠️ The probe also misled twice — `earth_natural` read 16.2/metro because
+  // "natural building contractor" matches every GC, and the Places sweep missed the builder
+  // ranking FIRST for its own query. A proxy that can be wrong in both directions is not worth
+  // gating on when the true measure is nearly free.
+  {
+    key: 'zip_line',
+    label: 'Zip lines & aerial courses',
+    queries: ['zip line builder', 'backyard zip line installation'],
+    ticket: 'mid',
+    intent: 'considered',
+    toolFit: 'none',
+    note: 'Adjacent to treehouses — Tree Top Builders and Treehouse Experts both sell them, so supply overlaps a cohort that already worked.',
+  },
+  {
+    key: 'skate_ramp',
+    label: 'Skate ramps & pump tracks',
+    queries: ['skate ramp builder', 'backyard pump track builder'],
+    ticket: 'mid',
+    intent: 'considered',
+    toolFit: 'none',
+    note: 'Treecraft lists skate ramps beside treehouses. Rare structure, enthusiast buyer who researches.',
+  },
+  {
+    key: 'climbing_wall',
+    label: 'Home climbing walls',
+    queries: ['home climbing wall builder', 'residential climbing wall installation'],
+    ticket: 'mid',
+    intent: 'considered',
+    toolFit: 'none',
+    note: 'Specialist trade, almost no local supply, buyer reads for weeks. ⚠️ Commercial gyms may dominate and are a different market.',
+  },
+  {
+    key: 'grain_bin_home',
+    label: 'Grain bin & silo homes',
+    queries: ['grain bin home builder', 'silo home conversion'],
+    ticket: 'high',
+    intent: 'considered',
+    toolFit: 'partial',
+    note: 'The rarest structure on the list. Risk is the opposite of density: there may be almost no searches either.',
+  },
+  {
+    key: 'earth_sheltered',
+    label: 'Earth-sheltered & berm homes',
+    queries: ['earth sheltered home builder', 'berm home construction'],
+    ticket: 'high',
+    intent: 'considered',
+    toolFit: 'partial',
+    note: 'Dome-adjacent; monolithic dome builders often do these, so DomeSketch is nearer here than elsewhere.',
+  },
+  {
+    key: 'natural_pool',
+    label: 'Natural swimming pools',
+    queries: ['natural swimming pool builder', 'natural pond pool construction'],
+    ticket: 'high',
+    intent: 'considered',
+    toolFit: 'none',
+    note: 'High ticket, distinct from the saturated pool trade. ⚠️ Ordinary pool builders may swamp the query — the check will say.',
+  },
+  {
+    key: 'wine_cellar',
+    label: 'Wine cellars',
+    queries: ['custom wine cellar builder', 'wine cellar installation'],
+    ticket: 'high',
+    intent: 'considered',
+    toolFit: 'none',
+    note: 'Specialist, high ticket, wealthy buyer who plans. Likely thin local supply outside a few metros.',
+  },
+  {
+    key: 'observatory',
+    label: 'Backyard observatories',
+    queries: ['backyard observatory builder', 'home observatory dome'],
+    ticket: 'mid',
+    intent: 'considered',
+    toolFit: 'partial',
+    note: 'Genuinely a dome — DomeSketch adjacent. Tiny market, but tiny markets are exactly where nobody has built the page.',
+  },
+  {
+    key: 'sport_court',
+    label: 'Sport courts & batting cages',
+    queries: ['backyard sport court builder', 'batting cage installation'],
+    ticket: 'mid',
+    intent: 'considered',
+    toolFit: 'none',
+    note: 'Franchise networks exist here, which usually means a full pack — included to find out rather than assume.',
+  },
+  {
+    key: 'bunker',
+    label: 'Bunkers & underground shelters',
+    queries: ['underground bunker builder', 'bomb shelter installation'],
+    ticket: 'high',
+    intent: 'considered',
+    toolFit: 'none',
+    note: 'Adjacent to storm shelters, which failed on regional density. ⚠️ Check the SERP is not dominated by prepper content farms.',
+  },
+
   // ---- Controls: included ON PURPOSE so the probe is falsifiable ----
   {
     key: 'towing',

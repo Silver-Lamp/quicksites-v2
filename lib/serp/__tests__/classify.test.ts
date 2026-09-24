@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { classifyDomain, readSerp, tally } from '@/lib/serp/classify';
+import { classifyDomain, isFeatureless, readHumanSerp, readSerp, tally } from '@/lib/serp/classify';
 import { collapseLocalPack, mapItems } from '@/lib/serp/dataforseo';
 import type { SerpElement, SerpSnapshot } from '@/lib/serp/types';
 
@@ -244,5 +244,37 @@ describe('the console preview and the server agree by construction', () => {
     });
     expect(stale.verdict).toBe('best');
     expect(stale.verdict).not.toBe('skip');
+  });
+});
+
+describe('a featureless page is a doubt about the input, not a verdict', () => {
+  // The real pair, 2026-09-23, minutes apart on `dock builder austin`:
+  //   item_types [local_pack, organic, people_also_ask, related_searches], se_results_count 111
+  //   item_types [organic, people_also_ask],                              se_results_count  57
+  // The short one scores `good`. In the first full sweep 4 of 108 readings were featureless and
+  // all four were green — the bias runs entirely toward spending money.
+  it('flags the shape a truncated response produces', () => {
+    const r = readSerp(snap([{ kind: 'organic', rank: 1, domain: 'example.com' }]));
+    expect(r.verdict).toBe('good');
+    expect(isFeatureless(r)).toBe(true);
+  });
+
+  it('does not flag a page where we actually saw something', () => {
+    const r = readSerp(
+      snap([
+        { kind: 'local_pack', rank: 1, entries: 1 },
+        { kind: 'organic', rank: 2, domain: 'example.com' },
+      ]),
+    );
+    expect(isFeatureless(r)).toBe(false);
+  });
+
+  // ⚠️ The guarantee that matters: a PERSON cannot be served a truncated SERP, so this predicate
+  // must never reach into scoring. If someone "fixes" the bias inside verdictFor, a hand-checked
+  // empty page stops reading as the opportunity it really is — and this test goes red.
+  it('never changes the verdict — the classifier is right, the input was wrong', () => {
+    const human = readHumanSerp({ query: 'q', location: 'L', packSize: 0, firstOrganicKind: 'unknown' });
+    expect(human.verdict).toBe('good');
+    expect(isFeatureless(human)).toBe(true);
   });
 });

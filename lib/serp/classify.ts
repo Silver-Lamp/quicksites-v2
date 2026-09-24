@@ -115,6 +115,35 @@ export function readSerp(snapshot: SerpSnapshot): SerpReading {
   return { ...reading, ...verdictFor(reading) };
 }
 
+/**
+ * A page on which we saw NOTHING but organic results — no pack, no ads, no AI overview, nothing
+ * above the first organic result.
+ *
+ * ⚠️ THIS IS NOT A VERDICT, IT IS A REASON TO DOUBT THE INPUT, AND THE ASYMMETRY IS THE POINT.
+ * A truncated provider response and a genuinely wide-open SERP are IDENTICAL from one reading, and
+ * the truncated one scores `good` — the most favourable verdict there is. Observed 2026-09-23:
+ * `dock builder austin` read twice minutes apart returned `item_types` of
+ * `[local_pack, organic, people_also_ask, related_searches]` with `se_results_count` 111, and then
+ * `[organic, people_also_ask]` with 57. Same query, same location; the second is half a SERP, and
+ * our classifier called it wide open.
+ *
+ * **A feature we SAW is trustworthy; a feature we did not see is not.** So the remedy is a second
+ * read rather than a cleverer single-response detector: if the second read shows any feature, the
+ * first was short. Two independent truncations of the same query are far less likely than one.
+ *
+ * ⚠️ Deliberately NOT wired into `verdictFor`. The classifier is correct given its input — the
+ * input was wrong, and compensating for a provider defect inside the scoring rule would make the
+ * rule wrong for the human path too. **A person cannot be served a truncated SERP**, so a person
+ * reporting an empty page is reporting an empty page.
+ *
+ * Falsifying condition: if a provider stops dropping feature blocks (or the adapter learns to
+ * detect it from the response itself), this predicate stops earning its second call — check the
+ * disagreement rate the sweep prints before keeping it.
+ */
+export function isFeatureless(r: Pick<SerpReading, 'packSize' | 'adCount' | 'aiOverview' | 'blocksAbove'>): boolean {
+  return r.packSize === 0 && r.adCount === 0 && !r.aiOverview && r.blocksAbove === 0;
+}
+
 function verdictFor(r: Omit<SerpReading, 'verdict' | 'reason'>): { verdict: SerpVerdict; reason: string } {
   if (r.firstOrganicRank === null) {
     return { verdict: 'skip', reason: 'No organic result on the page at all.' };

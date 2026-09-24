@@ -40,3 +40,31 @@ describe('estimatePartnerResidual', () => {
     expect(r.monthly).toBeCloseTo(10_000 * 0.1 * 0.5); // 500
   });
 });
+
+// ⚠️ THE MIRROR HAD NOTHING PINNING IT TO THE SOURCE, WHICH IS THE FAILURE THIS REPO KEEPS FINDING.
+// `partnerEarnings.ts` exists because `partner-terms.ts` reads QS_* env and cannot be imported into
+// a client bundle, and its header says "keep these in sync with that file" — a remembered
+// instruction, not a derived check. Every assertion above imports its expected value FROM the
+// mirror, so editing one file and not the other stayed green. A number survives if something
+// re-derives it (CLAUDE.md §4).
+//
+// Falsifying condition worth stating: this compares DEFAULTS. It cannot catch a deploy that sets
+// QS_PARTNER_FEE_SHARE server-side while the client keeps showing 80% — that divergence is real and
+// unfixable by mirroring, which is why `components/commissions/scenario-lab.tsx` takes the constants
+// as PROPS from the server instead of importing either module.
+describe('the client mirror matches the server source', () => {
+  const source = require('@/lib/commerce/partner-terms');
+  const mirror = require('@/lib/commerce/partnerEarnings');
+
+  it('PARTNER_FEE_SHARE agrees', () => {
+    expect(mirror.PARTNER_FEE_SHARE).toBe(source.PARTNER_FEE_SHARE);
+  });
+
+  it('the fee cap agrees', () => {
+    expect(mirror.MAX_FEE_PCT).toBe(source.MAX_PLATFORM_FEE_PERCENT);
+  });
+
+  it('the mirror default fee is inside the cap it mirrors', () => {
+    expect(mirror.DEFAULT_FEE_PCT).toBeLessThanOrEqual(source.MAX_PLATFORM_FEE_PERCENT);
+  });
+});

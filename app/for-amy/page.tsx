@@ -39,11 +39,8 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
-import {
-  pageRequiresPin,
-  pagePinCookie,
-  verifyPagePinGrant,
-} from '@/lib/auth/pagePin';
+import { pageRequiresPin, pagePinCookie, verifyPagePinGrant } from '@/lib/auth/pagePin';
+import ScenarioLab from '@/components/commissions/scenario-lab';
 import { SPLIT, splitRentalPayment } from '@/lib/commerce/rentalSplits';
 import {
   MAX_PLATFORM_FEE_PERCENT,
@@ -279,9 +276,7 @@ function PinPrompt({ error }: { error?: string }) {
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-white">
         <div className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
           <h1 className="text-lg font-semibold text-white">This page is private</h1>
-          <p className="mt-2 text-sm text-zinc-400">
-            Enter the six-digit code you were given.
-          </p>
+          <p className="mt-2 text-sm text-zinc-400">Enter the six-digit code you were given.</p>
           <form method="POST" action="/api/page-pin" className="mt-4 space-y-3">
             <input type="hidden" name="page" value={PAGE_KEY} />
             <input
@@ -641,6 +636,35 @@ export default async function ForAmyPage({
                 that — which is the honest reason it&rsquo;s a conversation rather than a setting.
               </p>
             </Card>
+          </div>
+        </section>
+
+        {/* Move the sliders yourself */}
+        <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+            Move it yourself
+          </h2>
+          <p className="mt-2 text-sm text-zinc-500">
+            The tables above are fixed examples. These sliders are the same arithmetic, live — so
+            you can go find the rate you think is fair and see what it does to my side before we
+            talk. Nothing here changes anything; it&rsquo;s a calculator.
+          </p>
+          <div className="mt-4">
+            {/*
+              ⚠️ Constants are resolved HERE, on the server, and passed down. The client bundle cannot
+              read QS_* env, so a calculator importing partner-terms directly would silently fall back
+              to its defaults and keep quoting 80/20 on a deploy where those had been changed.
+            */}
+            <ScenarioLab
+              partnerFeeShare={PARTNER_FEE_SHARE}
+              availableShare={QS_FEE_SHARE}
+              maxFeePct={MAX_PLATFORM_FEE_PERCENT}
+              rentalManagerStandard={SPLIT.managerStandard}
+              rentalManagerRecruit={SPLIT.managerRecruit}
+              rentalCloserShare={SPLIT.closer}
+              personName="You"
+              middleName="Someone between you and the sale"
+            />
           </div>
         </section>
 

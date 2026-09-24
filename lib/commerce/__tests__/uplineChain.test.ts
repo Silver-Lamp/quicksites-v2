@@ -82,6 +82,31 @@ describe('the cap is on the TOTAL, which is the whole point', () => {
     expect(a.shorted.map((s) => s.code)).toEqual(['amy']);
   });
 
+  // ⚠️ REGRESSION: QS_FEE_SHARE is `1 - 0.8` = 0.19999999999999996 in floating point. Flooring the
+  // budget made 10% + 10% — summing to exactly the documented ceiling — miss by ONE CENT, and the
+  // far level was paid nothing. A cliff at a correctly-configured value reads as a bug, and it was
+  // found by running scripts/commission-scenarios.mts rather than by reasoning about the code.
+  it('pays two levels whose shares sum to exactly the ceiling', () => {
+    const half = QS_FEE_SHARE / 2;
+    const a = allocateUplineOverrides(FEE, [
+      { code: 'daryle', overrideShare: half },
+      { code: 'amy', overrideShare: half },
+    ]);
+    expect(a.shorted).toEqual([]);
+    expect(a.payments).toHaveLength(2);
+    expect(a.totalCents).toBeLessThanOrEqual(Math.round(FEE * QS_FEE_SHARE));
+  });
+
+  it('still refuses to pay more than the slice, rounding included', () => {
+    const a = allocateUplineOverrides(FEE, [
+      { code: 'a', overrideShare: 0.1 },
+      { code: 'b', overrideShare: 0.1 },
+      { code: 'c', overrideShare: 0.1 },
+    ]);
+    expect(a.totalCents).toBeLessThanOrEqual(Math.round(FEE * QS_FEE_SHARE));
+    expect(a.shorted.map((s) => s.code)).toEqual(['c']);
+  });
+
   it('pays both when they fit', () => {
     const a = allocateUplineOverrides(FEE, [
       { code: 'daryle', overrideShare: 0.1 },

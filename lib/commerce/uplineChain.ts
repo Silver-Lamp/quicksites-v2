@@ -114,9 +114,19 @@ export function allocateUplineOverrides(
 ): UplineAllocation {
   const fee = Math.max(0, Math.floor(Number(platformFeeCents) || 0));
   const available = Math.max(0, Math.min(1, Number(availableShare) || 0));
-  // The ceiling in cents, floored: paying a rounded-up cent N times is how a "capped" total creeps
-  // past its cap on a busy day.
-  const budgetCents = Math.floor(fee * available);
+  /**
+   * ⚠️ ROUNDED, NOT FLOORED, AND THE REASON IS A ONE-CENT CLIFF THAT LOOKS EXACTLY LIKE A BUG.
+   *
+   * `QS_FEE_SHARE` is computed as `1 - PARTNER_FEE_SHARE`, which in floating point is
+   * **0.19999999999999996**, not 0.2. Flooring the budget therefore gave $99.99 on a $500 fee, so a
+   * perfectly sensible 10% + 10% configuration — summing to exactly the documented ceiling — missed
+   * by a single cent and the FAR level was paid nothing at all. Found by running
+   * `scripts/commission-scenarios.mts`, not by reasoning about it.
+   *
+   * Rounding costs at most a sub-cent of cap and makes exact configurations behave as written. The
+   * cap exists to stop N levels each drawing a full slice; it was never about the last cent.
+   */
+  const budgetCents = Math.round(fee * available);
 
   const payments: UplinePayment[] = [];
   const shorted: UplineAllocation['shorted'] = [];

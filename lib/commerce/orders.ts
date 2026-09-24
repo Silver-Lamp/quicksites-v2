@@ -7,11 +7,17 @@ import { EVENTS } from '@/lib/analytics/events';
 import {
   partnerCommissionCents,
   PARTNER_FEE_SHARE,
-  hubOverrideCents,
   isAffiliateOwnerType,
   affiliateResidualCents,
   AFFILIATE_FEE_SHARE,
 } from './partner-terms';
+import {
+  MAX_UPLINE_DEPTH,
+  allocateUplineOverrides,
+  buildUplineChain,
+  type CodeNode,
+  type UplineLink,
+} from './uplineChain';
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
 import {
   computeSubtotalCents,
@@ -23,6 +29,53 @@ import {
 import { recordAdjustment } from './inventoryLedger';
 import { sendOrderAlert } from '@/lib/commerce/orderNotify';
 import { recordCustomerForPaidOrder, recordCustomerForAlreadyPaidOrder } from './customers';
+
+/**
+ * Fetch the codes above `sellingCode` and hand them to the pure walker.
+ *
+ * The walk itself (cycle breaking, depth bound, nearest-first ordering) lives in
+ * `uplineChain.ts` so it is tested in one place. This function only does the I/O: follow
+ * `parent_code` upward, collecting rows into a map, then let the pure function derive the chain from
+ * that map.
+ *
+ * ⚠️ The FETCH loop needs its own bound and its own seen-set, separate from the pure walker's. A
+ * cyclic `parent_code` would otherwise spin here — issuing queries forever inside the Stripe webhook
+ * — before the tested cycle-breaking code ever got a chance to run. Two loops, two guards.
+ *
+ * One query per level, at most `MAX_UPLINE_DEPTH`. The selling code's own row is already in hand from
+ * the caller, so a one-level chain costs no extra query at all.
+ */
+async function resolveUplineChainFromDb(
+  supabase: any,
+  sellingCode: string,
+  sellingCodeRow: { parent_code?: string | null; override_share?: number | null } | null
+): Promise<UplineLink[]> {
+  const nodes = new Map<string, CodeNode>();
+  nodes.set(sellingCode, {
+    parentCode: (sellingCodeRow as any)?.parent_code ?? null,
+    overrideShare: Number((sellingCodeRow as any)?.override_share) || 0,
+  });
+
+  let cursor = (sellingCodeRow as any)?.parent_code ?? null;
+  const fetched = new Set<string>([sellingCode]);
+  for (let depth = 0; depth < MAX_UPLINE_DEPTH && cursor; depth++) {
+    if (fetched.has(cursor)) break; // cycle — stop fetching, the walker will stop too
+    fetched.add(cursor);
+    const { data } = await supabase
+      .from('referral_codes')
+      .select('parent_code, override_share')
+      .eq('code', cursor)
+      .maybeSingle();
+    if (!data) break;
+    nodes.set(cursor, {
+      parentCode: (data as any).parent_code ?? null,
+      overrideShare: Number((data as any).override_share) || 0,
+    });
+    cursor = (data as any).parent_code ?? null;
+  }
+
+  return buildUplineChain(sellingCode, (c) => nodes.get(c));
+}
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -477,58 +530,84 @@ export async function markOrderPaid(
           );
         }
 
-        // 5b) Hub override: if this reseller was recruited by an upline (parent_code),
-        //     pay the hub a configurable cut — funded OUT OF QuickSites' share
-        //     (clamped to QS_FEE_SHARE), so the reseller residual above is untouched.
-        //     (codeRow was already fetched above with parent_code + override_share.)
-        if ((codeRow as any)?.parent_code && Number((codeRow as any).override_share) > 0) {
-          const overrideCents = hubOverrideCents(
-            orderRow.platform_fee_cents,
-            Number((codeRow as any).override_share)
-          );
-          if (overrideCents > 0) {
-            const ov = await supabase.from('commission_ledger').upsert(
-              {
-                referral_code: (codeRow as any).parent_code,
-                subject: 'order_platform_fee_override',
-                subject_id: orderId,
-                amount_cents: overrideCents,
-                currency: orderRow.currency || 'USD',
-                status: 'pending',
-                adjustments: {
-                  note: 'hub override',
-                  downline_code: attr.referral_code,
-                  override_share: Number((codeRow as any).override_share),
-                  platform_fee_cents: orderRow.platform_fee_cents,
-                },
+        // 5b) Upline overrides: pay every level above the seller a configurable cut, funded OUT OF
+        //     QuickSites' share, so the reseller/affiliate residual above is untouched.
+        //
+        //     ⚠️ This used to pay exactly ONE level (codeRow.parent_code) and stop, which could not
+        //     express "the head of BD earns on everything downstream" — a chain three deep paid the
+        //     middle link only. The walk and the arithmetic now live in lib/commerce/uplineChain.ts,
+        //     where the CAP IS ON THE TOTAL: N levels each at the old per-level ceiling would have
+        //     paid N × the slice that exists. Nearest-first, and a level that does not fit is paid
+        //     nothing rather than a quietly reduced rate. See that module and docs/RENTAL_SPLITS.md.
+        //
+        //     Inert until rates are set: every override_share is 0 today, so this allocates nothing.
+        const uplineChain = await resolveUplineChainFromDb(
+          supabase,
+          attr.referral_code,
+          // `as any`: types/supabase.ts predates parent_code/override_share on referral_codes
+          // (CLAUDE.md §8 — the columns are live, verified against prod; the generated types lag).
+          codeRow as any
+        );
+        const allocation = allocateUplineOverrides(orderRow.platform_fee_cents, uplineChain);
+
+        // ⚠️ A shortfall means somebody is configured for a rate this order cannot pay. Report it —
+        // silently paying less than a promised rate is exactly the failure the allocator refuses to
+        // commit, and it must not reappear as a quiet log line nobody reads.
+        if (allocation.shorted.length) {
+          Sentry.captureMessage('upline override(s) shorted by the fee cap', {
+            level: 'warning',
+            extra: {
+              order_id: orderId,
+              selling_code: attr.referral_code,
+              platform_fee_cents: orderRow.platform_fee_cents,
+              paid_cents: allocation.totalCents,
+              shorted: allocation.shorted,
+            },
+          } as any);
+        }
+
+        for (const payment of allocation.payments) {
+          const ov = await supabase.from('commission_ledger').upsert(
+            {
+              referral_code: payment.code,
+              subject: 'order_platform_fee_override',
+              subject_id: orderId,
+              amount_cents: payment.cents,
+              currency: orderRow.currency || 'USD',
+              status: 'pending',
+              adjustments: {
+                note: 'upline override',
+                downline_code: attr.referral_code,
+                override_share: payment.share,
+                platform_fee_cents: orderRow.platform_fee_cents,
               },
-              { onConflict: 'referral_code,subject,subject_id' }
+            },
+            { onConflict: 'referral_code,subject,subject_id' }
+          );
+          if (ov.error && `${ov.error.code}` !== '23505') {
+            console.warn('upline override upsert error:', ov.error.message);
+            Sentry.captureMessage('commission_ledger upsert failed (upline override)', {
+              level: 'error',
+              extra: {
+                order_id: orderId,
+                referral_code: payment.code,
+                amount_cents: payment.cents,
+                code: ov.error.code,
+                message: ov.error.message,
+              },
+            } as any);
+          } else {
+            await captureServer(
+              EVENTS.COMMISSION_ACCRUED,
+              {
+                order_id: orderId,
+                referral_code: payment.code,
+                amount_cents: payment.cents,
+                kind: 'hub_override',
+                downline_code: attr.referral_code,
+              },
+              orderRow.merchant_id
             );
-            if (ov.error && `${ov.error.code}` !== '23505') {
-              console.warn('hub override upsert error:', ov.error.message);
-              Sentry.captureMessage('commission_ledger upsert failed (hub override)', {
-                level: 'error',
-                extra: {
-                  order_id: orderId,
-                  referral_code: (codeRow as any).parent_code,
-                  amount_cents: overrideCents,
-                  code: ov.error.code,
-                  message: ov.error.message,
-                },
-              } as any);
-            } else {
-              await captureServer(
-                EVENTS.COMMISSION_ACCRUED,
-                {
-                  order_id: orderId,
-                  referral_code: (codeRow as any).parent_code,
-                  amount_cents: overrideCents,
-                  kind: 'hub_override',
-                  downline_code: attr.referral_code,
-                },
-                orderRow.merchant_id
-              );
-            }
           }
         }
       }

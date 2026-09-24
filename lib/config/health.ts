@@ -73,6 +73,15 @@ const set = (k: string) => !!(process.env[k] && String(process.env[k]).trim());
  */
 export const CONFIG_GATES: ConfigGate[] = [
   {
+    key: 'page_pin_amy',
+    label: 'PIN gate on the unlisted /for-amy page',
+    requires: ['PAGE_PIN_AMY'],
+    breaks:
+      'The /for-amy page shows its PIN prompt and nobody — including Amy — can open it. It fails ' +
+      'closed on purpose: that page carries a pay schedule, so unconfigured must mean shut, not open. ' +
+      'Set PAGE_PIN_AMY to the six digits she was given.',
+  },
+  {
     key: 'supabase',
     label: 'Supabase (database + auth)',
     requires: ['NEXT_PUBLIC_SUPABASE_URL'],

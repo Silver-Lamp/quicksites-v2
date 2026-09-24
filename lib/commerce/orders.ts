@@ -7,6 +7,7 @@ import { EVENTS } from '@/lib/analytics/events';
 import {
   partnerCommissionCents,
   PARTNER_FEE_SHARE,
+  QS_FEE_SHARE,
   isAffiliateOwnerType,
   affiliateResidualCents,
   AFFILIATE_FEE_SHARE,
@@ -548,7 +549,13 @@ export async function markOrderPaid(
           // (CLAUDE.md §8 — the columns are live, verified against prod; the generated types lag).
           codeRow as any
         );
-        const allocation = allocateUplineOverrides(orderRow.platform_fee_cents, uplineChain);
+        //     `QS_FEE_SHARE` is passed explicitly: the reseller's share is protected, so every upline on
+        //     this rail draws from QuickSites' slice and nothing else.
+        const allocation = allocateUplineOverrides(
+          orderRow.platform_fee_cents,
+          uplineChain,
+          QS_FEE_SHARE
+        );
 
         // ⚠️ A shortfall means somebody is configured for a rate this order cannot pay. Report it —
         // silently paying less than a promised rate is exactly the failure the allocator refuses to

@@ -284,8 +284,8 @@ export default function ScenarioLab({
         <Panel title="Rentals — your manager override is already settled">
           <p className="mt-1 text-sm text-zinc-400">
             {pct(rentalManagerRecruit)} of net for someone you recruited,{' '}
-            {pct(rentalManagerStandard)} otherwise. The second-level slider is the part that{' '}
-            <em>isn&rsquo;t</em> built — it&rsquo;s here so the trade is visible.
+            {pct(rentalManagerStandard)} otherwise. A level above you is built too and funded from
+            the house — the slider shows what that costs.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Slider
@@ -308,7 +308,7 @@ export default function ScenarioLab({
               format={(n) => `${n}`}
             />
             <Slider
-              label="A second level below you (not built)"
+              label="A second level above you"
               value={secondLevel}
               onChange={setSecondLevel}
               min={0}
@@ -356,7 +356,7 @@ export default function ScenarioLab({
               note="settled"
             />
             {secondLevel > 0 && (
-              <Out label="A second level" value={money(secondCents)} note="hypothetical" />
+              <Out label="A level above you" value={money(secondCents)} note="from the house" />
             )}
             <Out
               label="House"

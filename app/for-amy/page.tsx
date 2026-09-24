@@ -98,9 +98,11 @@ const EX_MERCHANTS = 10;
 /** ⚠️ Rates are ILLUSTRATIVE — hers is not set. Each row is computed, never typed. */
 const COMMERCE_RATES = [0.02, 0.05, 0.1, 0.15] as const;
 const commerceRows = COMMERCE_RATES.map((share) => {
-  const amy = allocateUplineOverrides(exFeeCents, [
-    { code: 'amy', overrideShare: share },
-  ]).totalCents;
+  const amy = allocateUplineOverrides(
+    exFeeCents,
+    [{ code: 'amy', overrideShare: share }],
+    QS_FEE_SHARE
+  ).totalCents;
   return { share, amy, house: sliceCents - amy, atScale: amy * EX_MERCHANTS };
 });
 
@@ -115,10 +117,14 @@ const CHAIN_CASES = [
   [0.15, 0.1],
 ] as const;
 const chainRows = CHAIN_CASES.map(([dShare, aShare]) => {
-  const a = allocateUplineOverrides(exFeeCents, [
-    { code: 'daryle', overrideShare: dShare },
-    { code: 'amy', overrideShare: aShare },
-  ]);
+  const a = allocateUplineOverrides(
+    exFeeCents,
+    [
+      { code: 'daryle', overrideShare: dShare },
+      { code: 'amy', overrideShare: aShare },
+    ],
+    QS_FEE_SHARE
+  );
   const paid = new Map(a.payments.map((x) => [x.code, x.cents]));
   return {
     dShare,
@@ -699,32 +705,31 @@ export default async function ForAmyPage({
               </p>
             </Card>
 
-            <Card
-              title="Online orders now pay every level above the seller. Rentals still pay one."
-              tag="half built"
-              tone="amber"
-            >
-              Your intent is the rule: as head of business development you get a cut of everything
-              that goes through anyone downstream of you. I&rsquo;ve now built that on the{' '}
-              <strong className="text-zinc-200">online-orders</strong> rail — if Daryle recruits
-              someone and that person signs up a merchant, the chain is walked all the way up and
-              you earn on it, however many links deep.
+            <Card title="Both rails now pay every level above the sale" tag="built" tone="emerald">
+              Your intent is the rule: as head of business development you earn on everything that
+              goes through anyone downstream of you. That is now true on <em>both</em> rails —
+              online orders and rentals — however many links deep the chain runs.
               <p className="mt-3">
-                <strong className="text-zinc-200">Rentals are still one level.</strong> There the
-                money is split three ways with a single manager slot, and paying a second level
-                means deciding whose share it comes from. It can&rsquo;t come from the closer —
-                that&rsquo;s the rule that stops recruiting competing with selling — so it comes
-                from mine, and mine has a floor. That&rsquo;s a decision I owe you, not a build I
-                can quietly do.
+                <strong className="text-zinc-200">Where the money comes from, on both:</strong>{' '}
+                never the person who closed the sale. On orders it comes out of my {qsPct}% of the
+                fee; on rentals out of the house&rsquo;s share of the net. The closer&rsquo;s{' '}
+                {closerPct}% and your manager override are protected in code — that is the rule that
+                stops recruiting competing with selling, and adding a level above you does not get
+                to bend it.
               </p>
               <p className="mt-3">
-                And one consequence you should see, because it&rsquo;s arithmetic rather than
-                goodwill: the slice all overrides share is fixed. If the person directly above the
-                sale is set high enough to use it up, someone further up earns nothing on that
-                order. The software pays nearest-first and flags the shortfall rather than quietly
-                paying everybody less. Getting you paid two levels up therefore means either a
-                bigger slice or smaller per-level rates — that&rsquo;s the conversation, and
-                I&rsquo;d rather have it with real numbers in front of us.
+                <strong className="text-zinc-200">One consequence, and it is arithmetic:</strong>{' '}
+                the slice every override shares is fixed. Whoever is nearest the sale is paid first,
+                at the rate they were promised. If their rate uses up the slice, someone further up
+                earns nothing on that payment — nothing, rather than a quietly reduced amount,
+                because a rate that silently shrinks is worse than one that visibly doesn&rsquo;t
+                fit. The system flags it at me when it happens.
+              </p>
+              <p className="mt-3 text-zinc-300">
+                So the rates of everyone between you and the work are the same budget as yours. That
+                is a real tension in a team you&rsquo;re building, and it&rsquo;s better on the
+                table now than discovered later. Every rate is currently zero, so nothing is paying
+                anyone yet — that part is the conversation we still need to have.
               </p>
             </Card>
 

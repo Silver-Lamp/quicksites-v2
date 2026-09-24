@@ -19,8 +19,6 @@
 // the chain resolves and allocates nothing. That is deliberate — the mechanism can land before the
 // compensation decisions do, and the compensation decisions are the owner's (docs/RENTAL_SPLITS.md).
 
-import { QS_FEE_SHARE } from './partner-terms';
-
 /**
  * How far up a chain we will pay. A bound rather than a business rule: it stops one malformed row
  * from turning a paid order into an unbounded walk, and no real org chart is this deep.
@@ -110,7 +108,17 @@ export type UplineAllocation = {
 export function allocateUplineOverrides(
   platformFeeCents: number,
   chain: readonly UplineLink[],
-  availableShare: number = QS_FEE_SHARE
+  /**
+   * The share of `platformFeeCents` ALL uplines together may draw from.
+   *
+   * ⚠️ REQUIRED, NOT DEFAULTED, AND THAT IS DELIBERATE. It used to default to `QS_FEE_SHARE`,
+   * which meant this module imported `partner-terms` and therefore read `QS_*` env — making it
+   * unusable from a client bundle without silently falling back to defaults, and unusable by the
+   * RENTAL rail, whose available slice is the house remainder rather than a fee share. Passing it
+   * explicitly makes the module env-free and shared by both rails, and removes any chance of a
+   * caller drawing against the wrong budget because a default looked reasonable.
+   */
+  availableShare: number
 ): UplineAllocation {
   const fee = Math.max(0, Math.floor(Number(platformFeeCents) || 0));
   const available = Math.max(0, Math.min(1, Number(availableShare) || 0));

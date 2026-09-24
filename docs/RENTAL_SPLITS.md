@@ -81,11 +81,22 @@ On a $10k/month merchant at a 5% fee: fee $500, reseller $400, and **$100 is the
 override could ever pay**. Anyone promising an upline "a cut of everything" needs that number in front
 of them first.
 
-## Multi-level: BUILT on commerce (2026-09-24), still one level on rentals
+## Multi-level: BUILT on BOTH rails (commerce 2026-09-24, rentals 2026-09-24)
 
-`lib/commerce/uplineChain.ts` walks `parent_code` upward and pays every level, replacing the single
-hop in `orders.ts` §5b. **Inert until rates are set** — every `override_share` is 0, so it allocates
-nothing and behaviour is unchanged today.
+`lib/commerce/uplineChain.ts` walks `parent_code` upward and pays every level. **Inert until rates
+are set** — every `override_share` is 0, so it allocates nothing and behaviour is unchanged today.
+
+**Commerce** (`orders.ts` §5b) draws from `QS_FEE_SHARE`; the reseller's 80% is protected.
+**Rentals** (`rentalCommissions.ts` → `allocateRentalUplines`) draw from the **house remainder**,
+because the closer's 50% *and* the manager's override are both protected. Rates live on the same
+`referral_codes.override_share` column for both, so "who earns above whom" has one record rather
+than two that can disagree. Subject `rental_upline_override`, listed in `RENTAL_SUBJECTS` so a
+refund voids it — a new subject left out of that array is a commission that survives a refund.
+
+⚠️ **`allocateUplineOverrides`'s `availableShare` is REQUIRED, not defaulted.** It used to default to
+`QS_FEE_SHARE`, which made the module import `partner-terms` and therefore read env — unusable from a
+client bundle without silently falling back to defaults, and wrong for rentals, whose slice is the
+house remainder. Making it explicit turned the compiler into the reviewer: it named every call site.
 
 ⚠️ **The cap is on the TOTAL, and that is the only reason this is safe.** One level could be bounded
 per-level by `clampOverrideShare` (≤ `QS_FEE_SHARE`). N levels each at that ceiling would pay **N ×
@@ -119,14 +130,13 @@ everything that goes through anyone downstream of her."
 
 1. **The rate on the commerce rail.** Currently 0 on every code; ceiling is `QS_FEE_SHARE`. This is a
    person's pay — it is set by the owner, not inferred.
-2. **Whether rentals get a second level, and whose share funds it.** Rentals still have exactly one
-   manager slot. The money cannot come from the closer (decision #2), so it comes from the house,
-   which has a floor — `QS_MIN_NET_KEEP_CENTS` exists precisely to stop QS going negative. A
-   multi-level rental scheme that ignores that floor pays commissions out of operating money.
+2. ✅ **DECIDED 2026-09-24: rentals get a second level, funded from the house.** Built; see above.
+   The trade it commits to: the house keeps ~$23.97 of a $99 rental, and that is what buys the
+   domain and funds the ranking work. At 15% of net a second level leaves **$9.60 per account** to
+   do all of it. Model it before setting a rate:
+   `npx tsx --env-file=.env.local scripts/commission-scenarios.mts`
 
-Until #1 is set, the commerce mechanism pays nothing. Until #2 is decided, **no surface may imply
-rentals pay beyond one level.** `/for-amy` states exactly which rail does which, and why the rental
-answer is a decision rather than a build.
+Until #1 is set, **both** mechanisms pay nothing.
 
 ## Where it is surfaced
 

@@ -1,11 +1,4 @@
-import {
-  SPLIT,
-  splitRentalPayment,
-  splitOnGrossForComparison,
-  stripeFeeCents,
-  monthlyEquivalentCents,
-  formatCents,
-} from '@/lib/commerce/rentalSplits';
+import { allocateRentalUplines, SPLIT, splitRentalPayment, splitOnGrossForComparison, stripeFeeCents, monthlyEquivalentCents, formatCents } from '@/lib/commerce/rentalSplits';
 
 describe('stripeFeeCents', () => {
   it('is 2.9% + 30c on the two live tiers', () => {
@@ -161,5 +154,68 @@ describe('the residual rule is stated the same way everywhere', () => {
     // question six months in.
     expect(read('lib/commerce/rentalSplits.ts')).toContain("OVERRIDE_BASIS = 'role'");
     expect(read('app/admin/splits/page.tsx')).toMatch(/override follows the role/i);
+  });
+});
+
+// ── A second level above the manager (2026-09-24) ──────────────────────────────────────────────
+//
+// Owner direction: the head of BD earns on everything downstream. On this rail the closer's 50%
+// and the manager's override are BOTH protected, so the only slice left is the house remainder —
+// about $23.97 of a $99 rental, which is what buys the domain and funds the ranking work.
+describe('rental uplines are funded from the house and nothing else', () => {
+  const split = splitRentalPayment(9_900, 'recruit');
+
+  it('pays a configured level out of the house, leaving closer and manager untouched', () => {
+    const before = { closer: split.closerCents, manager: split.managerCents };
+    const a = allocateRentalUplines(split, [{ code: 'amy', overrideShare: 0.1 }]);
+
+    expect(a.totalCents).toBe(Math.floor(split.netCents * 0.1));
+    expect(a.houseCents).toBe(split.houseCents - a.totalCents);
+    // The two invariants this rail has had since 2026-08-25.
+    expect(split.closerCents).toBe(before.closer);
+    expect(split.managerCents).toBe(before.manager);
+  });
+
+  // ⚠️ THE ONE THAT MATTERS. If an upline could out-draw the house it would be reaching into the
+  // closer's or the manager's money, which is the thing recruiting must never do.
+  it('can never draw more than the house had', () => {
+    const greedy = allocateRentalUplines(split, [{ code: 'amy', overrideShare: 0.9 }]);
+    expect(greedy.totalCents).toBeLessThanOrEqual(split.houseCents);
+    expect(greedy.houseCents).toBeGreaterThanOrEqual(0);
+  });
+
+  it('shorts the far level rather than diluting the near one, same as commerce', () => {
+    const a = allocateRentalUplines(split, [
+      { code: 'manager-upline', overrideShare: 0.2 },
+      { code: 'amy', overrideShare: 0.15 },
+    ]);
+    expect(a.payments.map((p) => p.code)).toEqual(['manager-upline']);
+    expect(a.shorted.map((s) => s.code)).toEqual(['amy']);
+    expect(a.houseCents).toBeGreaterThanOrEqual(0);
+  });
+
+  // Every referral_codes.override_share is 0 in production, so shipping this must change nothing.
+  it('pays nothing when no rate is configured', () => {
+    const a = allocateRentalUplines(split, [{ code: 'amy', overrideShare: 0 }]);
+    expect(a).toEqual({ payments: [], totalCents: 0, houseCents: split.houseCents, shorted: [] });
+  });
+
+  it('is a no-op with no chain at all', () => {
+    const a = allocateRentalUplines(split, []);
+    expect(a.totalCents).toBe(0);
+    expect(a.houseCents).toBe(split.houseCents);
+  });
+
+  it('cannot pay out of a payment too small to have a house share', () => {
+    // A charge under the fixed processor fee leaves nothing; an upline must not invent money.
+    const tiny = splitRentalPayment(20, 'recruit');
+    const a = allocateRentalUplines(tiny, [{ code: 'amy', overrideShare: 0.5 }]);
+    expect(a.totalCents).toBe(0);
+    expect(a.houseCents).toBeGreaterThanOrEqual(0);
+  });
+
+  it('the three shares plus uplines still sum to net exactly', () => {
+    const a = allocateRentalUplines(split, [{ code: 'amy', overrideShare: 0.08 }]);
+    expect(split.closerCents + split.managerCents + a.totalCents + a.houseCents).toBe(split.netCents);
   });
 });

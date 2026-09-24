@@ -68,7 +68,7 @@ function commerceRail() {
   console.log(pad('Amy alone above the seller', 30) + rpad('Amy/mo', 10) + rpad('house/mo', 11) + rpad(`× ${MERCHANTS} merchants`, 16) + rpad('house/yr', 14));
   rule();
   for (const share of [0.02, 0.05, 0.1, 0.15, QS_FEE_SHARE]) {
-    const a = allocateUplineOverrides(feeCents, [{ code: 'amy', overrideShare: share }]);
+    const a = allocateUplineOverrides(feeCents, [{ code: 'amy', overrideShare: share }], QS_FEE_SHARE);
     const amy = a.totalCents;
     const house = sliceCents - amy;
     const label = `${(share * 100).toFixed(0)}% of the fee` + (share === QS_FEE_SHARE ? '  (the ceiling)' : '');
@@ -90,10 +90,14 @@ function commerceRail() {
     [0.15, 0.1],
     [QS_FEE_SHARE, 0.05],
   ] as const) {
-    const a = allocateUplineOverrides(feeCents, [
-      { code: 'daryle', overrideShare: dShare },
-      { code: 'amy', overrideShare: aShare },
-    ]);
+    const a = allocateUplineOverrides(
+      feeCents,
+      [
+        { code: 'daryle', overrideShare: dShare },
+        { code: 'amy', overrideShare: aShare },
+      ],
+      QS_FEE_SHARE
+    );
     const paid = new Map(a.payments.map((p) => [p.code, p.cents]));
     const house = sliceCents - a.totalCents;
     const note = a.shorted.length

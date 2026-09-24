@@ -31,6 +31,16 @@ export type RateInput = {
   packSize: number;
   aiOverview: boolean;
   verdict: SerpVerdict;
+  /**
+   * False when this reading cannot support a "nothing local above organic" claim — see
+   * `lib/serp/aiOverview.ts`. Such a reading is dropped from the rate entirely.
+   *
+   * ⚠️ NOT counted as pack-served either. Counting an unopened box as "a pack was there" would
+   * invent evidence in the opposite direction; the honest answer is that we do not know, and the
+   * interval is already the tool for saying so — five real reads produce a wide band, which is
+   * correct, where 23 reads of which 18 are blind would produce a narrow and false one.
+   */
+  packFreeVerifiable?: boolean;
 };
 
 export type RateVerdict = 'winnable' | 'contested' | 'lost';
@@ -55,6 +65,12 @@ export type QueryRate = {
    * reintroduced one level up.
    */
   varied: boolean;
+  /**
+   * Reads discarded because an unfetched AI Overview made "pack-free" unverifiable.
+   * ⚠️ A high number against a small `reads` means the confident-looking rate above it rests on
+   * very little. Surface it wherever the rate is surfaced.
+   */
+  blind: number;
 };
 
 export type NicheRate = {
@@ -71,6 +87,8 @@ export type NicheRate = {
   lost: number;
   resolved: number;
   contested: number;
+  /** Reads discarded as unverifiable across this niche's queries. */
+  blind: number;
 };
 
 /**
@@ -109,17 +127,23 @@ function verdictFor(lo: number, hi: number): RateVerdict {
 }
 
 export function rateQuery(query: string, location: string, reads: readonly RateInput[]): QueryRate {
-  const n = reads.length;
-  const packServed = reads.filter((r) => r.packSize >= FULL_PACK).length;
+  // ⚠️ Drop the readings whose "no pack" we could not verify. Keeping them at face value is how a
+  // niche reached 100% pack-free over 23 reads while every one of those reads carried an AI
+  // Overview nobody had opened.
+  const blind = reads.filter((r) => r.packFreeVerifiable === false).length;
+  const usable = reads.filter((r) => r.packFreeVerifiable !== false);
+  const n = usable.length;
+  const packServed = usable.filter((r) => r.packSize >= FULL_PACK).length;
   const packFree = n - packServed;
   const { lo, hi } = wilson(packFree, n);
-  const shapes = new Set(reads.map((r) => `${r.packSize}|${r.aiOverview}`));
+  const shapes = new Set(usable.map((r) => `${r.packSize}|${r.aiOverview}`));
   return {
     query,
     location,
     reads: n,
     packServed,
     aiOverviewServed: reads.filter((r) => r.aiOverview).length,
+    blind,
     packFreeRate: n ? packFree / n : 0,
     lo,
     hi,
@@ -134,6 +158,7 @@ export function rateQuery(query: string, location: string, reads: readonly RateI
  */
 export function rateNiche(key: string, queries: readonly QueryRate[]): NicheRate {
   const reads = queries.reduce((s, q) => s + q.reads, 0);
+  const blind = queries.reduce((s, q) => s + q.blind, 0);
   const packFreeRate = queries.length
     ? queries.reduce((s, q) => s + q.packFreeRate, 0) / queries.length
     : 0;
@@ -169,6 +194,7 @@ export function rateNiche(key: string, queries: readonly QueryRate[]): NicheRate
     lost,
     resolved: queries.filter((q) => q.verdict !== 'contested').length,
     contested: queries.filter((q) => q.verdict === 'contested').length,
+    blind,
   };
 }
 

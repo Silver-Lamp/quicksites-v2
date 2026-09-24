@@ -117,6 +117,31 @@ describe('the notify action itself', () => {
     expect(action).toContain('gh issue comment');
   });
 
+  // ⚠️ REGRESSION: the first version ran `gh issue create --label automated || gh issue create`.
+  // A create that SUCCEEDS and then returns non-zero — a 504 after the write, which is exactly what
+  // was observed on 2026-09-24 — makes that fallback file a SECOND issue for one failure. An
+  // alerting mechanism that duplicates under load turns a useful signal into noise.
+  it('creates an issue exactly once, with no fallback create', () => {
+    // ⚠️ Comments stripped first — for the THIRD time today, a comment explaining a fix tripped the
+    // check verifying that fix (the note above quotes the very command it says was removed). Same
+    // shape as ROUTER_STRATEGY.md in CLAUDE.md §4 and the placeholder guard higher in this file. If
+    // a fourth instance appears, the lesson is not "remember to strip" — it is that every source
+    // guard in this repo should read code, never prose.
+    const code = action
+      .split('\n')
+      .map((l) => l.replace(/(^|\s)#.*$/, ''))
+      .join('\n');
+    expect(code.match(/gh issue create/g) ?? []).toHaveLength(1);
+    expect(code).not.toContain('--label');
+  });
+
+  // Creating without being able to check for an existing issue is how duplicates happen. A missed
+  // comment costs nothing (the job fails again tomorrow); a duplicate issue costs attention.
+  it('refuses to create blind when the lookup fails', () => {
+    expect(action).toContain('__lookup_failed__');
+    expect(action).toMatch(/Not creating one blind/);
+  });
+
   it('uses only the built-in token', () => {
     expect(action).toContain('GITHUB_TOKEN');
     expect(action).not.toMatch(/secrets\.SLACK_WEBHOOK|secrets\.EMAIL_/);

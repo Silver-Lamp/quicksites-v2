@@ -302,6 +302,53 @@ before the percentage.**
 
 ---
 
+## 4. Pack STRENGTH — the signal we already owned and never read
+
+**What it is.** `lib/serp/packStrength.ts` + `scripts/pack-strength.mts`. DataForSEO returns
+`rating.votes_count` on every `local_pack` item and we already store the raw, so **every reading ever
+taken can be rescored for nothing.**
+
+⚠️ **Why it matters: `classify.ts` calls every full pack `skip`, which is right about towing and
+throws away the difference between three businesses with 4 reviews and three with 500.** Presence
+and strength are different questions, and we had been treating presence as the whole answer.
+
+**It separates our two controls on the first try**, which is the only reason it is trusted:
+
+| | listings | under 20 reviews | median |
+|---|---|---|---|
+| `towing service near me` — **known LOSS** (pos 10.9, 69 impressions, **0 clicks**) | 3 | 0 | **323** |
+| treehouse queries — **known WIN** (cohort bought, a builder ranks #1) | 48 | 33 | **9** |
+
+A 36× separation, and the per-niche ordering matched the verdicts the sweep reached independently:
+bunkers 1 · treehouses 4 · … · domes 59 · climbing walls 476.
+
+⚠️ **An unrated listing counts as WEAK, not as unknown.** Google omits the rating block when a
+business has no reviews to show; treating that as missing data reads the weakest possible competitor
+as the most uncertain one — backwards, and biased toward `skip`.
+
+⚠️ **Deliberately NOT wired into `verdictFor`.** The classifier was calibrated against a person's
+hand-scored run and agrees on four rows; changing the rule would discard that calibration to chase a
+signal validated on two controls. Pack strength reports *alongside* the verdict and produces a
+**shortlist**: 31 queries we called `skip` whose pack is actually weak — e.g. `custom treehouse
+company austin`, which our rate measurement calls unanimously lost (the pack is always served) while
+its pack is three businesses with a median of 4 reviews. **Both are true, and they answer different
+questions.**
+
+⚠️ **The threshold is borrowed, the validation is ours.** "At least 2 competitors under 20 reviews"
+comes from a rank-and-rent practitioner's public criteria. What this repo added was checking it
+against a known loss and a known win before believing it.
+
+### CPC: we were already buying it and discarding it
+
+`lib/prospects/keywordVolume.ts` calls DataForSEO's `search_volume/live`, whose response carries
+`cpc` and `competition` in the same JSON. Only `search_volume` was read. Every niche judgement
+therefore leaned on a hand-set `ticket` guess in `lib/niches/candidates.ts` while a **measured**
+signal of what advertisers pay per click sat unused in a response we had already paid for. Now
+cached per call and readable via `metricsForKeyword()`. ⚠️ A cache, not a store — a stale CPC shown
+as current is worse than no CPC.
+
+---
+
 ## Using it
 
 ```bash

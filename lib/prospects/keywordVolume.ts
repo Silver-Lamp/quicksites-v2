@@ -33,6 +33,28 @@ type VolItem = { domain: string; city: string; industryKey: string };
  * volume, live). One call for the whole batch. Never throws — returns {} on any failure so
  * the caller degrades to unenriched scoring.
  */
+/** What one keyword's Ads data says. `null` where Google reported nothing. */
+export type KeywordMetrics = { volume: number; cpc: number | null; competition: number | null };
+
+/**
+ * Filled by the most recent `fetchKeywordVolumes` call, keyed by lowercased keyword.
+ *
+ * ⚠️ A cache, not a store: it exists so the extra fields from a call we already made are reachable
+ * without a second paid request. Read it right after fetching, or read nothing — it is deliberately
+ * not persisted, because a stale CPC presented as current is worse than no CPC.
+ */
+const lastMetrics = new Map<string, KeywordMetrics>();
+
+/** The cpc/competition/volume from the latest fetch. Empty before the first call. */
+export function metricsForKeyword(keyword: string): KeywordMetrics | null {
+  return lastMetrics.get(String(keyword).toLowerCase()) ?? null;
+}
+
+/** Everything the latest fetch returned, for a caller that wants the whole set. */
+export function lastFetchedMetrics(): ReadonlyMap<string, KeywordMetrics> {
+  return lastMetrics;
+}
+
 export async function fetchKeywordVolumes(items: VolItem[]): Promise<Record<string, number>> {
   if (!keywordVolumeEnabled() || !items.length) return {};
 
@@ -65,7 +87,18 @@ export async function fetchKeywordVolumes(items: VolItem[]): Promise<Record<stri
     const volByKw = new Map<string, number>();
     for (const r of rows) {
       if (r?.keyword != null) {
-        volByKw.set(String(r.keyword).toLowerCase(), typeof r.search_volume === 'number' ? r.search_volume : 0);
+        const kw = String(r.keyword).toLowerCase();
+        volByKw.set(kw, typeof r.search_volume === 'number' ? r.search_volume : 0);
+        // ⚠️ THE SAME RESPONSE CARRIES cpc AND competition, AND WE THREW THEM AWAY FOR MONTHS.
+        // This endpoint is already paid for per call; `search_volume` was the only field read, so
+        // every niche judgement fell back to a hand-set `ticket` guess in lib/niches/candidates.ts
+        // while a MEASURED signal of what advertisers pay per click sat unused in the same JSON.
+        // Cached here so a caller can have it without a second request.
+        lastMetrics.set(kw, {
+          volume: typeof r.search_volume === 'number' ? r.search_volume : 0,
+          cpc: typeof r.cpc === 'number' ? r.cpc : null,
+          competition: typeof r.competition === 'number' ? r.competition : null,
+        });
       }
     }
     const out: Record<string, number> = {};

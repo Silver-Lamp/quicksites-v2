@@ -61,15 +61,50 @@ chosen rather than agreed, and it contradicted `/for-sales` and `/for-shelly`, w
 promised the life of the account in three separate places. **Two surfaces disagreeing about what a
 person is owed is worse than either rule.**
 
-## ⛔ OPEN — not decided, do not answer it by inventing a number
+## The other rail: commerce platform fees (`lib/commerce/partner-terms.ts`)
 
-**Is there a second level?** Amy asked on 2026-09-23 whether she earns on business brought in by
-someone *her* recruit recruits. There is no rule, because the model has exactly **one manager slot
-per account**. `/for-amy` says plainly that it is undecided and the owner's call.
+A rental is one product; **commerce** is the other — a merchant runs online ordering on us and we
+take a fee per order. The upline mechanism there is the **hub override**, and it behaves differently
+enough that conflating the two will produce a wrong promise:
 
-Anyone extending this: the answer changes the arithmetic (a third share has to come from somewhere,
-and by decision #2's logic it cannot come from the closer), so it needs a decision here **before** it
-needs code. Until then no surface may imply a third level exists.
+| | rental (`rentalSplits.ts`) | commerce (`partner-terms.ts`) |
+|---|---|---|
+| basis | net of one rental payment | the order's platform fee (cap 10% of the order) |
+| person who sold it | closer, 50% | reseller, **80%** of the fee |
+| upline | manager, 15% / 25% | hub, `override_share` per code |
+| funded from | house share | **QS's 20% only** — `clampOverrideShare` caps at `QS_FEE_SHARE` |
+| rate today | settled | **0 on every code** |
+
+⚠️ **The commerce ceiling is arithmetic, not policy.** The reseller's 80% is protected in code, so an
+upline's cut can only come from QS's 20% of the fee. At the cap, QS's share of that order is **zero**.
+On a $10k/month merchant at a 5% fee: fee $500, reseller $400, and **$100 is the absolute maximum any
+override could ever pay**. Anyone promising an upline "a cut of everything" needs that number in front
+of them first.
+
+## ⛔ OPEN — owner intent is stated; the mechanism is not built
+
+**Owner direction, 2026-09-23:** Amy is **head of business development** and should get "a cut of
+everything that goes through anyone downstream of her."
+
+**What exists:** exactly **one level**, on both rails. `lib/commerce/orders.ts` §5b reads
+`codeRow.parent_code`, pays that one code, and stops — there is no walk up the chain. Rentals have
+exactly one manager slot per account.
+
+**So a chain three deep pays the middle link, not the top.** If Amy recruits Daryle and Daryle
+recruits Bob, Bob's sale pays Daryle. Amy earns nothing on it.
+
+Two decisions are needed **before** code, and neither may be answered by picking a plausible number:
+
+1. **The rate on the commerce rail** (currently 0, ceiling = `QS_FEE_SHARE`).
+2. **Where a second level's share comes from.** Both rails deliberately protect whoever closed the
+   sale, so by decision #2's logic it cannot come from them — which leaves the house share, which has
+   a floor (`QS_MIN_NET_KEEP_CENTS` exists precisely to stop QS going negative). A multi-level scheme
+   that ignores that floor pays commissions out of money the business needs to operate.
+
+Until both are settled, **no surface may imply a second level exists.** `/for-amy` states the gap
+explicitly and advises building wide rather than deep — because the failure mode is that she recruits
+a tier which earns her nothing and discovers it afterwards, which is the same class of harm this
+whole file exists to prevent.
 
 ## Where it is surfaced
 

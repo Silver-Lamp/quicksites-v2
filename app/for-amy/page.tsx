@@ -19,12 +19,33 @@
 //      not the recruit. It runs while she is managing that rep and stops when she stops. Telling her
 //      that now is cheap; letting her find out after she has built a team is not.
 //
-// Every figure is derived from splitRentalPayment() — the same function the API and /admin/splits
-// use — so this page cannot quote a number the system would not actually pay. Nothing is typed.
+// ⚠️ BOTH RAILS ARE ON THIS PAGE, AND THEY BEHAVE DIFFERENTLY. Rentals pay the manager override from
+// rentalSplits.ts (15%/25% of net, SETTLED). Commerce pays a hub override from partner-terms.ts on
+// the platform fee, and there the reseller's 80% is protected by clampOverrideShare, so the ONLY
+// slice Amy's cut can come from is QS's 20% — a hard ceiling, not a negotiating position. Her rate
+// on that rail is NOT SET (0 on every code), so the page quotes the fee, the protected share and the
+// CEILING, and never a rate. Quoting one would be inventing a person's pay.
+//
+// ⚠️ OWNER INTENT, 2026-09-23: Amy is head of business development and "gets a cut of everything that
+// goes through anyone downstream of her." The code does exactly ONE level — orders.ts reads
+// codeRow.parent_code and stops, so a chain three deep pays the middle link, not Amy. The page says
+// that plainly and tells her to build wide rather than deep until it is built, because the
+// alternative is she recruits a tier that earns her nothing and finds out afterwards.
+//
+// Every figure is derived from splitRentalPayment() / partner-terms — the same functions the payment
+// handler and /admin/splits use — so this page cannot quote a number the system would not actually
+// pay. Nothing is typed.
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import { SPLIT, splitRentalPayment } from '@/lib/commerce/rentalSplits';
+import {
+  MAX_PLATFORM_FEE_PERCENT,
+  PARTNER_FEE_SHARE,
+  QS_FEE_SHARE,
+  partnerCommissionCents,
+  hubOverrideCents,
+} from '@/lib/commerce/partner-terms';
 
 const closerPct = Math.round(SPLIT.closer * 100);
 const standardPct = Math.round(SPLIT.managerStandard * 100);
@@ -45,6 +66,24 @@ const TEAM: ReadonlyArray<{ name: string; accounts: number }> = [
 ];
 const teamAccounts = TEAM.reduce((s, r) => s + r.accounts, 0);
 const teamMonthly = one.managerCents * teamAccounts;
+
+/**
+ * The commerce rail. ⚠️ Amy's override share on this rail is NOT SET — it is 0 on every code in the
+ * system. So the only figures quoted here are the fee, the protected partner share, and the CEILING
+ * (`hubOverrideCents` at the maximum `clampOverrideShare` allows, which is QS_FEE_SHARE). Quoting a
+ * rate would be inventing her pay.
+ */
+const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
+const partnerPct = Math.round(PARTNER_FEE_SHARE * 100);
+const qsPct = Math.round(QS_FEE_SHARE * 100);
+
+const EX_GMV_CENTS = 1_000_000; // $10k/mo of online orders — a busy small restaurant
+const EX_FEE_PCT = 0.05; // a typical platform fee; the cap is MAX_PLATFORM_FEE_PERCENT
+const exFeePct = Math.round(EX_FEE_PCT * 100);
+const exFeeCents = Math.round(EX_GMV_CENTS * EX_FEE_PCT);
+const exPartnerCents = partnerCommissionCents(exFeeCents);
+/** The most an override could ever pay on that fee — at this value QS's own share is nothing. */
+const exQsCents = hubOverrideCents(exFeeCents, QS_FEE_SHARE);
 
 const money = (cents: number) =>
   `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -224,6 +263,95 @@ export default function ForAmyPage() {
           </div>
         </section>
 
+        {/* The second rail: commerce platform fees */}
+        <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+            The other rail — online orders, not just rentals
+          </h2>
+          <p className="mt-2 text-sm text-zinc-500">
+            Two different things earn money here, and your override works on both.
+          </p>
+          <div className="mt-4 space-y-3">
+            <Card
+              title="Every order a downstream merchant takes, forever"
+              tag="built"
+              tone="emerald"
+            >
+              Renting a ranked domain is one product. The other is <em>commerce</em>: a business
+              runs their online ordering on us and we take a small fee on each order. It&rsquo;s a
+              different shape of money — smaller per event, but it repeats every time somebody
+              checks out rather than once a month.
+              <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
+                <Row
+                  label="A busy small restaurant"
+                  value={money(EX_GMV_CENTS)}
+                  note="monthly online orders"
+                />
+                <Row
+                  label={`Platform fee at ${exFeePct}%`}
+                  value={money(exFeeCents)}
+                  note={`cap is ${maxFeePct}%`}
+                />
+                <Row
+                  label="Whoever signed them up keeps"
+                  value={money(exPartnerCents)}
+                  note={`${partnerPct}%`}
+                />
+                <Row
+                  label="Leaves my side"
+                  value={money(exQsCents)}
+                  note={`${qsPct}% — your override comes from here`}
+                />
+              </div>
+              <p className="mt-3">
+                One merchant, one month. Ten of them across your people is ten times that, and it
+                keeps arriving as long as they keep selling.
+              </p>
+            </Card>
+
+            <Card
+              title="Here the ceiling is real, and I'd rather you hear it from me"
+              tag="hard cap"
+              tone="amber"
+            >
+              On this rail the person who signed the merchant up keeps{' '}
+              <strong className="text-zinc-200">{partnerPct}%</strong> of the fee, and that is
+              protected in code — your override cannot touch it. Everything for you comes out of the{' '}
+              {qsPct}% left on my side, and the software will refuse to set your share higher than
+              that.
+              <p className="mt-3">
+                So on the example above, the absolute most an override could ever pay you is{' '}
+                <strong className="text-amber-300">{money(exQsCents)}</strong> — and at that point
+                my side of that order is zero. That&rsquo;s not me being cagey, it&rsquo;s
+                arithmetic: there is exactly one slice your cut can come from.
+              </p>
+              <p className="mt-3">
+                <strong className="text-zinc-200">
+                  Your rate on this rail isn&rsquo;t set yet.
+                </strong>{' '}
+                It&rsquo;s currently zero — on every code in the system, not just yours. For scale:
+                at half of my share you&rsquo;d earn {money(Math.floor(exQsCents / 2))} on that
+                merchant&rsquo;s month, and I&rsquo;d keep the other half to run the thing. I want
+                to pick that number with you rather than hand it down, and I want to pick it knowing
+                what it has to cover.
+              </p>
+            </Card>
+
+            <Card title="Which rail matters more to you" tone="sky">
+              Rentals are bigger per account and slower to sell. Commerce is smaller per event and
+              compounds — a merchant who does well pays you more every month without anyone selling
+              anything again. As head of business development you&rsquo;d be choosing which one your
+              people push, and I genuinely don&rsquo;t know the answer yet.
+              <p className="mt-3">
+                What I do know:{' '}
+                <strong className="text-zinc-200">nothing has paid anyone on either rail</strong>.
+                See below — I&rsquo;m not going to let you build a plan on a number that has never
+                happened.
+              </p>
+            </Card>
+          </div>
+        </section>
+
         {/* The caveat she didn't ask about */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
           <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
@@ -256,20 +384,33 @@ export default function ForAmyPage() {
             </Card>
 
             <Card
-              title="Your second example isn't decided yet"
-              tag="open — my call to make"
+              title="One level is built. A second level is not — and you should plan around that for now."
+              tag="being fixed"
               tone="rose"
             >
-              You wrote &ldquo;anyone Daryle brings in.&rdquo; If you mean the <em>businesses</em>{' '}
-              Daryle signs up, that&rsquo;s the {recruitPct}% above and it&rsquo;s settled. But if
-              you mean someone <em>Daryle recruits</em> as a rep — a third level under you — there
-              is no rule for that, because the model has exactly one manager slot per account and
-              nobody has ever needed a second.
+              My intent is what you&rsquo;d want it to be: as head of business development you get a
+              cut of everything that goes through anyone downstream of you. I want to be precise
+              about the gap between that and what the software does today, because the gap is real.
               <p className="mt-3">
-                I&rsquo;d rather tell you it&rsquo;s undecided than invent a number to sound
-                organised. If you&rsquo;re planning to build a team that deep, that&rsquo;s a real
-                conversation and it changes the maths, so let&rsquo;s have it before you start
-                making promises to people on my behalf.
+                <strong className="text-zinc-200">What works now:</strong> anyone attached directly
+                to you — Daryle, Angela — pays you automatically on every order and every rental
+                they generate, forever, with no action from either of you.
+              </p>
+              <p className="mt-3">
+                <strong className="text-zinc-200">What doesn&rsquo;t:</strong> if Daryle recruits
+                someone, that person&rsquo;s sales pay <em>Daryle</em>, not you. The code looks up
+                one level and stops. So a chain three deep pays you nothing on the third link today.
+              </p>
+              <p className="mt-3">
+                That&rsquo;s a build, not a setting, and it needs a decision I haven&rsquo;t made
+                yet: where a third share comes from. Both rails deliberately protect the person who
+                closed the sale, so it can&rsquo;t come out of them — which means it comes out of my
+                side, and my side has a floor. I&rsquo;d rather tell you the shape of that than
+                quote you a number I&rsquo;d have to walk back.
+              </p>
+              <p className="mt-3 text-zinc-300">
+                Practical version: build wide rather than deep for now. People attached straight to
+                you pay you today; people two steps away don&rsquo;t until I&rsquo;ve built it.
               </p>
             </Card>
 
@@ -345,10 +486,16 @@ export default function ForAmyPage() {
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
             <h2 className="text-lg font-semibold text-white">So, concretely</h2>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-              Your assumption was right: {recruitPct}% of net on everything your people close, every
-              month, out of my side and not theirs. Two asterisks — it runs while you&rsquo;re
-              actually managing the account, and a third level under Daryle isn&rsquo;t a thing yet.
-              Nothing has paid anyone anything so far.
+              Your assumption was right, on both rails. On rentals it&rsquo;s {recruitPct}% of net
+              on everything your people close, every month, out of my side and not theirs — that
+              number is settled. On online orders the mechanism is built and the rate is still zero,
+              because I want to set it with you and because there&rsquo;s a real ceiling on it
+              I&rsquo;d rather you see than discover.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              Three asterisks, all of them above: it runs while you&rsquo;re actually managing the
+              account; people two steps down the chain don&rsquo;t pay you until I build that; and
+              nothing has paid anyone anything yet, on either rail.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link

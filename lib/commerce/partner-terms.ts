@@ -38,6 +38,29 @@ export function clampPlatformFeePercent(pct: number): number {
  * [0, QS_FEE_SHARE] so the reseller's 80% residual is never touched and QS's net
  * can't go negative. Returns the hub's cut of one order's platform fee, in cents.
  */
+/**
+ * The rate an upline earns when no explicit one is chosen — the head-of-business-development
+ * starting point, settled 2026-09-24.
+ *
+ * ⚠️ 5% OF THE PLATFORM FEE, AND THE REASONING MATTERS MORE THAN THE NUMBER, because whoever
+ * changes it next needs to know what it is trading against.
+ *
+ *   - The ceiling is `QS_FEE_SHARE` (20%): the reseller's 80% is protected in code, so every
+ *     override on this rail shares that one slice with the house. 5% is a quarter of it.
+ *   - It leaves room for a level BETWEEN the upline and the sale. Overrides are paid nearest-first,
+ *     so two levels at 10% each consume the entire slice and the house earns nothing; at 5% a
+ *     manager can sit underneath without anyone being paid zero.
+ *   - On a $10k/month merchant at a 5% platform fee that is $25/month, recurring, per merchant.
+ *   - ⚠️ It is deliberately the easy direction to move. Raising a rate is a pleasant conversation
+ *     and cutting one is not, and nothing has ever been paid to anyone from this ledger — so the
+ *     cheapest decision today is the one that is cheapest to revise.
+ *
+ * Per-relationship rates still win: `set-hub` accepts an explicit `overrideShare`, and this is only
+ * the value used when none is given.
+ */
+export const DEFAULT_UPLINE_FEE_SHARE =
+  Number(process.env.QS_DEFAULT_UPLINE_FEE_SHARE ?? '0.05') || 0.05;
+
 export function clampOverrideShare(share: number): number {
   const v = Number(share) || 0;
   return Math.min(Math.max(v, 0), QS_FEE_SHARE);

@@ -13,8 +13,15 @@ jobs:
   export:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      # ⚠️ THE NAMES MUST MATCH WHAT THE SCRIPT READS. This block used to export SUPABASE_URL while
+      # scripts/export-analytics.ts reads NEXT_PUBLIC_SUPABASE_URL, so the job failed with
+      # "supabaseUrl is required" every night from 2026-02-13 — and adding a secret called
+      # SUPABASE_URL would have produced the identical error, which is how a name mismatch survives
+      # its own fix. The key accepts either name because this project migrated to the new Supabase
+      # API keys (SUPABASE_SECRET_KEY) while the older name still works.
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
 
     steps:
       - name: Checkout repository
@@ -48,13 +55,12 @@ jobs:
       # 2026-02-13 without anyone noticing. It has also never produced output: `reports/analytics/`
       # does not exist, because the job dies before writing anything.
       #
-      # ⚠️ It fails for a reason adding secrets will NOT fix: the workflow passes SUPABASE_URL while
-      # scripts/export-analytics.ts reads NEXT_PUBLIC_SUPABASE_URL. Setting a secret named
-      # SUPABASE_URL produces the identical error, which is how a name mismatch survives a fix.
+      # The variable-name mismatch that caused those failures is fixed above. If this still fails,
+      # the repository secrets themselves are unset — the step's own error names which ones.
       - name: Report the failure somewhere it will be seen
         if: ${{ failure() }}
         uses: ./.github/actions/notify-failure
         with:
           title: 'Nightly Analytics Export is failing'
-          body: 'Never produced output since 2026-02-13. The workflow passes SUPABASE_URL but scripts/export-analytics.ts reads NEXT_PUBLIC_SUPABASE_URL, so adding a SUPABASE_URL secret will not fix it. Consider deleting this job instead — nothing consumes its output.'
+          body: 'The variable-name mismatch (SUPABASE_URL vs NEXT_PUBLIC_SUPABASE_URL) was fixed on 2026-09-24. If this is failing again, check that the repository secrets NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY are actually set — the failing step names whichever is missing.'
           token: ${{ secrets.GITHUB_TOKEN }}

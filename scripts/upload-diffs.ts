@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import * as Diff from 'diff';
-import { supabase } from '@/admin/lib/supabaseClient';
+import { supabase } from './lib/storageClient';
 
 async function generateAndUploadDiff(fileA: string, fileB: string, uploadKey: string) {
   const [xmlA, xmlB] = await Promise.all([readFile(fileA, 'utf8'), readFile(fileB, 'utf8')]);

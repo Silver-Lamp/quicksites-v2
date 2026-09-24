@@ -23,6 +23,7 @@ const arg = (n: string) => process.argv.find((a) => a.startsWith(`--${n}=`))?.sp
 async function main() {
   const { NICHE_CANDIDATES } = await import('@/lib/niches/candidates');
   const { rateNiche, rateQuery, readsToResolve } = await import('@/lib/serp/rate');
+  const { packFreeClaimIsVerifiable } = await import('@/lib/serp/aiOverview');
   const { supabaseAdmin } = await import('@/lib/supabase/admin');
 
   const days = Number(arg('days') ?? 7);
@@ -31,7 +32,7 @@ async function main() {
 
   const { data, error } = await supabaseAdmin
     .from('serp_observations')
-    .select('niche_key,query,location,pack_size,ai_overview,verdict,checked_at')
+    .select('niche_key,query,location,pack_size,ai_overview,verdict,checked_at,raw')
     .gte('checked_at', since)
     .not('niche_key', 'is', null)
     .limit(20000);
@@ -53,6 +54,11 @@ async function main() {
       packSize: Number(r.pack_size ?? 0),
       aiOverview: Boolean(r.ai_overview),
       verdict: r.verdict as RateInput['verdict'],
+      // Computed from the raw we already store, so every historical reading is re-judged for free.
+      packFreeVerifiable: packFreeClaimIsVerifiable({
+        packSize: Number(r.pack_size ?? 0),
+        raw: (r as any).raw,
+      }),
     });
     byQuery.set(id, bucket);
   }

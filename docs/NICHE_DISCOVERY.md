@@ -302,6 +302,59 @@ before the percentage.**
 
 ---
 
+## ⛔ 5. The AI Overview is a box we never opened — and it invalidated the top of the table
+
+**Found by a hand check on 2026-09-24**, which is the only reason it was found at all.
+
+`horse barn builder austin` scored **100% pack-free over 23 readings** — the best result in the
+dataset, and the niche this file recommended. A screenshot of the real page showed this sitting
+above every organic result:
+
+```
+Local Horse Barn Builders & Designers
+  Texas Pole Barns · 4.6 ★ (18) · Construction company · Open · 11519 Pecan Creek Pkwy
+  [ Call ] [ Directions ] [ Website ]      … Show more
+```
+
+A local pack in everything but name. The API had reported
+`item_types: [ai_overview, organic, people_also_ask, related_searches]` — **no `local_pack`** — so
+the classifier scored the page wide open.
+
+⚠️ **Why: Google loads the AI Overview asynchronously, so DataForSEO's organic endpoint returns a
+PLACEHOLDER** — `asynchronous_ai_overview: true`, with `items`, `references` and `markdown` all
+null. Its contents need a separate paid call we do not make. We know an overview exists and know
+nothing about what is in it, while `blocksAbove` counts it as one block whether it holds a sentence
+or a local pack with phone numbers.
+
+⚠️ **Scope and direction, measured: 334 of 564 readings (59%) carry an unfetched overview, and 184
+of those were scored pack-free.** The bias runs toward SPENDING MONEY — an overview we failed to
+open reads exactly like one containing nothing, and "nothing above the organic results" is the most
+favourable verdict the tool can return.
+
+⚠️ **A re-read does not fix this, unlike the truncation guard.** A short response is transient; this
+is not. The organic endpoint never returns the contents, so reading again returns the same
+placeholder forever. The remedy is to stop counting these as evidence, not to sample harder.
+
+**`lib/serp/aiOverview.ts` therefore DISCARDS such readings** rather than counting them as
+pack-served — counting an unopened box as "a pack was there" would invent evidence in the opposite
+direction. Only the claim the missing data could falsify is poisoned: a reading that FOUND a pack is
+still trusted, because an unopened overview cannot un-see three map pins.
+
+### What it did to the table
+
+| niche | before | after | usable reads |
+|---|---|---|---|
+| Horse barns / riding arenas | 100% pack-free, 23 reads | **no evidence at all** | **0** |
+| Bunkers | 89%, 27 reads | 0% | 3 |
+| Wine cellars | 71%, 28 reads | 0% | 8 |
+| **Treehouses** *(the live cohort)* | 65%, 34 reads | **44%** | **24** |
+
+**Every one of the 23 horse-barn readings was blind**, and the top three candidates were artifacts of
+unread overviews. The niche left standing with the most usable evidence is the one we had already
+bought and validated independently — the control behaving correctly, for the fourth time in one day.
+
+---
+
 ## 4. Pack STRENGTH — the signal we already owned and never read
 
 **What it is.** `lib/serp/packStrength.ts` + `scripts/pack-strength.mts`. DataForSEO returns

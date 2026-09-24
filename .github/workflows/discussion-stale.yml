@@ -5,6 +5,10 @@ on:
     - cron: '0 6 * * 1' # Every Monday at 6:00 UTC
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write # closes stale items, and opens one issue if this job itself breaks
+
 jobs:
   stale:
     runs-on: ubuntu-latest
@@ -20,3 +24,13 @@ jobs:
           only-issues: false
           only-prs: false
           only-discussions: true
+
+      # Scheduled and unattended, so it reports its own failure rather than relying on someone
+      # noticing a red row in a list nobody opens.
+      - name: Report the failure somewhere it will be seen
+        if: ${{ failure() }}
+        uses: ./.github/actions/notify-failure
+        with:
+          title: 'Close Stale Discussions is failing'
+          body: 'The weekly stale-discussion sweep failed.'
+          token: ${{ secrets.GITHUB_TOKEN }}

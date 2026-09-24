@@ -1,0 +1,46 @@
+name: Notify failure
+description: >
+  Open (or reuse) a GitHub issue when a scheduled workflow fails. Uses only the built-in
+  GITHUB_TOKEN, so it cannot be defeated by a secret nobody set.
+
+inputs:
+  title:
+    description: Issue title. Must be stable across runs — it is the dedupe key.
+    required: true
+  body:
+    description: Extra context to include.
+    required: false
+    default: ''
+  token:
+    description: GITHUB_TOKEN with issues:write.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # ⚠️ ONE OPEN ISSUE, NOT ONE PER NIGHT. These jobs run daily, so a naive create would have
+    # produced ~220 issues over the period this was actually broken — which is its own kind of
+    # silence, the kind you mute.
+    - name: Open or update the failure issue
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        TITLE: ${{ inputs.title }}
+        EXTRA: ${{ inputs.body }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        existing=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
+          --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")
+        note="Failed again: $RUN_URL ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+        if [ -n "$existing" ]; then
+          gh issue comment "$existing" --body "$note"
+          echo "Commented on existing issue #$existing"
+        else
+          gh issue create --title "$TITLE" \
+            --body "$(printf '%s\n\n%s\n\nThis issue is opened automatically by the workflow and reused on every subsequent failure, so it stays one thread rather than one per night. Close it once the job is green — or delete the job.\n' "$EXTRA" "$note")" \
+            --label "automated" 2>/dev/null \
+          || gh issue create --title "$TITLE" \
+            --body "$(printf '%s\n\n%s\n' "$EXTRA" "$note")"
+          echo "Opened a new failure issue"
+        fi

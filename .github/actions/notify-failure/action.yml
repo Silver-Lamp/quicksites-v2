@@ -29,18 +29,42 @@ runs:
         EXTRA: ${{ inputs.body }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
-        set -euo pipefail
-        existing=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
-          --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")
+        set -uo pipefail
+
+        # ⚠️ RETRY THE LOOKUP. The GitHub API returns transient 504s — one hit this action on its
+        # second real firing (2026-09-24, sitemap job). Under `set -e` that aborted the step, and
+        # the fallback below could then create a SECOND issue for a failure that already had one.
+        # An alerting mechanism that duplicates under load is how a useful signal becomes noise.
+        existing=""
+        for attempt in 1 2 3; do
+          if existing=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number,title \
+               --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty" 2>/dev/null); then
+            break
+          fi
+          echo "issue lookup failed (attempt $attempt) — retrying"
+          existing="__lookup_failed__"
+          sleep $((attempt * 5))
+        done
+
         note="Failed again: $RUN_URL ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+
+        if [ "$existing" = "__lookup_failed__" ]; then
+          # ⚠️ DO NOT CREATE when we could not check. Creating blind is what produces duplicates,
+          # and a missed comment on an already-open issue costs nothing — the job is failing
+          # nightly, so the next run reports it. Fail the step loudly instead of guessing.
+          echo "::error::Could not reach the GitHub API to check for an existing issue. Not creating one blind."
+          exit 1
+        fi
+
         if [ -n "$existing" ]; then
           gh issue comment "$existing" --body "$note"
           echo "Commented on existing issue #$existing"
         else
+          # ⚠️ NO --label. The previous version tried `--label automated` and fell back to a second
+          # `gh issue create` when the label did not exist — but a create that SUCCEEDS and then
+          # returns non-zero (a 504 after the write, exactly what was observed) makes that fallback
+          # file a duplicate. One create, no fallback, no label.
           gh issue create --title "$TITLE" \
-            --body "$(printf '%s\n\n%s\n\nThis issue is opened automatically by the workflow and reused on every subsequent failure, so it stays one thread rather than one per night. Close it once the job is green — or delete the job.\n' "$EXTRA" "$note")" \
-            --label "automated" 2>/dev/null \
-          || gh issue create --title "$TITLE" \
-            --body "$(printf '%s\n\n%s\n' "$EXTRA" "$note")"
+            --body "$(printf '%s\n\n%s\n\nOpened automatically by the workflow and reused on every subsequent failure, so it stays one thread rather than one per night. Close it once the job is green — or delete the job.\n' "$EXTRA" "$note")"
           echo "Opened a new failure issue"
         fi

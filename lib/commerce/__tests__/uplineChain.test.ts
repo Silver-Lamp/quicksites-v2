@@ -76,7 +76,7 @@ describe('the cap is on the TOTAL, which is the whole point', () => {
       { code: 'daryle', overrideShare: QS_FEE_SHARE },
       { code: 'amy', overrideShare: QS_FEE_SHARE },
     ];
-    const a = allocateUplineOverrides(FEE, chain);
+    const a = allocateUplineOverrides(FEE, chain, QS_FEE_SHARE);
     expect(a.totalCents).toBeLessThanOrEqual(Math.floor(FEE * QS_FEE_SHARE));
     expect(a.payments.map((p) => p.code)).toEqual(['daryle']);
     expect(a.shorted.map((s) => s.code)).toEqual(['amy']);
@@ -91,7 +91,7 @@ describe('the cap is on the TOTAL, which is the whole point', () => {
     const a = allocateUplineOverrides(FEE, [
       { code: 'daryle', overrideShare: half },
       { code: 'amy', overrideShare: half },
-    ]);
+    ], QS_FEE_SHARE);
     expect(a.shorted).toEqual([]);
     expect(a.payments).toHaveLength(2);
     expect(a.totalCents).toBeLessThanOrEqual(Math.round(FEE * QS_FEE_SHARE));
@@ -102,7 +102,7 @@ describe('the cap is on the TOTAL, which is the whole point', () => {
       { code: 'a', overrideShare: 0.1 },
       { code: 'b', overrideShare: 0.1 },
       { code: 'c', overrideShare: 0.1 },
-    ]);
+    ], QS_FEE_SHARE);
     expect(a.totalCents).toBeLessThanOrEqual(Math.round(FEE * QS_FEE_SHARE));
     expect(a.shorted.map((s) => s.code)).toEqual(['c']);
   });
@@ -111,7 +111,7 @@ describe('the cap is on the TOTAL, which is the whole point', () => {
     const a = allocateUplineOverrides(FEE, [
       { code: 'daryle', overrideShare: 0.1 },
       { code: 'amy', overrideShare: 0.05 },
-    ]);
+    ], QS_FEE_SHARE);
     expect(a.payments).toEqual([
       { code: 'daryle', cents: 5_000, share: 0.1 },
       { code: 'amy', cents: 2_500, share: 0.05 },
@@ -127,7 +127,7 @@ describe('the cap is on the TOTAL, which is the whole point', () => {
     const a = allocateUplineOverrides(FEE, [
       { code: 'daryle', overrideShare: 0.18 },
       { code: 'amy', overrideShare: 0.1 },
-    ]);
+    ], QS_FEE_SHARE);
     expect(a.payments).toEqual([{ code: 'daryle', cents: 9_000, share: 0.18 }]);
     expect(a.shorted).toEqual([{ code: 'amy', requestedShare: 0.1, paidCents: 0 }]);
   });
@@ -136,7 +136,7 @@ describe('the cap is on the TOTAL, which is the whole point', () => {
     const a = allocateUplineOverrides(FEE, [
       { code: 'daryle', overrideShare: 0.19 },
       { code: 'amy', overrideShare: 0.05 },
-    ]);
+    ], QS_FEE_SHARE);
     expect(a.payments.map((p) => p.code)).toEqual(['daryle']);
     expect(a.shorted[0].paidCents).toBe(0);
   });
@@ -145,7 +145,7 @@ describe('the cap is on the TOTAL, which is the whole point', () => {
     const a = allocateUplineOverrides(FEE, [
       { code: 'daryle', overrideShare: 0 },
       { code: 'amy', overrideShare: 0.05 },
-    ]);
+    ], QS_FEE_SHARE);
     expect(a.payments).toEqual([{ code: 'amy', cents: 2_500, share: 0.05 }]);
     expect(a.shorted).toEqual([]);
   });
@@ -157,14 +157,14 @@ describe('today, nothing is configured, so nothing changes', () => {
   it('pays nothing when every rate is zero', () => {
     const chain = buildUplineChain('bob', graph());
     expect(chain.map((l) => l.code)).toEqual(['daryle', 'amy']);
-    const a = allocateUplineOverrides(50_000, chain);
+    const a = allocateUplineOverrides(50_000, chain, QS_FEE_SHARE);
     expect(a).toEqual({ payments: [], totalCents: 0, shorted: [] });
   });
 });
 
 describe('degenerate inputs cannot pay money', () => {
   it.each([0, -100, Number.NaN])('a fee of %p pays nothing', (fee) => {
-    const a = allocateUplineOverrides(fee as number, [{ code: 'amy', overrideShare: 0.2 }]);
+    const a = allocateUplineOverrides(fee as number, [{ code: 'amy', overrideShare: 0.2 }], QS_FEE_SHARE);
     expect(a.totalCents).toBe(0);
     expect(a.payments).toEqual([]);
   });
@@ -175,7 +175,7 @@ describe('degenerate inputs cannot pay money', () => {
   });
 
   it('a negative configured share is treated as off, not as a credit', () => {
-    const a = allocateUplineOverrides(50_000, [{ code: 'amy', overrideShare: -0.5 }]);
+    const a = allocateUplineOverrides(50_000, [{ code: 'amy', overrideShare: -0.5 }], QS_FEE_SHARE);
     expect(a.totalCents).toBe(0);
     expect(a.payments).toEqual([]);
   });

@@ -45,34 +45,28 @@ jobs:
 
       - name: Upload to Supabase Storage
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          echo "SUPABASE_URL=${SUPABASE_URL}" > .env
-          echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" >> .env
-          npx tsx scripts/upload-sitemaps.ts
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/upload-sitemaps.ts
       - name: Cleanup old sitemaps and update 'latest'
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          echo "SUPABASE_URL=${SUPABASE_URL}" > .env
-          echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" >> .env
-          npx tsx scripts/cleanup-sitemaps.ts
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/cleanup-sitemaps.ts
       - name: Upload XML diffs
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          echo "SUPABASE_URL=${SUPABASE_URL}" > .env
-          echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" >> .env
-          npx tsx scripts/upload-diffs.ts
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/upload-diffs.ts
       - name: Upload Markdown sitemap diffs
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          npx tsx scripts/upload-diffs-markdown.ts
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npx tsx scripts/upload-diffs-markdown.ts
       - name: Commit markdown diffs to repo
         run: |
           mkdir -p reports
@@ -98,5 +92,5 @@ jobs:
         uses: ./.github/actions/notify-failure
         with:
           title: 'Nightly Sitemap Snapshot is failing'
-          body: 'The nightly sitemap job failed. Its fetch-and-commit steps work; the Supabase upload steps need NEXT_PUBLIC_SUPABASE_ANON_KEY (admin/lib/supabaseClient reads the ANON key, not a service key).'
+          body: 'The nightly sitemap job failed. The upload scripts now use a SERVICE-ROLE client (scripts/lib/storageClient.ts) instead of the browser/anon client, and the workflow passes the names those scripts read. If it is still failing, check the repository secrets NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY — the client throws naming whichever is missing.'
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -50,6 +50,21 @@ export const SPLIT = {
 export const RESIDUAL_BASIS = 'role' as const;
 
 /**
+ * ⚠️ A SECOND LEVEL EXISTS AS OF 2026-09-24, AND IT IS FUNDED ENTIRELY FROM THE HOUSE.
+ *
+ * Owner direction: the head of business development earns on everything downstream of her. On this
+ * rail the closer's 50% and the manager's override are both protected — decision #2's logic is that
+ * recruiting must never compete with selling — so the only slice a further level can come from is
+ * the house remainder. That is a real trade, not a technicality: the house keeps about $23.97 of a
+ * $99 rental, and that is what buys the domain and funds the work of making it rank.
+ *
+ * Rates live on `referral_codes.override_share`, the same column the commerce rail uses, so "who
+ * earns above whom" has ONE record rather than two that can disagree. Every one is 0 today, so this
+ * allocates nothing until the owner sets a rate.
+ */
+export const SECOND_LEVEL_BASIS = 'house-remainder' as const;
+
+/**
  * The manager override follows the same rule, for the same reason.
  *
  * Amy earns it for as long as she is the manager on that account — supporting the closer,
@@ -67,6 +82,8 @@ export const RESIDUAL_BASIS = 'role' as const;
  * one-off bounty collected forever, which is the incentive we were avoiding.
  */
 export const OVERRIDE_BASIS = 'role' as const;
+
+import { allocateUplineOverrides } from './uplineChain';
 
 /** A refund inside this window reverses the commission for that payment. */
 export const CLAWBACK_WINDOW_DAYS = 120;
@@ -182,4 +199,33 @@ export function formatCents(cents?: number | null): string {
   const v = Number(cents);
   if (!Number.isFinite(v)) return '—';
   return `$${(v / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Allocate upline overrides ABOVE the manager, out of the house's slice of one rental payment.
+ *
+ * Shares are of NET, matching every other share on this rail. The allocator is the same one the
+ * commerce rail uses (`allocateUplineOverrides`), so both rails agree on the two rules that matter:
+ * nearest-first, and a level that does not fit is paid NOTHING rather than a quietly reduced rate.
+ *
+ * ⚠️ The budget is the HOUSE share, never the whole net. Passing `netCents` as the basis with a
+ * share derived from `houseCents` keeps "shares are of net" true for the rates while making it
+ * arithmetically impossible for an upline to reach into the closer's or the manager's money — the
+ * invariant this rail has had since 2026-08-25 and must not lose to a new feature.
+ */
+export function allocateRentalUplines(
+  split: RentalSplit,
+  chain: readonly { code: string; overrideShare: number }[]
+): { payments: { code: string; cents: number; share: number }[]; totalCents: number; houseCents: number; shorted: { code: string; requestedShare: number; paidCents: number }[] } {
+  if (!chain.length || split.netCents <= 0 || split.houseCents <= 0) {
+    return { payments: [], totalCents: 0, houseCents: split.houseCents, shorted: [] };
+  }
+  const availableShare = split.houseCents / split.netCents;
+  const alloc = allocateUplineOverrides(split.netCents, chain, availableShare);
+  return {
+    payments: alloc.payments,
+    totalCents: alloc.totalCents,
+    houseCents: split.houseCents - alloc.totalCents,
+    shorted: alloc.shorted,
+  };
 }

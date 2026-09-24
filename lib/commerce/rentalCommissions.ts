@@ -14,11 +14,20 @@
 // override simply isn't written and the house keeps it — never accrued to nobody.
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { splitRentalPayment, type SplitVariant } from '@/lib/commerce/rentalSplits';
+import {
+  allocateRentalUplines,
+  splitRentalPayment,
+  type SplitVariant,
+} from '@/lib/commerce/rentalSplits';
+import { MAX_UPLINE_DEPTH, buildUplineChain, type CodeNode } from '@/lib/commerce/uplineChain';
 
 export const SUBJECT_CLOSER = 'rental_closer';
 export const SUBJECT_MANAGER = 'rental_manager_override';
-export const RENTAL_SUBJECTS = [SUBJECT_CLOSER, SUBJECT_MANAGER] as const;
+/** Levels ABOVE the manager (head of BD and up). Funded from the house — see rentalSplits.ts. */
+export const SUBJECT_UPLINE = 'rental_upline_override';
+// ⚠️ The refund path voids `.in('subject', RENTAL_SUBJECTS)`, so a new subject MUST be listed here
+// or its rows survive a refund — a commission paid on money that was given back.
+export const RENTAL_SUBJECTS = [SUBJECT_CLOSER, SUBJECT_MANAGER, SUBJECT_UPLINE] as const;
 
 export type RentalCommissionResult = {
   wrote: number;
@@ -26,6 +35,8 @@ export type RentalCommissionResult = {
   variant: SplitVariant | null;
   closerCents: number;
   managerCents: number;
+  /** Total paid to levels above the manager. 0 until a rate is configured. */
+  uplineCents: number;
 };
 
 /**
@@ -48,6 +59,42 @@ export async function managerRecruitedCloser(
 }
 
 /**
+ * Walk up from the manager, collecting each level's configured share.
+ *
+ * ⚠️ Own seen-set on the FETCH loop, separate from the pure walker's. `parent_code` has no foreign
+ * key and no acyclicity constraint, and neither writer checks — so A→B→A is one mistyped field
+ * away, and this runs inside a Stripe webhook where an unbounded loop means money taken and no
+ * commission recorded. Two loops, two guards (same as the commerce path).
+ */
+async function resolveUplinesAboveManager(
+  managerCode: string
+): Promise<{ code: string; overrideShare: number }[]> {
+  const nodes = new Map<string, CodeNode>();
+  let cursor: string | null = managerCode;
+  const fetched = new Set<string>();
+  for (let depth = 0; depth <= MAX_UPLINE_DEPTH && cursor; depth++) {
+    if (fetched.has(cursor)) break;
+    fetched.add(cursor);
+    // `as any`: types/supabase.ts predates parent_code/override_share on referral_codes
+    // (CLAUDE.md §8 — the columns are live; the generated types lag). The annotation also breaks
+    // the self-referential inference tsc otherwise reports on `cursor`.
+    const res: { data: any } = await supabaseAdmin
+      .from('referral_codes')
+      .select('parent_code, override_share')
+      .eq('code', cursor)
+      .maybeSingle();
+    const row = res.data;
+    if (!row) break;
+    nodes.set(cursor, {
+      parentCode: (row.parent_code as string | null) ?? null,
+      overrideShare: Number(row.override_share) || 0,
+    });
+    cursor = (row.parent_code as string | null) ?? null;
+  }
+  return buildUplineChain(managerCode, (c) => nodes.get(c));
+}
+
+/**
  * Accrue commissions for one paid rental invoice.
  *
  * Idempotent on (referral_code, subject, subject_id) via commission_unique_subject, with
@@ -67,6 +114,7 @@ export async function recordRentalCommissions(args: {
     variant: null,
     closerCents: 0,
     managerCents: 0,
+    uplineCents: 0,
   };
 
   if (!args.amountPaidCents || args.amountPaidCents <= 0) {
@@ -90,6 +138,11 @@ export async function recordRentalCommissions(args: {
 
   const split = splitRentalPayment(args.amountPaidCents, variant);
   const currency = (args.currency || 'USD').toUpperCase();
+
+  // Levels above the manager, nearest first. Rates come from referral_codes.override_share — the
+  // same column the commerce rail reads, so who-earns-above-whom has one record, not two.
+  const uplineChain = managerCode ? await resolveUplinesAboveManager(managerCode) : [];
+  const uplines = allocateRentalUplines(split, uplineChain);
 
   const rows: any[] = [
     {
@@ -131,6 +184,36 @@ export async function recordRentalCommissions(args: {
     });
   }
 
+  for (const p of uplines.payments) {
+    rows.push({
+      referral_code: p.code,
+      subject: SUBJECT_UPLINE,
+      subject_id: args.invoiceId,
+      amount_cents: p.cents,
+      currency,
+      status: 'pending',
+      adjustments: {
+        note: 'rental upline override (above the manager)',
+        campaign_id: args.campaignId,
+        domain: (campaign as any)?.domain ?? null,
+        closer_code: closerCode,
+        manager_code: managerCode,
+        net_cents: split.netCents,
+        share: p.share,
+      },
+    });
+  }
+
+  // ⚠️ A shortfall means somebody is configured for a rate this payment cannot pay, because the
+  // house slice ran out. Surface it rather than let it pass — silently paying less than a promised
+  // rate is the one thing this rail's allocator refuses to do.
+  if (uplines.shorted.length) {
+    console.warn(
+      'rental upline override(s) shorted by the house share:',
+      JSON.stringify({ invoice: args.invoiceId, shorted: uplines.shorted })
+    );
+  }
+
   const { error } = await supabaseAdmin
     .from('commission_ledger')
     .upsert(rows, { onConflict: 'referral_code,subject,subject_id' });
@@ -143,6 +226,7 @@ export async function recordRentalCommissions(args: {
     variant,
     closerCents: split.closerCents,
     managerCents: managerCode ? split.managerCents : 0,
+    uplineCents: uplines.totalCents,
   };
 }
 

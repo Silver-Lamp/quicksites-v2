@@ -1,4 +1,4 @@
-import { supabase } from 'admin/lib/supabaseClient.js';
+import { supabase } from './lib/storageClient';
 
 const BUCKET = 'sitemaps';
 const MAX_ENTRIES = 30;

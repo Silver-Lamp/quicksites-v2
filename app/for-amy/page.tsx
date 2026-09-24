@@ -384,33 +384,31 @@ export default function ForAmyPage() {
             </Card>
 
             <Card
-              title="One level is built. A second level is not — and you should plan around that for now."
-              tag="being fixed"
-              tone="rose"
+              title="Online orders now pay every level above the seller. Rentals still pay one."
+              tag="half built"
+              tone="amber"
             >
-              My intent is what you&rsquo;d want it to be: as head of business development you get a
-              cut of everything that goes through anyone downstream of you. I want to be precise
-              about the gap between that and what the software does today, because the gap is real.
+              Your intent is the rule: as head of business development you get a cut of everything
+              that goes through anyone downstream of you. I&rsquo;ve now built that on the{' '}
+              <strong className="text-zinc-200">online-orders</strong> rail — if Daryle recruits
+              someone and that person signs up a merchant, the chain is walked all the way up and
+              you earn on it, however many links deep.
               <p className="mt-3">
-                <strong className="text-zinc-200">What works now:</strong> anyone attached directly
-                to you — Daryle, Angela — pays you automatically on every order and every rental
-                they generate, forever, with no action from either of you.
+                <strong className="text-zinc-200">Rentals are still one level.</strong> There the
+                money is split three ways with a single manager slot, and paying a second level
+                means deciding whose share it comes from. It can&rsquo;t come from the closer —
+                that&rsquo;s the rule that stops recruiting competing with selling — so it comes
+                from mine, and mine has a floor. That&rsquo;s a decision I owe you, not a build I
+                can quietly do.
               </p>
               <p className="mt-3">
-                <strong className="text-zinc-200">What doesn&rsquo;t:</strong> if Daryle recruits
-                someone, that person&rsquo;s sales pay <em>Daryle</em>, not you. The code looks up
-                one level and stops. So a chain three deep pays you nothing on the third link today.
-              </p>
-              <p className="mt-3">
-                That&rsquo;s a build, not a setting, and it needs a decision I haven&rsquo;t made
-                yet: where a third share comes from. Both rails deliberately protect the person who
-                closed the sale, so it can&rsquo;t come out of them — which means it comes out of my
-                side, and my side has a floor. I&rsquo;d rather tell you the shape of that than
-                quote you a number I&rsquo;d have to walk back.
-              </p>
-              <p className="mt-3 text-zinc-300">
-                Practical version: build wide rather than deep for now. People attached straight to
-                you pay you today; people two steps away don&rsquo;t until I&rsquo;ve built it.
+                And one consequence you should see, because it&rsquo;s arithmetic rather than
+                goodwill: the slice all overrides share is fixed. If the person directly above the
+                sale is set high enough to use it up, someone further up earns nothing on that
+                order. The software pays nearest-first and flags the shortfall rather than quietly
+                paying everybody less. Getting you paid two levels up therefore means either a
+                bigger slice or smaller per-level rates — that&rsquo;s the conversation, and
+                I&rsquo;d rather have it with real numbers in front of us.
               </p>
             </Card>
 

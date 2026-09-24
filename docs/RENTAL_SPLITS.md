@@ -81,30 +81,52 @@ On a $10k/month merchant at a 5% fee: fee $500, reseller $400, and **$100 is the
 override could ever pay**. Anyone promising an upline "a cut of everything" needs that number in front
 of them first.
 
-## ⛔ OPEN — owner intent is stated; the mechanism is not built
+## Multi-level: BUILT on commerce (2026-09-24), still one level on rentals
+
+`lib/commerce/uplineChain.ts` walks `parent_code` upward and pays every level, replacing the single
+hop in `orders.ts` §5b. **Inert until rates are set** — every `override_share` is 0, so it allocates
+nothing and behaviour is unchanged today.
+
+⚠️ **The cap is on the TOTAL, and that is the only reason this is safe.** One level could be bounded
+per-level by `clampOverrideShare` (≤ `QS_FEE_SHARE`). N levels each at that ceiling would pay **N ×
+the slice that exists** — out of the house share, then through the floor, appearing as "revenue is
+down" rather than as an error.
+
+⚠️ **Nearest-first, and a level that does not fit is paid NOTHING rather than a reduced amount.**
+Scaling everyone proportionally would silently shrink a rate someone agreed to in writing because a
+level was added elsewhere in the tree — the same harm decision #2 forbids. The consequence, which the
+owner must accept rather than discover: **if the direct upline's share consumes the slice, a
+head-of-BD two levels up earns zero on that order.** The remedy is a bigger slice (costs the house)
+or smaller per-level rates, never a cleverer allocator. Shortfalls raise a Sentry warning because
+somebody is configured for a rate the order cannot pay.
+
+⚠️ **Cycle detection is load-bearing, not defensive.** `parent_code` has no foreign key and no
+acyclicity constraint, and neither writer (`/api/admin/referrals/set-hub`, `/api/partners/join`)
+checks. A→B→A is one mistyped field away, and the walk runs **inside the Stripe webhook** — an
+unbounded loop there means money taken and no order marked paid. Guarded twice: the fetch loop and
+the pure walker each carry their own seen-set, because the fetch would spin before the tested
+cycle-breaking code ever ran.
+
+✅ **Verified the rest of the chain already handles N rows.** Refund voiding filters on `subject_id`
+without `referral_code`, so it reverses every override row for an order; `summarizePlatformRevenue`
+sums by subject. No schema change was needed — `commission_ledger`'s conflict key is
+`(referral_code, subject, subject_id)`, so each upline gets its own row for the same order.
+
+## ⛔ OPEN — two decisions, and rentals still need one
 
 **Owner direction, 2026-09-23:** Amy is **head of business development** and should get "a cut of
 everything that goes through anyone downstream of her."
 
-**What exists:** exactly **one level**, on both rails. `lib/commerce/orders.ts` §5b reads
-`codeRow.parent_code`, pays that one code, and stops — there is no walk up the chain. Rentals have
-exactly one manager slot per account.
+1. **The rate on the commerce rail.** Currently 0 on every code; ceiling is `QS_FEE_SHARE`. This is a
+   person's pay — it is set by the owner, not inferred.
+2. **Whether rentals get a second level, and whose share funds it.** Rentals still have exactly one
+   manager slot. The money cannot come from the closer (decision #2), so it comes from the house,
+   which has a floor — `QS_MIN_NET_KEEP_CENTS` exists precisely to stop QS going negative. A
+   multi-level rental scheme that ignores that floor pays commissions out of operating money.
 
-**So a chain three deep pays the middle link, not the top.** If Amy recruits Daryle and Daryle
-recruits Bob, Bob's sale pays Daryle. Amy earns nothing on it.
-
-Two decisions are needed **before** code, and neither may be answered by picking a plausible number:
-
-1. **The rate on the commerce rail** (currently 0, ceiling = `QS_FEE_SHARE`).
-2. **Where a second level's share comes from.** Both rails deliberately protect whoever closed the
-   sale, so by decision #2's logic it cannot come from them — which leaves the house share, which has
-   a floor (`QS_MIN_NET_KEEP_CENTS` exists precisely to stop QS going negative). A multi-level scheme
-   that ignores that floor pays commissions out of money the business needs to operate.
-
-Until both are settled, **no surface may imply a second level exists.** `/for-amy` states the gap
-explicitly and advises building wide rather than deep — because the failure mode is that she recruits
-a tier which earns her nothing and discovers it afterwards, which is the same class of harm this
-whole file exists to prevent.
+Until #1 is set, the commerce mechanism pays nothing. Until #2 is decided, **no surface may imply
+rentals pay beyond one level.** `/for-amy` states exactly which rail does which, and why the rental
+answer is a decision rather than a build.
 
 ## Where it is surfaced
 

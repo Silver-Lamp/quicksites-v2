@@ -109,7 +109,18 @@ describe('detecting the local pack hiding inside a fetched overview', () => {
       ] },
     ]);
     expect(aiOverviewCitesLocalBusinesses(raw)).toBe(true);
-    expect(hasLocalCompetitionAbove({ packSize: 0, raw })).toBe(true);
+  });
+
+  // ⛔ THE DETECTOR IS NOT WIRED INTO SCORING, and this test is what stops it creeping back in.
+  // Measured against the controls it flagged 86% of pages and fired MORE on treehouses — a cohort
+  // with four live sites — than on horse barns, where a hand check photographed a real local block.
+  // Until a rule separates those two, `hasLocalCompetitionAbove` must answer only from `packSize`.
+  it('does NOT let the unvalidated detector drive the verdict', () => {
+    const raw = overview([
+      { title: 'Local Horse Barn Builders', references: [{ domain: 'www.google.com' }] },
+    ]);
+    expect(aiOverviewCitesLocalBusinesses(raw)).toBe(true);
+    expect(hasLocalCompetitionAbove({ packSize: 0, raw })).toBe(false);
   });
 
   // ⚠️ The title is a SECONDARY signal — one wording change from silently returning false. The
@@ -124,6 +135,11 @@ describe('detecting the local pack hiding inside a fetched overview', () => {
     ]);
     expect(aiOverviewCitesLocalBusinesses(raw)).toBe(false);
     expect(hasLocalCompetitionAbove({ packSize: 0, raw })).toBe(false);
+  });
+
+  it('still reports unknown when the overview was never fetched', () => {
+    const blind = { tasks: [{ result: [{ items: [{ type: 'ai_overview', items: null, markdown: null }] }] }] };
+    expect(hasLocalCompetitionAbove({ packSize: 0, raw: blind })).toBeNull();
   });
 
   it('returns unknown — not false — when the overview was never fetched', () => {

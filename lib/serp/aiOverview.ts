@@ -51,18 +51,27 @@ export function hasUnfetchedAiOverview(raw: unknown): boolean {
 /**
  * Does a FETCHED AI Overview cite local business listings?
  *
- * ⚠️ THE PAYOFF OF FETCHING: this turns an absence we could not interpret into evidence we can.
- * Before `load_async_ai_overview`, a hidden local pack was indistinguishable from an empty overview
- * and we could only distrust the reading. Now we can say the pack is there.
+ * ⛔ **NOT VALIDATED — DO NOT SCORE ON THIS.** It is exported for investigation only, and
+ * `hasLocalCompetitionAbove` deliberately does not call it. Measured against the controls on
+ * 2026-09-24, four candidate rules and not one of them separated the two cases that matter:
  *
- * The signal is STRUCTURAL rather than a title match: Google Business Profile citations appear as
- * `google.com` references on the overview's elements. On `horse barn builder austin` the element
- * titled "Local Horse Barn Builders" carries exactly those, alongside the builders' own domains —
- * which is the same block the hand check photographed with Call / Directions / Website buttons.
+ *   rule                              overall   treehouse (known WIN)   horse barns (known local)
+ *   any google ref or title             86%          100%  ✗                  100%  ✓
+ *   >= 2 google refs on one element     29%           31%                      22%  ✗
+ *   provider-ish title + a ref          49%           85%  ✗                   33%  ✗
+ *   both, strict                        20%           23%                      11%  ✗
  *
- * ⚠️ A title match is kept as a SECONDARY signal only. "Local …" is how Google labels it today and
- * is one wording change from silently returning false; the references are the part that has to
- * exist for the citation to work at all.
+ * The loose rule fires on everything; the tight ones fire MORE on treehouses — a cohort with four
+ * live sites and a builder ranking first — than on horse barns, where a hand check photographed an
+ * actual local block. That is backwards, so the signal does not discriminate.
+ *
+ * ⚠️ Why the obvious signals fail: `google.com` appears in 72% of overviews (Maps, support pages,
+ * anything), and the title regex matches section headings like "Local Context & Regulations", which
+ * is about zoning rules, not businesses.
+ *
+ * ⚠️ WHAT IS STILL TRUE: a local pack CAN hide inside an AI Overview — that is photographed, not
+ * theorised. We simply cannot yet tell from the API which overviews contain one. A known,
+ * stated blind spot beats a detector that fails its control.
  */
 export function aiOverviewCitesLocalBusinesses(raw: unknown): boolean {
   const items = (raw as any)?.tasks?.[0]?.result?.[0]?.items;
@@ -111,5 +120,9 @@ export function hasLocalCompetitionAbove(input: {
 }): boolean | null {
   if (input.packSize > 0) return true;
   if (hasUnfetchedAiOverview(input.raw)) return null;
-  return aiOverviewCitesLocalBusinesses(input.raw);
+  // ⛔ Deliberately NOT `aiOverviewCitesLocalBusinesses(...)` — see the note on that function. It
+  // flagged 86% of pages and failed the treehouse control, so scoring on it would have replaced a
+  // measurable optimism with an unmeasurable pessimism. Returning false here means "no pack we can
+  // see", which is exactly as much as we can honestly claim today.
+  return false;
 }

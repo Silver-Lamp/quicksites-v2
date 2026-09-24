@@ -23,7 +23,9 @@ const arg = (n: string) => process.argv.find((a) => a.startsWith(`--${n}=`))?.sp
 async function main() {
   const { NICHE_CANDIDATES } = await import('@/lib/niches/candidates');
   const { rateNiche, rateQuery, readsToResolve } = await import('@/lib/serp/rate');
-  const { packFreeClaimIsVerifiable } = await import('@/lib/serp/aiOverview');
+  const { packFreeClaimIsVerifiable, hasLocalCompetitionAbove } = await import(
+    '@/lib/serp/aiOverview'
+  );
   const { supabaseAdmin } = await import('@/lib/supabase/admin');
 
   const days = Number(arg('days') ?? 7);
@@ -56,6 +58,11 @@ async function main() {
       verdict: r.verdict as RateInput['verdict'],
       // Computed from the raw we already store, so every historical reading is re-judged for free.
       packFreeVerifiable: packFreeClaimIsVerifiable({
+        packSize: Number(r.pack_size ?? 0),
+        raw: (r as any).raw,
+      }),
+      // Counts the AI Overview, which is the whole point of fetching it.
+      localAbove: hasLocalCompetitionAbove({
         packSize: Number(r.pack_size ?? 0),
         raw: (r as any).raw,
       }),

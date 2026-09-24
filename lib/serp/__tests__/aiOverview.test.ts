@@ -137,3 +137,31 @@ describe('detecting the local pack hiding inside a fetched overview', () => {
     expect(hasLocalCompetitionAbove({ packSize: 3, raw })).toBe(true);
   });
 });
+
+describe('the flag is not the evidence — the missing contents are', () => {
+  // ⚠️ REGRESSION. `asynchronous_ai_overview` stays true even when the contents WERE fetched: it
+  // records how Google loaded the overview, not whether we got it. Treating the flag as proof of
+  // blindness would discard every reading taken after `load_async_ai_overview` was enabled — the
+  // first such run returned 4 populated elements with the flag still true.
+  const fetched = {
+    tasks: [{ result: [{ items: [{
+      type: 'ai_overview', asynchronous_ai_overview: true,
+      items: [{ type: 'ai_overview_element', title: 'Local Horse Barn Builders' }], markdown: '# x',
+    }] }] }],
+  };
+
+  it('trusts a populated overview even with the async flag set', () => {
+    expect(hasUnfetchedAiOverview(fetched)).toBe(false);
+    expect(packFreeClaimIsVerifiable({ packSize: 0, raw: fetched })).toBe(true);
+  });
+
+  it('still catches the genuinely empty placeholder', () => {
+    const blind = { tasks: [{ result: [{ items: [{ type: 'ai_overview', asynchronous_ai_overview: true, items: null, markdown: null }] }] }] };
+    expect(hasUnfetchedAiOverview(blind)).toBe(true);
+  });
+
+  it('treats an empty items array as no contents, not as contents', () => {
+    const empty = { tasks: [{ result: [{ items: [{ type: 'ai_overview', items: [], markdown: '' }] }] }] };
+    expect(hasUnfetchedAiOverview(empty)).toBe(true);
+  });
+});

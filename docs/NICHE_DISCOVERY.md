@@ -349,9 +349,29 @@ varies with page size, not with the flag.
 returned $0.002–$0.008, mean $0.0053, so every cost estimate the sweep has ever printed understated
 spend by ~2.6×: the K=5 run it announced as "$0.92" actually cost about **$2.44**.
 
-`hasLocalCompetitionAbove()` now answers the question `packSize` was standing in for, and returns
-**`null` — not false — when the overview was never fetched**, because unknown must not read as
-either answer.
+`hasLocalCompetitionAbove()` now answers the question `packSize` was standing in for, returns
+**`null` — not false — when the overview was never fetched**, and **is what the rate scores on**.
+
+⚠️ **The flag is not the evidence — the missing CONTENTS are.** `asynchronous_ai_overview` stays
+`true` even when the contents were fetched: it records how Google loaded the overview, not whether
+we got it. The first version of the guard treated the flag alone as proof of blindness, and the
+first sweep run with the fetch enabled returned four populated elements **with the flag still true**
+— so every good reading from then on would have been silently discarded as unverifiable. Caught by
+checking the data after the change rather than trusting the change.
+
+### Horse barns, measured four ways in one afternoon
+
+| what we were looking at | answer |
+|---|---|
+| `packSize` only, overview unfetched | **100% pack-free** over 23 reads — top of the table |
+| same, after discarding blind readings | **no evidence at all** (0 usable) |
+| `packSize` only, overview fetched | 75% pack-free over 4 reads |
+| **local competition incl. the overview** | **0% — all four queries** |
+
+Three of the four have **no `local_pack` item and an AI Overview citing Google Business Profiles**;
+the fourth has a real 3-pack. The niche this file recommended twice is not open ground, and each
+step toward the truth came from looking at something we had not looked at before — a screenshot, the
+raw payload, then the data produced by our own fix.
 
 **For readings taken before the flag, `lib/serp/aiOverview.ts` DISCARDS them** rather than counting them as
 pack-served — counting an unopened box as "a pack was there" would invent evidence in the opposite

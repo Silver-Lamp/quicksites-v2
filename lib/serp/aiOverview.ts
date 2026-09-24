@@ -32,13 +32,20 @@
 export function hasUnfetchedAiOverview(raw: unknown): boolean {
   const items = (raw as any)?.tasks?.[0]?.result?.[0]?.items;
   if (!Array.isArray(items)) return false;
-  return items.some(
-    (i: any) =>
-      i?.type === 'ai_overview' &&
-      // The flag is what DataForSEO sets; the null contents are the corroboration. Either alone is
-      // enough to distrust the reading, and requiring both would let a shape change slip past.
-      (i.asynchronous_ai_overview === true || (i.items == null && i.markdown == null))
-  );
+  return items.some((i: any) => {
+    if (i?.type !== 'ai_overview') return false;
+    // ⚠️ THE ABSENT CONTENTS ARE THE EVIDENCE — NOT THE FLAG.
+    //
+    // `asynchronous_ai_overview` stays TRUE even when the contents were fetched: it records that
+    // Google loaded the overview asynchronously, not that we failed to get it. The first version of
+    // this function treated the flag alone as proof of blindness, and the first sweep run with
+    // `load_async_ai_overview` enabled came back with four populated elements and the flag still
+    // true — so every good reading we collected from then on would have been silently discarded as
+    // unverifiable. Caught by checking the data after the change rather than trusting the change.
+    const hasItems = Array.isArray(i.items) && i.items.length > 0;
+    const hasMarkdown = typeof i.markdown === 'string' && i.markdown.length > 0;
+    return !hasItems && !hasMarkdown;
+  });
 }
 
 /**

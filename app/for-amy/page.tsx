@@ -36,8 +36,14 @@
 // handler and /admin/splits use — so this page cannot quote a number the system would not actually
 // pay. Nothing is typed.
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
+import {
+  pageRequiresPin,
+  pagePinCookie,
+  verifyPagePinGrant,
+} from '@/lib/auth/pagePin';
 import { SPLIT, splitRentalPayment } from '@/lib/commerce/rentalSplits';
 import {
   MAX_PLATFORM_FEE_PERCENT,
@@ -256,7 +262,71 @@ function Row({ label, value, note }: { label: string; value: string; note?: stri
   );
 }
 
-export default function ForAmyPage() {
+const PAGE_KEY = 'amy';
+
+/**
+ * The PIN prompt. No JS: a plain form POST to /api/page-pin, which sets a signed grant cookie and
+ * redirects back here.
+ *
+ * ⚠️ Says nothing about what the page contains. A gate that advertises "commission schedule inside"
+ * has leaked the interesting part to anyone holding the URL, which is the exact population the gate
+ * exists to stop.
+ */
+function PinPrompt({ error }: { error?: string }) {
+  return (
+    <>
+      <SiteHeader sticky />
+      <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-white">
+        <div className="w-full max-w-sm rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
+          <h1 className="text-lg font-semibold text-white">This page is private</h1>
+          <p className="mt-2 text-sm text-zinc-400">
+            Enter the six-digit code you were given.
+          </p>
+          <form method="POST" action="/api/page-pin" className="mt-4 space-y-3">
+            <input type="hidden" name="page" value={PAGE_KEY} />
+            <input
+              type="password"
+              name="pin"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={12}
+              aria-label="Six-digit code"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-center font-mono text-lg tracking-[0.3em] text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500 focus:outline-none"
+              placeholder="······"
+            />
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400"
+            >
+              Open
+            </button>
+          </form>
+          {error === 'slow' ? (
+            <p className="mt-3 text-sm text-amber-300">Too many tries. Give it an hour.</p>
+          ) : error ? (
+            <p className="mt-3 text-sm text-rose-300">That code didn&rsquo;t work.</p>
+          ) : null}
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default async function ForAmyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ e?: string }>;
+}) {
+  // ⚠️ FAILS CLOSED. If PAGE_PIN_AMY is unset the page is gated and unopenable, rather than open to
+  // anyone with the link. Check readiness on /status — never by finding out that it rendered.
+  if (!pageRequiresPin(PAGE_KEY)) return <PinPrompt />;
+
+  const jar = await cookies();
+  if (!verifyPagePinGrant(jar.get(pagePinCookie(PAGE_KEY))?.value, PAGE_KEY)) {
+    const sp = await searchParams;
+    return <PinPrompt error={sp?.e} />;
+  }
+
   return (
     <>
       <SiteHeader sticky />

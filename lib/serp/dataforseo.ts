@@ -123,6 +123,16 @@ export const dataForSeoProvider: SerpProvider = {
           device: 'desktop',
           // The measurement is what sits above organic, so we need the whole page, not a filter.
           depth: 30,
+          // ⚠️ WITHOUT THIS, THE AI OVERVIEW COMES BACK AS AN EMPTY PLACEHOLDER and a local pack
+          // rendered inside it is invisible — which is how `horse barn builder austin` scored 100%
+          // pack-free over 23 readings while the real page carried "Local Horse Barn Builders" with
+          // Call / Directions / Website buttons above every organic result. 59% of readings taken
+          // before 2026-09-24 have this hole in them.
+          //
+          // ⚠️ IT IS FREE. Measured over three paired queries: mean $0.0053 with the flag and
+          // $0.0053 without — cost varies with page size, not with this. An earlier estimate that
+          // it "roughly doubles per-check cost" was wrong and stopped a correct fix for an hour.
+          load_async_ai_overview: true,
         },
       ]),
       cache: 'no-store',

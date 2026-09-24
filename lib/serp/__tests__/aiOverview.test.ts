@@ -1,7 +1,12 @@
 /**
  * @jest-environment node
  */
-import { hasUnfetchedAiOverview, packFreeClaimIsVerifiable } from '@/lib/serp/aiOverview';
+import {
+  aiOverviewCitesLocalBusinesses,
+  hasLocalCompetitionAbove,
+  hasUnfetchedAiOverview,
+  packFreeClaimIsVerifiable,
+} from '@/lib/serp/aiOverview';
 
 const withItems = (items: any[]) => ({ tasks: [{ result: [{ items }] }] });
 
@@ -87,5 +92,48 @@ describe('the rate module drops them rather than counting them either way', () =
     expect(r.reads).toBe(2);
     expect(r.blind).toBe(1);
     expect(r.packFreeRate).toBe(1);
+  });
+});
+
+describe('detecting the local pack hiding inside a fetched overview', () => {
+  const overview = (elements: any[]) => ({
+    tasks: [{ result: [{ items: [{ type: 'ai_overview', asynchronous_ai_overview: false, items: elements, markdown: '#' }] }] }],
+  });
+
+  // The real element from `horse barn builder austin`: Google Business Profile citations alongside
+  // the builders' own domains. This is the block the hand check photographed.
+  it('spots Google Business Profile citations', () => {
+    const raw = overview([
+      { title: 'Local Horse Barn Builders', references: [
+        { domain: 'barnsacrosstexas.com' }, { domain: 'www.google.com' },
+      ] },
+    ]);
+    expect(aiOverviewCitesLocalBusinesses(raw)).toBe(true);
+    expect(hasLocalCompetitionAbove({ packSize: 0, raw })).toBe(true);
+  });
+
+  // ⚠️ The title is a SECONDARY signal — one wording change from silently returning false. The
+  // references are what must exist for the citation to work at all.
+  it('still catches it when only the title says local', () => {
+    expect(aiOverviewCitesLocalBusinesses(overview([{ title: 'Local pros near you', references: [] }]))).toBe(true);
+  });
+
+  it('does not fire on an overview that cites only editorial sources', () => {
+    const raw = overview([
+      { title: 'Comparison of Barn Types', references: [{ domain: 'thisoldhouse.com' }, { domain: 'wikipedia.org' }] },
+    ]);
+    expect(aiOverviewCitesLocalBusinesses(raw)).toBe(false);
+    expect(hasLocalCompetitionAbove({ packSize: 0, raw })).toBe(false);
+  });
+
+  it('returns unknown — not false — when the overview was never fetched', () => {
+    const raw = { tasks: [{ result: [{ items: [{ type: 'ai_overview', asynchronous_ai_overview: true, items: null, markdown: null }] }] }] };
+    // ⚠️ null is the honest answer. Reading it as "no local competition" is exactly the bug.
+    expect(hasLocalCompetitionAbove({ packSize: 0, raw })).toBeNull();
+  });
+
+  it('never lets an overview override a pack that was actually found', () => {
+    const raw = overview([{ title: 'Comparison', references: [] }]);
+    expect(hasLocalCompetitionAbove({ packSize: 3, raw })).toBe(true);
   });
 });

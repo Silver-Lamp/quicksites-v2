@@ -31,7 +31,11 @@ import ws from 'ws';
 const arg = (n: string) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split('=')[1];
 const APPLY = process.argv.includes('--apply');
 const READS = Math.max(1, Number(arg('reads') ?? 1));
-const PER_CALL_USD = 0.002; // approximate; see docs/NICHE_DISCOVERY.md
+// ⚠️ MEASURED 2026-09-24, not assumed: six live calls returned $0.002–$0.008, mean $0.0053. The
+// previous value of 0.002 was the floor mistaken for the average, so every cost estimate this
+// script has ever printed understated the spend by roughly 2.6x — the K=5 sweep it announced as
+// "$0.92" actually cost about $2.44. Cost varies with page size; re-measure rather than adjust.
+const PER_CALL_USD = 0.0053;
 
 async function main() {
   const { NICHE_CANDIDATES } = await import('@/lib/niches/candidates');

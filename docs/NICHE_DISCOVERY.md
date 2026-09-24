@@ -227,8 +227,54 @@ provider response produces identical readings, a tight interval and total confid
 own failure restored one level up. `varied` is recorded per query and the scorer stops and says so
 if *no* repeated query anywhere varied.
 
-**First scoring of the existing 189 readings: every niche `contested`.** Nothing yet has the reads
-to resolve, which is the correct state and exactly what the old table was hiding.
+### The K=5 run (2026-09-23, Austin + Denver, 460 attempted, 373 stored, ~$0.92)
+
+⚠️ **19% of reads were lost to provider errors even with three retries**, so reads per query land
+between 3 and 8 rather than a flat 5. The interval absorbs that honestly — a 3-read query shows a
+visibly wider band — which is the reason to read the band and not the percentage.
+
+**The headline is that the QUERY is the unit, not the niche, and a niche score averages that away.**
+
+| niche | reads | winnable queries | lost |
+|---|---|---|---|
+| **Horse barns / riding arenas** | 23 | **4 of 4** | 0 |
+| Wine cellars | 28 | 3 of 4 | 1 |
+| Bunkers & underground shelters | 27 | 3 of 4 | 0 (1 unresolved) |
+| Yurts | 31 | 2 of 4 | 1 |
+| Pole barns | 25 | 2 of 4 | 1 |
+| Grain bin & silo homes | 26 | 2 of 4 | 2 |
+| Treehouses *(live cohort)* | 33 | 1 of 9 | 2 |
+| Geodesic domes *(live cohort)* | 26 | 1 of 4 | 3 |
+| Timber frame | 27 | 1 of 4 | 3 |
+| Container builds · saunas · natural pools · backyard studios · sport courts · skate ramps · greenhouses · earth-sheltered · earthbag · climbing walls | 15–27 each | **0** | most |
+
+**Horse barns is the only niche where every query resolved winnable** — 100% pack-free on all four,
+23 reads, no lost query and nothing unresolved.
+
+⚠️ **THE PATTERN WORTH MORE THAN THE RANKING: the same niche splits by CITY and by PHRASING, and the
+splits are total rather than marginal.**
+
+```
+silo home conversion austin      100% [65–100] winnable | grain bin home builder austin    0% [0–35] lost
+silo home conversion denver      100% [61–100] winnable | grain bin home builder denver    0% [0–39] lost
+geodesic dome builder denver     100% [65–100] winnable | geodesic dome builder austin     0% [0–35] lost
+timber frame builder denver      100% [65–100] winnable | timber frame builder austin     13% [2–47] lost
+treehouse builder austin         100% [65–100] winnable | custom treehouse company austin  0% [0–39] lost
+yurt dealer austin               100% [68–100] winnable | yurt dealer denver               0% [0–35] lost
+```
+
+Each pair is one niche. **"Grain bin home builder" is unwinnable in both cities while "silo home
+conversion" is winnable in both** — same businesses, same buyers, opposite answers, decided by the
+words. Domes are winnable in Denver and lost in Austin. So *"is this niche good"* was never a
+well-formed question: a niche-level rate averages over exactly the distinction that decides what to
+build, which is why this file's earlier ranking tables kept disagreeing with each other.
+
+⚠️ **Domes read 1-winnable-of-4 and we have 13 live directory sites.** Not a contradiction to settle
+by picking a number — it says the pack is the answer in most dome markets and Denver is the
+exception. Read it as a caution about the other twelve, not a verdict on the cohort.
+
+⚠️ **The truncation guard earned its keep here**: it fired 13 times and **7 were genuinely short
+responses** that would otherwise have scored as opportunity.
 
 ⚠️ **One of the nine WAS a short response, and that guard shipped anyway.** `dock builder austin`
 returned `item_types` of `[local_pack, organic, people_also_ask, related_searches]` with

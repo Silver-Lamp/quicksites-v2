@@ -1,9 +1,43 @@
-# SecondSet — AR‑glasses service‑transparency layer (PLANNING, not greenlit)
+# SecondSet — AR‑glasses service‑transparency layer (BUILT, flag‑gated OFF, never run)
 
-> **Status: ideation / plan only.** Nothing is built, no spend, no hardware commitment.
-> Awaiting Sandon's greenlight of a scoped v0 (+ brand + business‑model calls). Working
-> name **SecondSet** ("a second set of eyes"); tagline *"See the work. Trust the bill."*
-> Grounded in two crosstalk rounds with HiveJournal (who owns the glasses tech), 2026‑07‑23.
+> **Status corrected 2026‑09‑24.** This file said *"ideation / plan only. Nothing is built"* long
+> after v0 shipped — found while answering a question in a glasses user group, not by an audit. Four
+> tables, nine API routes, two pages and a lib exist. Working name **SecondSet** ("a second set of
+> eyes"); tagline *"See the work. Trust the bill."* Grounded in two crosstalk rounds with
+> HiveJournal (who owns the glasses tech), 2026‑07‑23.
+>
+> ⚠️ **A doc claiming nothing is built, over code that is, is the expensive direction of stale.** A
+> stale "this is done" gets corrected the moment somebody looks for the feature. A stale "nothing
+> here" invites the next session to build it a second time, and nothing in CI objects to a
+> duplicate. Re‑derive rather than trust this list: `ls app/api/service-jobs`.
+>
+> ### What exists today
+>
+> | | |
+> |---|---|
+> | Tables | `service_jobs`, `service_job_line_items`, `service_job_captures`, `secondset_capture_grants` (migrations `20260801`–`20260803`) |
+> | API | 9 routes under `app/api/service-jobs/` — create/list, `[id]`, line items, voice note, capture token, grant, tech roster, sync, and the customer portal decision |
+> | Pages | `/service-jobs` (operator) · `/jobs/[token]` (customer portal) |
+> | Logic | `lib/serviceJobs/serviceJobs.ts` · flag `lib/flags/secondset.ts` |
+>
+> ### What has NOT happened
+>
+> - **`SECONDSET_ENABLED` is OFF**, so every surface above is inert.
+> - **No real job has ever gone through it.** `service_jobs` and `service_job_captures` hold 0 rows.
+>   ⚠️ That is NOT the same as "never run": v0 was **proven end‑to‑end by a self‑test (7/7
+>   assertions) against the live schema**, which cleaned up after itself — which is exactly why the
+>   tables are empty. Reading 0 rows as "never executed" would have been a true observation
+>   supporting a false conclusion. What is unproven is the behaviour **with a real shop, a real
+>   customer and real glasses**, which is a different claim from "the code path works."
+> - **No hardware, no pilot shop, no spend.** Those remain owner calls.
+> - ⚠️ **No tests.** Nothing under `lib/serviceJobs/` or the routes is covered, on a surface that
+>   records people in their own driveway and drives an approve‑the‑bill decision. That is the gap to
+>   close before a pilot, ahead of any new feature.
+>
+> ⚠️ **The blocker was never the technology.** It is the consent flow — a tech wearing a camera on a
+> customer's property, capturing a third party's premises and sometimes their voice. Building more
+> surface does not move that, and shipping a pilot without it is the kind of mistake that ends a
+> product rather than delays it.
 
 ## 1. The wedge
 

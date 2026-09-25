@@ -53,44 +53,21 @@ Regionally dense, nationally sparse. The supply probe could not see that; this c
 
 1. **Open an incognito/private window.** Your logged-in results are personalised by your own
    search history.
-2. **Set location — but only for the `near me` rows.** A search with the city in it
-   (`treehouse builder asheville nc`) needs nothing. A `near me` search uses where Google thinks
-   you are, and from the wrong city it measures the wrong market while looking identical to a
-   measurement of the right one.
-   - **No DevTools:** run the search, then click **Update location** at the bottom of the results
-     page (beside "Results for …") and enter the **full location** — `Asheville, North Carolina,
-     United States`, not just "Asheville".
-   - ⚠️ **Use the whole string, because the automated run used it.** A different location measures
-     a different market, and the hand/machine comparison stops being apples to apples while still
-     producing two verdicts that look comparable. "Asheville" alone is also ambiguous in Google's
-     own box — and **Portland here is Maine**.
-   - **Chrome DevTools:** ⌥⌘I to open it, then **⌘⇧P** → type `sensors` → "Show Sensors" →
-     Location → "Other…" → fill **Lat/Long, Timezone ID and Locale** → reload. ⚠️ Sensors is a
-     bottom-drawer panel, not a tab, and the ⋮ menu is the one *inside* DevTools, not the
-     browser's.
-   - ⚠️ **The override lives with the DevTools session, not the profile** — incognito makes no
-     difference. It survives retyping a query in the **same tab**; it does not survive a new tab,
-     and may not survive closing DevTools. So keep one tab open and retype. The run is ordered by
-     city so you set it once per city.
-   - ⚠️ **Verify rather than trust:** Google prints the location it actually used at the **bottom
-     of the results page** ("Bonney Lake, Washington · From your device"). Check that line.
+2. ✅ **Location is now in the link — do not use DevTools → Sensors.**
+   The console's "Search Google" button carries a `uule` for that row's city, built from the same
+   canonical name the API check uses, so the hand check and the machine check point at one place by
+   construction rather than by someone retyping a city into a panel.
 
-   | city | Lat / Long | Timezone ID |
-   |---|---|---|
-   | Seattle · Bonney Lake, WA | `47.6062, -122.3321` · `47.1854, -122.1868` | `America/Los_Angeles` |
-   | Austin, TX | `30.2672, -97.7431` | `America/Chicago` |
-   | Madison, WI | `43.0731, -89.4012` | `America/Chicago` |
-   | Nashville, TN | `36.1627, -86.7816` | `America/Chicago` |
-   | Asheville, NC | `35.5951, -82.5515` | `America/New_York` |
-   | Orlando, FL | `28.5383, -81.3792` | `America/New_York` |
-   | Portland, **ME** | `43.6591, -70.2568` | `America/New_York` |
-   | Denver, CO | `39.7392, -104.9903` | `America/Denver` |
-   | Boise, ID | `43.6150, -116.2023` | `America/Boise` |
-   | Phoenix, AZ | `33.4484, -112.0740` | `America/Phoenix` |
+   ⚠️ **Sensors is removed because it failed silently twice in two days, on the same niche.** One
+   run came back stamped `28801, Asheville, NC` and the next `East Renton Highlands, Washington`,
+   both while checking queries meant to be Austin's. The searches ran, the results looked entirely
+   plausible, and the only contradiction was one line at the very bottom of the page. **A setup step
+   that fails invisibly and is verified last is the wrong shape.**
 
-   Locale is `en-US` throughout. ⚠️ **Phoenix and Boise have their own timezone IDs** rather than
-   folding into `America/Denver` — Arizona skips DST, so `America/Denver` is an hour out for half
-   the year. And **Portland here is Maine**, not Oregon.
+   ⚠️ **Still check the footer.** A `uule` cannot fail the way Sensors did — a malformed one is
+   ignored and the footer then shows your IP city — but "cannot fail silently" is not "cannot
+   fail". The footer is the receipt and it takes two seconds.
+
 3. **Laptop, not phone.** Phone SERPs show even less organic, which biases the answer pessimistic.
 
 ---

@@ -11,6 +11,7 @@
 // it is the one row whose job is to catch a broken reading — including a broken human reading. A
 // run whose control disagrees is a run nobody should act on, and we want to know that at row one.
 
+import { googleSearchUrl } from './uule';
 import { WORKSHEET_CHECKS, checksFor, locationFor, type SerpCheck } from '@/lib/serp/checkSets';
 import { isControlReading, type SerpReading, type SerpVerdict } from '@/lib/serp/classify';
 
@@ -71,8 +72,20 @@ export const CITY_COORDS: Record<string, string> = Object.fromEntries(
   Object.entries(CITY_LOCALES).map(([k, v]) => [k, v.coords]),
 );
 
-const googleUrl = (query: string) =>
-  `https://www.google.com/search?q=${encodeURIComponent(query)}&pws=0`;
+/**
+ * ⚠️ THE LOCATION NOW TRAVELS IN THE URL, replacing the DevTools → Sensors step.
+ *
+ * Sensors failed silently TWICE in two days on the same niche: one run stamped `28801, Asheville,
+ * NC` and the next `East Renton Highlands, Washington`, both while checking queries meant to be
+ * Austin's. The searches ran, the results looked plausible, and only the footer at the very bottom
+ * of the page disagreed. A setup step that fails invisibly and is verified LAST is the wrong shape.
+ *
+ * `uule` cannot fail quietly in the same way — a malformed one is ignored and the footer then shows
+ * the IP city, which is the same visible receipt. And because it is built from the SAME canonical
+ * name the API check uses, the hand check and the machine check point at one place by construction
+ * rather than by someone retyping a city into a panel.
+ */
+const googleUrl = (query: string, location: string) => googleSearchUrl(query, location);
 
 /**
  * Control first, then the rest GROUPED BY CITY.
@@ -101,7 +114,7 @@ export function buildWorklist(checks: readonly SerpCheck[]): WorklistStep[] {
       ...c,
       index: i + 1,
       isControl: c.nicheKey === 'towing',
-      searchUrl: googleUrl(c.query),
+      searchUrl: googleUrl(c.query, c.location),
       needsLocationOverride,
       ...(needsLocationOverride && CITY_LOCALES[city]
         ? { coords: CITY_LOCALES[city].coords, timezoneId: CITY_LOCALES[city].timezoneId }

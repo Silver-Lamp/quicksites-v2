@@ -1,7 +1,12 @@
 /**
  * @jest-environment node
  */
-import { hasUnfetchedAiOverview, packFreeClaimIsVerifiable } from '@/lib/serp/aiOverview';
+import {
+  aiOverviewCitesLocalBusinesses,
+  hasLocalCompetitionAbove,
+  hasUnfetchedAiOverview,
+  packFreeClaimIsVerifiable,
+} from '@/lib/serp/aiOverview';
 
 const withItems = (items: any[]) => ({ tasks: [{ result: [{ items }] }] });
 
@@ -87,5 +92,92 @@ describe('the rate module drops them rather than counting them either way', () =
     expect(r.reads).toBe(2);
     expect(r.blind).toBe(1);
     expect(r.packFreeRate).toBe(1);
+  });
+});
+
+describe('detecting the local pack hiding inside a fetched overview', () => {
+  const overview = (elements: any[]) => ({
+    tasks: [{ result: [{ items: [{ type: 'ai_overview', asynchronous_ai_overview: false, items: elements, markdown: '#' }] }] }],
+  });
+
+  // The real element from `horse barn builder austin`: Google Business Profile citations alongside
+  // the builders' own domains. This is the block the hand check photographed.
+  it('spots Google Business Profile citations', () => {
+    const raw = overview([
+      { title: 'Local Horse Barn Builders', references: [
+        { domain: 'barnsacrosstexas.com' }, { domain: 'www.google.com' },
+      ] },
+    ]);
+    expect(aiOverviewCitesLocalBusinesses(raw)).toBe(true);
+  });
+
+  // ⛔ THE DETECTOR IS NOT WIRED INTO SCORING, and this test is what stops it creeping back in.
+  // Measured against the controls it flagged 86% of pages and fired MORE on treehouses — a cohort
+  // with four live sites — than on horse barns, where a hand check photographed a real local block.
+  // Until a rule separates those two, `hasLocalCompetitionAbove` must answer only from `packSize`.
+  it('does NOT let the unvalidated detector drive the verdict', () => {
+    const raw = overview([
+      { title: 'Local Horse Barn Builders', references: [{ domain: 'www.google.com' }] },
+    ]);
+    expect(aiOverviewCitesLocalBusinesses(raw)).toBe(true);
+    expect(hasLocalCompetitionAbove({ packSize: 0, raw })).toBe(false);
+  });
+
+  // ⚠️ The title is a SECONDARY signal — one wording change from silently returning false. The
+  // references are what must exist for the citation to work at all.
+  it('still catches it when only the title says local', () => {
+    expect(aiOverviewCitesLocalBusinesses(overview([{ title: 'Local pros near you', references: [] }]))).toBe(true);
+  });
+
+  it('does not fire on an overview that cites only editorial sources', () => {
+    const raw = overview([
+      { title: 'Comparison of Barn Types', references: [{ domain: 'thisoldhouse.com' }, { domain: 'wikipedia.org' }] },
+    ]);
+    expect(aiOverviewCitesLocalBusinesses(raw)).toBe(false);
+    expect(hasLocalCompetitionAbove({ packSize: 0, raw })).toBe(false);
+  });
+
+  it('still reports unknown when the overview was never fetched', () => {
+    const blind = { tasks: [{ result: [{ items: [{ type: 'ai_overview', items: null, markdown: null }] }] }] };
+    expect(hasLocalCompetitionAbove({ packSize: 0, raw: blind })).toBeNull();
+  });
+
+  it('returns unknown — not false — when the overview was never fetched', () => {
+    const raw = { tasks: [{ result: [{ items: [{ type: 'ai_overview', asynchronous_ai_overview: true, items: null, markdown: null }] }] }] };
+    // ⚠️ null is the honest answer. Reading it as "no local competition" is exactly the bug.
+    expect(hasLocalCompetitionAbove({ packSize: 0, raw })).toBeNull();
+  });
+
+  it('never lets an overview override a pack that was actually found', () => {
+    const raw = overview([{ title: 'Comparison', references: [] }]);
+    expect(hasLocalCompetitionAbove({ packSize: 3, raw })).toBe(true);
+  });
+});
+
+describe('the flag is not the evidence — the missing contents are', () => {
+  // ⚠️ REGRESSION. `asynchronous_ai_overview` stays true even when the contents WERE fetched: it
+  // records how Google loaded the overview, not whether we got it. Treating the flag as proof of
+  // blindness would discard every reading taken after `load_async_ai_overview` was enabled — the
+  // first such run returned 4 populated elements with the flag still true.
+  const fetched = {
+    tasks: [{ result: [{ items: [{
+      type: 'ai_overview', asynchronous_ai_overview: true,
+      items: [{ type: 'ai_overview_element', title: 'Local Horse Barn Builders' }], markdown: '# x',
+    }] }] }],
+  };
+
+  it('trusts a populated overview even with the async flag set', () => {
+    expect(hasUnfetchedAiOverview(fetched)).toBe(false);
+    expect(packFreeClaimIsVerifiable({ packSize: 0, raw: fetched })).toBe(true);
+  });
+
+  it('still catches the genuinely empty placeholder', () => {
+    const blind = { tasks: [{ result: [{ items: [{ type: 'ai_overview', asynchronous_ai_overview: true, items: null, markdown: null }] }] }] };
+    expect(hasUnfetchedAiOverview(blind)).toBe(true);
+  });
+
+  it('treats an empty items array as no contents, not as contents', () => {
+    const empty = { tasks: [{ result: [{ items: [{ type: 'ai_overview', items: [], markdown: '' }] }] }] };
+    expect(hasUnfetchedAiOverview(empty)).toBe(true);
   });
 });

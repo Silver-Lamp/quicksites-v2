@@ -128,8 +128,15 @@ sums by subject. No schema change was needed — `commission_ledger`'s conflict 
 **Owner direction, 2026-09-23:** Amy is **head of business development** and should get "a cut of
 everything that goes through anyone downstream of her."
 
-1. **The rate on the commerce rail.** Currently 0 on every code; ceiling is `QS_FEE_SHARE`. This is a
-   person's pay — it is set by the owner, not inferred.
+1. ✅ **DECIDED 2026-09-24: the default upline rate is 5% of the platform fee**
+   (`DEFAULT_UPLINE_FEE_SHARE`, env-overridable). Reasoning, because whoever changes it next needs
+   to know what it trades against: the ceiling is `QS_FEE_SHARE` (20%) since the reseller's 80% is
+   protected, so 5% is a quarter of the available slice; overrides pay **nearest-first**, so two
+   levels at 10% each consume it entirely and the house earns nothing, while 5% leaves room for a
+   manager underneath; and it is the **easy direction to move** — raising a rate is a pleasant
+   conversation and cutting one is not. ⚠️ `set-hub` now applies this when no rate is named, where
+   before an omitted rate silently created a relationship that paid **zero** — indistinguishable
+   from a configured one until somebody read the ledger.
 2. ✅ **DECIDED 2026-09-24: rentals get a second level, funded from the house.** Built; see above.
    The trade it commits to: the house keeps ~$23.97 of a $99 rental, and that is what buys the
    domain and funds the ranking work. At 15% of net a second level leaves **$9.60 per account** to

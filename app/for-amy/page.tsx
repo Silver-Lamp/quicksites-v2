@@ -51,6 +51,7 @@ import {
   hubOverrideCents,
 } from '@/lib/commerce/partner-terms';
 import { allocateUplineOverrides } from '@/lib/commerce/uplineChain';
+import { DEFAULT_UPLINE_FEE_SHARE } from '@/lib/commerce/partner-terms';
 
 const closerPct = Math.round(SPLIT.closer * 100);
 const standardPct = Math.round(SPLIT.managerStandard * 100);
@@ -147,6 +148,7 @@ const AVG_ORDER_CENTS = 4_500;
 const affiliateKeeps = affiliateResidualCents(exFeeCents, AVG_ORDER_CENTS, 0.25);
 const affiliateLeaves = exFeeCents - affiliateKeeps;
 
+const pctLabel = (n: number) => `${Math.round(n * 100)}%`;
 const money = (cents: number) =>
   `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const plain = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-US')}`;
@@ -486,13 +488,18 @@ export default async function ForAmyPage({
               </p>
               <p className="mt-3">
                 <strong className="text-zinc-200">
-                  Your rate on this rail isn&rsquo;t set yet.
+                  Your rate is {pctLabel(DEFAULT_UPLINE_FEE_SHARE)} of the fee
                 </strong>{' '}
-                It&rsquo;s currently zero — on every code in the system, not just yours. For scale:
-                at half of my share you&rsquo;d earn {money(Math.floor(exQsCents / 2))} on that
-                merchant&rsquo;s month, and I&rsquo;d keep the other half to run the thing. I want
-                to pick that number with you rather than hand it down, and I want to pick it knowing
-                what it has to cover.
+                — {money(Math.floor(exFeeCents * DEFAULT_UPLINE_FEE_SHARE))} a month on the merchant
+                above, every month they keep selling. I picked a quarter of what&rsquo;s available
+                rather than the maximum for two reasons: it leaves room for someone to sit between
+                you and a sale without either of you being paid nothing, and it&rsquo;s the easy
+                direction to move — raising a rate is a pleasant conversation and cutting one
+                isn&rsquo;t.
+              </p>
+              <p className="mt-3 text-zinc-300">
+                If you think it should be higher, say so. I&rsquo;d rather argue about it now than
+                have you discover it six months in, which is the whole reason this page exists.
               </p>
             </Card>
 

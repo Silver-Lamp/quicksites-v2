@@ -32,6 +32,17 @@ export type RateInput = {
   aiOverview: boolean;
   verdict: SerpVerdict;
   /**
+   * ⚠️ THE AUTHORITATIVE FIELD. `true` = local competition sits above the organic results,
+   * `false` = it does not, `null`/undefined = we could not tell and the reading is dropped.
+   *
+   * It exists because `packSize` was never the question. A page with no `local_pack` item but an
+   * AI Overview citing Google Business Profiles is not open ground — it is the same competition
+   * rendered where our item taxonomy does not look. Measured on horse barns 2026-09-24: three of
+   * four queries had NO pack and local businesses in the overview, so a pack-only reading called
+   * them 75% open when the real answer is zero.
+   */
+  localAbove?: boolean | null;
+  /**
    * False when this reading cannot support a "nothing local above organic" claim — see
    * `lib/serp/aiOverview.ts`. Such a reading is dropped from the rate entirely.
    *
@@ -130,10 +141,16 @@ export function rateQuery(query: string, location: string, reads: readonly RateI
   // ⚠️ Drop the readings whose "no pack" we could not verify. Keeping them at face value is how a
   // niche reached 100% pack-free over 23 reads while every one of those reads carried an AI
   // Overview nobody had opened.
-  const blind = reads.filter((r) => r.packFreeVerifiable === false).length;
-  const usable = reads.filter((r) => r.packFreeVerifiable !== false);
+  // A reading is blind when we could not tell either way — explicitly flagged, or `localAbove` null.
+  const isBlind = (r: RateInput) => r.packFreeVerifiable === false || r.localAbove === null;
+  const blind = reads.filter(isBlind).length;
+  const usable = reads.filter((r) => !isBlind(r));
   const n = usable.length;
-  const packServed = usable.filter((r) => r.packSize >= FULL_PACK).length;
+  // ⚠️ Prefer `localAbove`; fall back to the pack only when it was not supplied. The fallback is
+  // the OLD, narrower question, and it is kept solely so historical readings still score.
+  const packServed = usable.filter((r) =>
+    typeof r.localAbove === 'boolean' ? r.localAbove : r.packSize >= FULL_PACK
+  ).length;
   const packFree = n - packServed;
   const { lo, hi } = wilson(packFree, n);
   const shapes = new Set(usable.map((r) => `${r.packSize}|${r.aiOverview}`));

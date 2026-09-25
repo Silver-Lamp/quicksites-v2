@@ -335,7 +335,70 @@ favourable verdict the tool can return.
 is not. The organic endpoint never returns the contents, so reading again returns the same
 placeholder forever. The remedy is to stop counting these as evidence, not to sample harder.
 
-**`lib/serp/aiOverview.ts` therefore DISCARDS such readings** rather than counting them as
+### ✅ Fixed 2026-09-24: `load_async_ai_overview: true`, and it is FREE
+
+One request flag makes DataForSEO fetch the overview's contents. On `horse barn builder austin` it
+returns an element titled **"Local Horse Barn Builders"** citing Google Business Profiles alongside
+the builders' own domains — the same block the hand check photographed.
+
+⚠️ **The cost estimate that nearly stopped this was wrong.** "Roughly doubles per-check cost" was a
+guess. Measured over three paired queries: **mean $0.0053 with the flag and $0.0053 without.** Cost
+varies with page size, not with the flag.
+
+⚠️ **And `PER_CALL_USD` was wrong too — 0.002, the floor mistaken for the average.** Six live calls
+returned $0.002–$0.008, mean $0.0053, so every cost estimate the sweep has ever printed understated
+spend by ~2.6×: the K=5 run it announced as "$0.92" actually cost about **$2.44**.
+
+`hasLocalCompetitionAbove()` now answers the question `packSize` was standing in for, returns
+**`null` — not false — when the overview was never fetched**, and **is what the rate scores on**.
+
+⚠️ **The flag is not the evidence — the missing CONTENTS are.** `asynchronous_ai_overview` stays
+`true` even when the contents were fetched: it records how Google loaded the overview, not whether
+we got it. The first version of the guard treated the flag alone as proof of blindness, and the
+first sweep run with the fetch enabled returned four populated elements **with the flag still true**
+— so every good reading from then on would have been silently discarded as unverifiable. Caught by
+checking the data after the change rather than trusting the change.
+
+### ⛔ The fetch works. Interpreting it does not — yet.
+
+Fetching removed the blind spot: **0 blind readings** in the first 159 of the re-sweep, against 59%
+before. That part is validated.
+
+**Deciding whether a fetched overview CONTAINS a local pack is not.** Four candidate rules, measured
+against the controls:
+
+| rule | overall | treehouses *(known WIN — want low)* | horse barns *(photographed local — want high)* |
+|---|---|---|---|
+| any `google.com` ref or "local" title | 86% | **100%** ✗ | 100% ✓ |
+| ≥2 `google.com` refs on one element | 29% | 31% | **22%** ✗ |
+| provider-ish title + a ref | 49% | **85%** ✗ | 33% ✗ |
+| both, strict | 20% | 23% | **11%** ✗ |
+
+The loose rule fires on everything; the tight ones fire **more** on treehouses than on horse barns,
+which is backwards. `google.com` appears in **72%** of overviews (Maps, support pages, anything),
+and the title regex matches headings like *"Local Context & Regulations"* — zoning rules, not
+businesses.
+
+⚠️ **So `hasLocalCompetitionAbove` answers from `packSize` alone, and says so.** Scoring on the
+detector would have traded a measurable optimism for an unmeasurable pessimism — and the first
+partial table built on it read treehouses at 15% and "lost", which is how it was caught. A stated
+blind spot beats a detector that fails its control.
+
+### Horse barns, measured four ways in one afternoon
+
+| what we were looking at | answer |
+|---|---|
+| `packSize` only, overview unfetched | **100% pack-free** over 23 reads — top of the table |
+| same, after discarding blind readings | **no evidence at all** (0 usable) |
+| `packSize` only, overview fetched | 75% pack-free over 4 reads |
+| **local competition incl. the overview** | **0% — all four queries** ⚠️ *by the unvalidated detector; see above* |
+
+Three of the four have **no `local_pack` item and an AI Overview citing Google Business Profiles**;
+the fourth has a real 3-pack. The niche this file recommended twice is not open ground, and each
+step toward the truth came from looking at something we had not looked at before — a screenshot, the
+raw payload, then the data produced by our own fix.
+
+**For readings taken before the flag, `lib/serp/aiOverview.ts` DISCARDS them** rather than counting them as
 pack-served — counting an unopened box as "a pack was there" would invent evidence in the opposite
 direction. Only the claim the missing data could falsify is poisoned: a reading that FOUND a pack is
 still trusted, because an unopened overview cannot un-see three map pins.

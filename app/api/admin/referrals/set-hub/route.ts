@@ -13,7 +13,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
-import { clampOverrideShare, QS_FEE_SHARE } from '@/lib/commerce/partner-terms';
+import { clampOverrideShare, DEFAULT_UPLINE_FEE_SHARE, QS_FEE_SHARE } from '@/lib/commerce/partner-terms';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -70,7 +70,15 @@ export async function POST(req: Request) {
     } else {
       const { data: hub } = await db.from('referral_codes').select('code').eq('code', parentCode).maybeSingle();
       if (!hub) return NextResponse.json({ error: `Hub code "${parentCode}" not found.` }, { status: 404 });
-      const overrideShare = clampOverrideShare(Number(body?.overrideShare));
+      // ⚠️ An omitted rate now means the DEFAULT, not zero. Before this, linking someone to a hub
+      // without naming a rate silently created a relationship that paid nothing — a downline whose
+      // upline earns 0 looks identical to a configured one until somebody checks the ledger.
+      const requested = body?.overrideShare;
+      const overrideShare = clampOverrideShare(
+        requested === undefined || requested === null || requested === ''
+          ? DEFAULT_UPLINE_FEE_SHARE
+          : Number(requested)
+      );
       const { error } = await db.from('referral_codes').update({ parent_code: parentCode, override_share: overrideShare }).eq('code', code);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       result.parentCode = parentCode;

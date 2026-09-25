@@ -157,6 +157,20 @@ export async function setLineItems(jobId: string, items: NewLineItem[]): Promise
   await setStatus(jobId, 'awaiting_approval');
 }
 
+/**
+ * Roll a job's line-item statuses up into the job status. Pure, so the rule can be argued with.
+ *
+ * ⚠️ A job with NO line items reads as `declined`, which is the honest reading of "nothing was
+ * approved" but is worth knowing: it means an empty job created by mistake presents to the shop as
+ * a customer refusal rather than as an empty job. Pinned by a test so a change here is deliberate.
+ */
+export function nextJobStatus(
+  lineItems: readonly { status: string }[],
+): 'awaiting_approval' | 'approved' | 'declined' {
+  if (lineItems.some((li) => li.status === 'proposed')) return 'awaiting_approval';
+  return lineItems.some((li) => li.status === 'approved') ? 'approved' : 'declined';
+}
+
 /** Customer decision on each line item → roll the decisions up into the job status. */
 export async function applyCustomerDecision(
   jobId: string,
@@ -171,9 +185,7 @@ export async function applyCustomerDecision(
   }
   const detail = await getJobDetail(jobId);
   if (!detail) return null;
-  const anyApproved = detail.line_items.some((li) => li.status === 'approved');
-  const anyPending = detail.line_items.some((li) => li.status === 'proposed');
-  const next = anyPending ? 'awaiting_approval' : anyApproved ? 'approved' : 'declined';
+  const next = nextJobStatus(detail.line_items);
   if (next !== detail.status) await setStatus(jobId, next);
   return getJobDetail(jobId);
 }

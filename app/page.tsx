@@ -7,9 +7,7 @@ import { Suspense } from 'react';
 import { organizationSchemaJson } from '@/lib/seo/organizationSchema';
 import HomeClient from '@/components/home/home-client';
 import SiteShowcase from '@/components/home/site-showcase';
-import ResellerDiagram from '@/components/home/reseller-diagram';
 import { getShowcaseData } from '@/lib/home/getShowcaseData';
-import { getResellers } from '@/lib/home/getResellers';
 import { marketingOg } from '@/lib/marketingOg';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +17,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = marketingOg({
   title: 'QuickSites — One-Click Local Websites',
   description:
-    'Launch a professional site for your local business in minutes — AI-assisted, with built-in commerce and a partner program.',
+    'Launch a professional site for your local business in minutes — AI-assisted, with built-in commerce.',
   path: '/',
   ogTitle: 'One-Click Local Websites',
   ogSubtitle:
@@ -42,13 +40,6 @@ async function ShowcaseSSR() {
   return <SiteShowcase initialData={initial} />;
 }
 
-// The reseller diagram is far below the fold — stream it too so getResellers never
-// blocks the shell.
-async function ResellersSSR() {
-  const resellers = await getResellers();
-  return <ResellerDiagram resellers={resellers} />;
-}
-
 export default function Page() {
   return (
     <>
@@ -68,11 +59,6 @@ export default function Page() {
       showcase={
         <Suspense fallback={<SiteShowcase initialData={undefined} />}>
           <ShowcaseSSR />
-        </Suspense>
-      }
-      resellerSlot={
-        <Suspense fallback={<ResellerDiagram resellers={[]} />}>
-          <ResellersSSR />
         </Suspense>
       }
     />

@@ -3,15 +3,18 @@
 > Written for the owner, Amy and Daryle, ahead of the call. Prompted by Daryle's feedback after
 > meeting a supplement-business prospect (2026-09-25).
 >
-> Status: **proposal, nothing built.** Three decisions at the bottom are the owner's.
+> Status: **steps 1–3 BUILT 2026-09-25.** Step 4 (founding partner terms) is still blocked on the
+> owner's numbers. See §7 for what shipped and the one correction the build made to this plan.
 
 ---
 
-## 1. What a prospect actually hits today (measured, not remembered)
+## 1. What a prospect hit BEFORE this change (measured, not remembered)
 
-Re-derive any of these: `grep -nE '<h2' components/home/home-client.tsx`, `ls app`.
+⚠️ This section is the **audit that motivated the work**, kept as written on 2026-09-25. Steps 1–3
+have since shipped, so these figures are history, not the current page — §7 says what it looks like
+now. Re-derive rather than trusting either: `grep -nE '<h2' components/home/home-client.tsx`.
 
-| | today |
+| | before |
 |---|---|
 | Header nav items | **13** — Features · Restaurants · Realtors · Auto Shops · Job Seekers · Lemonade Stands · Partners · Pricing · Compare · Book · Contact |
 | Homepage sections | **9** |
@@ -19,11 +22,11 @@ Re-derive any of these: `grep -nE '<h2' components/home/home-client.tsx`, `ls ap
 | `/pricing` | **924 lines** |
 | `/partners`, `/partners/resellers`, `/partners/calculator` | public, **no `noindex`** — indexable today |
 
-A small business owner scrolling quicksites.ai reaches, in this order: industries → builder →
+A small business owner scrolling quicksites.ai reached, in this order: industries → builder →
 commerce → CRM → **"White-label it. Resell it. Earn the slice."** → **"Grow the network. Earn on all
 of it."** → agency → "Build → Sell → Earn". The last thing they read is our channel comp plan.
 
-These exact words are on the public homepage right now:
+These exact words were on the public homepage:
 
 > "Send your **recruit link**. Anyone who signs up to resell through it becomes your **downline**."
 > "You keep a **lifetime cut** of their sales…" · "Overrides accrue to your **commission ledger**."
@@ -107,9 +110,10 @@ quicksites.ai/partners    → CHANNEL. Margin, white-label, bring your book of b
                             Public and indexed — this is lead-gen and should stay findable.
                             No override or downline language.
 
-quicksites.ai/partners/terms  (new)  → NETWORK. Override rates, tiers, payout mechanics.
-                            PIN-gated via lib/auth/pagePin.ts. Not indexed. Link given
-                            deliberately, by a person, to someone already in the conversation.
+quicksites.ai/partners/terms  → NETWORK. Override rates, tiers, payout mechanics.
+     ⚠️ NOT BUILT — and §7 explains why: there was no tier-C page to move, so this
+     would have been an empty gated page holding numbers nobody has settled. It is
+     step 4, and step 4 is the owner's.
 ```
 
 Nav drops from 13 to **5 for the default visitor**: Features · Pricing · Industries (dropdown for
@@ -157,7 +161,62 @@ restaurant menu prices already are. Worth knowing before the meeting rather than
 
 ---
 
-## 7. Decisions that are the owner's
+## 7. What shipped, and the correction the build made to this plan
+
+⚠️ **Step 3 was wrong about where tier C lived, and finding out made it smaller, not bigger.**
+
+The plan said to move the override mechanics off `/partners` and behind a PIN. Grepping for
+`downline|lifetime override|recruit link|become a hub` across every public surface returned:
+
+| surface | tier-C language | status |
+|---|---|---|
+| `components/home/home-client.tsx` | yes — three sections | **deleted** |
+| `app/partners/*` (landing, resellers, calculator) | **none** | already clean tier B |
+| `app/partners/dashboard` | yes | authenticated; correct place for it |
+| `app/for-amy` | yes | already PIN-gated |
+| `app/for-daryle` | yes | `noindex`, unlisted, linked from nowhere |
+
+**There was no tier-C page to gate. The homepage was the tier-C page.** So deleting those sections
+removed 100% of the public, indexed override exposure, and `/partners/terms` was not created —
+building an empty gated page to hold numbers nobody has settled would be worse than not having one.
+The gating decision in §8.1 is therefore **deferred into step 4**, where it belongs: it is a
+question about the founding-terms page, and that page does not exist yet.
+
+### Shipped
+
+- **`/supplements`** — the merchant vertical page, on the `/restaurants` · `/realtors` ·
+  `/secondset` pattern. ⚠️ Two product limits were read out of the source rather than assumed, and
+  the page states both: checkout is `mode: 'payment'` so **there are no subscriptions** (close to
+  table stakes in this category), and shipping is flat/per-item, not carrier-rated. It also carries
+  a deliberate commitment — **we do not write health claims** — which is the §6 flag turned into a
+  sentence a careful founder can hold us to.
+- **Homepage** — the three reseller sections deleted; the commerce card that told a business owner
+  *"you take a platform fee — your take-rate, set per merchant"* rewritten to the person actually
+  reading it; the hero's "Become a partner" CTA replaced; "Build → Sell → **Earn**" → "Get paid";
+  Partners and Contact added to the footer.
+- **Nav 11 → 5**, verticals grouped under an **Industries** dropdown (click, not hover: keyboard
+  reachable, closes on Escape / outside click / route change). The mobile sheet renders the group as
+  a labelled list rather than a second nested disclosure, and carries Contact + Partners at the
+  bottom — **the sheet replaces the nav, not the footer, so without that pair both would simply be
+  gone on a phone.**
+- **`/partners`** gains the reseller diagram, moved off the homepage with its data loader.
+- **`components/home/__tests__/merchantHomepage.test.ts`** pins all of it. ⚠️ It strips comments
+  before matching, because the deletion note left in the homepage names every forbidden word — the
+  failure this repo hit three times in one day. It also asserts the stripper still leaves a
+  substantial file, since a stripper that ate its input would make every other assertion pass.
+  ⚠️ And its first draft banned the string `subscribe-and-save`, which **failed on the sentence
+  saying we do not have it** — a token ban cannot tell a claim from its denial. It now forbids the
+  affirmative constructions and separately requires the denial.
+
+### Not done, deliberately
+
+- No `/partners/terms`. See the correction above.
+- No change to `/partners/resellers` or `/partners/calculator` — both were already tier B.
+- **No rate published anywhere new.** Step 4 is the owner's.
+
+---
+
+## 8. Decisions that are the owner's
 
 1. **Do the payout details come off the open web, or just off the homepage?** Gating stops them
    working as inbound recruitment. Recommendation: gate tier C, leave tier B public.

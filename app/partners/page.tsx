@@ -1,9 +1,12 @@
 // app/partners/page.tsx
 // Marketing landing for the white-label reseller program. Static, on-message,
 // no invented pricing — partner terms are a "talk to us" conversation.
+import { Suspense } from 'react';
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
 import PageBackdrop from '@/components/site/page-backdrop';
+import ResellerDiagram from '@/components/home/reseller-diagram';
+import { getResellers } from '@/lib/home/getResellers';
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE, QS_FEE_SHARE, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
 import { marketingOg } from '@/lib/marketingOg';
 
@@ -39,6 +42,13 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 const MAILTO = 'mailto:partners@quicksites.ai?subject=QuickSites%20reseller%20partnership';
+
+// Moved here from the homepage on 2026-09-25 (docs/AUDIENCE_SPLIT_PLAN.md). The 1→many fan-out is
+// a partner's question, not a business owner's. Streamed so `getResellers` never blocks the shell.
+async function ResellersSSR() {
+  const resellers = await getResellers();
+  return <ResellerDiagram resellers={resellers} />;
+}
 
 export default function PartnersPage() {
   return (
@@ -117,8 +127,43 @@ export default function PartnersPage() {
           </div>
         </section>
 
-        {/* What you get */}
+        {/* One platform → many brands (moved from the homepage) */}
         <section className="border-t border-zinc-800/70">
+          <div className="mx-auto max-w-6xl px-6 py-14">
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
+                One platform · many brands
+              </span>
+              <h2 className="mt-4 text-2xl md:text-3xl font-semibold">
+                We power the platform. You resell it as your own.
+              </h2>
+              <p className="mt-3 text-sm text-zinc-400">
+                QuickSites is the engine. Resellers put their own brand and domain on top and serve
+                their own merchants — one platform behind many businesses.{' '}
+                <span className="text-zinc-300">CedarSites</span> is a live example; your brand can
+                be the next.
+              </p>
+            </div>
+            <div className="mt-10">
+              <Suspense fallback={<ResellerDiagram resellers={[]} />}>
+                <ResellersSSR />
+              </Suspense>
+            </div>
+            <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2">
+              <Card title="Your brand, your domain">
+                White-label theming per reseller — logo, colors, and domain (e.g. cedarsites.com).
+                Your customers never see us.
+              </Card>
+              <Card title="Bring your existing sites">
+                Already run client sites? Migrate them onto the platform and manage them all in one
+                place.
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* What you get */}
+        <section className="border-t border-zinc-800/70 bg-zinc-950/60">
           <div className="mx-auto max-w-6xl px-6 py-14">
             <h2 className="text-2xl md:text-3xl font-semibold">What you get</h2>
             <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -132,7 +177,7 @@ export default function PartnersPage() {
         </section>
 
         {/* How it works */}
-        <section className="border-t border-zinc-800/70 bg-zinc-950/60">
+        <section className="border-t border-zinc-800/70">
           <div className="mx-auto max-w-6xl px-6 py-14 text-center">
             <h2 className="text-2xl md:text-3xl font-semibold">How it works</h2>
             <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">

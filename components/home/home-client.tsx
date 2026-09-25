@@ -64,10 +64,11 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 export default function HomeClient({
   showcase,
-  resellerSlot,
 }: {
   showcase?: React.ReactNode;
-  resellerSlot?: React.ReactNode;
+  /** ⚠️ `resellerSlot` was removed 2026-09-25 with the three partner sections. The reseller
+   *  diagram now renders on /partners, where the audience for it is. Re-adding a slot here means
+   *  re-adding the pitch — see docs/AUDIENCE_SPLIT_PLAN.md before you do. */
 }) {
   const { user, role, isLoggedIn } = useSafeAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -177,6 +178,10 @@ export default function HomeClient({
             <GuestStart />
           ) : (
             <>
+              {/* ⚠️ The second CTA here used to be "Become a partner" — a channel pitch in the
+                  first thing a business owner sees. See docs/AUDIENCE_SPLIT_PLAN.md: this page
+                  sells to a merchant and nothing else. Partners reach /partners from the footer,
+                  from search, or from a person. */}
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
                   href={primaryHref}
@@ -185,13 +190,13 @@ export default function HomeClient({
                   {primaryLabel}
                 </Link>
                 <Link
-                  href="/partners"
+                  href="/features"
                   className="inline-block rounded-lg border border-sky-500 px-6 py-3 text-base font-medium text-sky-300 transition hover:bg-sky-500/10 hover:text-sky-200"
                 >
-                  Become a partner
+                  See what you get
                 </Link>
               </div>
-              <p className="mt-3 text-xs text-zinc-500">No code. Your domain. Your storefront. Your margin.</p>
+              <p className="mt-3 text-xs text-zinc-500">No code. Your domain. Your storefront.</p>
             </>
           )}
         </main>
@@ -288,11 +293,18 @@ export default function HomeClient({
               <Card title="Catalog → cart → checkout">
                 A product catalog and storefront on every site, with cart and Stripe-powered checkout out of the box.
               </Card>
-              <Card title="You take a platform fee">
-                Collect a percentage of every order via Stripe Connect — your take-rate, set per merchant.
+              {/* ⚠️ This card used to read "You take a platform fee — your take-rate, set per
+                  merchant." That is written to a RESELLER, in the middle of a section a business
+                  owner is reading about their own store: they do not take the fee, they pay it.
+                  See docs/AUDIENCE_SPLIT_PLAN.md. */}
+              <Card title="You get paid directly">
+                Stripe pays into your own account on every order — we are never in the middle of your
+                money. A small per-order platform fee is the only thing we take; see{' '}
+                <Link href="/pricing" className="underline hover:text-zinc-300">pricing</Link>.
               </Card>
               <Card title="Refunds & revenue, tracked">
-                Refunds reverse the fee automatically; a revenue dashboard reconciles what you’ve earned.
+                Refund an order and the fee reverses automatically. A revenue dashboard reconciles what
+                you sold, what you kept, and what is still settling.
               </Card>
             </div>
           </div>
@@ -325,122 +337,28 @@ export default function HomeClient({
         {/* ───────── Showcase (real published sites) — SSR'd via server page ───────── */}
         {showcase}
 
-        {/* ───────── Earn (partners / resellers) ───────── */}
-        <section className="relative z-10 w-full border-t border-zinc-800/70 bg-gradient-to-b from-sky-950/30 to-transparent">
-          <div className="mx-auto max-w-6xl px-6 py-16">
-            <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
-              <div className="text-left">
-                <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
-                  For partners &amp; resellers
-                </span>
-                <h2 className="mt-4 text-3xl md:text-4xl font-bold">White-label it. Resell it. Earn the slice.</h2>
-                <p className="mt-4 text-zinc-400">
-                  Bring {productName} to your network under your own brand. Onboard merchants through your
-                  whitelisted payment processor, set your platform fee, and earn on every order they process —
-                  plus recurring on hosting. Free or near-free hosting brings them in; the take-rate is yours.
-                </p>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Link
-                    href="/partners"
-                    className="inline-block rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
-                  >
-                    Become a partner
-                  </Link>
-                  <a
-                    href="mailto:partners@quicksites.ai?subject=QuickSites%20reseller%20partnership"
-                    className="inline-block rounded-lg border border-zinc-700 px-6 py-3 text-base font-medium text-zinc-300 transition hover:bg-zinc-800"
-                  >
-                    Talk to us
-                  </a>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Card title="Your brand">White-label theming per partner — your logo, your domain, your customers.</Card>
-                <Card title="Whitelisted processors">Onboard merchants through approved payment processors via Stripe Connect.</Card>
-                <Card title="Your take-rate">Set the platform fee; collect on every order automatically.</Card>
-                <Card title="Residual commissions">Earn recurring on referred merchants — tracked in a commission ledger.</Card>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* ⚠️ THREE SECTIONS WERE DELETED HERE ON 2026-09-25, AND DELETED RATHER THAN HIDDEN.
+            "White-label it. Resell it. Earn the slice." · "Grow the network. Earn on all of it."
+            (recruit link / downline / lifetime override) · "We power the platform. You resell it
+            as your own."
 
-        {/* ───────── Hub referral (refer resellers → lifetime override) ───────── */}
-        <section className="relative z-10 w-full border-t border-zinc-800/70 bg-gradient-to-b from-amber-950/20 to-transparent">
-          <div className="mx-auto max-w-4xl px-6 py-16 text-center">
-            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
-              Refer resellers
-            </span>
-            <h2 className="mt-4 text-3xl md:text-4xl font-bold">Grow the network. Earn on all of it.</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-zinc-400">
-              Know people who&apos;d resell {productName}? Bring them on and earn a{' '}
-              <span className="font-semibold text-zinc-200">lifetime override</span> on every order their merchants
-              process — on top of your own residual. Their resellers, your income, ongoing.
-            </p>
-            <div className="mt-8 grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
-              <Card title="Share one link">Send your recruit link. Anyone who signs up to resell through it becomes your downline.</Card>
-              <Card title="Earn an override">You keep a lifetime cut of their sales — funded from the platform&apos;s share, so your resellers keep 100% of theirs.</Card>
-              <Card title="Paid automatically">Overrides accrue to your commission ledger and pay out with the rest — nothing to chase.</Card>
-            </div>
-            <div className="mt-8">
-              <Link
-                href="/partners/resellers"
-                className="inline-block rounded-lg bg-amber-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-amber-400"
-              >
-                Become a hub
-              </Link>
-            </div>
-          </div>
-        </section>
+            They were ~45% of this page's body, and they close it — so the last thing a business
+            owner read here was our channel compensation plan. A "for partners" toggle would have
+            been the same information in front of the same person plus a click; the point is that
+            the merchant homepage sells one thing. None of the content is lost: it lives at
+            /partners, and the reseller diagram moved there with it.
 
-        {/* ───────── Reseller model (1 platform → many resellers) ───────── */}
-        <section className="relative z-10 w-full border-t border-zinc-800/70">
-          <div className="mx-auto max-w-6xl px-6 py-16">
-            <div className="mx-auto max-w-2xl text-center">
-              <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
-                One platform · many brands
-              </span>
-              <h2 className="mt-4 text-2xl md:text-3xl font-semibold">
-                We power the platform. You resell it as your own.
-              </h2>
-              <p className="mt-3 text-sm text-zinc-400">
-                {productName} is the engine. Resellers put their own brand and domain on top and serve
-                their own merchants — one platform behind many businesses.{' '}
-                <span className="text-zinc-300">CedarSites</span> is a live example; your brand can be the next.
-              </p>
-            </div>
-
-            <div className="mt-10">
-              {resellerSlot}
-            </div>
-
-            <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
-              <Card title="Your brand, your domain">
-                White-label theming per reseller — logo, colors, and domain (e.g. cedarsites.com). Your customers never see us.
-              </Card>
-              <Card title="Bring your existing sites">
-                Already run client sites? Migrate them onto the platform and manage them all in one place.
-              </Card>
-              <Card title="Earn on every order">
-                Set your platform fee; collect on every sale your merchants process, with residual commissions tracked for you.
-              </Card>
-            </div>
-
-            <div className="mt-8 text-center">
-              <Link
-                href="/partners"
-                className="inline-block rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
-              >
-                Become a reseller
-              </Link>
-            </div>
-          </div>
-        </section>
+            See docs/AUDIENCE_SPLIT_PLAN.md. Do not re-add a partner pitch to this page. */}
 
         {/* ───────── How it works ───────── */}
         <section className="relative z-10 w-full border-t border-zinc-800/70 bg-zinc-950/60">
           <SectionBackdrop image="meadow" />
           <div className="mx-auto max-w-6xl px-6 py-14 text-center">
-            <h2 className="text-2xl md:text-3xl font-semibold">Build → Sell → Earn</h2>
+            {/* ⚠️ Was "Build → Sell → Earn", and step 2 read "merchants get paid, YOU take the
+                fee" — addressed to a reseller, on the merchant homepage, in the closing summary.
+                Step 3 was "Earn the margin: per-order take-rate + residual commissions". Rewritten
+                to the second person a business owner actually is. docs/AUDIENCE_SPLIT_PLAN.md */}
+            <h2 className="text-2xl md:text-3xl font-semibold">Build → Sell → Get paid</h2>
             <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
               <div>
                 <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-sky-500 font-bold text-zinc-950">1</div>
@@ -450,12 +368,12 @@ export default function HomeClient({
               <div>
                 <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-sky-500 font-bold text-zinc-950">2</div>
                 <h4 className="mt-3 font-semibold">Sell with checkout</h4>
-                <p className="mt-1 text-sm text-zinc-400">Customers buy via Stripe; merchants get paid, you take the fee.</p>
+                <p className="mt-1 text-sm text-zinc-400">Customers pay by card through Stripe, right on your site.</p>
               </div>
               <div>
                 <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-sky-500 font-bold text-zinc-950">3</div>
-                <h4 className="mt-3 font-semibold">Earn the margin</h4>
-                <p className="mt-1 text-sm text-zinc-400">Per-order take-rate + residual commissions, reconciled for you.</p>
+                <h4 className="mt-3 font-semibold">Get paid</h4>
+                <p className="mt-1 text-sm text-zinc-400">Stripe deposits into your account. Orders, refunds and revenue reconciled for you.</p>
               </div>
             </div>
             <div className="mt-10">
@@ -477,6 +395,12 @@ export default function HomeClient({
           <a href="/legal/privacy" className="underline hover:text-zinc-300">Privacy</a>
           <span className="mx-1">•</span>
           <a href="/legal/terms" className="underline hover:text-zinc-300">Terms</a>
+          <span className="mx-1">•</span>
+          <a href="/contact" className="underline hover:text-zinc-300">Contact</a>
+          <span className="mx-1">•</span>
+          {/* The channel pitch lives here now, not in the hero and not in three sections above.
+              Someone looking for it finds it; a business owner is not sold it. */}
+          <a href="/partners" className="underline hover:text-zinc-300">Partners</a>
           <span className="mx-1">•</span>
           made by{' '}
           <a href="https://www.hivejournal.com/point-seven-studio" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-300">Point Seven Studio</a>

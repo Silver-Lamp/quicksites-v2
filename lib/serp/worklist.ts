@@ -71,6 +71,26 @@ export const CITY_COORDS: Record<string, string> = Object.fromEntries(
   Object.entries(CITY_LOCALES).map(([k, v]) => [k, v.coords]),
 );
 
+/**
+ * ⚠️ THE LOCATION IS NOT IN THIS URL, AND TWO ATTEMPTS TO PUT IT THERE FAILED. Do not try a third
+ * without reading this.
+ *
+ * 1. **DevTools → Sensors** failed silently twice in two days on the same niche: one run stamped
+ *    `28801, Asheville, NC`, the next `East Renton Highlands, Washington`, both while checking
+ *    queries meant to be Austin's.
+ * 2. **The `uule` parameter** — the standard trick for pinning a canonical location — was built,
+ *    tested and pasted by hand on 2026-09-25. Google IGNORED it (the footer still read the IP city)
+ *    and served a CAPTCHA. ⚠️ That second part is why it was removed rather than left as an option:
+ *    a link that makes a person's ordinary browsing look automated costs them something real, and
+ *    this repo does not query Google programmatically.
+ *
+ * ⚠️ THE REFRAME THAT ACTUALLY RESOLVED THIS: every finding a hand check has produced was
+ * LOCATION-INDEPENDENT — the business cards inside the AI Overview, the six ads, the pack review
+ * counts were all visible from the wrong city, because they are keyed to the query. The API already
+ * measures from the right location. So the browser answers "what is on this page that the API
+ * cannot see", the API answers "what is served in that city", and neither needs to do the other's
+ * job. Chasing the browser's location was solving a problem the split does not have.
+ */
 const googleUrl = (query: string) =>
   `https://www.google.com/search?q=${encodeURIComponent(query)}&pws=0`;
 

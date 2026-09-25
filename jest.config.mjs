@@ -26,6 +26,13 @@ export default {
     // cheerio 1.x resolves to its ESM/browser build under the jsdom env, which Jest
     // won't transform (node_modules is ignored). Pin its CommonJS entry for tests.
     '^cheerio$': '<rootDir>/node_modules/cheerio/dist/commonjs/index.js',
+    // ⚠️ `server-only` is a guard package that exists to BREAK a client bundle importing a server
+    // module. Under Jest it simply fails to resolve, which silently made every module carrying it
+    // untestable — including lib/serviceJobs, which shipped with zero tests on a surface that
+    // records people in their own driveway. Mapping it to a no-op restores the ability to unit test
+    // server logic and does not weaken the guard, because the guard only ever fires in a real
+    // client build.
+    '^server-only$': '<rootDir>/test/stubs/server-only.js',
     '^@/(.*)$': '<rootDir>/$1',
   },
 };

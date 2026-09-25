@@ -28,11 +28,19 @@ type RailCapture = {
   status?: string;
 };
 
-export type SyncResult = { skipped?: string; pulled: number; stored: number; acked: number; techs: number };
+export type SyncResult = {
+  skipped?: string;
+  pulled: number;
+  stored: number;
+  acked: number;
+  techs: number;
+  /** Captures held back because the customer has not consented to on-site capture yet. */
+  refusedNoConsent: number;
+};
 
 /** Pull + store + ack a shop owner's secondset_field captures. Idempotent. */
 export async function syncOwnerCaptures(ownerId: string): Promise<SyncResult> {
-  const zero = { pulled: 0, stored: 0, acked: 0, techs: 0 };
+  const zero = { pulled: 0, stored: 0, acked: 0, techs: 0, refusedNoConsent: 0 };
   if (!SECONDSET_ENABLED) return { skipped: 'not_enabled', ...zero };
 
   const grant = await getCaptureGrant(ownerId);
@@ -54,6 +62,7 @@ export async function syncOwnerCaptures(ownerId: string): Promise<SyncResult> {
   const existing = await existingRailCaptureIds(captures.map((c) => c.id).filter(Boolean));
   let stored = 0;
   let acked = 0;
+  let refusedNoConsent = 0;
   const jobIdsSeen = new Set<string>(); // for passive tech-roster discovery after the loop
 
   for (const c of captures) {
@@ -65,6 +74,26 @@ export async function syncOwnerCaptures(ownerId: string): Promise<SyncResult> {
       // Verify the job belongs to this owner (grant scopes the owner, but double-check).
       const job = await getJobDetail(jobId);
       if (!job || job.owner_id !== ownerId) continue;
+
+      // ⚠️ THE CUSTOMER'S CONSENT GATE, AND IT WAS MISSING ENTIRELY UNTIL 2026-09-24.
+      //
+      // Nothing on the ingest path read `consent_captured_at`: a photo of someone's driveway and a
+      // recording of their voice would be stored because a TECH had a valid grant. Those are two
+      // different consents — HJ's rail enforces that the wearer is bound, which is the tech
+      // agreeing to be recorded, not the customer agreeing to be.
+      //
+      // ⚠️ Checked HERE rather than inside `addCapture`, and the reason is the catch below: it
+      // swallows every error as "unique conflict" and then ACKS, so a throw would drop the capture
+      // off the rail permanently while reporting success. That is the bare-catch failure CLAUDE.md
+      // records from the rank sync, and adding a privacy gate through it would have been silent.
+      //
+      // ⚠️ DELIBERATELY NOT ACKED. Leaving it pending means the capture is still there when consent
+      // arrives, so a customer who consents late loses nothing. Acking would destroy evidence the
+      // shop may legitimately need, to enforce a rule that has not been broken yet.
+      if (!job.consent_captured_at) {
+        refusedNoConsent++;
+        continue;
+      }
       const hasImage = !!c.media?.image_url;
       try {
         await addCapture(jobId, {
@@ -75,8 +104,13 @@ export async function syncOwnerCaptures(ownerId: string): Promise<SyncResult> {
           railCaptureId: c.id,
         });
         stored++;
-      } catch {
-        // unique conflict (concurrent pull) → already stored; fall through to ack
+      } catch (e) {
+        // ⚠️ Only a UNIQUE conflict means "already stored, safe to ack". The previous bare catch
+        // treated every failure that way — a write that failed for any other reason was acked off
+        // the rail and lost. Anything else re-raises to the caller rather than being acked away.
+        const msg = String((e as any)?.message ?? e);
+        const isDuplicate = /duplicate key|unique constraint|23505/i.test(msg);
+        if (!isDuplicate) throw e;
       }
     }
     // Ack so the rail marks it delivered and it drops out of future pulls.
@@ -95,5 +129,5 @@ export async function syncOwnerCaptures(ownerId: string): Promise<SyncResult> {
     if (await resolveTechRef(ownerId, jobId)) techs++;
   }
 
-  return { pulled: captures.length, stored, acked, techs };
+  return { pulled: captures.length, stored, acked, techs, refusedNoConsent };
 }

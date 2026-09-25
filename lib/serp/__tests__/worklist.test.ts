@@ -165,35 +165,3 @@ describe('rows are grouped by city', () => {
     expect(CITY_LOCALES.portland.timezoneId).toBe('America/New_York');
   });
 });
-
-// ⚠️ Every row's link must carry its own location, because the DevTools step it replaces failed
-// silently twice in two days — once as Asheville, once as East Renton Highlands, both while
-// measuring Austin queries.
-describe('every search link is pinned to that row\'s city', () => {
-  it('carries a uule matching the row location, on every row', () => {
-    const { uuleFor } = require('@/lib/serp/uule');
-    const steps = worksheetWorklist();
-    expect(steps.length).toBeGreaterThan(0);
-    for (const s of steps) {
-      expect(s.searchUrl).toContain(encodeURIComponent(uuleFor(s.location)));
-      expect(s.searchUrl).toContain('pws=0');
-    }
-  });
-
-  it('never gives two different rows the same link', () => {
-    // The real invariant: one row, one URL. Two cities searching the same words must not share a
-    // link, or a checker measures one market twice and records it as two.
-    const { nicheWorklist } = require('@/lib/serp/worklist');
-    const w = nicheWorklist('treehouse', ['treehouse builder'], ['Austin', 'Denver']);
-    expect(new Set(w.map((s: any) => s.searchUrl)).size).toBe(w.length);
-  });
-
-  it('distinguishes the same query text across cities', () => {
-    const { nicheWorklist } = require('@/lib/serp/worklist');
-    const w = nicheWorklist('treehouse', ['treehouse builder'], ['Austin', 'Denver']);
-    const byCity = new Map<string, string>();
-    for (const s of w) if (!s.isControl) byCity.set(s.location, s.searchUrl);
-    expect(byCity.size).toBeGreaterThanOrEqual(2);
-    expect(new Set(byCity.values()).size).toBe(byCity.size);
-  });
-});

@@ -11,7 +11,6 @@
 // it is the one row whose job is to catch a broken reading — including a broken human reading. A
 // run whose control disagrees is a run nobody should act on, and we want to know that at row one.
 
-import { googleSearchUrl } from './uule';
 import { WORKSHEET_CHECKS, checksFor, locationFor, type SerpCheck } from '@/lib/serp/checkSets';
 import { isControlReading, type SerpReading, type SerpVerdict } from '@/lib/serp/classify';
 
@@ -73,19 +72,27 @@ export const CITY_COORDS: Record<string, string> = Object.fromEntries(
 );
 
 /**
- * ⚠️ THE LOCATION NOW TRAVELS IN THE URL, replacing the DevTools → Sensors step.
+ * ⚠️ THE LOCATION IS NOT IN THIS URL, AND TWO ATTEMPTS TO PUT IT THERE FAILED. Do not try a third
+ * without reading this.
  *
- * Sensors failed silently TWICE in two days on the same niche: one run stamped `28801, Asheville,
- * NC` and the next `East Renton Highlands, Washington`, both while checking queries meant to be
- * Austin's. The searches ran, the results looked plausible, and only the footer at the very bottom
- * of the page disagreed. A setup step that fails invisibly and is verified LAST is the wrong shape.
+ * 1. **DevTools → Sensors** failed silently twice in two days on the same niche: one run stamped
+ *    `28801, Asheville, NC`, the next `East Renton Highlands, Washington`, both while checking
+ *    queries meant to be Austin's.
+ * 2. **The `uule` parameter** — the standard trick for pinning a canonical location — was built,
+ *    tested and pasted by hand on 2026-09-25. Google IGNORED it (the footer still read the IP city)
+ *    and served a CAPTCHA. ⚠️ That second part is why it was removed rather than left as an option:
+ *    a link that makes a person's ordinary browsing look automated costs them something real, and
+ *    this repo does not query Google programmatically.
  *
- * `uule` cannot fail quietly in the same way — a malformed one is ignored and the footer then shows
- * the IP city, which is the same visible receipt. And because it is built from the SAME canonical
- * name the API check uses, the hand check and the machine check point at one place by construction
- * rather than by someone retyping a city into a panel.
+ * ⚠️ THE REFRAME THAT ACTUALLY RESOLVED THIS: every finding a hand check has produced was
+ * LOCATION-INDEPENDENT — the business cards inside the AI Overview, the six ads, the pack review
+ * counts were all visible from the wrong city, because they are keyed to the query. The API already
+ * measures from the right location. So the browser answers "what is on this page that the API
+ * cannot see", the API answers "what is served in that city", and neither needs to do the other's
+ * job. Chasing the browser's location was solving a problem the split does not have.
  */
-const googleUrl = (query: string, location: string) => googleSearchUrl(query, location);
+const googleUrl = (query: string) =>
+  `https://www.google.com/search?q=${encodeURIComponent(query)}&pws=0`;
 
 /**
  * Control first, then the rest GROUPED BY CITY.
@@ -114,7 +121,7 @@ export function buildWorklist(checks: readonly SerpCheck[]): WorklistStep[] {
       ...c,
       index: i + 1,
       isControl: c.nicheKey === 'towing',
-      searchUrl: googleUrl(c.query, c.location),
+      searchUrl: googleUrl(c.query),
       needsLocationOverride,
       ...(needsLocationOverride && CITY_LOCALES[city]
         ? { coords: CITY_LOCALES[city].coords, timezoneId: CITY_LOCALES[city].timezoneId }

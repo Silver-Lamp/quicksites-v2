@@ -53,20 +53,29 @@ Regionally dense, nationally sparse. The supply probe could not see that; this c
 
 1. **Open an incognito/private window.** Your logged-in results are personalised by your own
    search history.
-2. ✅ **Location is now in the link — do not use DevTools → Sensors.**
-   The console's "Search Google" button carries a `uule` for that row's city, built from the same
-   canonical name the API check uses, so the hand check and the machine check point at one place by
-   construction rather than by someone retyping a city into a panel.
+2. ⚠️ **DO NOT TRY TO PIN THE BROWSER'S LOCATION. Two approaches failed; the second did harm.**
 
-   ⚠️ **Sensors is removed because it failed silently twice in two days, on the same niche.** One
-   run came back stamped `28801, Asheville, NC` and the next `East Renton Highlands, Washington`,
-   both while checking queries meant to be Austin's. The searches ran, the results looked entirely
-   plausible, and the only contradiction was one line at the very bottom of the page. **A setup step
-   that fails invisibly and is verified last is the wrong shape.**
+   - **DevTools → Sensors** failed silently twice in two days on the same niche — one run stamped
+     `28801, Asheville, NC`, the next `East Renton Highlands, Washington`, both while checking
+     queries meant to be Austin's. The searches ran and the results looked entirely plausible.
+   - **The `uule` parameter** was built, tested and pasted by hand on 2026-09-25. **Google ignored
+     it** — the footer still showed the IP city — **and served a CAPTCHA.** A link that makes a
+     person's ordinary browsing look automated costs them something real, so it was removed rather
+     than left as an option.
 
-   ⚠️ **Still check the footer.** A `uule` cannot fail the way Sensors did — a malformed one is
-   ignored and the footer then shows your IP city — but "cannot fail silently" is not "cannot
-   fail". The footer is the receipt and it takes two seconds.
+   ✅ **The reframe that resolved it: you do not need the browser to be in the target city.**
+   Every finding a hand check has produced was LOCATION-INDEPENDENT, because it is keyed to the
+   query rather than the searcher — the business cards inside the AI Overview, the six ads above
+   the fold, the pack review counts were all visible from the wrong state. The API already measures
+   from the right location.
+
+   **So the split is:** the browser answers *"what is on this page that the API cannot see"* — the
+   AI Overview's contents, the real ad load, review counts. The API answers *"what is served in
+   that city"*. Neither needs to do the other's job, and chasing the browser's location was solving
+   a problem this split does not have.
+
+   ⚠️ **Still read the footer** — not to pass a check, but to know which city you are describing
+   when you write the result down.
 
 3. **Laptop, not phone.** Phone SERPs show even less organic, which biases the answer pessimistic.
 

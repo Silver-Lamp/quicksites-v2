@@ -87,9 +87,42 @@ homepage says "downline" has been given a reason to hesitate that our product do
 The recommendation is therefore **keep the structure, change the words.** "Downline" → "the partners
 you bring on". "Recruit link" → "your partner link". "Earn the slice" → say the number.
 
-On **"founding families"**: same issue, and it is the name itself. Suggest "founding partner terms"
-or "charter partner terms" — it says early-and-favourable without the kinship framing. Amy's call;
-flagging the reason, not vetoing the word.
+### ⛔ "Founding families" is out on the QuickSites side — owner, 2026-09-25
+
+Decided, and **HiveJournal/Cornerstone keeps it.** The owner's reasoning, which is the rule worth
+keeping rather than just the verdict:
+
+> **QS is business.**
+
+That is the whole test. The word is right wherever the audience actually *is* families, and wrong
+wherever it is a metaphor for a commercial relationship. Cornerstone is families; a QuickSites
+reseller is a company. **Do not "harmonise" these later** — the fact that one mesh product uses a
+warm word is not a reason for the others to. Shared vocabulary across the mesh is usually good and
+here it is not, which is the kind of exception a future session will want to "tidy up".
+
+It also collides, concretely. "Founding families" is HiveJournal's Cornerstone iPad pilot —
+`lib/mesh/hjFoundingFamilies.ts`, contract `crosstalk/contracts/founding-families-counts.md`, and a
+panel rendering on **our** `/admin/ops` headed *"Cornerstone founding families (HiveJournal)"*. They
+are actual families, applying to an actual pilot.
+
+Two costs, then, not one:
+
+1. **A collision in one operator's dashboard.** The same person would see "founding families"
+   meaning real families on HJ and a reseller commission tier on QS, on the same screen.
+2. **The word changes register when it moves.** On HJ it is a description. On QS it would be a
+   metaphor for people who recruit people — which is exactly the register that makes a two-tier
+   override read as something it is not.
+
+**Recommended replacement, and it is two names rather than one, because they are two things:**
+
+- **The page: "Partner terms"** (`/partners/terms`). A page named after a cohort dates the moment
+  the cohort closes, and this page outlives it.
+- **The offer: a "charter rate."** Says early-and-favourable, carries no kinship, and survives being
+  read aloud by someone who has heard a comp plan before.
+
+Nothing is built on either name yet, so this stays cheap to change — but pick before the first one
+is written down in front of a partner, because a rate is easy to revise and a name people have
+started using is not.
 
 ---
 
@@ -218,9 +251,16 @@ question about the founding-terms page, and that page does not exist yet.
 
 ## 8. Decisions that are the owner's
 
-1. **Do the payout details come off the open web, or just off the homepage?** Gating stops them
-   working as inbound recruitment. Recommendation: gate tier C, leave tier B public.
-2. **"Founding families", or a name without the kinship framing?**
-3. **What the founding terms actually promise.** Nothing has ever paid from this ledger — every
+1. ⏸️ **Do the payout details come off the open web, or just off the homepage?** Deferred into step
+   4 by §7 — there is no tier-C page yet, so there is nothing to gate. Recommendation when there is:
+   gate tier C, leave tier B public.
+2. ✅ **RESOLVED 2026-09-25 — "founding families" is out on the QuickSites side.** Owner's call. It
+   is HiveJournal's program name for real families in the Cornerstone pilot, and it already renders
+   on our own `/admin/ops`; see §3 for the collision and the two recommended names ("Partner terms"
+   for the page, "charter rate" for the offer). **Still open: which replacement.**
+3. ⏳ **What the terms actually promise.** Nothing has ever paid from this ledger — every
    `override_share` in production is 0 — so this is still the cheap moment to set it. Publishing a
    rate externally is a money decision and a commitment; it is surfaced here rather than assumed.
+   ⚠️ Note the asymmetry with the naming decision above: **a rate is easy to revise and a name
+   people have started saying is not.** The name is the one to settle first, even though the rate
+   feels like the bigger question.

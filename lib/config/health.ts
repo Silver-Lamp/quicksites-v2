@@ -82,6 +82,37 @@ export const CONFIG_GATES: ConfigGate[] = [
       'Set PAGE_PIN_AMY to the six digits she was given.',
   },
   {
+    // ⚠️ ADDED 2026-09-25 AFTER FINDING POSTHOG HAS NEVER BEEN SET IN PRODUCTION. `vercel env ls
+    // production` returns zero PostHog entries, and `captureServer` returns early when the key is
+    // absent — so all 33 server-side capture calls across 24 files have been writing to nothing for
+    // the entire life of the feature. That includes the whole Model A money funnel (signup →
+    // builder_activated → … → platform_fee_collected, docs/MODEL_A_PLAN.md), the commission events,
+    // the CRM events, TRADE_CARD_LINK_VISITED and GUEST_SIGNUP_CONFIRMED.
+    //
+    // ⚠️ The code is correct and the tests pass — `captureServer` no-ops *by design* so callers need
+    // no guards. That graceful degradation is exactly what hid it: an analytics layer that is absent
+    // and an analytics layer where nothing happened look identical from the inside. This is the same
+    // shape as the guest funnel's dead writer, one level up.
+    //
+    // No `enabledBy`: analytics is not a feature you switch on per-deploy, it is either configured
+    // or the numbers do not exist. `degradeOnly` because the product genuinely works without it —
+    // you simply cannot see anything, which is how it survived this long.
+    //
+    // ⚠️ POSTHOG_HOST is deliberately NOT required: it has a code default, and listing it would make
+    // a correctly-configured deploy report incomplete (see the warning on `requires`).
+    key: 'posthog',
+    label: 'PostHog (server-side product + money funnel analytics)',
+    requiresAnyOf: [['POSTHOG_KEY', 'NEXT_PUBLIC_POSTHOG_KEY']],
+    requires: [],
+    degradeOnly: true,
+    breaks:
+      'Every server-side analytics event silently vanishes — captureServer() returns early with no ' +
+      'key, so nothing throws and nothing is logged. The Model A money funnel (signup → order_paid → ' +
+      'platform_fee_collected), partner commission events, CRM events, postcard scans and ' +
+      'guest_signup_confirmed all record nothing. You will not notice: the dashboards are simply ' +
+      'empty, which is indistinguishable from "no activity yet". Set POSTHOG_KEY.',
+  },
+  {
     key: 'supabase',
     label: 'Supabase (database + auth)',
     requires: ['NEXT_PUBLIC_SUPABASE_URL'],

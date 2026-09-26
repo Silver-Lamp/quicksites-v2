@@ -6,6 +6,7 @@
 // only for a valid token that binds this id AND a still-claimable draft.
 import Link from 'next/link';
 import { verifySiteClaimToken } from '@/lib/auth/siteClaimToken';
+import { recordClaimStep } from '@/lib/analytics/claimFunnel';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { CLAIM_VERIFICATION_ENABLED } from '@/lib/flags/claimVerification';
 import ClaimSiteHero from '@/components/sites/claim-site-hero';
@@ -56,6 +57,17 @@ export default async function ClaimSitePage({
   const claimHref = CLAIM_VERIFICATION_ENABLED
     ? `/claim-site/${params.id}/verify?token=${encodeURIComponent(token)}`
     : `/api/claim-draft/${params.id}?token=${encodeURIComponent(token)}`;
+
+  // ⚠️ Recorded BEFORE the early return, and the dead end is recorded as loudly as the success.
+  // Four strangers have reached this page from a postcard and none claimed; until now the page
+  // itself said nothing, so "they saw the offer and declined" and "our own link refused them" were
+  // the same silence. `bad_token` means OUR LINK failed someone who tried — a very different
+  // problem from a draft that is genuinely gone. Never awaited into the render path's critical
+  // work; a failed write must not cost somebody their site.
+  void recordClaimStep(claimable ? 'claim_page_viewed' : 'claim_page_dead_end', {
+    templateId: params.id,
+    reason: claimable ? null : !tokenOk ? 'bad_token' : 'not_claimable',
+  });
 
   if (!claimable) {
     return (

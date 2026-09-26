@@ -8,6 +8,7 @@ import { signInHref } from '@/lib/auth/authLinks';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySiteClaimToken, SITE_CLAIM_COOKIE, SITE_CLAIM_TTL_MS } from '@/lib/auth/siteClaimToken';
+import { recordClaimStep } from '@/lib/analytics/claimFunnel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,8 +18,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const token = url.searchParams.get('token') || '';
   const payload = verifySiteClaimToken(token);
   if (!payload || payload.templateId !== params.id) {
+    // ⚠️ Someone PRESSED THE BUTTON and our own token refused them. Recorded separately from a
+    // page that never loaded, because this is the failure we would most want to know about and the
+    // one that leaves no other trace — they bounce to ?invalid=1 and give up.
+    void recordClaimStep('claim_page_dead_end', { templateId: params.id, reason: 'bad_token' });
     return NextResponse.redirect(new URL(`/claim-site/${params.id}?invalid=1`, url.origin));
   }
+
+  // They committed. Everything after this is the sign-up wall — the step that has converted nobody
+  // in any funnel this product has. The gap between claim_started and claim_completed is the number
+  // that decides whether claiming should require an account at all.
+  void recordClaimStep('claim_started', { templateId: params.id });
 
   const store = await cookies();
   store.set({

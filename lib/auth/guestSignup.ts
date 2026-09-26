@@ -52,3 +52,57 @@ export function requestGuestSignup(reason?: string): void {
     /* SSR / no window */
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// "We've sent the confirmation" — shared, because THREE surfaces ask for the sign-up.
+//
+// ⚠️ After submitting, a guest saw the green "Check <email> to confirm" message AND, at the same
+// time, "Sign up to publish your site" in the banner beside it and "Sign up to publish" in the
+// toolbar below. Three surfaces, one of them announcing success while the other two asked again —
+// which reads as "that didn't work, try again" at the exact moment we need them to go and check
+// their inbox.
+//
+// The form's own `status === 'sent'` is local to one copy of the form. The banner and the toolbar
+// are separate components, so the fact has to travel.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Dispatched (window) once the confirmation email is on its way. */
+export const GUEST_SIGNUP_SENT_EVENT = 'qs:guest:signup-sent';
+
+/**
+ * ⚠️ sessionStorage, not state: the confirmation lives in another tab (their inbox), and people
+ * reload. A reload that brings "Sign up to publish" back would undo the whole point. It is
+ * SESSION-scoped rather than local because the pending state ends when they confirm, and a stale
+ * "check your email" a week later would be worse than the prompt.
+ */
+const SENT_KEY = 'qs:guest:signup-sent';
+
+export function markGuestSignupSent(): void {
+  try {
+    window.sessionStorage.setItem(SENT_KEY, '1');
+  } catch {
+    /* private window / blocked storage — the event below still covers this tab */
+  }
+  try {
+    window.dispatchEvent(new CustomEvent(GUEST_SIGNUP_SENT_EVENT));
+  } catch {
+    /* SSR */
+  }
+}
+
+export function guestSignupSent(): boolean {
+  try {
+    return window.sessionStorage.getItem(SENT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Clear it once they are a real account — otherwise the notice outlives its truth. */
+export function clearGuestSignupSent(): void {
+  try {
+    window.sessionStorage.removeItem(SENT_KEY);
+  } catch {
+    /* no-op */
+  }
+}

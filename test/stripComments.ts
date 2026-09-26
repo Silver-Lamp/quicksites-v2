@@ -28,6 +28,16 @@
  * a lexer — a comment marker inside a string literal is stripped too. That direction is safe for a
  * forbidden-token check (it can only remove text, never invent a match), but do not reuse this to
  * transform source that will be executed.
+ *
+ * ⚠️ IT CAN CHANGE CODE STRUCTURE, NOT ONLY REMOVE PROSE. The JSX rule matches `{ … }` around a
+ * comment and removes THE BRACES TOO — correct for `{/* a jsx comment *\/}`, destructive for any
+ * block whose only content is a comment:
+ *
+ *     try { … } catch { /* best-effort *\/ }   →   try { … } catch
+ *
+ * So a test asserting something about the SHAPE of such a block (that a catch exists, that it does
+ * not call X) must read the RAW file; only token-presence checks should use the stripped copy.
+ * Cost one debugging round on `useGuestSignupSent`, where every catch body is a lone comment.
  */
 export function stripComments(src: string): string {
   return src

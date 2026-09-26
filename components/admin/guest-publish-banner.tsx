@@ -7,6 +7,7 @@ import Typewriter from '@/components/ui/typewriter';
 import { GuestSignupForm } from '@/components/admin/guest-signup-box';
 import { requestGuestSignup } from '@/lib/auth/guestSignup';
 import { trackGuestFunnel } from '@/lib/analytics/guestFunnel';
+import { useGuestSignupSent } from '@/hooks/useGuestSignupSent';
 
 const GUEST_LINE = 'You’re building as a guest. Sign up to publish your site — your work is saved.';
 
@@ -35,6 +36,10 @@ export default function GuestPublishBanner() {
   const [copied, setCopied] = useState(false);
   // The guide "types" the intro once, then it settles into the interactive version.
   const [typed, setTyped] = useState(false);
+  // ⚠️ Once the confirmation is on its way, this banner must stop asking. It sat beside the green
+  // "Check <email> to confirm" saying "Sign up to publish your site", so the page contradicted
+  // itself at the one moment it needed to be believed.
+  const signupSent = useGuestSignupSent();
 
   useEffect(() => {
     setPreviewUrl(buildPreviewUrl());
@@ -62,23 +67,29 @@ export default function GuestPublishBanner() {
         <div className="flex items-center gap-2.5">
           <CharacterAvatar size={30} />
           {typed ? (
-            <span className="text-sky-100">
-              You’re building as a guest.{' '}
-              <button
-                type="button"
-                onClick={() => requestGuestSignup('banner')}
-                className="font-medium text-sky-300 underline-offset-2 transition hover:text-sky-200 hover:underline"
-              >
-                Sign up to publish your site
-              </button>{' '}
-              — your work is saved.
-            </span>
+            signupSent ? (
+              <span className="text-sky-100">
+                Almost there — confirm the email we just sent and Publish is ready. Your work is saved.
+              </span>
+            ) : (
+              <span className="text-sky-100">
+                You’re building as a guest.{' '}
+                <button
+                  type="button"
+                  onClick={() => requestGuestSignup('banner')}
+                  className="font-medium text-sky-300 underline-offset-2 transition hover:text-sky-200 hover:underline"
+                >
+                  Sign up to publish your site
+                </button>{' '}
+                — your work is saved.
+              </span>
+            )
           ) : (
             <Typewriter text={GUEST_LINE} className="text-sky-100" onDone={() => setTyped(true)} />
           )}
         </div>
 
-        {!open ? (
+        {signupSent ? null : !open ? (
           <div className="flex shrink-0 items-center gap-2">
             {previewUrl && (
               <>

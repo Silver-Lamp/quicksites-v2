@@ -67,7 +67,10 @@ describe('the client: one event, one box, at the moment of intent', () => {
   });
   it('the always-visible toolbar has the BUTTON for a guest, and its toast says why', () => {
     const bar = readFileSync('components/admin/templates/template-action-toolbar/TemplateActionToolbar.tsx', 'utf8');
-    expect(bar).toMatch(/\{isGuest && \([\s\S]{0,400}requestGuestSignup\('toolbar'\)[\s\S]{0,400}Sign up to publish/);
+    // ⚠️ `!guestSignupSent` joined this condition on 2026-09-26; the button hides once the
+    // confirmation is on its way. Matches the guard loosely rather than pinning the exact
+    // expression — the proximity mistake this file already made once.
+    expect(bar).toMatch(/isGuest &&[\s\S]{0,60}\([\s\S]{0,400}requestGuestSignup\('toolbar'\)[\s\S]{0,400}Sign up to publish/);
     expect(bar).toMatch(/toast\.error\(\(e as any\)\?\.message \|\| 'Failed to publish'\)/);
   });
   it('the guest shell mounts the modal, and the banner shares the same form', () => {
@@ -119,10 +122,60 @@ describe('the bottom tray is simpler for a guest', () => {
   });
 
   it('keeps the guest sign-up button — the one control that matters', () => {
-    expect(src).toMatch(/isGuest && \([\s\S]{0,400}Sign up to publish/);
+    expect(src).toMatch(/isGuest &&[\s\S]{0,60}\([\s\S]{0,400}Sign up to publish/);
   });
 
   it('does not let the save reassurance wrap', () => {
     expect(src).toMatch(/whitespace-nowrap">Saved · yours when you sign up/);
+  });
+});
+
+// ⚠️ Three surfaces ask a guest to sign up: the banner text, the banner's blue CTA, and the
+// toolbar button. After submitting, the green "Check <email> to confirm" appeared while the other
+// two still said "Sign up to publish" — the page contradicting itself at the one moment it needs
+// to be believed, and reading as "that didn't work, try again" when they should be leaving for
+// their inbox.
+describe('every sign-up prompt goes quiet once the email is sent', () => {
+  const { stripComments } = require('@/test/stripComments');
+  const read = (p: string) => stripComments(readFileSync(p, 'utf8'));
+  const BANNER = read('components/admin/guest-publish-banner.tsx');
+  const BOX = read('components/admin/guest-signup-box.tsx');
+  const BAR = read('components/admin/templates/template-action-toolbar/TemplateActionToolbar.tsx');
+  const HOOK = read('hooks/useGuestSignupSent.ts');
+
+  it('the form announces it, or nothing else can know', () => {
+    expect(BOX).toMatch(/markGuestSignupSent\(\)/);
+  });
+
+  it('the banner swaps its text and drops its CTA', () => {
+    expect(BANNER).toMatch(/useGuestSignupSent\(\)/);
+    expect(BANNER).toMatch(/signupSent \? \(/); // text swap
+    expect(BANNER).toMatch(/\{signupSent \? null :/); // CTA hidden
+  });
+
+  it('the toolbar button hides too', () => {
+    expect(BAR).toMatch(/isGuest && !guestSignupSent &&/);
+  });
+
+  // ⚠️ sessionStorage alone is not enough: a guest who opens the editor in a NEW TAB while waiting
+  // for the mail has an empty one there, and would be asked to sign up again having already done
+  // it. The pending email on the account is the cross-tab truth.
+  it('checks the account for a pending email, not just this tab', () => {
+    expect(HOOK).toMatch(/sessionStorage|guestSignupSent\(\)/);
+    expect(HOOK).toMatch(/new_email/);
+  });
+
+  it('fails safe — an unreadable auth check leaves the prompt up', () => {
+    // ⚠️ The first version of this matched the WORD "safe direction" — which stripComments had
+    // just removed. Fourth time today that a guard was written against its own explanation.
+    // The property is in the code: nothing inside a catch may claim the email was sent.
+    // Hiding the prompt on an error would strand someone with no way to sign up at all.
+    // ⚠️ Read RAW, not stripped. `stripComments` removes `{ /* … */ }` INCLUDING the braces —
+    // right for a JSX comment, destructive for a catch block whose only content is a comment,
+    // which is exactly what these are. The stripped source shows `catch` with no body at all.
+    const raw = readFileSync('hooks/useGuestSignupSent.ts', 'utf8');
+    const catches = raw.match(/catch\s*(\([^)]*\))?\s*\{[\s\S]*?\}/g) ?? [];
+    expect(catches.length).toBeGreaterThan(0);
+    for (const c of catches) expect(c).not.toMatch(/setSent\(true\)/);
   });
 });

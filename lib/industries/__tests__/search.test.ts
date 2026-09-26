@@ -148,3 +148,35 @@ describe('the picker offers, never applies', () => {
     for (const k of ['ArrowDown', 'ArrowUp', 'Enter', 'Escape']) expect(SRC).toContain(k);
   });
 });
+
+// ⚠️ "My trade isn't here" is the one option a person cannot search for — they do not know what we
+// call it, which is precisely why they are stuck. It was buried alphabetically between "Moving"
+// and "Painting", and the free-text box beside the picker was DISABLED until you found it: a field
+// you cannot use until you have done the thing it exists to spare you.
+describe('Other is always reachable', () => {
+  const { readFileSync } = require('fs');
+  const { join } = require('path');
+  const { stripComments } = require('@/test/stripComments');
+  const r = (p: string) => stripComments(readFileSync(join(process.cwd(), p), 'utf8'));
+  const PICKER = r('components/admin/templates/industry-picker.tsx');
+  const HERO = r('components/admin/templates/block-editors/hero-editor.tsx');
+
+  it('has a permanent row, not a search result', () => {
+    expect(PICKER).toMatch(/Other — not in the list/);
+    // Filtered out of the matches so it cannot also appear mid-list.
+    expect(PICKER).toMatch(/m\.key !== 'other'/);
+  });
+
+  it('the free-text field is no longer disabled', () => {
+    expect(HERO).not.toMatch(/disabled=\{industryKey !== 'other'\}/);
+  });
+
+  it('typing in the free-text field selects Other for you', () => {
+    expect(HERO).toMatch(/industryKey !== 'other' && v\.trim\(\)\) setIndustryKey\('other'\)/);
+  });
+
+  it('picking Other focuses the field you now have to type in', () => {
+    expect(PICKER).toMatch(/onChooseOther\?\.\(\)/);
+    expect(HERO).toMatch(/industry-other-input/);
+  });
+});

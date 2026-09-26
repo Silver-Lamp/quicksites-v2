@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useIsGuest } from '@/hooks/useIsGuest';
 import { requestGuestSignup } from '@/lib/auth/guestSignup';
+import { useGuestSignupSent } from '@/hooks/useGuestSignupSent';
 import { createPortal } from 'react-dom';
 import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
 import { Button } from '@/components/ui';
@@ -185,6 +186,10 @@ export default function TemplateActionToolbar({
   // Guest-only suffix on the save status — see the comment at that render site for why the
   // reassurance lives in this always-visible toolbar rather than in a banner.
   const isGuest = useIsGuest();
+  // ⚠️ Stop asking once the confirmation is on its way. This button sat under a green "Check your
+  // email to confirm" still reading "Sign up to publish" — the page contradicting itself at the
+  // one moment it needs to be believed.
+  const guestSignupSent = useGuestSignupSent();
   const tplRef = useRef(template);
   useEffect(() => { tplRef.current = template; }, [template]);
 
@@ -886,7 +891,7 @@ useEffect(() => {
                   and gave them nothing to press; the banner with the form had scrolled away; 0 of 16
                   guest builders ever signed up (docs/GUEST_SIGNUP_PLAN.md). This bar is the one thing
                   always on screen, so the control lives here. */}
-              {isGuest && (
+              {isGuest && !guestSignupSent && (
                 <Button
                   size="sm"
                   onClick={() => requestGuestSignup('toolbar')}

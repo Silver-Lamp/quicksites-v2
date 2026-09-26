@@ -23,7 +23,7 @@
 // question the funnel will answer instead of us assuming it.
 import { useEffect, useState, type FormEvent } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { GUEST_SIGNUP_EVENT, editorPathFromPathname, guestSignupRedirectUrl, passwordProblem } from '@/lib/auth/guestSignup';
+import { GUEST_SIGNUP_EVENT, editorPathFromPathname, guestSignupRedirectUrl, markGuestSignupSent, passwordProblem } from '@/lib/auth/guestSignup';
 import { googleAuthEnabled } from '@/lib/flags/googleAuth';
 import { trackGuestFunnel, isGuestFunnelSurface, type GuestFunnelSurface } from '@/lib/analytics/guestFunnel';
 
@@ -132,6 +132,11 @@ export function GuestSignupForm({
       // The last thing we can see from this side. GUEST_SIGNUP_CONFIRMED picks it up from the auth
       // callback if they come back — the gap between these two is the email deliverability story.
       trackGuestFunnel('signup_email_sent', { surface, method: 'password' });
+      // ⚠️ Tell the other surfaces. The banner and the toolbar each carry their own
+      // "Sign up to publish", and left alone they keep asking after we have just said "check your
+      // email" — which reads as "that didn't work" at the moment they should be leaving for
+      // their inbox.
+      markGuestSignupSent();
       onDone?.();
     } catch (err: any) {
       setStatus('error');

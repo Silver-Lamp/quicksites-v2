@@ -61,6 +61,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/publish-grace-expiry",
+      "schedule": "20 4 * * *"
+    },
+    {
       "path": "/api/cron/ai-cost-alert",
       "schedule": "*/15 * * * *"
     },

@@ -47,6 +47,16 @@ export async function GET(req: NextRequest) {
     // GUEST_SIGNUP_CONFIRMED for a guest builder who just confirmed (SIGNUP misses those).
     try { await captureSignupIfNew(data.user); } catch {}
     try { await captureGuestConversionIfFresh(data.user); } catch {}
+    // ⚠️ Stop the publish-grace clock the moment they confirm. Without this the nightly sweep
+    // would take down a site belonging to someone who did exactly what we asked — the one failure
+    // that would make the deadline indefensible. Keyed on the USER, not a template: a guest may
+    // have published more than one.
+    try {
+      if (data.user && !data.user.is_anonymous) {
+        const { resolveGraceForOwner } = await import('@/lib/guest/publishGraceServer');
+        await resolveGraceForOwner(data.user.id);
+      }
+    } catch {}
     // Best-effort admin notification email on a genuine new signup (skips guests).
     try { await notifyNewSignup(data.user); } catch {}
     // Referral attribution: record a user-level signup if they arrived under a code.

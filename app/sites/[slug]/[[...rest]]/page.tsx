@@ -497,6 +497,25 @@ export async function generateMetadata({
   // `meta.noindex` lets a site be publicly reachable without being publicly discoverable.
   if (meta?.noindex === true) return { ...md, icons: siteIcons, robots: { index: false, follow: false } };
 
+  // ⚠️ A SITE PUBLISHED BY AN UNVERIFIED GUEST IS VISIBLE BUT NOT INDEXABLE, and that asymmetry is
+  // the entire reason publishing-before-confirming is safe to offer.
+  //
+  // What a real builder wants in that first hour is to SEE it live and send the link to one
+  // person; what someone abusing an unverified account wants is to be in an index. Withholding
+  // indexing for a few days costs the first nothing — a week-old page ranks for nothing anyway —
+  // and removes most of what the second came for. The site turns indexable the moment they
+  // confirm, which is also the moment the clock stops.
+  //
+  // ⚠️ Gated on `claim_source` FIRST so this costs the fleet nothing: 52 of 3,168 templates are
+  // guest builds, and an unconditional lookup here would add a query to every page view of every
+  // site we host for a state almost none of them can be in.
+  if (claimSource === 'guest_build' && siteRow.template_id) {
+    const { graceFor } = await import('@/lib/guest/publishGraceServer');
+    if (await graceFor(siteRow.template_id)) {
+      return { ...md, icons: siteIcons, robots: { index: false, follow: false } };
+    }
+  }
+
   return { ...md, icons: siteIcons };
 }
 

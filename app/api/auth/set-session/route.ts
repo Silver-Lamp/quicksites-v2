@@ -45,6 +45,16 @@ export async function POST(req: NextRequest) {
   // A guest builder who just confirmed their email lands here (the confirmation carries fragment
   // tokens, like a magic link). SIGNUP misses them; this counts them.
   try { await captureGuestConversionIfFresh(data.user); } catch {}
+  // ⚠️ Stop the publish-grace clock the moment they confirm. THIS is the branch a guest email
+  // confirmation actually lands on (fragment tokens, like a magic link), so missing it here would
+  // let the nightly sweep take down a site belonging to someone who did exactly what we asked.
+  // Keyed on the USER, not a template: a guest may have published more than one.
+  try {
+    if (data.user && !data.user.is_anonymous) {
+      const { resolveGraceForOwner } = await import('@/lib/guest/publishGraceServer');
+      await resolveGraceForOwner(data.user.id);
+    }
+  } catch {}
   // Best-effort admin notification email on a genuine new signup (skips guests).
   try { await notifyNewSignup(data.user); } catch {}
 

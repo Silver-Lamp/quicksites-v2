@@ -36,7 +36,20 @@ describe('the route: ownership, not admin — and an anonymous owner is told to 
     const gate = src.indexOf('await requireTemplateOwner(templateId)');
     expect(idCheck).toBeGreaterThan(0);
     expect(gate).toBeGreaterThan(idCheck);
-    expect(src).toMatch(/gate\.isAnonymous[\s\S]{0,120}code: NEEDS_SIGNUP_CODE[\s\S]{0,20}401/);
+    // ⚠️ The rule changed on 2026-09-26 and this assertion now states the NEW one rather than a
+    // character distance. An anonymous owner is no longer refused outright: one who has set an
+    // email + password publishes on a 7-day clock (lib/guest/publishGrace.ts), and only one who
+    // has committed NOTHING is sent to sign up. The old regex required the refusal to sit within
+    // 120 characters of the branch, so it failed on the grace logic being inserted between them —
+    // a true failure about nothing, which is the shape a proximity check tends to produce.
+    expect(src).toMatch(/gate\.isAnonymous/);
+    expect(src).toMatch(/mayPublishOnGrace\(/);
+    expect(src).toMatch(/code: NEEDS_SIGNUP_CODE[\s\S]{0,20}401/);
+    // The refusal must still be reachable — i.e. guarded by the grace check, not deleted.
+    const graceCheck = src.indexOf('mayPublishOnGrace(');
+    const refusal = src.indexOf('NEEDS_SIGNUP_CODE }, 401');
+    expect(graceCheck).toBeGreaterThan(0);
+    expect(refusal).toBeGreaterThan(graceCheck);
   });
   it('the owner gate reports anonymity', () => {
     const gate = readFileSync('lib/auth/requireTemplateOwner.ts', 'utf8');

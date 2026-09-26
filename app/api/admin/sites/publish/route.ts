@@ -6,6 +6,8 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
+import { mayPublishOnGrace } from '@/lib/guest/publishGrace';
+import { pendingEmailFor, startPublishGrace } from '@/lib/guest/publishGraceServer';
 import { NEEDS_SIGNUP_CODE } from '@/lib/auth/guestSignup';
 
 function j(data: any, init?: number | ResponseInit) {
@@ -94,8 +96,26 @@ async function handle(req: Request) {
 
     const gate = await requireTemplateOwner(templateId);
     if (!gate.ok) return gate.response;
+
+    // ⚠️ PUBLISH FIRST, CONFIRM WITHIN A WEEK — but only once they have actually committed.
+    //
+    // A guest who has set an email + password gets to publish now and confirm later, on a clock
+    // (lib/guest/publishGrace.ts). A guest who has committed NOTHING still cannot: an anonymous
+    // session with no pending address would otherwise hand anyone with a browser a live page on
+    // our domain. The pending email IS the entry ticket, and it happens to be the exact step the
+    // whole funnel dies on.
+    let graceUntil: string | null = null;
     if (gate.isAnonymous) {
-      return j({ error: 'Sign up to publish your site.', code: NEEDS_SIGNUP_CODE }, 401);
+      const pendingEmail = await pendingEmailFor(gate.userId);
+      if (!mayPublishOnGrace({ isAnonymous: true, pendingEmail })) {
+        return j({ error: 'Sign up to publish your site.', code: NEEDS_SIGNUP_CODE }, 401);
+      }
+      // Recorded BEFORE the publish. A site that went live with no deadline written is the open
+      // door this feature exists to close, so if the clock cannot be stored, do not publish.
+      graceUntil = await startPublishGrace(templateId, gate.userId);
+      if (!graceUntil) {
+        return j({ error: 'Could not start the confirmation window. Please try again.' }, 503);
+      }
     }
     note('gate', { userId: gate.userId, isAdmin: gate.isAdmin });
 
@@ -273,6 +293,9 @@ async function handle(req: Request) {
         domain: finalDomain,
         storedVia,
         pointerSet,
+        // Non-null only for a grace publish. The caller MUST surface it — a site that quietly
+        // disappears in a week because nobody was told is worse than not offering this at all.
+        graceUntil,
         debug: debug ? { attempt, lastError, trace } : undefined,
       },
       200

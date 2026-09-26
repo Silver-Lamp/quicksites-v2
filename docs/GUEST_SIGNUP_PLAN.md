@@ -37,6 +37,43 @@ see" — **is not the binding constraint. Nobody reaches it.**
 **So an empty table meant "nobody logged it", not "nobody clicked" — and until you know which, the
 next fix is a blind shot.** That is why instrumentation preceded any further change to the UI.
 
+### Shipped 2026-09-26 (PR E) — publish first, confirm within a week
+
+Owner's design. A guest who has set an email + password **publishes immediately**; the site goes
+live on a 7-day clock and is unpublished automatically if the address is never confirmed.
+
+- `publish_grace` (migration `20260854`, deny-default RLS) holds template · owner · `expires_at` ·
+  `resolved_at`. ⚠️ **A separate table, not a column on `templates`** — direct UPDATEs there are
+  blocked by `app.guard_templates_update`, and this is scheduling state, not content.
+- ⚠️ **The pending email is the entry ticket.** An anonymous session with *no* pending address
+  still cannot publish; otherwise anyone with a browser gets a live page on our domain.
+- ⚠️ **`public.unpublish_template` flips BOTH halves.** The existing unpublish ROUTE edits
+  `published_sites` only and never touches `templates.published` — measured 2026-09-26: **3
+  templates were serving publicly while flagged unpublished**, 1 the reverse. A sweep that did the
+  same would leave a lapsed site live while reporting it down.
+- Nightly cron `/api/cron/publish-grace-expiry` (04:20, registered in `vercel.json`).
+  ⚠️ **An unreadable owner state is NOT "still anonymous"** — those are left up and counted as
+  failures. A day late is recoverable; a wrongful takedown of a real business's live page is not,
+  and it is the honesty of the deadline that makes the deadline acceptable.
+- ⚠️ **The clock stops on BOTH auth branches.** A guest's confirmation lands on the *fragment*
+  branch (`/api/auth/set-session`), not the PKCE callback; wiring only the obvious one would have
+  the sweep taking down sites from people who did exactly what we asked.
+- ⚠️ **Visible but not indexable while the clock runs.** A real builder wants to see it live and
+  send one person the link; an abuser wants an index entry. Withholding indexing for days costs
+  the first nothing and removes most of what the second came for. Gated on
+  `claim_source='guest_build'` **before** the lookup, so the other 3,100+ templates pay no query.
+- The publish response returns `graceUntil` and the toolbar **says the deadline out loud**. A site
+  that silently vanishes in a week is worse than not offering this at all.
+
+⚠️ **What this does NOT fix.** 21 of 21 builders never typed an email; this removes friction at
+steps 3–6 and **nobody has been observed reaching step 3.** It is worth shipping for the *promise*
+— "publish now, confirm within a week" is a smaller ask than "sign up to publish" even though the
+keystrokes are identical — and that is a behavioural claim to READ OFF the funnel events, not to
+assume.
+
+**Not built:** a reminder email before expiry. Sending to an unverified address is itself a spam
+vector (Supabase already sends one confirmation there) and it needs a deliberate decision.
+
 ### Shipped 2026-09-26 (PR D) — a lighter ask, behind the flag
 
 ⚠️ **The measured problem is not which method people pick — it is that 21 of 21 never typed an

@@ -6,6 +6,7 @@ import CharacterAvatar from '@/components/brand/CharacterAvatar';
 import Typewriter from '@/components/ui/typewriter';
 import { GuestSignupForm } from '@/components/admin/guest-signup-box';
 import { requestGuestSignup } from '@/lib/auth/guestSignup';
+import { trackGuestFunnel } from '@/lib/analytics/guestFunnel';
 
 const GUEST_LINE = 'You’re building as a guest. Sign up to publish your site — your work is saved.';
 
@@ -37,6 +38,11 @@ export default function GuestPublishBanner() {
 
   useEffect(() => {
     setPreviewUrl(buildPreviewUrl());
+    // ⚠️ THE DENOMINATOR. Every other number in this funnel is meaningless without it: a zero
+    // click-through means one thing if 40 people saw the banner and something entirely different
+    // if it never rendered. Fired once per mount, from the banner itself, so it cannot drift out
+    // of step with whether the thing was actually on screen.
+    trackGuestFunnel('prompt_shown', { surface: 'banner' });
   }, []);
 
   const copyPreview = async () => {
@@ -95,7 +101,13 @@ export default function GuestPublishBanner() {
             )}
             <button
               type="button"
-              onClick={() => setOpen(true)}
+              onClick={() => {
+                // This one opens the form inline rather than dispatching GUEST_SIGNUP_EVENT, so
+                // the modal's own tracking never sees it — it has to be recorded here or the
+                // banner's primary button is the one click in the funnel that goes uncounted.
+                trackGuestFunnel('signup_opened', { surface: 'banner_inline' });
+                setOpen(true);
+              }}
               className="rounded-md bg-sky-500 px-4 py-1.5 font-medium text-zinc-950 transition hover:bg-sky-400"
             >
               Sign up to publish
@@ -103,7 +115,7 @@ export default function GuestPublishBanner() {
           </div>
         ) : (
           <div className="shrink-0">
-            <GuestSignupForm compact />
+            <GuestSignupForm compact surface="banner_inline" />
           </div>
         )}
       </div>

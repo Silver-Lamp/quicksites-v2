@@ -13,10 +13,22 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { GUEST_SIGNUP_EVENT, editorPathFromPathname, guestSignupRedirectUrl, passwordProblem } from '@/lib/auth/guestSignup';
+import { trackGuestFunnel, isGuestFunnelSurface, type GuestFunnelSurface } from '@/lib/analytics/guestFunnel';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error' | 'exists';
 
-export function GuestSignupForm({ onDone, autoFocus = true, compact = false }: { onDone?: () => void; autoFocus?: boolean; compact?: boolean }) {
+export function GuestSignupForm({
+  onDone,
+  autoFocus = true,
+  compact = false,
+  surface = 'modal',
+}: {
+  onDone?: () => void;
+  autoFocus?: boolean;
+  compact?: boolean;
+  /** Which surface this copy of the form is mounted in — recorded with every step it emits. */
+  surface?: GuestFunnelSurface;
+}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<Status>('idle');
@@ -40,8 +52,17 @@ export function GuestSignupForm({ onDone, autoFocus = true, compact = false }: {
     e.preventDefault();
     const addr = email.trim();
     if (!addr) return;
+    // ⚠️ Emitted BEFORE the password check, so a builder who tries and is bounced by our own rule
+    // still counts as having tried. Counting only the attempts that pass validation would hide the
+    // most actionable failure there is — someone who wanted an account and our form said no.
+    trackGuestFunnel('signup_submitted', { surface });
     const pwProblem = passwordProblem(password);
-    if (pwProblem) { setStatus('error'); setMessage(pwProblem); return; }
+    if (pwProblem) {
+      setStatus('error');
+      setMessage(pwProblem);
+      trackGuestFunnel('signup_failed', { surface, reason: 'weak_password' });
+      return;
+    }
     setStatus('sending');
     setMessage(null);
     try {
@@ -49,17 +70,29 @@ export function GuestSignupForm({ onDone, autoFocus = true, compact = false }: {
       const { error } = await supabase.auth.updateUser({ email: addr, password }, { emailRedirectTo });
       if (error) {
         const already = (error as any)?.code === 'email_exists' || /already.*(registered|exists|in use)/i.test(error.message || '');
-        if (already) { setStatus('exists'); setMessage('You already have an account with this email.'); return; }
+        if (already) {
+          setStatus('exists');
+          setMessage('You already have an account with this email.');
+          trackGuestFunnel('signup_existing_account', { surface });
+          return;
+        }
         setStatus('error');
         setMessage(error.message || 'Could not start signup. Please try again.');
+        // ⚠️ `reason: 'error'` and nothing else. Supabase puts the address into some of these
+        // messages, and this row is analytics, not a log.
+        trackGuestFunnel('signup_failed', { surface, reason: 'error' });
         return;
       }
       setStatus('sent');
       setMessage(`Check ${addr} to confirm — the link brings you straight back here, and Publish will be ready.`);
+      // The last thing we can see from this side. GUEST_SIGNUP_CONFIRMED picks it up from the auth
+      // callback if they come back — the gap between these two is the email deliverability story.
+      trackGuestFunnel('signup_email_sent', { surface });
       onDone?.();
     } catch (err: any) {
       setStatus('error');
       setMessage(err?.message || 'Something went wrong. Please try again.');
+      trackGuestFunnel('signup_failed', { surface, reason: 'error' });
     }
   };
 
@@ -118,7 +151,18 @@ export default function GuestSignupModal() {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
   useEffect(() => {
-    const onOpen = (e: Event) => { setReason((e as CustomEvent).detail?.reason ?? null); setOpen(true); };
+    const onOpen = (e: Event) => {
+      const why = (e as CustomEvent).detail?.reason ?? null;
+      setReason(why);
+      setOpen(true);
+      // ⚠️ `publish` is the signal worth separating from the rest: it means they tried to publish
+      // and were refused, which is intent, not curiosity. If that number is healthy and
+      // `signup_submitted` is not, the form is the problem; if it is zero, nobody is getting far
+      // enough to be refused and the problem is upstream of this component entirely.
+      trackGuestFunnel('signup_opened', {
+        surface: isGuestFunnelSurface(why) ? why : 'modal',
+      });
+    };
     window.addEventListener(GUEST_SIGNUP_EVENT, onOpen);
     return () => window.removeEventListener(GUEST_SIGNUP_EVENT, onOpen);
   }, []);

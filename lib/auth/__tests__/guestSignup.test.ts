@@ -60,7 +60,11 @@ describe('the client: one event, one box, at the moment of intent', () => {
   it('the guest shell mounts the modal, and the banner shares the same form', () => {
     expect(readFileSync('components/admin/admin-chrome.tsx', 'utf8')).toMatch(/<GuestSignupModal \/>/);
     const banner = readFileSync('components/admin/guest-publish-banner.tsx', 'utf8');
-    expect(banner).toMatch(/<GuestSignupForm compact \/>/);
+    // ⚠️ Matches the COMPONENT and the `compact` prop, not the exact tag text. The original
+    // `<GuestSignupForm compact />` broke the moment the form gained a `surface` prop for the
+    // funnel instrumentation — a true failure about nothing, since what this test cares about is
+    // that the banner reuses the shared form rather than growing its own.
+    expect(banner).toMatch(/<GuestSignupForm\b[^>]*\bcompact\b[^>]*\/>/);
     expect(banner).not.toMatch(/updateUser\(/); // the form logic lives in one place
   });
   it('the form upgrades IN PLACE with email + password and a redirect back to the editor', () => {

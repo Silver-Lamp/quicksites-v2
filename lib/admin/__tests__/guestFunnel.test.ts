@@ -25,6 +25,9 @@ describe('computeGuestFunnel', () => {
     expect(computeGuestFunnel(guests, sites)).toEqual({
       guests: 3, sites: 4, builders: 4, editedTenMinPlus: 1, returned: 1, startedSignup: 1, converted: 1,
       withSourceUrl: 1, withContact: 1, newestSiteAt: '2026-09-01T00:00:00Z',
+      // No events passed → null, meaning "not read". Deliberately not a zeroed object: see the
+      // field's note in guestFunnel.ts.
+      steps: null,
     });
   });
   it('an empty world is the empty funnel', () => {
@@ -52,5 +55,50 @@ describe('wired into the ops dashboard', () => {
   it('the loader never throws — the dashboard renders with an empty funnel instead', () => {
     const src = readFileSync('lib/admin/guestFunnelServer.ts', 'utf8');
     expect(src).toMatch(/catch[\s\S]*return EMPTY_GUEST_FUNNEL/);
+  });
+});
+
+// ⚠️ Added 2026-09-25 with the pre-submit instrumentation. The distinction these cover is the
+// whole point of the feature: an UNREAD events table and an EMPTY one are different answers, and
+// collapsing them is how "0 started sign-up" read as a finding for two months.
+describe('computeGuestFunnelSteps', () => {
+  const { computeGuestFunnelSteps } = require('@/lib/admin/guestFunnel');
+
+  it('counts each step, and counts PEOPLE separately from clicks', () => {
+    const rows = [
+      { event: 'prompt_shown', guest_user_id: 'a' },
+      { event: 'prompt_shown', guest_user_id: 'a' }, // same person, two page loads
+      { event: 'signup_opened', guest_user_id: 'a' },
+      { event: 'signup_opened', guest_user_id: 'a' }, // opened twice
+      { event: 'signup_opened', guest_user_id: 'b' },
+      { event: 'signup_submitted', guest_user_id: 'b' },
+      { event: 'signup_failed', guest_user_id: 'b' },
+      { event: 'signup_submitted', guest_user_id: 'b' },
+      { event: 'signup_email_sent', guest_user_id: 'b' },
+    ];
+    const s = computeGuestFunnelSteps(rows);
+    expect(s.promptShown).toBe(2);
+    expect(s.signupOpened).toBe(3);
+    expect(s.signupSubmitted).toBe(2);
+    expect(s.signupEmailSent).toBe(1);
+    expect(s.signupFailed).toBe(1);
+    // Two clicks from one person is one person. Reading 3 "opened" as 3 interested builders would
+    // overstate the top of the funnel and make the drop-off below it look worse than it is.
+    expect(s.buildersWhoOpened).toBe(2);
+  });
+
+  it('a prompt impression alone is not a builder who engaged', () => {
+    const s = computeGuestFunnelSteps([
+      { event: 'prompt_shown', guest_user_id: 'a' },
+      { event: 'prompt_shown', guest_user_id: 'b' },
+    ]);
+    expect(s.promptShown).toBe(2);
+    expect(s.buildersWhoOpened).toBe(0);
+  });
+
+  it('an empty read is all zeroes — which is a real answer, unlike null', () => {
+    const s = computeGuestFunnelSteps([]);
+    expect(s.promptShown).toBe(0);
+    expect(s.buildersWhoOpened).toBe(0);
   });
 });

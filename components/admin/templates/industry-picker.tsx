@@ -22,6 +22,7 @@ export default function IndustryPicker({
   value,
   onChange,
   businessName,
+  onChooseOther,
   className = '',
 }: {
   /** Current industry key, or '' for none. */
@@ -29,6 +30,8 @@ export default function IndustryPicker({
   onChange: (key: string) => void;
   /** Used only to offer a suggestion; never written anywhere. */
   businessName?: string | null;
+  /** Called when "Other" is picked, so the caller can focus its free-text field. */
+  onChooseOther?: () => void;
   className?: string;
 }) {
   const [query, setQuery] = useState('');
@@ -49,8 +52,13 @@ export default function IndustryPicker({
   // With no query, show a short alphabetical slice rather than nothing — an empty dropdown reads
   // as broken, and browsing is still legitimate for someone who does not know what to call it.
   const results = useMemo(() => {
-    if (query.trim()) return searchIndustries(query, 10);
+    // ⚠️ `other` is filtered out of the matches because it gets a PERMANENT row below. Left in
+    // the list it sorts alphabetically between "Moving" and "Painting", which is exactly where
+    // nobody looks for "my trade isn't here".
+    const drop = (m: { key: string }) => m.key !== 'other';
+    if (query.trim()) return searchIndustries(query, 10).filter(drop);
     return [...INDUSTRIES]
+      .filter(drop)
       .sort((a, b) => a.label.localeCompare(b.label))
       .slice(0, 10)
       .map((i) => ({ key: i.key, label: i.label, score: 0, via: i.label }));
@@ -130,8 +138,8 @@ export default function IndustryPicker({
             // ⚠️ Says what to do next instead of going blank. The free-text "Other" field beside
             // this exists precisely for trades we do not list, and a dead dropdown hides that.
             <li className="px-3 py-2 text-xs text-zinc-400">
-              Nothing matches “{query}”. Use the <span className="text-zinc-200">Other</span> box to
-              type it in your own words.
+              Nothing matches “{query}”. Pick{' '}
+              <span className="text-zinc-200">Other</span> below and describe it in your own words.
             </li>
           ) : (
             results.map((r, i) => (
@@ -155,6 +163,27 @@ export default function IndustryPicker({
               </li>
             ))
           )}
+
+          {/* ⚠️ ALWAYS PRESENT, NOT A SEARCH RESULT. "My trade isn't here" is the one option a
+              person cannot search for — they do not know what we call it, which is why they are
+              stuck. Buried alphabetically between "Moving" and "Painting" it was invisible, and
+              the free-text box beside the picker was DISABLED until you found it. Selecting this
+              enables that box and focuses it. */}
+          <li className="border-t border-zinc-800">
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === 'other'}
+              onClick={() => {
+                pick('other');
+                onChooseOther?.();
+              }}
+              className="flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left text-sm text-zinc-300 transition hover:bg-zinc-900"
+            >
+              <span>Other — not in the list</span>
+              <span className="shrink-0 text-[11px] text-zinc-500">describe it yourself</span>
+            </button>
+          </li>
         </ul>
       )}
     </div>

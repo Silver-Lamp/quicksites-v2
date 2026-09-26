@@ -1089,6 +1089,12 @@ export default function HeroEditor({
                   <IndustryPicker
                     value={industryKey}
                     businessName={(template as any)?.business_name ?? null}
+                    onChooseOther={() => {
+                      // Picking "Other" should land the cursor where they now have to type.
+                      requestAnimationFrame(() => {
+                        document.getElementById('industry-other-input')?.focus();
+                      });
+                    }}
                     onChange={(key: string) => {
                       const val = key;
                       setIndustryKey(val);
@@ -1127,9 +1133,16 @@ export default function HeroEditor({
                       const v = e.target.value;
                       setAiIndustryOther(v); // keep the input responsive
 
+                      // ⚠️ TYPING HERE CHOOSES "Other" FOR YOU. This field used to be disabled
+                      // until you had already found and selected "Other" in a ~60-item list —
+                      // a field you cannot use until you have done the thing it exists to spare
+                      // you. Someone with a trade we do not list would reasonably conclude we
+                      // cannot handle their business.
+                      if (industryKey !== 'other' && v.trim()) setIndustryKey('other');
+
                       // mirror when typing "Other" — debounced so we don't
                       // re-render the editor/preview on every keystroke
-                      if (industryKey === 'other') {
+                      if (industryKey === 'other' || v.trim()) {
                         mergeSoon({
                           meta: {
                             site_type: siteType || 'small_business',
@@ -1142,8 +1155,8 @@ export default function HeroEditor({
                       }
                     }}
                     onBlur={() => {
-                      if (industryKey === 'other') {
-                        isTypingOther.current = false;
+                      isTypingOther.current = false;
+                      if (industryKey === 'other' || aiIndustryOther.trim()) {
                         flushMerge();
                         flushSave();
                       }
@@ -1157,7 +1170,7 @@ export default function HeroEditor({
                       }
                     }}
                     placeholder="e.g., Mobile Windshield Repair"
-                    disabled={industryKey !== 'other'}
+                    id="industry-other-input"
                   />
                 </div>
               </div>

@@ -49,6 +49,23 @@ function fallbackData(displayMode: ShowcaseDisplayMode, now: number): ShowcaseDa
   return { sites: [], displayMode };
 }
 
+/**
+ * Is this a demo dressed as a customer? Checked across every name field AND the demo markers,
+ * because the three that slipped through carried the word only in `template_name`.
+ */
+export function looksLikeDemo(r: {
+  business_name?: string | null;
+  template_name?: string | null;
+  slug?: string | null;
+  claim_source?: string | null;
+  data?: any;
+}): boolean {
+  if (r.claim_source === 'demo_seed') return true;
+  if (r.data?.meta?.is_demo === true) return true;
+  const names = [r.business_name, r.template_name, r.slug].filter(Boolean).join(' ').toLowerCase();
+  return /\bdemo\b/.test(names);
+}
+
 export async function getShowcaseData(): Promise<ShowcaseData> {
   const now = Date.now();
   // Fetch the three showcase settings in parallel (was 3 sequential round-trips).
@@ -71,7 +88,7 @@ export async function getShowcaseData(): Promise<ShowcaseData> {
     for (let attempt = 0; attempt < 2; attempt++) {
       const res = await (supa as any)
         .from('templates')
-        .select('slug, business_name, industry_label, industry, hero_url, logo_url, data, domain, custom_domain, owner_id, claim_source')
+        .select('slug, business_name, template_name, industry_label, industry, hero_url, logo_url, data, domain, custom_domain, owner_id, claim_source')
         .eq('is_site', true)
         .eq('published', true)
         .eq('archived', false)
@@ -115,6 +132,19 @@ export async function getShowcaseData(): Promise<ShowcaseData> {
         const dom = firstNonEmpty(r.custom_domain, r.domain);
         const href = dom ? `https://${dom.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : `/sites/${r.slug}`;
         const isFeatured = priority.has(r.slug);
+        // ⚠️ THE HEADING OVER THIS ROW SAYS "Real businesses, live on QuickSites." Three of the
+        // top nine slots were demos — "Local Legal Solutions — Demo", "EcoPest Solutions — Demo",
+        // "LuxeGlow Salon & Spa — Demo" — and nobody could tell, because their `business_name` is
+        // empty so the card falls back to `prettifySlug(slug)`: a visitor read "Local" and
+        // "Ecopest" and had no way to know. The fallback did not strip the word on purpose; it
+        // never saw it. Either way the row was making a claim about real customers that three of
+        // its cards could not support.
+        //
+        // ⚠️ `claim_source='demo_seed'` alone does NOT catch these — all three have no claim
+        // source at all, so the tag-based check that looks sufficient would have missed every one.
+        // The NAME is the signal that works, and it has to be read from `template_name` too,
+        // which is exactly the field the card never shows.
+        const isDemo = looksLikeDemo(r);
         return {
           slug: r.slug as string,
           name: name || prettifySlug(r.slug),
@@ -123,7 +153,7 @@ export async function getShowcaseData(): Promise<ShowcaseData> {
           logoUrl: firstNonEmpty(r.logo_url),
           href,
           hidden: hidden.has(r.slug),
-          _publishable: Boolean(firstNonEmpty(r.business_name) || industry || dom || isFeatured),
+          _publishable: !isDemo && Boolean(firstNonEmpty(r.business_name) || industry || dom || isFeatured),
         } as ShowcaseSite & { _publishable: boolean };
       })
       .filter((s: any) => s._publishable)

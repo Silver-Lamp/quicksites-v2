@@ -16,7 +16,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpRight, Eye, EyeOff, GripVertical } from 'lucide-react';
+import { ArrowUpRight, Eye, EyeOff, GripVertical, Star } from 'lucide-react';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import {
   type ShowcaseDisplayMode,
@@ -174,6 +174,29 @@ export default function SiteShowcase({ initialData }: { initialData?: FeedData }
     }
   }
 
+  /**
+   * Star → put this site at the front of the showcase.
+   *
+   * ⚠️ It writes the FULL order, not just this slug, because `showcase_order` is an absolute list:
+   * `getShowcaseData` sorts every slug present in it ahead of every slug that is not. That is why
+   * `pnw-exteriorcleaning` sat at position 16 for a visitor while being first in the curated
+   * FEATURED_SITE_SLUGS — the saved drag order simply did not contain it, and a code-level
+   * "priority" list cannot outrank an admin order that never heard of the site.
+   */
+  async function moveToFront(slug: string) {
+    if (!data) return;
+    const prev = data;
+    const idx = data.sites.findIndex((s) => s.slug === slug);
+    if (idx <= 0) return; // absent, or already first
+    const nextSites = arrayMove(data.sites, idx, 0);
+    update({ ...data, sites: nextSites });
+    try {
+      await persistOrder(nextSites.map((s) => s.slug));
+    } catch {
+      update(prev);
+    }
+  }
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   function onDragEnd(e: DragEndEvent) {
@@ -225,6 +248,8 @@ export default function SiteShowcase({ initialData }: { initialData?: FeedData }
             site={s}
             mode={mode}
             onToggleHide={() => toggleHide(s.slug, !s.hidden)}
+            onMoveToFront={() => moveToFront(s.slug)}
+            isFirst={rowSites[0]?.slug === s.slug}
           />
         ) : (
           <div key={`${s.slug}-${mode}`} className="w-72 shrink-0 snap-start">
@@ -284,10 +309,15 @@ function SortableShowcaseCard({
   site: s,
   mode,
   onToggleHide,
+  onMoveToFront,
+  isFirst,
 }: {
   site: ShowcaseSite;
   mode: ShowcaseDisplayMode;
   onToggleHide: () => void;
+  onMoveToFront: () => void;
+  /** Already at the front — the star reads as "this is the one" rather than an action. */
+  isFirst: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: s.slug });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : undefined };
@@ -299,6 +329,23 @@ function SortableShowcaseCard({
       className={`relative w-72 shrink-0 snap-start ${s.hidden ? 'opacity-45' : ''}`}
     >
       <ShowcaseCard site={s} mode={mode} />
+
+      {/* ⚠️ One click for the job that otherwise needs dragging a card past 120 others. The
+          showcase row scrolls horizontally, so "move it to the front" by drag means dragging
+          across an overflow container — possible in principle, miserable in practice, and the
+          reason the curated code list kept being edited instead. */}
+      <button
+        onClick={onMoveToFront}
+        aria-pressed={isFirst}
+        title={isFirst ? 'Already first in the showcase' : 'Move to the front of the showcase'}
+        className={`absolute right-11 top-2 z-10 inline-flex items-center rounded-md px-2 py-1 text-[11px] font-medium backdrop-blur transition ${
+          isFirst
+            ? 'bg-amber-400/90 text-zinc-950'
+            : 'bg-zinc-950/80 text-white hover:bg-zinc-800'
+        }`}
+      >
+        <Star className={`h-3 w-3 ${isFirst ? 'fill-current' : ''}`} />
+      </button>
 
       <button
         onClick={onToggleHide}

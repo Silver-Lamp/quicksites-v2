@@ -6,6 +6,7 @@
 // claimPendingGuestDraft but uses the site-claim token + claim_operator_draft RPC.
 // Best-effort: never throws, always clears the cookie. Unlike the guest path, this
 // applies to any real user (the prospect signs up fresh, not an anon upgrade).
+import { recordClaimStep } from '@/lib/analytics/claimFunnel';
 import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { SITE_CLAIM_COOKIE, verifySiteClaimToken } from './siteClaimToken';
@@ -103,6 +104,12 @@ export async function claimPendingSiteDraft(
     // welcome page said "Your site is live". Publish on claim so that sentence is true, and record
     // the claim on the prospect (the claim rate is this vertical's decisive number).
     if (transferred === true) {
+      // ⚠️ THE ONLY STEP IN THIS FUNNEL THAT MEANS ANYTHING COMMERCIALLY, and until now it left no
+      // record of its own — the prospect row got a status and that was all. Recorded here, inside
+      // the `transferred === true` branch, so it counts a real ownership change rather than an
+      // attempt: the RPC no-ops on an already-claimed draft, and counting the call would turn a
+      // leaked link re-opened twice into two claims.
+      void recordClaimStep('claim_completed', { templateId: payload.templateId });
       try {
         const { activateClaimedSite } = await import('@/lib/tradeSites/activate');
         await activateClaimedSite(payload.templateId, user.id);

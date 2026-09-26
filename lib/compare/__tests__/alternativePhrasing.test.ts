@@ -43,7 +43,19 @@ describe('the source actually says it', () => {
   it('the body says it too, as a sentence a person would write', () => {
     // Metadata alone is thin; the phrase has to appear in rendered copy. But it is deliberately
     // NOT jammed into the H1 — the H1 states what the page is.
-    expect(PAGE).toMatch(/Looking for a <span[^>]*>\{c\.name\} alternative<\/span>/);
+    expect(PAGE).toMatch(/Looking for a/);
+    expect(PAGE).toMatch(/alternative/);
+  });
+
+  // ⚠️ THE PHRASE MUST BE ONE TEXT NODE. `{c.name} alternative` looks identical in the source and
+  // renders as `Duda<!-- --> alternative`: React inserts a comment between an expression and the
+  // text beside it. A browser parses that back into one phrase, so the page is not broken — but
+  // the raw HTML no longer CONTAINS the string, so no grep, audit or source guard of ours can see
+  // it. That is the tag-boundary failure from CLAUDE.md §8, where a live-claim sweep missed 20
+  // strings for the same reason. A single interpolated template literal emits one text node.
+  it('builds "<Name> alternative" as ONE interpolated string, not an expression beside text', () => {
+    expect(PAGE).toMatch(/\{`\$\{c\.name\} alternative`\}/);
+    expect(PAGE).not.toMatch(/>\{c\.name\} alternative</);
   });
 
   it('keeps the H1 as the comparison, not a keyword sandwich', () => {

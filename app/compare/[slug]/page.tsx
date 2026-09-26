@@ -118,8 +118,15 @@ export default async function CompareCompetitorPage({
               searched "<name> alternative" has already decided to leave — meet them there rather
               than opening with a comparison they did not ask for. */}
           <p className="mx-auto mt-3 max-w-2xl text-base text-zinc-300">
-            Looking for a <span className="font-semibold text-white">{c.name} alternative</span>?
-            Here is the honest version — including what {c.name} does better.
+            {/* ⚠️ ONE interpolated string, not `{c.name} alternative`. React emits a comment
+                node between adjacent expressions and text, so the latter renders as
+                `Duda<!-- --> alternative` — parsed back to one phrase by any browser or crawler,
+                but NOT contiguous in the raw HTML, so no grep, audit or source guard of ours can
+                see it. Same shape as the live-claim rewrites that missed 20 strings because the
+                target spanned a tag boundary (CLAUDE.md §8). */}
+            Looking for a{' '}
+            <span className="font-semibold text-white">{`${c.name} alternative`}</span>?
+            {' '}Here is the honest version — including what {c.name} does better.
           </p>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">{c.oneLiner}</p>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-zinc-400">

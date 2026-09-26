@@ -690,6 +690,7 @@ useEffect(() => {
             </Button>
 
             {/* Page Manager */}
+            <span data-tour="pages" className="contents-none inline-flex">
             <PageManagerToolbar
               pages={currentPages}
               currentSlug={currentSlug}
@@ -734,6 +735,7 @@ useEffect(() => {
               }}
               siteId={(tplRef.current as any).site_id}
             />
+            </span>
 
             {/* Page Settings — hidden for a guest, who has one page and no idea what a page
                 setting is. It is the third gear-ish icon in a row of four. */}
@@ -768,6 +770,7 @@ useEffect(() => {
                   size="sm"
                   variant={colorMode === 'light' ? 'secondary' : 'ghost'}
                   className="h-7 gap-1.5 px-2"
+                  data-tour="theme"
                   title="Light mode"
                   aria-pressed={colorMode === 'light'}
                   onClick={() => setColorModeAndEmit('light')}
@@ -922,6 +925,7 @@ useEffect(() => {
                 variant={dirty || saveError ? 'outline' : 'ghost'}
                 disabled={!dirty && !pending && !saveError}
                 className={saveError ? 'bg-red-600 hover:bg-red-700 text-white' : dirty ? 'bg-purple-500 hover:bg-purple-600' : ''}
+                data-tour="publish"
                 onClick={handleSaveClick}
                 title={saveError ? `Save failed: ${saveError}. Click to retry.` : dirty ? 'Save changes (⌘/Ctrl+S)' : pending ? 'Saving…' : 'All changes saved'}
               >

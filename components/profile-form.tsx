@@ -15,6 +15,7 @@ import {
   Sparkles, Check, Copy, Crown, Gift, UserRound, Palette,
 } from 'lucide-react';
 import AiCostEstimatorCard from '@/components/admin/billing/AiCostEstimatorCard';
+import WalkthroughReplayCard from '@/components/onboarding/walkthrough-replay-card';
 import WorkBackgroundPicker from '@/components/profile/work-background-picker';
 import SeoCoachCard from '@/components/profile/seo-coach-card';
 
@@ -376,6 +377,14 @@ export default function ProfileForm() {
           {/* ---------- Preferences ---------- */}
           <Section title="Workspace" icon={Palette} desc="A subtle texture behind the admin — yours only.">
             <WorkBackgroundPicker />
+          </Section>
+
+          <Section
+            title="Getting started"
+            icon={Palette}
+            desc="The editor tour, whenever you want it again."
+          >
+            <WalkthroughReplayCard />
           </Section>
 
           <AiCostEstimatorCard />

@@ -60,7 +60,12 @@ export default function ShuffleMenu({
   ];
 
   return (
-    <div ref={rootRef} className="fixed bottom-24 right-6 z-[2147483647] pointer-events-auto">
+    /* ⚠️ HIDDEN ON PHONES. `bottom-24 right-6` at max z-index lands this pill in the middle of a
+       390px canvas and over every panel — it covered the hero on the editor and sat across the
+       Site Settings sheet. Nothing is lost: Shuffle is also in the toolbar's Theme panel, which
+       is reachable by swiping the tray. It stays a delight control on a desktop, where there is
+       room for it to float. */
+    <div ref={rootRef} className="hidden sm:block fixed bottom-24 right-6 z-[2147483647] pointer-events-auto">
       {open && (
         <div className="absolute bottom-full right-0 mb-2 w-60 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900/95 p-1.5 shadow-2xl backdrop-blur">
           <div className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Shuffle just…</div>

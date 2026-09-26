@@ -25,6 +25,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import toast from 'react-hot-toast';
 import { getIndustryOptions, resolveIndustryKey, toIndustryLabel } from '@/lib/industries';
+import IndustryPicker from '@/components/admin/templates/industry-picker';
 import { NO_PEOPLE_NEGATIVES } from '@/lib/images/noPeople';
 import { uploadToStorage } from '@/lib/uploadToStorage';
 import MediaPicker from '@/components/admin/media/media-picker';
@@ -1085,11 +1086,11 @@ export default function HeroEditor({
               <div className="grid md:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs text-neutral-300">Industry</label>
-                  <select
-                    className={selectDark}
+                  <IndustryPicker
                     value={industryKey}
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    businessName={(template as any)?.business_name ?? null}
+                    onChange={(key: string) => {
+                      const val = key;
                       setIndustryKey(val);
 
                       // immediate broadcast
@@ -1114,14 +1115,7 @@ export default function HeroEditor({
                         saveNow();
                       });
                     }}
-                  >
-                    <option value="">{'— Select —'}</option>
-                    {industryOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <label className="text-xs text-neutral-300">Other (if not in the list)</label>

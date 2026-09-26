@@ -40,8 +40,34 @@
  * Cost one debugging round on `useGuestSignupSent`, where every catch body is a lone comment.
  */
 export function stripComments(src: string): string {
+  // ⚠️ NO JSX-SPECIFIC RULE. There used to be one — `\{\s*\/\*[\s\S]*?\*\/\s*\}` — to take the
+  // braces off `{/* … */}` as well as the comment. It silently deleted CODE.
+  //
+  // A TypeScript type literal whose first member carries a JSDoc comment opens identically:
+  //
+  //     }: {
+  //       /** Current industry key. */
+  //       value: string;
+  //
+  // `{` + whitespace + `/*`. The lazy body then ran to the first `*/}` anywhere later in the
+  // file — the next real JSX comment — and everything between was removed. On
+  // `industry-picker.tsx` that was 3,387 of 6,829 characters, including the keyboard handler a
+  // test was asserting on. The test failed, which was lucky: the same truncation under a
+  // `not.toMatch(forbidden)` assertion passes, for the wrong reason, and says the file is clean
+  // because half of it is gone.
+  //
+  // Removing the comment but leaving `{ }` behind is enough for every token check here, and
+  // cannot eat code.
+  // ⚠️ LINE COMMENTS FIRST, BLOCKS SECOND — the order is load-bearing.
+  //
+  // A `//` comment may legitimately CONTAIN `/*`. One in this repo reads:
+  //
+  //     // One page, not a second /alternatives/* route: Google ranks one URL for both…
+  //
+  // Strip blocks first and that `/*` opens a phantom comment which runs to the next real `*/`
+  // fifty lines later, taking the code between with it. Line comments are anchored to the start
+  // of a line (`^\s*//`), so removing them first cannot eat a `//` inside a string such as a URL.
   return src
-    .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, '')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^\s*\/\/.*$/gm, '');
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '');
 }

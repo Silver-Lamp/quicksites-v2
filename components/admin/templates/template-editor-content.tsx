@@ -627,7 +627,12 @@ export default function EditorContent({
 
       {/* Settings Drawer (unchanged visual, but S hotkey now works from iframe via bridge) */}
       {showSettings && (
-        <div className="fixed inset-0 z-[1300] bg-black/70 backdrop-blur-sm">
+        /* ⚠️ ABOVE THE TRAY. At z-[1300] this full-screen sheet sat UNDER the action toolbar
+           (max int) and the Shuffle pill, so on a phone both punched straight through the
+           settings modal — a floating button and a tray drawn across a sheet that is supposed to
+           own the screen. A modal REPLACES the chrome; it is the opposite case from the
+           walkthrough, which points at the toolbar and therefore respects it as a floor. */
+        <div className="fixed inset-0 z-[2147483647] bg-black/70 backdrop-blur-sm">
           <div className="absolute inset-y-0 right-0 w-[min(92vw,1000px)] max-w-[1000px] h-full shadow-2xl">
             <div className="h-full bg-neutral-900 border-l border-white/10 flex flex-col">
               <div className="sticky top-0 z-10 flex items-center justify-between gap-3 p-3 border-b border-white/10 bg-neutral-900/95 backdrop-blur">

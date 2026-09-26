@@ -647,7 +647,12 @@ useEffect(() => {
             </Button>
           </div>
         ) : (
-          <div className="w-full flex justify-between items-center gap-3">
+          /* ⚠️ PANS ON A PHONE INSTEAD OF CLIPPING. `justify-between` with no wrap and no
+             scroll put ~12 controls into a 390px tray, so the right-hand end — light/dark,
+             theme, save, publish — fell off the screen with no way to reach it. Horizontal
+             scroll keeps every control reachable by swiping the tray, and `justify-start` at
+             narrow widths stops the gaps being stretched to nothing. */
+          <div className="w-full flex items-center gap-3 overflow-x-auto justify-start sm:justify-between [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {/* ⚠️ A DUPLICATE, AND FOR A GUEST A CONFUSING ONE. This gear and the labelled
                 "Hide" at the far right of the same row both call setToolbarCollapsed(true) —
                 two controls, one job — and a gear does not look like it hides anything; it

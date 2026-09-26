@@ -109,6 +109,21 @@ describe('⚠️ the wiring', () => {
     expect(TOUR).toMatch(/>\s*Skip\s*</);
   });
 
+  // ⚠️ A SPOTLIGHT MUST OUTRANK WHAT IT SPOTLIGHTS. At z-[80] the overlay sat under the page
+  // manager (z-[2147483646]) and the action toolbar (z-[2147483647]), so the step-2 card rendered
+  // BEHIND the Pages panel with only its buttons showing — which looks like a theming bug and is
+  // a stacking one. Pinned against both the old value and any number below the chrome.
+  it('renders above the editor chrome', () => {
+    const TOOLBAR = read('components/admin/templates/template-action-toolbar/TemplateActionToolbar.tsx');
+    const PAGES = read('components/admin/templates/page-manager-toolbar.tsx');
+    // The chrome really is up at max int — if that ever changes, this test should be revisited
+    // rather than the overlay silently left behind.
+    expect(TOOLBAR).toContain('z-[2147483647]');
+    expect(PAGES).toContain('z-[2147483646]');
+    expect(TOUR).toContain('z-[2147483647]');
+    expect(TOUR).not.toContain('z-[80]');
+  });
+
   it('skips a step whose anchor is not on the page', () => {
     expect(TOUR).toMatch(/WALKTHROUGH_STEPS\.filter\(/);
   });

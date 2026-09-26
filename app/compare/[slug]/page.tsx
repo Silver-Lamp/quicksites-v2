@@ -1,8 +1,18 @@
 // app/compare/[slug]/page.tsx
 //
-// One SEO page per competitor — "QuickSites vs <Name>" — generated from
-// lib/compare/competitors.ts. These are the exact-match comparison-shopper pages
-// ("quicksites vs wix", "wix alternative") the /compare hub links into.
+// One SEO page per competitor — "QuickSites vs <Name>" AND "<Name> alternative" — generated from
+// lib/compare/competitors.ts. These are the exact-match comparison-shopper pages the /compare hub
+// links into.
+//
+// ⚠️ THIS COMMENT USED TO BE FALSE, WHICH IS WHY THE SECOND PHRASING IS SPELLED OUT NOW. It said
+// these pages covered "wix alternative" from the day they shipped. They did not: the word appeared
+// in this comment and nowhere a crawler reads — not the title, the H1, the description or the body.
+// Search Console settled it on 2026-09-26: across 394 distinct queries, **zero** impressions for
+// any `<vendor> alternative`, while `duda vs wix` alone drew 94 (at position ~34, 0 clicks). An
+// absence of impressions was the absence of a page, not the absence of demand.
+//
+// ⚠️ A comment is not a keyword. If you add a phrasing here, add it to the metadata in the same
+// edit — `lib/compare/__tests__/alternativePhrasing.test.ts` now fails if they drift apart.
 //
 // Adding a competitor = one entry in COMPETITORS; this route, the hub, and the sitemap
 // all pick it up. Unknown slugs 404 (dynamicParams=false). Honesty-first: every page
@@ -39,8 +49,21 @@ export async function generateMetadata({
   const c = competitorBySlug(slug);
   if (!c) return {};
   return marketingOg({
-    title: `QuickSites vs ${c.name} — pricing, features & an honest verdict`,
-    description: `${c.name} (${c.pricing}) vs QuickSites (free hosting + a commerce take-rate). Side-by-side on cost, ecommerce, AI site build, and reseller economics — including what ${c.name} does better.`,
+    // ⚠️ BOTH PHRASINGS, ONE PAGE — and the "alternative" half was missing until 2026-09-26.
+    //
+    // This file's own header comment claimed these pages target "wix alternative". They did not:
+    // the word appeared nowhere a crawler reads, only in the comment. Search Console agrees —
+    // across 394 distinct queries we have **zero** impressions for any `<vendor> alternative`,
+    // while `duda vs wix` alone drew 94. That zero was the absence of a page, not of demand.
+    //
+    // The two phrasings are different INTENT, which is why it is worth carrying both: someone
+    // searching "duda vs wix" is choosing between two products that are not us, while someone
+    // searching "wix alternative" has already decided to leave. The second is the audience.
+    //
+    // One page, not a second /alternatives/* route: Google ranks one URL for both, and a parallel
+    // cluster would be thin and cannibalise this one.
+    title: `${c.name} alternative — QuickSites vs ${c.name}: pricing, features & an honest verdict`,
+    description: `Looking for a ${c.name} alternative? ${c.name} (${c.pricing}) vs QuickSites (free hosting + a commerce take-rate). Side-by-side on cost, ecommerce, AI site build, and reseller economics — including what ${c.name} does better.`,
     path: `/compare/${c.slug}`,
     ogEyebrow: 'Compare',
     ogTitle: `QuickSites vs ${c.name}`,
@@ -89,6 +112,15 @@ export default async function CompareCompetitorPage({
           <h1 className="mt-5 text-3xl font-extrabold tracking-tight md:text-5xl">
             QuickSites <span className="text-zinc-500">vs</span> {c.name}
           </h1>
+          {/* ⚠️ The "alternative" phrasing as a real sentence, not a keyword stuffed into the H1.
+              The H1 stays "QuickSites vs <Name>" because that is what the page IS; this line
+              carries the other intent and reads like something a person wrote. Someone who
+              searched "<name> alternative" has already decided to leave — meet them there rather
+              than opening with a comparison they did not ask for. */}
+          <p className="mx-auto mt-3 max-w-2xl text-base text-zinc-300">
+            Looking for a <span className="font-semibold text-white">{c.name} alternative</span>?
+            Here is the honest version — including what {c.name} does better.
+          </p>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-400">{c.oneLiner}</p>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-zinc-400">
             <span className="font-semibold text-zinc-200">The short version:</span> {c.name} is a strong{' '}

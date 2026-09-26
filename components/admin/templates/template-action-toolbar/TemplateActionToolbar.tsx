@@ -642,10 +642,17 @@ useEffect(() => {
           </div>
         ) : (
           <div className="w-full flex justify-between items-center gap-3">
-            {/* Hide/Show toolbar */}
-            <Button size="icon" variant="ghost" title="Hide toolbar (T)" aria-label="Hide toolbar (T)" onClick={() => setToolbarCollapsed(true)}>
-              <SettingsIcon className="w-4 h-4" />
-            </Button>
+            {/* ⚠️ A DUPLICATE, AND FOR A GUEST A CONFUSING ONE. This gear and the labelled
+                "Hide" at the far right of the same row both call setToolbarCollapsed(true) —
+                two controls, one job — and a gear does not look like it hides anything; it
+                looks like settings, which is the button immediately to its right. An owner
+                keeps it (muscle memory, sits by the S shortcut); a first-time builder gets the
+                one control that says what it does. */}
+            {!isGuest && (
+              <Button size="icon" variant="ghost" title="Hide toolbar (T)" aria-label="Hide toolbar (T)" onClick={() => setToolbarCollapsed(true)}>
+                <SettingsIcon className="w-4 h-4" />
+              </Button>
+            )}
 
             {/* Open Site Settings (same behavior as pressing "s") */}
             <Button
@@ -723,9 +730,13 @@ useEffect(() => {
               siteId={(tplRef.current as any).site_id}
             />
 
+            {/* Page Settings — hidden for a guest, who has one page and no idea what a page
+                setting is. It is the third gear-ish icon in a row of four. */}
+            {!isGuest && (
             <Button size="icon" variant="ghost" title="Page Settings" onClick={() => onOpenPageSettings?.()}>
               <SlidersHorizontal className="w-4 h-4" />
             </Button>
+            )}
 
             {/* Viewport */}
             <div className="flex items-center gap-1">
@@ -885,17 +896,21 @@ useEffect(() => {
                   Sign up to publish
                 </Button>
               )}
+              {/* ⚠️ whitespace-nowrap on the status spans below. Squeezed by the rest of the row,
+                  this text wrapped to ONE WORD PER LINE — a column reading "saved / · / yours /
+                  when / you / sign / up" through the middle of the toolbar. The reassurance is
+                  well argued above; it was simply being rendered as debris. */}
               {saveError ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 mr-1" title={saveError}>
                   <AlertTriangle className="w-3.5 h-3.5" /> Not saved
                 </span>
               ) : typeof autosaveStatus === 'string' && autosaveStatus ? (
-                <span className="text-[11px] text-zinc-400 mr-1">
+                <span className="text-[11px] text-zinc-400 mr-1 whitespace-nowrap">
                   {autosaveStatus}
                   {isGuest ? ' · yours when you sign up' : ''}
                 </span>
               ) : isGuest && !dirty ? (
-                <span className="text-[11px] text-zinc-400 mr-1">Saved · yours when you sign up</span>
+                <span className="text-[11px] text-zinc-400 mr-1 whitespace-nowrap">Saved · yours when you sign up</span>
               ) : null}
               <Button
                 size="sm"
@@ -911,9 +926,15 @@ useEffect(() => {
 
             {/* Status + undo/redo */}
             <div className="text-sm font-medium flex gap-3 items-center">
-              <span className={`text-xs px-2 py-1 rounded ${status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'}`}>
-                {status}
-              </span>
+              {/* ⚠️ "Draft" next to "Sign up to publish" reads as a second, competing status to
+                  someone who has just typed a business name — and the save chip beside it already
+                  answers the only question they have. An owner needs published-vs-draft at a
+                  glance; a guest needs one less yellow badge. */}
+              {!isGuest && (
+                <span className={`text-xs px-2 py-1 rounded ${status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'}`}>
+                  {status}
+                </span>
+              )}
 
               <div className="relative">
                 <Button size="icon" variant="ghost" onClick={undo} title={`Undo (${stats.past}) • ⌘Z`}>

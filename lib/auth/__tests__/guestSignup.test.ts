@@ -88,3 +88,41 @@ describe('the client: one event, one box, at the moment of intent', () => {
     expect(box).not.toMatch(/\/login\?(?!\$\{q)/); // never a bare /login for the upgrade path
   });
 });
+
+// ⚠️ The guest tray, decluttered 2026-09-26. A first-time builder who has typed only a business
+// name was getting the full owner cockpit: two controls that both hide the toolbar (a gear that
+// looks like settings, and a labelled "Hide"), page settings for a site with one page, a "Draft"
+// badge competing with "Sign up to publish", and a reassurance line squeezed until it wrapped one
+// word per line.
+describe('the bottom tray is simpler for a guest', () => {
+  const { stripComments } = require('@/test/stripComments');
+  const src = stripComments(
+    readFileSync('components/admin/templates/template-action-toolbar/TemplateActionToolbar.tsx', 'utf8'),
+  );
+
+  it('reads a real file', () => {
+    expect(src.length).toBeGreaterThan(8000);
+    expect(src).toContain('setToolbarCollapsed');
+  });
+
+  it('shows only ONE way to hide the toolbar for a guest', () => {
+    // Both the gear and the labelled button call setToolbarCollapsed(true). The gear is now
+    // owner-only; the one that says "Hide" is what a guest gets.
+    const collapses = src.match(/setToolbarCollapsed\(true\)/g) ?? [];
+    expect(collapses.length).toBeGreaterThanOrEqual(2); // both still exist for owners
+    expect(src).toMatch(/\{!isGuest && \([\s\S]{0,400}Hide toolbar \(T\)/);
+  });
+
+  it('hides page settings and the draft badge from a guest', () => {
+    expect(src).toMatch(/\{!isGuest && \([\s\S]{0,300}Page Settings/);
+    expect(src).toMatch(/\{!isGuest && \([\s\S]{0,300}bg-yellow-600/);
+  });
+
+  it('keeps the guest sign-up button — the one control that matters', () => {
+    expect(src).toMatch(/isGuest && \([\s\S]{0,400}Sign up to publish/);
+  });
+
+  it('does not let the save reassurance wrap', () => {
+    expect(src).toMatch(/whitespace-nowrap">Saved · yours when you sign up/);
+  });
+});

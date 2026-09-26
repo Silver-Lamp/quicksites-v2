@@ -22,17 +22,12 @@
  */
 import { readFileSync } from 'fs';
 import { join } from 'path';
+// ⚠️ Shared, not local. The same mistake recurred twice more the same afternoon while wiring the
+// guest funnel, so the stripper lives in one place with the reasoning attached.
+import { stripComments } from '@/test/stripComments';
 
 const root = process.cwd();
 const read = (p: string) => readFileSync(join(root, p), 'utf8');
-
-/** Remove block and line comments, and JSX `{/* … *\/}` wrappers, leaving shipped code. */
-function stripComments(src: string): string {
-  return src
-    .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, '') // {/* jsx comment */}
-    .replace(/\/\*[\s\S]*?\*\//g, '') // /* block */
-    .replace(/^\s*\/\/.*$/gm, ''); // // line
-}
 
 const HOME = stripComments(read('components/home/home-client.tsx'));
 const HEADER = stripComments(read('components/site/site-header.tsx'));

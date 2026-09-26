@@ -4,6 +4,71 @@
 > enough for them to sign up after they've made a trial site?"* The answer was no, with numbers.
 > Re-derive the numbers on `/admin/ops` ("Guest builders → sign-ups"); never trust the ones here.
 
+## ⛔ RE-MEASURED 2026-09-25 — the fix could not be evaluated, because the funnel emitted nothing
+
+Twelve days after PR A, against the live DB:
+
+| | |
+|---|---|
+| guest sites · builders | **52 · 21** |
+| published · converted | **0 · 0** — every site still owned by an `is_anonymous` user |
+| builders since the 09-13 fix | **8**, of whom **0** converted |
+| of those 8, time invested | one spent **95 minutes**, another **45** |
+
+⚠️ **NOBODY HAS EVER SUBMITTED THE FORM.** Across the 21 anonymous owners: `email` = 0,
+`email_change` (a pending confirm) = 0, `encrypted_password` = 0. So the confirmation-link token
+shape — the thing the owed browser walk-through exists to test, and "the one thing a test cannot
+see" — **is not the binding constraint. Nobody reaches it.**
+
+⚠️ **And "0 of 8" was uninterpretable, because everything before the form was dark:**
+
+1. `guest_upgrade_events` had 0 rows and **structurally could not have had any**: its only writer,
+   `components/admin/modals/upgrade-modal.tsx`, was **imported nowhere.** A table with a schema, an
+   admin reader and a dead writer reads exactly like instrumentation.
+2. The UI that actually shipped in PR A (`guest-signup-box.tsx`, `guest-publish-banner.tsx`) emitted
+   **no events at all.**
+3. ✅ The confirm side was fine — `captureGuestConversionIfFresh` fires `GUEST_SIGNUP_CONFIRMED` on
+   **both** auth branches. It has never fired because nobody has confirmed, which is a *correct*
+   silence. ⚠️ Worth recording how this was nearly misread: a grep for the literal string
+   `guest_signup_confirmed` finds only `events.ts` and its test, because every call site uses the
+   **symbol**. Searching for the string and concluding "no call site" is a one-character mistake
+   with an opposite conclusion.
+
+**So an empty table meant "nobody logged it", not "nobody clicked" — and until you know which, the
+next fix is a blind shot.** That is why instrumentation preceded any further change to the UI.
+
+### Shipped 2026-09-25 (PR C)
+
+- `lib/analytics/guestFunnel.ts` — six pre-submit steps: `prompt_shown` (the **denominator**),
+  `signup_opened`, `signup_submitted`, `signup_email_sent`, `signup_failed`,
+  `signup_existing_account`; each tagged with the surface (`banner` · `banner_inline` · `toolbar` ·
+  `publish` · `modal`). `publish` is the strong one — it means they tried to publish and were refused.
+- `POST /api/guest/funnel` — ⚠️ **server-side with the service role, not a client insert.**
+  `guest_upgrade_events` currently has RLS *disabled*, so a browser insert's fate depends on table
+  GRANTs, and a later hardening sweep (this repo has locked a batch of anon-writable tables before)
+  would make it fail **silently** — building a silent-failure mode into the instrument whose whole
+  job is to end one. The user id comes from the session, never the body.
+- ⚠️ **No PII by construction.** The unit is a STEP, not a person: no email, no password, and never
+  the provider's error string (Supabase puts the address in some of them) — failures are one of
+  three coarse reasons. Guarded by tests over the source.
+- `signup_submitted` fires **before** password validation, so someone our own rule turns away still
+  counts as having tried.
+- `/admin/ops` gains a "Before the form — where they actually stop" row. ⚠️ Unread events render as
+  **"—", never 0**; only a successful read of an empty table may say zero.
+- The dead `upgrade-modal.tsx` is **deleted**, so nothing looks instrumented that is not.
+- `test/stripComments.ts` — shared, because a source guard that greps prose fails on the comment
+  explaining the rule. That happened three times in one day here, then twice more the same
+  afternoon. Also fixed the `@/test/*` path alias, which existed for `tests/` (Playwright) but not
+  `test/` — so the import resolved under Jest and failed under `tsc`.
+
+**Verified:** a service-role insert through PostgREST returns 201 and the row lands with the right
+columns (self-test row written and deleted); the route answers 401 unauthenticated and 400 on an
+unknown event, against a real build.
+**Still owed, and now narrower:** the browser walk-through. It answers "if someone clicks, does the
+path complete" — a different question from "do they ever click", which the events will now answer.
+
+---
+
 ## The numbers (live DB, 2026-09-13, guests since 2026-07-03)
 
 | Stage | Count |

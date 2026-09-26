@@ -20,6 +20,7 @@
     "components",
     "hooks",
     "lib",
+    "test",
     "types",
     "pages",
     "scripts",

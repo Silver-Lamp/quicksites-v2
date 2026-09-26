@@ -215,6 +215,41 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
           <KpiTile label="Converted" value={guestFunnel.converted} tone={guestFunnel.converted > 0 ? 'good' : 'bad'} sub={guestFunnel.sites ? `${Math.round((100 * guestFunnel.converted) / guestFunnel.sites)}% of guest sites` : '—'} />
           <GuestReachableTile funnel={guestFunnel} />
         </div>
+
+        {/* ⚠️ THE ROW ABOVE IS ALL END STATE, AND END STATE CANNOT SAY WHY.
+            "Started sign-up 0" is the same number whether forty people saw the prompt and walked
+            away or the button never rendered — and for two months that ambiguity read as an answer.
+            These are the steps in between (guest_upgrade_events, wired 2026-09-25). */}
+        <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900/40 p-3">
+          <div className="text-xs font-medium uppercase tracking-wide text-neutral-400">
+            Before the form — where they actually stop
+          </div>
+          {guestFunnel.steps === null ? (
+            // ⚠️ Not zeroes. A failed/unread events table must never render as "nobody clicked".
+            <p className="mt-2 text-xs text-amber-300">
+              Step events unreadable — showing nothing rather than zeroes, because an unread table
+              and an empty one are different answers.
+            </p>
+          ) : (
+            <>
+              <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                <KpiTile label="Prompt shown" value={guestFunnel.steps.promptShown} tone="info" sub="the denominator" />
+                <KpiTile label="Opened the form" value={guestFunnel.steps.signupOpened} tone={guestFunnel.steps.signupOpened > 0 ? 'good' : 'warn'} sub={`${guestFunnel.steps.buildersWhoOpened} builder${guestFunnel.steps.buildersWhoOpened === 1 ? '' : 's'}`} />
+                <KpiTile label="Submitted" value={guestFunnel.steps.signupSubmitted} tone={guestFunnel.steps.signupSubmitted > 0 ? 'good' : 'warn'} sub="pressed the button" />
+                <KpiTile label="Email sent" value={guestFunnel.steps.signupEmailSent} tone={guestFunnel.steps.signupEmailSent > 0 ? 'good' : 'neutral'} sub="confirm on its way" />
+                <KpiTile label="Failed" value={guestFunnel.steps.signupFailed} tone={guestFunnel.steps.signupFailed > 0 ? 'bad' : 'neutral'} sub="our rules or an error" />
+                <KpiTile label="Already had an account" value={guestFunnel.steps.signupExistingAccount} tone="neutral" sub="offered log-in" />
+              </div>
+              <p className="mt-2 text-xs text-neutral-500">
+                Read them as a drop-off: shown → opened → submitted → email sent. The biggest gap is
+                the thing to fix. <strong className="text-neutral-400">Zeroes across the row mean the
+                events are new</strong> — they only started being recorded on 2026-09-25, so they
+                describe visitors since then and say nothing about the 21 builders before.
+              </p>
+            </>
+          )}
+        </div>
+
         <p className="mt-2 text-xs text-neutral-500">
           To contact them: <code className="rounded bg-neutral-800 px-1">npm run guests:contacts</code> lists each guest site with what it recorded and what its source website shows.
         </p>

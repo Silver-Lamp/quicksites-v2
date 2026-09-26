@@ -26,6 +26,11 @@
       "@/hooks/*": ["hooks/*"],
       "@/lib/*": ["lib/*"],
       "@/scripts/*": ["scripts/*"],
+      // ⚠️ `test` and `tests` are two different real directories. `tests/` is Playwright; `test/`
+      // holds the Jest setup, the module stubs and shared test helpers. Only `tests` was mapped, so
+      // `@/test/...` resolved under Jest (its moduleNameMapper has a blanket `^@/(.*)$`) and failed
+      // under `tsc` — green tests, red typecheck, from the same import.
+      "@/test/*": ["test/*"],
       "@/tests/*": ["tests/*"],
       "@/types/*": ["types/*"],
       "@/ui/*": ["ui/*"]

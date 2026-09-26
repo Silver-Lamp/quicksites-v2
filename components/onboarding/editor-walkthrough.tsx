@@ -18,6 +18,26 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { WALKTHROUGH_STEPS, type WalkthroughStep } from '@/lib/onboarding/walkthrough';
 
+/**
+ * ⚠️ MAX 32-BIT INT, AND IT HAS TO BE — the editor chrome already lives up here.
+ *
+ * The first cut used `z-[80]`, which put the whole overlay UNDER the page manager
+ * (`z-[2147483646]`) and the action toolbar (`z-[2147483647]`). Step 1 looked perfect because its
+ * card sits high on the page with nothing above it; step 2 anchors near the bottom, so the card
+ * rendered *behind* the Pages panel and only the button row poked out below it — which reads as a
+ * theming bug and is really a stacking one.
+ *
+ * ⚠️ We cannot outrank the toolbar numerically, because it is already at the maximum. Equal
+ * z-index is resolved by DOM order, and this portal is appended to <body> when the walkthrough
+ * OPENS — after the toolbar has mounted — so it wins. That is a real dependency on mount order
+ * rather than a guarantee: if a future overlay renders at max-int *after* this one, it will cover
+ * the card, and the fix then is to lower the toolbar rather than to invent a bigger number.
+ *
+ * Leaving the toolbar bright is deliberate, not a side effect: on the theme and publish steps the
+ * toolbar IS the thing being pointed at, so it should sit above the dimmed backdrop.
+ */
+const OVERLAY_Z = 'z-[2147483647]';
+
 type Rect = { top: number; left: number; width: number; height: number };
 
 function rectFor(anchor: string): Rect | null {
@@ -90,7 +110,7 @@ export default function EditorWalkthrough({ onDone }: { onDone: () => void }) {
   const isLast = i === steps.length - 1;
 
   return createPortal(
-    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-label="Editor walkthrough">
+    <div className={`fixed inset-0 ${OVERLAY_Z}`} role="dialog" aria-modal="true" aria-label="Editor walkthrough">
       {/* Backdrop with a hole punched over the target. Four panels rather than an SVG mask —
           fewer moving parts, and it degrades to "slightly dim" rather than "black screen" if a
           measurement is off. */}

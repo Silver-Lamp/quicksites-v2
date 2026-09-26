@@ -72,3 +72,33 @@ describe('the featured list', () => {
     expect(FEATURED_SITE_SLUGS[0]).toBe('pnw-exteriorcleaning');
   });
 });
+
+// ⚠️ The #1 featured card rendered as "Pnw exteriorcleaning" while its real name sat unused in
+// `template_name`. Title-casing a slug is a fallback for having NOTHING, not for having the name
+// in a field nobody looked at.
+describe('the card name', () => {
+  const { stripComments } = require('@/test/stripComments');
+  const src = stripComments(
+    require('fs').readFileSync(require('path').join(process.cwd(), 'lib/home/getShowcaseData.ts'), 'utf8'),
+  );
+
+  it('prefers template_name over a prettified slug', () => {
+    const tn = src.indexOf('const realName');
+    const pretty = src.indexOf('realName || (industry ? prettifySlug(r.slug)');
+    expect(tn).toBeGreaterThan(0);
+    expect(pretty).toBeGreaterThan(tn);
+  });
+
+  it('selects template_name from the database, or it cannot use it', () => {
+    // The field was absent from the select for the life of the feature.
+    expect(src).toMatch(/\.select\('[^']*template_name/);
+  });
+
+  it('still ignores slug-shaped template names', () => {
+    const slugShaped = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+    expect(slugShaped.test('new-template-66cf-y0nf')).toBe(true);
+    expect(slugShaped.test('plumbing-1')).toBe(true);
+    expect(slugShaped.test('PNW Prestige – Exterior Cleaning')).toBe(false);
+    expect(slugShaped.test('Grafton Towing')).toBe(false);
+  });
+});

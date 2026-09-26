@@ -139,10 +139,22 @@ describe('⚠️ no PII reaches the analytics row', () => {
     expect(BOX).not.toMatch(/reason:\s*[a-zA-Z]+\?\.\s*message/);
   });
 
-  it('never sends the email or password', () => {
+  // ⚠️ MATCHES IDENTIFIERS, NOT THE WORD. The first version banned the token `password` anywhere
+  // in a call and broke the moment a legitimate ENUM VALUE was named `method: 'password'` — a ban
+  // on a token cannot tell a value from a name, the same failure as the `subscribe-and-save` check
+  // that fired on the sentence denying it. What must never appear is the VARIABLE being passed:
+  // `{ email }` shorthand or `something: addr`.
+  it('never sends the email or password VALUE', () => {
     const calls = [...BOX.matchAll(/trackGuestFunnel\([^)]*\)/gs)].map((m) => m[0]).join('\n');
     expect(calls.length).toBeGreaterThan(0);
-    expect(calls).not.toMatch(/\bemail\b|\baddr\b|\bpassword\b/);
+    expect(calls).not.toMatch(/:\s*(email|addr|password)\b/); // key: <variable>
+    expect(calls).not.toMatch(/\{\s*(email|addr|password)\s*[,}]/); // { email } shorthand
+  });
+
+  it('that PII check still rejects the thing it is for', () => {
+    // Guard the guard: if the regexes above were loosened into uselessness, this fails.
+    const bad = "trackGuestFunnel('x', { surface, email: addr })";
+    expect(bad).toMatch(/:\s*(email|addr|password)\b/);
   });
 
   it('the route accepts no field that could carry an address', () => {
@@ -158,5 +170,59 @@ describe('⚠️ no PII reaches the analytics row', () => {
   it('the user id comes from the session, never the request body', () => {
     expect(ROUTE).toMatch(/guest_user_id:\s*user\.id/);
     expect(ROUTE).not.toMatch(/guest_user_id:\s*(parsed|body)/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Google sign-up for guests (2026-09-26). The button is inert until the Supabase
+// provider is configured — verified that day: the authorize endpoint answers
+// `{"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"}`.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('⚠️ the guest Google path must LINK, never sign in afresh', () => {
+  const BOX = stripComments(readRaw('components/admin/guest-signup-box.tsx'));
+
+  it('uses linkIdentity', () => {
+    expect(BOX).toMatch(/supabase\.auth\.linkIdentity\(/);
+  });
+
+  // THE ONE THAT MATTERS. `signInWithOAuth` starts a NEW session under a NEW uid, so the draft the
+  // guest just spent an hour on belongs to the old user — orphaned and invisible. It is the exact
+  // failure the file header warns about for /login, and it would look completely correct in review
+  // because it is what the /login button does two files away.
+  it('NEVER uses signInWithOAuth, which would orphan the draft', () => {
+    expect(BOX).not.toMatch(/signInWithOAuth/);
+  });
+
+  it('is hidden unless the Supabase provider is actually configured', () => {
+    // A button that 400s is worse than no button — the flag exists for that, not for a rollout.
+    expect(BOX).toMatch(/googleAuthEnabled\(\)/);
+  });
+
+  it('keeps the email+password path intact', () => {
+    expect(BOX).toMatch(/supabase\.auth\.updateUser\(/);
+  });
+});
+
+describe('⚠️ every step carries its METHOD, or the button is unmeasurable', () => {
+  const BOX = stripComments(readRaw('components/admin/guest-signup-box.tsx'));
+
+  it('tags the google attempt and its failure', () => {
+    expect(BOX).toMatch(/trackGuestFunnel\('signup_submitted', \{ surface, method: 'google' \}\)/);
+    expect(BOX).toMatch(/method: 'google', reason: 'error'/);
+  });
+
+  it('tags the password path too, so the two can be compared', () => {
+    // Tagging only the new path would make Google look like the only thing anyone ever tries.
+    expect(BOX).toMatch(/method: 'password'/);
+    const untagged = BOX.match(/trackGuestFunnel\('signup_(submitted|failed|email_sent|existing_account)'[^)]*\)/g) ?? [];
+    expect(untagged.length).toBeGreaterThan(0);
+    for (const call of untagged) expect(call).toMatch(/method:/);
+  });
+
+  it('triggerReason folds surface, method and reason in that order', () => {
+    const { triggerReason } = require('@/lib/analytics/guestFunnel');
+    expect(triggerReason('banner_inline', null, 'google')).toBe('banner_inline:google');
+    expect(triggerReason('modal', 'weak_password', 'password')).toBe('modal:password:weak_password');
+    expect(triggerReason(null, null, null)).toBeNull();
   });
 });

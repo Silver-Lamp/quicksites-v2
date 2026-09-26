@@ -59,6 +59,17 @@ export type GuestFunnelSurface = (typeof GUEST_FUNNEL_SURFACES)[number];
 export const GUEST_FUNNEL_REASONS = ['weak_password', 'email_exists', 'error'] as const;
 export type GuestFunnelReason = (typeof GUEST_FUNNEL_REASONS)[number];
 
+/**
+ * HOW they tried to create the account.
+ *
+ * ⚠️ Without this dimension, adding "Continue with Google" would be unmeasurable — the whole
+ * argument for it is that email+password+confirm-your-inbox is too much to ask at the moment of
+ * intent, and that claim is only worth anything if the two can be compared. Shipping the button
+ * and not the dimension is how you end up believing it helped.
+ */
+export const GUEST_FUNNEL_METHODS = ['password', 'google'] as const;
+export type GuestFunnelMethod = (typeof GUEST_FUNNEL_METHODS)[number];
+
 export function isGuestFunnelEvent(v: unknown): v is GuestFunnelEvent {
   return typeof v === 'string' && (GUEST_FUNNEL_EVENTS as readonly string[]).includes(v);
 }
@@ -72,12 +83,21 @@ export function isGuestFunnelSurface(v: unknown): v is GuestFunnelSurface {
   return typeof v === 'string' && (GUEST_FUNNEL_SURFACES as readonly string[]).includes(v);
 }
 
-/** The `trigger_reason` column, as one short token: the surface, plus a failure reason if any. */
+/**
+ * The `trigger_reason` column, as one short colon-joined token: `surface:method:reason`, with any
+ * absent part omitted (`banner_inline:google`, `modal:password:weak_password`, `publish`).
+ *
+ * ⚠️ Three facts in one text column, which is a compromise — `guest_upgrade_events` has no spare
+ * typed column and adding one to compare two sign-up buttons is not worth a migration. The parts
+ * are each from a closed allowlist, so the string stays parseable; if a fourth dimension ever
+ * wants in, that is the point to stop and add columns rather than a fourth segment.
+ */
 export function triggerReason(
   surface?: GuestFunnelSurface | null,
   reason?: GuestFunnelReason | null,
+  method?: GuestFunnelMethod | null,
 ): string | null {
-  const parts = [surface, reason].filter(Boolean);
+  const parts = [surface, method, reason].filter(Boolean);
   return parts.length ? parts.join(':') : null;
 }
 
@@ -94,7 +114,7 @@ export const GUEST_FUNNEL_ENDPOINT = '/api/guest/funnel';
  */
 export function trackGuestFunnel(
   event: GuestFunnelEvent,
-  opts: { surface?: GuestFunnelSurface; reason?: GuestFunnelReason } = {},
+  opts: { surface?: GuestFunnelSurface; reason?: GuestFunnelReason; method?: GuestFunnelMethod } = {},
 ): void {
   if (typeof window === 'undefined') return;
   try {
@@ -107,6 +127,7 @@ export function trackGuestFunnel(
         event,
         surface: opts.surface ?? null,
         reason: opts.reason ?? null,
+        method: opts.method ?? null,
         pageUrl: window.location.pathname, // path only — no query string, which can carry tokens
         referrer: document.referrer || null,
       }),

@@ -22,6 +22,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import {
   GUEST_FUNNEL_EVENTS,
+  GUEST_FUNNEL_METHODS,
   GUEST_FUNNEL_REASONS,
   GUEST_FUNNEL_SURFACES,
   triggerReason,
@@ -36,6 +37,8 @@ const bodySchema = z.object({
   event: z.enum(GUEST_FUNNEL_EVENTS),
   surface: z.enum(GUEST_FUNNEL_SURFACES).nullish(),
   reason: z.enum(GUEST_FUNNEL_REASONS).nullish(),
+  /** password | google — the comparison the Google button exists to make. */
+  method: z.enum(GUEST_FUNNEL_METHODS).nullish(),
   pageUrl: z.string().max(300).nullish(),
   referrer: z.string().max(300).nullish(),
 });
@@ -57,14 +60,14 @@ export async function POST(req: Request) {
   } = await supa.auth.getUser();
   if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
-  const { event, surface, reason, pageUrl, referrer } = parsed.data;
+  const { event, surface, reason, method, pageUrl, referrer } = parsed.data;
 
   // Best-effort by design: a failed beacon must never surface to the person signing up. It is
   // logged rather than swallowed, because a write that fails quietly is the bug being fixed.
   const { error } = await supabaseAdmin.from('guest_upgrade_events').insert({
     guest_user_id: user.id,
     event,
-    trigger_reason: triggerReason(surface ?? null, reason ?? null),
+    trigger_reason: triggerReason(surface ?? null, reason ?? null, method ?? null),
     page_url: pageUrl ?? null,
     referrer: referrer ?? null,
   });

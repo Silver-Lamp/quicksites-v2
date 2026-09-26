@@ -37,6 +37,38 @@ see" — **is not the binding constraint. Nobody reaches it.**
 **So an empty table meant "nobody logged it", not "nobody clicked" — and until you know which, the
 next fix is a blind shot.** That is why instrumentation preceded any further change to the UI.
 
+### Shipped 2026-09-26 (PR D) — a lighter ask, behind the flag
+
+⚠️ **The measured problem is not which method people pick — it is that 21 of 21 never typed an
+email.** The password path asks for an address, an invented password, and a trip to an inbox
+before the site they just built can go live. Google asks for one tap.
+
+- `GuestSignupForm` gains **Continue with Google**, rendered FIRST (below the form would leave the
+  heavy ask as the default and test nothing).
+- ⚠️ **`linkIdentity`, NOT `signInWithOAuth`.** `/login` can use `signInWithOAuth` because nobody
+  there has anything to lose. Here it would start a NEW session under a NEW uid and **orphan the
+  draft** — the same failure as sending them to `/login`, wearing a nicer button. It would also
+  look completely correct in review, because it is what the `/login` button does two files away.
+  Pinned by a test that fails on `signInWithOAuth` appearing in this component at all.
+- Every funnel step now carries a **`method`** (`password` | `google`), folded into
+  `trigger_reason` as `surface:method:reason`. Without it the button would be unmeasurable, and
+  shipping it unmeasured is how you end up believing it helped.
+
+⛔ **INERT until two Supabase dashboard actions.** Verified 2026-09-26: the authorize endpoint
+returns `{"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"}`.
+So the flag being off is correct, not an oversight — turning it on today renders a button that
+400s.
+
+**Owner actions, in order:**
+1. Supabase → Authentication → Providers → **Google**: client id + secret.
+2. Supabase → Authentication → **Manual linking: enabled** (required by `linkIdentity`).
+3. Supabase → URL Configuration → Redirect URLs: allowlist the app hosts.
+4. `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` in Vercel, then **redeploy** — it is build-time inlined.
+
+⚠️ **Assumed, not measured:** that one-tap sign-up converts better here. It is a strong prior and
+it is not evidence; the `method` dimension exists precisely so the claim can be checked rather
+than believed.
+
 ### Shipped 2026-09-25 (PR C)
 
 - `lib/analytics/guestFunnel.ts` — six pre-submit steps: `prompt_shown` (the **denominator**),

@@ -124,6 +124,24 @@ describe('⚠️ the wiring', () => {
     expect(TOUR).not.toContain('z-[80]');
   });
 
+  // ⚠️ "STEP 2 OF 2". Three of the five anchors live in the action toolbar, which is a PORTAL that
+  // had not mounted when a single layout effect measured. The steps were not dropped loudly —
+  // they were silently absent, and the tour looked complete at two steps. A late portal and a
+  // genuinely missing control are indistinguishable from ONE measurement.
+  it('re-measures, so anchors in a late-mounting portal are not lost', () => {
+    expect(TOUR).toMatch(/setTimeout\(resolve/);
+    expect(TOUR).toMatch(/present\.length > prev\.length/);
+  });
+
+  // ⚠️ #1047 raised this to max int and admitted it could not outrank the toolbar, which is
+  // already there — leaving DOM order to decide. That gamble lost: the card's buttons rendered
+  // under the tray. The card now respects the toolbar as a floor instead of fighting for the top.
+  it('never places the card beneath the action toolbar', () => {
+    expect(TOUR).toMatch(/getElementById\('template-action-toolbar'\)/);
+    expect(TOUR).toMatch(/const floor =/);
+    expect(TOUR).toMatch(/fitsBelow/);
+  });
+
   it('skips a step whose anchor is not on the page', () => {
     expect(TOUR).toMatch(/WALKTHROUGH_STEPS\.filter\(/);
   });

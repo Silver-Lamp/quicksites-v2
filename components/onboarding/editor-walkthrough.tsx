@@ -60,10 +60,33 @@ export default function EditorWalkthrough({ onDone }: { onDone: () => void }) {
 
   useEffect(() => setMounted(true), []);
 
+  // ⚠️ MEASURED REPEATEDLY, NOT ONCE. The first cut resolved the step list in a single layout
+  // effect and got "STEP 2 OF 2": three of the five anchors live in the action toolbar, which is a
+  // PORTAL that had not mounted yet. Steps did not fail loudly — they were silently dropped, and
+  // the tour looked complete at two steps.
+  //
+  // So it re-checks for a short window and grows the list. Skipping a genuinely absent anchor is
+  // still correct (a guest has no Publish); skipping one that simply had not rendered is not, and
+  // from a single measurement the two are indistinguishable.
   useLayoutEffect(() => {
-    const present = WALKTHROUGH_STEPS.filter((s) => rectFor(s.anchor));
-    setSteps(present);
-    if (present.length === 0) onDone(); // nothing to point at — do not show an empty tour
+    let cancelled = false;
+    let tries = 0;
+
+    const resolve = () => {
+      if (cancelled) return;
+      const present = WALKTHROUGH_STEPS.filter((st) => rectFor(st.anchor));
+      setSteps((prev) => (present.length > prev.length ? present : prev));
+      tries += 1;
+      // ~1.2s of grace, then stop: a late portal is common, an infinitely late one is a bug.
+      if (present.length < WALKTHROUGH_STEPS.length && tries < 8) {
+        setTimeout(resolve, 150);
+      } else if (present.length === 0) {
+        onDone(); // nothing to point at anywhere — do not show an empty tour
+      }
+    };
+
+    resolve();
+    return () => { cancelled = true; };
   }, [onDone]);
 
   const step = steps[i];
@@ -102,9 +125,26 @@ export default function EditorWalkthrough({ onDone }: { onDone: () => void }) {
   const boxW = rect.width + pad * 2;
   const boxH = rect.height + pad * 2;
 
-  // Put the card below the target, or above it when there is no room underneath.
-  const below = boxTop + boxH + 190 < window.innerHeight;
-  const cardTop = below ? boxTop + boxH + 12 : Math.max(12, boxTop - 12 - 180);
+  // ⚠️ THE ACTION TOOLBAR IS THE FLOOR, AND IT IS NOT NEGOTIABLE BY Z-INDEX.
+  //
+  // #1047 raised this overlay to max 32-bit int to escape the editor chrome, and noted that we
+  // cannot outrank the toolbar numerically because it is ALREADY at the maximum — leaving equal
+  // z-index resolved by DOM order, "a dependency on mount order rather than a guarantee". That
+  // gamble lost: the step-2 card rendered with its buttons underneath the toolbar.
+  //
+  // So stop fighting for the top and respect the floor instead. The toolbar is legitimately the
+  // topmost chrome; the card simply must not be placed beneath it. Measured from the live element
+  // rather than a hardcoded height, because the tray wraps at narrow widths.
+  const CARD_H = 190;
+  const toolbar = document.getElementById('template-action-toolbar');
+  const toolbarTop = toolbar ? toolbar.getBoundingClientRect().top : window.innerHeight;
+  const floor = Math.max(120, toolbarTop - 12);
+
+  // Below the target when it fits above the floor, otherwise above the target.
+  const fitsBelow = boxTop + boxH + 12 + CARD_H <= floor;
+  const cardTop = fitsBelow
+    ? boxTop + boxH + 12
+    : Math.max(12, Math.min(boxTop - 12 - CARD_H, floor - CARD_H));
   const cardLeft = Math.min(Math.max(12, boxLeft), Math.max(12, window.innerWidth - 360));
 
   const isLast = i === steps.length - 1;

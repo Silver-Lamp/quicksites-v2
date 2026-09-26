@@ -1,18 +1,35 @@
 // lib/home/featured-sites.ts
 //
-// Priority ordering for the homepage "Built with QuickSites" showcase. The
-// showcase shows ALL publishable published sites (those with a business name,
-// industry, or hero image); these slugs are pinned to the front in this order.
-// Everything else follows alphabetically. Admins can hide individual sites at
-// runtime (persisted; see showcase_hidden_slugs). Add a slug here to feature it
-// first — note a site only appears once it's actually published.
+// Fallback priority for the homepage "Built with QuickSites" showcase.
+//
+// ⚠️ THIS LIST DOES NOT WIN, AND ITS OLD COMMENT SAID IT DID. It claimed these slugs were "pinned
+// to the front"; they are not. `getShowcaseData` sorts every slug present in
+// `site_settings.showcase_order` (the admin drag order) ahead of every slug that is not, so a
+// featured site the saved order has never heard of lands *behind all of it*. Measured 2026-09-26:
+// `pnw-exteriorcleaning` was first here and **16th of 130 in the live public feed**, while an
+// admin saw it first in their own browser from their local drag state. This list only breaks ties
+// among sites the admin order does not mention.
+//
+// ⚠️ To actually put a site first, use the ★ on its card (super-admin, homepage) — it writes the
+// full `showcase_order`. Editing this file will not do it.
+//
+// Ordering principle for what follows: real business names, no demos, no `starter-*` seeds, and
+// INDUSTRY VARIETY at the front. The row led with five towing companies in a row, which reads as
+// "this is a towing tool" to everyone who is not a tow operator.
 
 export const FEATURED_SITE_SLUGS: string[] = [
-  'pnw-exteriorcleaning', // shows automatically once published
-  'graftontowing',
+  'pnw-exteriorcleaning', // exterior cleaning — owner's pick
+  'graftontowing', // towing — the deepest site we have (9 pages)
+  'renton-plumbing', // plumbing
+  'auburnroofcleaning', // roof cleaning
+  'arlington-electrical', // electrical
+  'arlington-hvac', // hvac
+  'arlo-v-books', // author — the non-trade vertical
   'southhilltowing',
-  'florencetow',
-  // 'deliveredmenu' removed 2026-07-27: it was `published=true` with NO published snapshot,
-  // so its showcase card linked to a page that rendered the marketing homepage instead of a
-  // site. Unpublished at the same time. Re-add only if it is genuinely published.
+  'framingham-plumbing',
+  'covingtontow',
+  // 'deliveredmenu' removed 2026-07-27: `published=true` with NO published snapshot, so its card
+  // linked to a page that rendered the marketing homepage instead of a site.
+  // ⚠️ 'local', 'ecopest', 'luxeglow' are NOT eligible — their names end in "— Demo". They are
+  // filtered out at source now (`looksLikeDemo`), not merely left out of this list.
 ];

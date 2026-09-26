@@ -61,12 +61,12 @@ export default function WalkthroughReplayCard() {
     <div className="space-y-2">
       <p className="text-sm text-muted-foreground">
         {state === 'reset'
-          ? 'Done — open any site in the editor and the walkthrough will run once more.'
+          ? 'Done — it runs next time you open a site. You can also start it any time from the ? button in the editor toolbar.'
           : state === 'error'
             ? 'Could not read your preferences just now. Try again in a moment.'
             : state === 'unseen'
               ? 'You have not seen it yet — it runs the next time you open a site in the editor.'
-              : 'A five-step tour of the editor: sections, blocks, pages, themes and publishing.'}
+              : 'A five-step tour of the editor: sections, blocks, pages, themes and publishing. The ? button in the editor toolbar starts it any time.'}
       </p>
       <Button
         variant="outline"

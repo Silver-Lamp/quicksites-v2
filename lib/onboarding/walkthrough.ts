@@ -89,3 +89,32 @@ export function markUnseen(prefs: UiPrefs): UiPrefs {
   delete next[WALKTHROUGH_PREF_KEY];
   return next;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Re-triggering it on demand.
+//
+// ⚠️ Clearing the "seen" flag from the account page was technically a replay and practically
+// useless: it required leaving settings, remembering which site, and opening the editor, by which
+// point you have forgotten what you wanted to check. Two ways that actually work — a button in the
+// editor, and a URL.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Dispatched (window) to start the walkthrough immediately, wherever the host is mounted. */
+export const WALKTHROUGH_REPLAY_EVENT = 'qs:walkthrough:replay';
+
+/**
+ * `?walkthrough=1` on any editor URL starts the tour on load.
+ *
+ * ⚠️ The host strips it from the address bar afterwards. Left in place, every refresh restarts the
+ * tour — and the URL is the thing people bookmark, share in a support reply, and reload.
+ */
+export const WALKTHROUGH_QUERY_PARAM = 'walkthrough';
+
+/** Start it now. Safe to call from anywhere on the client. */
+export function startWalkthrough(): void {
+  try {
+    window.dispatchEvent(new CustomEvent(WALKTHROUGH_REPLAY_EVENT));
+  } catch {
+    /* SSR */
+  }
+}

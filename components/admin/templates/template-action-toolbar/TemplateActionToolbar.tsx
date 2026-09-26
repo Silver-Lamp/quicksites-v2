@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useIsGuest } from '@/hooks/useIsGuest';
 import { requestGuestSignup } from '@/lib/auth/guestSignup';
 import { useGuestSignupSent } from '@/hooks/useGuestSignupSent';
+import { startWalkthrough } from '@/lib/onboarding/walkthrough';
 import { createPortal } from 'react-dom';
 import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
 import { Button } from '@/components/ui';
@@ -11,7 +12,7 @@ import toast from 'react-hot-toast';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
   Smartphone, Tablet, Monitor, SlidersHorizontal, Check, Sun, Moon,
-  Settings as SettingsIcon, Trash2, Database, Minus, Wrench, Palette, Keyboard,
+  Settings as SettingsIcon, Trash2, Database, Minus, Wrench, Palette, Keyboard, HelpCircle,
 } from 'lucide-react';
 import { ThemeShufflePanel } from '@/components/admin/templates/theme-shuffle-panel';
 import ShuffleMenu from '@/components/admin/templates/template-action-toolbar/ShuffleMenu';
@@ -829,6 +830,23 @@ useEffect(() => {
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
+            )}
+
+            {/* ⚠️ RE-RUN THE TOUR, FROM WHERE YOU WOULD WANT IT. The account page could already
+                clear the "seen" flag, which was technically a replay and practically useless: it
+                meant leaving settings, remembering which site, and opening the editor — by which
+                point you have forgotten what you wanted to look at. This starts it here, now.
+                Signed-in only; a guest gets the lightweight coach mark instead. */}
+            {!isGuest && (
+              <Button
+                size="icon"
+                variant="ghost"
+                title="Show the editor walkthrough"
+                aria-label="Show the editor walkthrough"
+                onClick={() => startWalkthrough()}
+              >
+                <HelpCircle className="w-4 h-4" />
+              </Button>
             )}
 
             {/* Keyboard shortcuts legend */}

@@ -128,7 +128,17 @@ export async function getShowcaseData(): Promise<ShowcaseData> {
         const heroUrl = firstNonEmpty(r.hero_url) || extractHeroImage(r.data);
         const industryRaw = firstNonEmpty(r.industry_label, r.industry);
         const industry = industryRaw && industryRaw.toLowerCase() !== 'generic' ? industryRaw : null;
-        const name = firstNonEmpty(r.business_name) || (industry ? prettifySlug(r.slug) : null);
+        // ⚠️ `template_name` BEFORE the prettified slug. The owner's own featured site rendered
+        // as "Pnw exteriorcleaning" on the #1 card while its real name — "PNW Prestige – Exterior
+        // Cleaning" — sat one column away in `template_name`, unused. `business_name` is empty on
+        // a lot of these, and title-casing a slug is a fallback for having nothing, not for
+        // having the name in a field we did not look at.
+        //
+        // ⚠️ Skipped when `template_name` is itself slug-shaped (`new-template-66cf-y0nf`,
+        // `plumbing-1`) — those are auto-generated handles, and prettifying the slug is no worse.
+        const templateName = firstNonEmpty(r.template_name);
+        const realName = templateName && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(templateName) ? templateName : null;
+        const name = firstNonEmpty(r.business_name) || realName || (industry ? prettifySlug(r.slug) : null);
         const dom = firstNonEmpty(r.custom_domain, r.domain);
         const href = dom ? `https://${dom.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : `/sites/${r.slug}`;
         const isFeatured = priority.has(r.slug);

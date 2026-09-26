@@ -917,6 +917,7 @@ export default function LiveEditorPreviewFrame({
                           <div className="mt-1.5 flex justify-center">
                             <button
                               type="button"
+                              data-tour="add-block"
                               aria-label="Add a block below"
                               className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/45 opacity-70 transition hover:border-sky-400/50 hover:bg-sky-500/10 hover:text-sky-300 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/60"
                               onClick={(e) => {

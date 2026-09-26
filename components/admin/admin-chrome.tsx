@@ -8,6 +8,7 @@ import ResponsiveAdminLayout from './responsive-admin-layout';
 import GuestPublishBanner from './guest-publish-banner';
 import GuestSignupModal from './guest-signup-box';
 import WorkSurfaceBackground from './work-surface-background';
+import WalkthroughHost from '@/components/onboarding/walkthrough-host';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import { useSafeTargetRef } from '@/lib/ui/safeTargetRef';
 import { useOrg } from '@/app/providers';
@@ -61,6 +62,10 @@ export default function AdminChrome({
   return <FullAdminChrome>{children}</FullAdminChrome>;
 }
 
+// ⚠️ The walkthrough lives HERE, in the signed-in chrome, and not in GuestChrome — my first pass
+// put it in the guest one, which is precisely backwards. A guest's session dies with them, so a
+// "seen" flag against it is a row nobody will ever read; and the requirement is "when they log
+// back in", which is the one case a guest never reaches. Guests keep the lightweight coach mark.
 function FullAdminChrome({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
@@ -142,7 +147,8 @@ function FullAdminChrome({ children }: { children: React.ReactNode }) {
             <AppHeader />
           </header>
 
-          <main className="min-w-0 pt-0">{children}</main>
+          <main data-tour="canvas" className="min-w-0 pt-0">{children}</main>
+          <WalkthroughHost />
         </div>
       </div>
 

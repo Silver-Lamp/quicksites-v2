@@ -142,3 +142,40 @@ describe('⚠️ the wiring', () => {
     expect(ROUTE).toMatch(/prefs: data\?\.prefs \?\? \{\}/);
   });
 });
+
+// ⚠️ Clearing the "seen" flag from settings was technically a replay and practically useless: it
+// meant leaving the account page, remembering which site, and opening the editor — by which point
+// you have forgotten what you wanted to look at. Two routes that actually work.
+describe('re-triggering it', () => {
+  const HOST = read('components/onboarding/walkthrough-host.tsx');
+  const BAR = read('components/admin/templates/template-action-toolbar/TemplateActionToolbar.tsx');
+  const LIB = read('lib/onboarding/walkthrough.ts');
+
+  it('exposes one way to start it from anywhere on the client', () => {
+    expect(LIB).toMatch(/export function startWalkthrough/);
+    expect(LIB).toMatch(/WALKTHROUGH_REPLAY_EVENT/);
+  });
+
+  it('has a button in the editor toolbar, for signed-in users', () => {
+    expect(BAR).toMatch(/startWalkthrough\(\)/);
+    expect(BAR).toMatch(/\{!isGuest && \([\s\S]{0,400}Show the editor walkthrough/);
+  });
+
+  it('runs from ?walkthrough=1, so a link is enough', () => {
+    expect(HOST).toMatch(/WALKTHROUGH_QUERY_PARAM/);
+  });
+
+  // ⚠️ Left in the address bar, every refresh restarts the tour — and a URL is exactly the thing
+  // people bookmark, share in a support reply, and reload.
+  it('strips the param afterwards', () => {
+    expect(HOST).toMatch(/searchParams\.delete\(WALKTHROUGH_QUERY_PARAM\)/);
+    expect(HOST).toMatch(/history\.replaceState/);
+  });
+
+  it('the param beats the seen flag, or it would do nothing for the people who need it', () => {
+    const paramEffect = HOST.indexOf('WALKTHROUGH_QUERY_PARAM');
+    const prefsFetch = HOST.indexOf("fetch('/api/me/ui-prefs'");
+    expect(paramEffect).toBeGreaterThan(-1);
+    expect(paramEffect).toBeLessThan(prefsFetch);
+  });
+});

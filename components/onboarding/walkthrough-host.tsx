@@ -12,13 +12,31 @@
 // ⚠️ It listens for a replay event so the account page can restart it without a reload.
 import { useCallback, useEffect, useState } from 'react';
 import EditorWalkthrough from '@/components/onboarding/editor-walkthrough';
-import { WALKTHROUGH_PREF_KEY, shouldRunWalkthrough, type UiPrefs } from '@/lib/onboarding/walkthrough';
+import {
+  WALKTHROUGH_PREF_KEY,
+  WALKTHROUGH_QUERY_PARAM,
+  WALKTHROUGH_REPLAY_EVENT,
+  shouldRunWalkthrough,
+  type UiPrefs,
+} from '@/lib/onboarding/walkthrough';
 
-/** Dispatched by the account page's "show it again" control. */
-export const WALKTHROUGH_REPLAY_EVENT = 'qs:walkthrough:replay';
+// Re-exported for the components that already import it from here.
+export { WALKTHROUGH_REPLAY_EVENT };
 
 export default function WalkthroughHost({ enabled = true }: { enabled?: boolean }) {
   const [open, setOpen] = useState(false);
+
+  // ⚠️ `?walkthrough=1` wins over the seen flag and runs immediately — that is the point of it.
+  // The param is then STRIPPED from the address bar: left in place, every refresh restarts the
+  // tour, and a URL is exactly the thing people bookmark, share in a support reply, and reload.
+  useEffect(() => {
+    if (!enabled || typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get(WALKTHROUGH_QUERY_PARAM) !== '1') return;
+    setOpen(true);
+    url.searchParams.delete(WALKTHROUGH_QUERY_PARAM);
+    window.history.replaceState({}, '', url.toString());
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled) return;

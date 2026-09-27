@@ -14,6 +14,7 @@ import PplAttachNumberForm from '@/components/admin/ppl-attach-number-form';
 import PplDisputeActions from '@/components/admin/ppl-dispute-actions';
 import { listOpenDisputes, DISPUTE_CATEGORIES } from '@/lib/ppl/disputes';
 import { statementUrl } from '@/lib/ppl/statementToken';
+import { suggestForwardTargets } from '@/lib/ppl/forwardSuggestions';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import { accountFamily, listTrackingNumbers, twilioConfigured } from '@/lib/outreach/callTracking';
 import { supabaseAdmin } from '@/lib/supabase/admin';
@@ -78,6 +79,10 @@ export default async function PplOpsPage() {
   const twilioNumbers = twilioConfigured() ? await listTrackingNumbers().catch(() => []) : [];
   const family = twilioConfigured() ? await accountFamily().catch(() => null) : null;
   const openDisputes = await listOpenDisputes().catch(() => []);
+  const forwardSuggestions = await suggestForwardTargets().catch(() => ({
+    recommendations: [],
+    skipped: [],
+  }));
   const base = publicBaseUrl();
   const { data: allCampaigns } = await supabaseAdmin
     .from('geo_industry_campaigns')
@@ -449,6 +454,85 @@ export default async function PplOpsPage() {
               </tbody>
             </table>
           </div>
+        )}
+      </section>
+
+      {/* Who should these calls go to */}
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Suggested forward-to</h2>
+        <p className="max-w-3xl text-sm text-muted-foreground">
+          For each campaign holding a number with nowhere to send it, the businesses in that city
+          and trade, ranked. Read the pool verdict before the names — a market with two stale,
+          unrated candidates produces a confident-looking #1 that is really a coin flip, and the
+          thing being decided is where a stranger’s call lands at 2am.
+        </p>
+        {forwardSuggestions.recommendations.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            No campaign is waiting on a forward-to.
+          </p>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {forwardSuggestions.recommendations.map((r) => (
+              <div key={r.campaign.id} className="rounded-xl border border-border p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-medium">
+                    {r.campaign.domain}{' '}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {r.campaign.city}
+                      {r.campaign.region ? `, ${r.campaign.region}` : ''} · {r.campaign.industry_key}
+                    </span>
+                  </div>
+                  <span
+                    className={`rounded-md border px-2 py-0.5 text-[11px] uppercase tracking-wide ${
+                      r.pool.verdict === 'usable'
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                        : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                    }`}
+                  >
+                    pool: {r.pool.verdict}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{r.pool.advice}</p>
+                {r.ranked.length > 0 && (
+                  <ol className="mt-3 space-y-2">
+                    {r.ranked.slice(0, 3).map((c, i) => (
+                      <li key={c.prospect.id} className="rounded-lg bg-muted/50 p-3 text-sm">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="font-medium">
+                            {i + 1}. {c.prospect.business_name}
+                          </span>
+                          <span className="tabular-nums text-muted-foreground">
+                            {c.prospect.phone} · score {c.score}
+                          </span>
+                        </div>
+                        <ul className="mt-1 list-disc pl-5 text-xs text-muted-foreground">
+                          {c.reasons.map((why) => (
+                            <li key={why}>{why}</li>
+                          ))}
+                          {c.flags.map((f) => (
+                            <li key={f} className="text-amber-300">
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {r.autoApplyEligible
+                    ? 'Clear winner in a healthy pool — still attach it yourself, then send the forwarding notice.'
+                    : 'Not a clean enough call to make unattended. Pick one below, then send the forwarding notice.'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+        {forwardSuggestions.skipped.length > 0 && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Skipped:{' '}
+            {forwardSuggestions.skipped.map((s2) => `${s2.domain} (${s2.why})`).join(' · ')}
+          </p>
         )}
       </section>
 

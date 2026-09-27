@@ -302,3 +302,60 @@ dome lead price. National domains (`domebuildersnearme.com`, …) are registered
 - ZIP/intent IVR menus before the bridge (friction; disputes cover it).
 - Twilio Functions / Studio (no raw body → no Stripe signature; the draft's whole class of bug).
 - Any per-lead price in copy or env. It is a column.
+
+---
+
+## 11. Who the calls go to — the forward-to recommender (2026-09-27)
+
+`lib/ppl/forwardCandidates.ts` (pure) ranks the businesses a campaign could forward to, from
+`outreach_prospects`; `lib/ppl/forwardSuggestions.ts` loads the data and `/admin/ppl` renders it
+under **Suggested forward-to**.
+
+**Hard requirements** filter (usable phone, matching trade, matching city *and* region, not opted
+out). Everything else scores: no website (+40, the whole pitch), a shrunk rating, a small bonus
+for a business already in our funnel, and a heavy penalty plus a flag when the number already
+takes calls for another domain.
+
+⚠️ **The pool verdict matters more than the ranking, and the module says so before it names a
+winner.** The three markets it was built for — South Hill, Cullman, Covington — each hold exactly
+two towing candidates from a shallow **2026-07-12** sweep with **no ratings at all**, while every
+sweep since returns 14–19 per city with ratings on nearly all. Ranked, those pairs come out
+**61–61, an exact tie**: there is genuinely nothing to choose between them, and a recommender that
+named a winner anyway would be laundering a coin flip into a decision about where a stranger's 2am
+towing call lands. `assessPool` returns `stale`/`thin`/`empty` and says *re-sweep this city*.
+
+⚠️ **`autoApplyEligible` is separate from the score on purpose.** It needs a `usable` pool, ≥3
+candidates, no flag on the winner, and a ≥15-point margin. Arab, AL — 21 candidates, 19 rated —
+still reads `false`, because its top two are 75 and 71. Being first of two is not evidence.
+
+⚠️ Scoping is by **GSC impressions**, not by holding a number (`provision-number` takes
+`forwardTo`, so the forward-to is an *input* to buying the number) and not by `rank_status`, which
+reads `unranked` for all three markets because the rank sync never wrote a rank — filtering on
+`page1` would have excluded exactly the campaigns in question while looking principled.
+
+⚠️ Candidates are **deduped on the normalised phone**: repeat sweeps insert a second row for the
+same business (live: "Space Age Wrecker and Recovery" twice on one number, once unrated from July,
+once rated from September). Undeduped it shows the operator one business twice *and* inflates
+`pool.qualified`, which gates auto-apply.
+
+Every recommendation carries `requiresNotice: true` — `forwardNotice.ts` is part of attaching, not
+a later courtesy.
+
+## 12. One tracking number, one campaign (2026-09-27)
+
+⚠️ **`attach-number` guarded only one direction.** It refused to give a campaign a *second*
+number, but nothing stopped one *number* backing several campaigns — the direction that destroys
+the measurement, since a shared number means no call can be credited to the site that earned it.
+
+Found live: **+1 425 270 2226 renders on both `maplevalley-towing.com` and `millcreektowing.com`**,
+with **13 calls logged and `geo_campaign_id`, `template_slug` and `custom_domain` NULL on every
+one**. Not one of those calls is attributable. (`millcreektowing.com` has no campaign row at all.)
+
+Fixed by `geo_campaigns_tracking_number_uniq` (migration `20260856`, a partial unique index —
+route checks are advisory because bulk automation, scripts and hand-written SQL write the column
+too) plus a `number_in_use` 409 naming the campaign that holds it. Verified: attaching Grafton's
+live number to a second campaign raises the constraint.
+
+⚠️ **The index does not cover the content copy.** The number is shared in the published snapshots,
+and `millcreektowing.com` has no campaign row, so removing it from one of the two sites is a
+separate content edit and an owner call about which site keeps it.

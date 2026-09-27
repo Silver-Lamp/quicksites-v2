@@ -1,0 +1,252 @@
+// lib/ppl/__tests__/forwardCandidates.test.ts
+//
+// The load-bearing assertions are the ones about NOT recommending: a thin or stale pool must
+// refuse to auto-apply, and an unrated business must not be punished for being unrated. The
+// ranking itself is the easy part.
+import {
+  recommendForwardTargets,
+  shrunkRating,
+  areaCodeFlag,
+  normalizePhone,
+  isAutoApplyEligible,
+  type ForwardProspect,
+  type ForwardCampaign,
+} from '../forwardCandidates';
+
+const NOW = new Date('2026-09-27T00:00:00Z');
+const FRESH = '2026-09-20T00:00:00Z';
+const STALE = '2026-07-12T00:00:00Z';
+
+function prospect(over: Partial<ForwardProspect> & { id: string }): ForwardProspect {
+  return {
+    business_name: `Biz ${over.id}`,
+    phone: '(253) 555-0100',
+    website: null,
+    city: 'South Hill',
+    region: 'WA',
+    industry_key: 'towing',
+    rating: null,
+    review_count: null,
+    status: 'draft_built',
+    created_at: FRESH,
+    ...over,
+  };
+}
+
+const CAMPAIGN: ForwardCampaign = {
+  id: 'c1',
+  domain: 'southhilltowing.com',
+  city: 'South Hill',
+  region: 'WA',
+  industry_key: 'towing',
+};
+
+describe('normalizePhone', () => {
+  it('compares a formatted number equal to E.164', () => {
+    expect(normalizePhone('(253) 204-1234')).toBe('2532041234');
+    expect(normalizePhone('+12532041234')).toBe('2532041234');
+  });
+});
+
+describe('shrunkRating', () => {
+  it('does not let a 5.0 from 2 reviews beat a 4.6 from 200', () => {
+    expect(shrunkRating(4.6, 200)).toBeGreaterThan(shrunkRating(5.0, 2));
+  });
+
+  it('scores an unrated business at the prior rather than zero', () => {
+    // The no-website cohort is mostly unrated; treating absence as badness would rank the pool
+    // by how thoroughly Google has noticed it.
+    expect(shrunkRating(null, null)).toBeCloseTo(4.3, 5);
+    expect(shrunkRating(null, null)).toBeGreaterThan(shrunkRating(3.0, 500));
+  });
+});
+
+describe('region matching', () => {
+  it('refuses a same-named city in another state', () => {
+    // Covington WA and Covington GA both exist. A city-name match would forward Washington
+    // towing calls to Georgia.
+    const wa: ForwardCampaign = { ...CAMPAIGN, domain: 'covingtontow.com', city: 'Covington', region: 'WA' };
+    const out = recommendForwardTargets(
+      wa,
+      [
+        prospect({ id: 'ga', city: 'Covington', region: 'GA' }),
+        prospect({ id: 'wa', city: 'Covington', region: 'WA' }),
+      ],
+      { now: NOW },
+    );
+    expect(out.ranked.map((c) => c.prospect.id)).toEqual(['wa']);
+    expect(out.disqualified).toEqual([
+      expect.objectContaining({ reason: 'region_mismatch' }),
+    ]);
+  });
+});
+
+describe('hard requirements', () => {
+  it('drops a business with no usable phone regardless of how good it looks', () => {
+    const out = recommendForwardTargets(
+      CAMPAIGN,
+      [prospect({ id: 'a', phone: null, rating: 5, review_count: 400 })],
+      { now: NOW },
+    );
+    expect(out.ranked).toHaveLength(0);
+    expect(out.disqualified[0].reason).toBe('no_phone');
+  });
+
+  it('drops a business that replied STOP', () => {
+    const out = recommendForwardTargets(CAMPAIGN, [prospect({ id: 'a', phone: '2535550100' })], {
+      now: NOW,
+      optedOut: new Set(['2535550100']),
+    });
+    expect(out.disqualified[0].reason).toBe('opted_out');
+  });
+
+  it('drops a different trade', () => {
+    const out = recommendForwardTargets(CAMPAIGN, [prospect({ id: 'a', industry_key: 'concrete' })], {
+      now: NOW,
+    });
+    expect(out.disqualified[0].reason).toBe('industry_mismatch');
+  });
+});
+
+describe('already forwarded elsewhere', () => {
+  it('penalises and flags but does not disqualify', () => {
+    // A single operator can legitimately cover two towns; refusing outright would strand a
+    // market whose only real business already takes calls for a neighbour.
+    const out = recommendForwardTargets(
+      CAMPAIGN,
+      [prospect({ id: 'busy', phone: '2535550100' })],
+      { now: NOW, forwardedElsewhere: new Map([['2535550100', 'graftontowing.com']]) },
+    );
+    expect(out.ranked).toHaveLength(1);
+    expect(out.ranked[0].flags.join(' ')).toContain('graftontowing.com');
+    expect(out.autoApplyEligible).toBe(false);
+  });
+});
+
+describe('duplicate rows', () => {
+  it('collapses two sweeps of one business and keeps the rated row', () => {
+    // Live data: "Space Age Wrecker and Recovery" on (256) 550-2383 twice — unrated from July,
+    // rated from September. Two rows would show the operator one business twice AND inflate
+    // pool.qualified, which gates auto-apply.
+    const out = recommendForwardTargets(
+      CAMPAIGN,
+      [
+        prospect({ id: 'july', business_name: 'Space Age', phone: '2565502383', created_at: STALE }),
+        prospect({
+          id: 'sept',
+          business_name: 'Space Age',
+          phone: '(256) 550-2383',
+          rating: 4.2,
+          review_count: 9,
+          created_at: FRESH,
+        }),
+      ],
+      { now: NOW },
+    );
+    expect(out.ranked).toHaveLength(1);
+    expect(out.ranked[0].prospect.id).toBe('sept');
+    expect(out.pool.qualified).toBe(1);
+  });
+
+  it('keeps the freshest when neither row is rated', () => {
+    const out = recommendForwardTargets(
+      CAMPAIGN,
+      [
+        prospect({ id: 'old', phone: '2565502383', created_at: STALE }),
+        prospect({ id: 'new', phone: '2565502383', created_at: FRESH }),
+      ],
+      { now: NOW },
+    );
+    expect(out.ranked).toHaveLength(1);
+    expect(out.ranked[0].prospect.id).toBe('new');
+  });
+});
+
+describe('pool quality', () => {
+  it('calls the real South Hill pool thin and refuses to auto-apply', () => {
+    // The actual data as of 2026-09-27: two unrated towing businesses from a 2026-07-12 sweep.
+    const out = recommendForwardTargets(
+      CAMPAIGN,
+      [
+        prospect({ id: 'toocool', business_name: 'Too Cool Towing LLC', phone: '(253) 442-5373', created_at: STALE }),
+        prospect({ id: 'pnw', business_name: 'PNW Towing & Recovery', phone: '(206) 929-2000', created_at: STALE }),
+      ],
+      { now: NOW },
+    );
+    expect(out.ranked).toHaveLength(2);
+    expect(out.pool.verdict).toBe('stale');
+    expect(out.pool.rated).toBe(0);
+    expect(out.autoApplyEligible).toBe(false);
+    expect(out.pool.advice).toMatch(/re-sweep/i);
+  });
+
+  it('reports an empty pool rather than silently succeeding', () => {
+    const out = recommendForwardTargets(CAMPAIGN, [], { now: NOW });
+    expect(out.pool.verdict).toBe('empty');
+    expect(out.autoApplyEligible).toBe(false);
+  });
+
+  it('calls a fresh, rated, populated market usable', () => {
+    const many = Array.from({ length: 6 }, (_, i) =>
+      prospect({ id: `p${i}`, rating: 4 + i * 0.1, review_count: 50, phone: `253555010${i}` }),
+    );
+    const out = recommendForwardTargets(CAMPAIGN, many, { now: NOW });
+    expect(out.pool.verdict).toBe('usable');
+    expect(out.pool.rated).toBe(6);
+  });
+});
+
+describe('autoApplyEligible', () => {
+  it('stays false for a near-tie even in a healthy pool', () => {
+    const many = Array.from({ length: 6 }, (_, i) =>
+      prospect({ id: `p${i}`, rating: 4.5, review_count: 50, phone: `253555010${i}` }),
+    );
+    const out = recommendForwardTargets(CAMPAIGN, many, { now: NOW });
+    expect(out.pool.verdict).toBe('usable');
+    expect(out.autoApplyEligible).toBe(false);
+  });
+
+  it('becomes true only with a clear winner, a real field and no flags', () => {
+    const rows = [
+      prospect({ id: 'winner', rating: 4.9, review_count: 300, phone: '2535550101' }),
+      prospect({ id: 'b', rating: 4.0, review_count: 80, phone: '2535550102', website: 'https://b.com' }),
+      prospect({ id: 'c', rating: 3.9, review_count: 60, phone: '2535550103', website: 'https://c.com' }),
+      prospect({ id: 'd', rating: 3.8, review_count: 60, phone: '2535550104', website: 'https://d.com' }),
+    ];
+    const out = recommendForwardTargets(CAMPAIGN, rows, { now: NOW });
+    expect(out.ranked[0].prospect.id).toBe('winner');
+    expect(out.autoApplyEligible).toBe(true);
+  });
+
+  it('never auto-applies on a pool that is merely thin', () => {
+    expect(
+      isAutoApplyEligible(
+        [
+          { prospect: prospect({ id: 'a' }), score: 90, reasons: [], flags: [] },
+          { prospect: prospect({ id: 'b' }), score: 10, reasons: [], flags: [] },
+        ],
+        { considered: 2, qualified: 2, rated: 0, freshestDays: 1, verdict: 'thin', advice: '' },
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('areaCodeFlag', () => {
+  it('has no opinion on a market too small to have a modal area code', () => {
+    // With the real two-row pools this must stay silent rather than invent a local prefix.
+    expect(areaCodeFlag(prospect({ id: 'a', phone: '2069292000' }), ['2534425373', '2069292000'])).toBeNull();
+  });
+
+  it('flags an out-of-market area code once the market has spoken', () => {
+    const market = ['2535550101', '2535550102', '2535550103', '2535550104', '2069292000'];
+    expect(areaCodeFlag(prospect({ id: 'a', phone: '2069292000' }), market)).toMatch(/206.*not the local 253/);
+    expect(areaCodeFlag(prospect({ id: 'b', phone: '2535550101' }), market)).toBeNull();
+  });
+});
+
+describe('the consent path is not optional', () => {
+  it('always reports that the forwarding notice is required', () => {
+    const out = recommendForwardTargets(CAMPAIGN, [prospect({ id: 'a' })], { now: NOW });
+    expect(out.requiresNotice).toBe(true);
+  });
+});

@@ -57,3 +57,28 @@ describe('⚠️ the config gate stays a presence check, on purpose', () => {
     expect(HEALTH).toMatch(/only checks the key is SET/);
   });
 });
+
+// ⚠️ THE ALERT HAS TO REACH A HUMAN, AND IT DID NOT.
+//
+// Straight after shipping the AI-outage alert: ADMIN_EMAILS is unset in production, and TEN call
+// sites read it to reach a person — lead disputes, domain watch, showcase link health,
+// design-partner nudges, order notifications, and this watchdog. Each composes an email, finds no
+// recipient, and returns quietly. An alerter with nowhere to send is worse than none, because it
+// is believed.
+describe('⚠️ the alert channel is itself gated', () => {
+  it('ADMIN_EMAILS has a config gate, so /status reports an alerter with no recipient', () => {
+    expect(HEALTH).toMatch(/key: 'admin_alerts'/);
+    expect(HEALTH).toMatch(/requires: \['ADMIN_EMAILS'\]/);
+  });
+
+  it("the gate's breaks text names what actually goes nowhere", () => {
+    // "Misconfigured" is not actionable at 3am; the list of dead alerts is.
+    expect(HEALTH).toMatch(/sends it to nobody/);
+    expect(HEALTH).toMatch(/Sentry still gets them/);
+  });
+
+  it('the cron still degrades rather than throwing when there is no recipient', () => {
+    // It must not start failing the job — Sentry is a real, if quieter, destination.
+    expect(CRON).toMatch(/if \(admins\.length\)/);
+  });
+});

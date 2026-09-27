@@ -214,6 +214,31 @@ export const CONFIG_GATES: ConfigGate[] = [
     // API on every public request, which is a cost and DoS amplifier (see the rule at the top of
     // this file). The detector belongs on a cron, and now is one: `ai-cost-alert` alerts when
     // `ai_usage_events` records NOTHING for AI_ALERT_SILENCE_HOURS.
+    // ⚠️ THE ALERTING CHANNEL IS ITSELF A SILENT FAILURE, and it is unset in production.
+    //
+    // Found 2026-09-26, immediately after shipping an AI-outage alert: ADMIN_EMAILS has no value
+    // in prod, and TEN call sites read it to reach a human — lead disputes, domain watch,
+    // showcase link health, design-partner nudges, order notifications, the AI cost/silence
+    // watchdog. Every one of them composes an email, finds no recipient, and returns quietly.
+    //
+    // ⚠️ This is the third instance of one pattern in a single day (PostHog unset, OpenAI revoked,
+    // now the alerts that would have told us). Each was invisible for the same reason: the code
+    // degrades gracefully and nothing checks that the OUTPUT ever arrives. An alerter with
+    // nowhere to send is worse than no alerter, because it is believed.
+    //
+    // `degradeOnly` because Sentry still receives these — a human inbox does not.
+    key: 'admin_alerts',
+    label: 'Operator alerts by email (ADMIN_EMAILS)',
+    requires: ['ADMIN_EMAILS'],
+    degradeOnly: true,
+    breaks:
+      'Every operator alert composes an email and sends it to nobody. That includes the AI-outage ' +
+      'and AI-overspend watchdogs, domain-expiry watch, showcase link health, lead disputes, ' +
+      'design-partner nudges and new-order notifications. Sentry still gets them; your inbox does ' +
+      'not, so an outage announces itself only where nobody is looking. Set ADMIN_EMAILS to a ' +
+      'comma-separated list.',
+  },
+  {
     key: 'ai',
     label: 'AI (copy, hero images, backdrops)',
     requires: ['OPENAI_API_KEY'],

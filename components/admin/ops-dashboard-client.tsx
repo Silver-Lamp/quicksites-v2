@@ -211,7 +211,32 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
           <KpiTile label="Guests" value={guestFunnel.guests} tone="info" sub={`${guestFunnel.sites} site${guestFunnel.sites === 1 ? '' : 's'} · ${guestFunnel.builders} builder${guestFunnel.builders === 1 ? '' : 's'}`} href="/admin/users" />
           <KpiTile label="Edited 10+ min" value={guestFunnel.editedTenMinPlus} tone={guestFunnel.editedTenMinPlus > 0 ? 'good' : 'neutral'} sub="invested real time" />
           <KpiTile label="Came back" value={guestFunnel.returned} tone={guestFunnel.returned > 0 ? 'good' : 'warn'} sub="signed in again later" />
-          <KpiTile label="Started sign-up" value={guestFunnel.startedSignup} tone={guestFunnel.startedSignup > 0 ? 'good' : 'warn'} sub="email awaiting confirm" />
+          {/* ⚠️ THIS TILE COUNTS A PENDING STATE, NOT A FUNNEL STEP, AND IT USED TO SAY OTHERWISE.
+              `startedSignup` is guests with an unconfirmed `new_email`, so CONFIRMING CLEARS IT.
+              Labelled "Started sign-up" with a warn tone at zero, it therefore showed
+              "Started sign-up 0 ⚠" beside "Converted 1 ✓" on 2026-09-27 — the first time anyone
+              ever completed the flow. The number was true and answered a different question:
+              "how many are stuck waiting", not "how many ever began". The cumulative step lives
+              in the row below (`steps.signupSubmitted`), which is the one to read.
+              Zero pending is only bad news if nothing was ever submitted. */}
+          <KpiTile
+            label="Awaiting confirm"
+            value={guestFunnel.startedSignup}
+            tone={
+              guestFunnel.startedSignup > 0
+                ? 'info'
+                : (guestFunnel.steps?.signupSubmitted ?? 0) > 0 || guestFunnel.converted > 0
+                  ? 'good'
+                  : 'warn'
+            }
+            sub={
+              guestFunnel.startedSignup > 0
+                ? 'clicked the link yet?'
+                : (guestFunnel.steps?.signupSubmitted ?? 0) > 0 || guestFunnel.converted > 0
+                  ? 'none stuck'
+                  : 'nobody has submitted'
+            }
+          />
           <KpiTile label="Converted" value={guestFunnel.converted} tone={guestFunnel.converted > 0 ? 'good' : 'bad'} sub={guestFunnel.sites ? `${Math.round((100 * guestFunnel.converted) / guestFunnel.sites)}% of guest sites` : '—'} />
           <GuestReachableTile funnel={guestFunnel} />
         </div>

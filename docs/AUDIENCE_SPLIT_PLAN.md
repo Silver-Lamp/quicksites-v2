@@ -264,3 +264,47 @@ question about the founding-terms page, and that page does not exist yet.
    ⚠️ Note the asymmetry with the naming decision above: **a rate is easy to revise and a name
    people have started saying is not.** The name is the one to settle first, even though the rate
    feels like the bigger question.
+
+
+---
+
+## 8. `/pricing` trimmed + calculator capture (2026-09-27)
+
+Two items agreed weeks earlier and never delivered, closed together.
+
+### `/pricing` is merchant-only now
+
+§4 said `/pricing` → *"what a merchant pays. Nothing about commissions."* It still carried a
+fifth path — **"Resell under my brand", 80% lifetime residual** — as a path-chooser card, a full
+`#partner` section, and an FAQ. ⚠️ **So the split was one click deep**: a merchant who came off
+the trimmed homepage to find out what QuickSites costs was shown the channel compensation plan
+anyway.
+
+Removed: the `#partner` section, its chooser card (5 → 4), the "How do partners make money?"
+FAQ, and the hero's *"or reselling under your brand"*. Also a **local `PARTNER_FEE_SHARE = 0.8`**
+that duplicated `lib/commerce/partner-terms` and was free to drift from it silently — the page
+sat next to imported fee constants while re-declaring that one.
+
+One footer line still links to `/partners` and **states no rate**. Removing the pitch must not
+orphan the channel: a partner who is looking should still arrive.
+
+Pinned by `app/pricing/__tests__/merchantPricing.test.ts` (reads code, strips comments first —
+the header comment naming the forbidden words would otherwise fail the grep documenting the fix).
+
+### The partner calculator captures an email
+
+`/partners/calculator` is the most qualified page on the marketing site — nobody models a
+residual on a GMV they invented — and it produced a number, the visitor left, and we learned
+nothing. `POST /api/partners/lead` now writes to `leads` (`source='partner_calculator'`,
+rate-limited, idempotent per email so a re-run updates rather than minting a second lead and
+overstating the signal).
+
+⚠️ **It asks; it does not gate.** The result is on screen above the form and stays there. A gate
+measures how badly someone wants back a figure they already earned, not whether the offer is
+good, and it would poison the one signal the page produces — the same rule as the `cook_intent`
+probe. `partnerLead.test.ts` pins that the results render before the capture and are not
+conditioned on it.
+
+⚠️ **The modelled figures travel with the email**, in `notes`: "40 merchants, $18,000 avg monthly
+GMV each, modelled $46,080/mo". An address alone is a name on a list. The visitor is shown what
+was captured rather than it being collected invisibly.

@@ -10,7 +10,6 @@ import {
   Sparkles,
   Store,
   Users,
-  Handshake,
   Globe,
   BadgeCheck,
   Phone,
@@ -40,7 +39,13 @@ import SiteFooter from '@/components/site/site-footer';
  * QuickSites Pricing — hybrid model (see docs/PRICING_REDESIGN.md)
  *  A) Build my own  → free build/host/publish, 5% per order when you sell
  *  B) Run for clients → flat agency subscription (no per-order fee)
- *  C) Resell (partner) → 80% lifetime residual → /partners
+ *
+ * ⚠️ THERE IS NO PATH C HERE ANY MORE. Reselling — white-label, the residual, the fee share —
+ * lives on /partners and nowhere on this page. `docs/AUDIENCE_SPLIT_PLAN.md` puts it plainly:
+ * /pricing is "what a merchant pays. Nothing about commissions." A merchant reading how much
+ * QuickSites costs should not be shown what they could earn by reselling it; that is the page
+ * selling two things to one person, which is the whole problem the split exists to fix.
+ * A footer link points a channel partner who IS looking at /partners. Never restate the rate.
  */
 
 // ---- Config ----
@@ -81,7 +86,6 @@ const LEADGEN_PLAN = { founderFrom: 49, fullFrom: 99, premiumFull: 399 };
 // Done-for-you: a person builds and maintains the site. Hosting stays free on every plan; these
 // pay for design, migration and support hours, never for servers. The figures here are the ones
 // quoted in proposals (first: a Tampa law firm, 2026-09-17) — change them here, never in an email.
-const PARTNER_FEE_SHARE = 0.8; // partners keep 80% of the order fee
 
 const CTA = {
   buildHref: '/build', // guest builder (no-signup); /build redirects to /login if the flag is off
@@ -299,7 +303,9 @@ function Stat({
   );
 }
 
-// ---- Path B: Agency tier card + reseller calculator ----
+// ---- Path B: Agency tier card + the agency cost calculator ----
+// (NOT a "reseller calculator" — it was called that until 2026-09-27 and the name was wrong:
+//  it prices what an agency PAYS us per site, and nothing here pays anyone a commission.)
 function PlanToggle({
   value,
   onChange,
@@ -653,10 +659,6 @@ const FAQS: { q: string; a: string }[] = [
     a: 'If you’re an agency running many client sites and prefer flat, predictable costs over a per-order fee, the Agency plan bills per user + per site with no order fee. Talk to us to get set up during the beta.',
   },
   {
-    q: 'How do partners make money?',
-    a: 'Partners white-label QuickSites, set their merchants’ order fee (up to 10%), and keep 80% of every fee as a lifetime residual. See the partner program for details.',
-  },
-  {
     q: 'What about payment processing fees?',
     a: 'Standard Stripe processing fees apply on top of our platform fee, the same as any checkout. You’ll always see fees before you publish.',
   },
@@ -702,8 +704,8 @@ export default function PricingPage() {
                 customer CRM. We take a small {pct(ORDER_FEE_PCT)} fee only on the orders you
                 actually sell — {pct(FOOD_FEE_PCT)} plus {FOOD_FEE_MIN}¢ on food ordering, where
                 card fees eat a small ticket alive. No online store? Service trades can host on a
-                premium local domain for a flat monthly rate. Running sites for clients or reselling
-                under your brand? There’s a path for that too.
+                premium local domain for a flat monthly rate. Running sites for clients? There’s a path
+                for that too.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Link href={CTA.buildHref}>
@@ -827,37 +829,6 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Path C — Partner */}
-        <section
-          id="partner"
-          className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60"
-        >
-          <Card className="border-zinc-800/60 bg-gradient-to-br from-sky-500/10 to-transparent">
-            <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="max-w-2xl">
-                <div className="flex items-center gap-2">
-                  <Handshake className="h-6 w-6 text-sky-400" />
-                  <h2 className="text-2xl font-semibold">Resell under my brand</h2>
-                </div>
-                <p className="mt-2 text-muted-foreground">
-                  White-label QuickSites for your network. Set each merchant’s order fee (up to
-                  10%), keep{' '}
-                  <span className="text-foreground font-medium">
-                    {pct(PARTNER_FEE_SHARE)} of every fee as a lifetime residual
-                  </span>
-                  . Hosting is free for your merchants.
-                </p>
-              </div>
-              <Link href={CTA.partnersHref}>
-                <Button size="lg">
-                  See the partner program
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </section>
-
         {/* Add-ons */}
         <section
           id="addons"
@@ -917,6 +888,17 @@ export default function PricingPage() {
             </Link>
           </div>
         </section>
+
+        {/* ⚠️ The ONLY mention of reselling on this page, and it states no rate.
+            A channel partner who is looking will find it; a merchant reading what QuickSites
+            costs is not pitched a second business. See the header comment. */}
+        <p className="mx-auto w-full max-w-6xl px-6 pb-12 text-sm text-muted-foreground">
+          Want to offer QuickSites to your own clients under your brand?{' '}
+          <Link href={CTA.partnersHref} className="underline hover:text-foreground">
+            See the partner program
+          </Link>
+          .
+        </p>
       </div>
       <SiteFooter />
     </>

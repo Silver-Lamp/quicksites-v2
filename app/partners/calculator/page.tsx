@@ -10,6 +10,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
+import CalculatorEmailCapture from '@/components/partners/calculator-email-capture';
 // Client-safe defaults mirroring lib/commerce/partner-terms.ts (which reads QS_*
 // env, not available in a client bundle). Shared with the /rebuild earnings overlay.
 import { PARTNER_FEE_SHARE, MAX_FEE_PCT, estimatePartnerResidual } from '@/lib/commerce/partnerEarnings';
@@ -165,6 +166,9 @@ export default function PartnerCalculator() {
             </div>
           </div>
         </div>
+
+        {/* Asks AFTER the answer is on screen, and never in place of it — see the component. */}
+        <CalculatorEmailCapture merchants={merchants} avgGmv={gmvPerMerchant} monthly={qsMonthly} />
 
         <div className="mt-10 flex flex-col items-center gap-3">
           <Link

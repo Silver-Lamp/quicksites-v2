@@ -6,11 +6,10 @@
 // the blurbs come from lib/billing/planPricing + lib/commerce/partner-terms, never typed here.
 
 import Link from 'next/link';
-import { ArrowRight, Handshake, Phone, Store, Users, Wrench, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Phone, Store, Users, Wrench, type LucideIcon } from 'lucide-react';
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DONE_FOR_YOU } from '@/lib/billing/planPricing';
-import { PARTNER_FEE_SHARE } from '@/lib/commerce/partner-terms';
 
 const usd0 = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -56,14 +55,6 @@ export const PRICING_PATHS: PricingPath[] = [
     tag: 'Agencies',
   },
   {
-    key: 'partner',
-    icon: Handshake,
-    title: 'Resell under my brand',
-    blurb: `White-label and earn ${Math.round(PARTNER_FEE_SHARE * 100)}% on every order, for life.`,
-    hash: '#partner',
-    tag: 'Partners',
-  },
-  {
     key: 'done-for-you',
     icon: Wrench,
     title: 'Have it built for me',
@@ -76,7 +67,7 @@ export const PRICING_PATHS: PricingPath[] = [
 /** The full cards (top of /pricing). Links are in-page anchors. */
 export function PathChooser() {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
       {PRICING_PATHS.map((p) => (
         <Link key={p.key} href={p.hash} className="group">
           <Card className="h-full border-zinc-800/60 transition hover:border-sky-500/50 hover:bg-sky-500/[0.03]">

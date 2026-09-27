@@ -302,3 +302,254 @@ dome lead price. National domains (`domebuildersnearme.com`, …) are registered
 - ZIP/intent IVR menus before the bridge (friction; disputes cover it).
 - Twilio Functions / Studio (no raw body → no Stripe signature; the draft's whole class of bug).
 - Any per-lead price in copy or env. It is a column.
+
+---
+
+## 11. Who the calls go to — the forward-to recommender (2026-09-27)
+
+`lib/ppl/forwardCandidates.ts` (pure) ranks the businesses a campaign could forward to, from
+`outreach_prospects`; `lib/ppl/forwardSuggestions.ts` loads the data and `/admin/ppl` renders it
+under **Suggested forward-to**.
+
+**Hard requirements** filter (usable phone, matching trade, matching city *and* region, not opted
+out). Everything else scores: no website (+40, the whole pitch), a shrunk rating, a small bonus
+for a business already in our funnel, and a heavy penalty plus a flag when the number already
+takes calls for another domain.
+
+⚠️ **The pool verdict matters more than the ranking, and the module says so before it names a
+winner.** The three markets it was built for — South Hill, Cullman, Covington — each hold exactly
+two towing candidates from a shallow **2026-07-12** sweep with **no ratings at all**, while every
+sweep since returns 14–19 per city with ratings on nearly all. Ranked, those pairs come out
+**61–61, an exact tie**: there is genuinely nothing to choose between them, and a recommender that
+named a winner anyway would be laundering a coin flip into a decision about where a stranger's 2am
+towing call lands. `assessPool` returns `stale`/`thin`/`empty` and says *re-sweep this city*.
+
+⚠️ **`autoApplyEligible` is separate from the score on purpose.** It needs a `usable` pool, ≥3
+candidates, no flag on the winner, and a ≥15-point margin. Arab, AL — 21 candidates, 19 rated —
+still reads `false`, because its top two are 75 and 71. Being first of two is not evidence.
+
+⚠️ Scoping is by **GSC impressions**, not by holding a number (`provision-number` takes
+`forwardTo`, so the forward-to is an *input* to buying the number) and not by `rank_status`, which
+reads `unranked` for all three markets because the rank sync never wrote a rank — filtering on
+`page1` would have excluded exactly the campaigns in question while looking principled.
+
+⚠️ Candidates are **deduped on the normalised phone**: repeat sweeps insert a second row for the
+same business (live: "Space Age Wrecker and Recovery" twice on one number, once unrated from July,
+once rated from September). Undeduped it shows the operator one business twice *and* inflates
+`pool.qualified`, which gates auto-apply.
+
+Every recommendation carries `requiresNotice: true` — `forwardNotice.ts` is part of attaching, not
+a later courtesy.
+
+## 12. One tracking number, one campaign (2026-09-27)
+
+⚠️ **`attach-number` guarded only one direction.** It refused to give a campaign a *second*
+number, but nothing stopped one *number* backing several campaigns — the direction that destroys
+the measurement, since a shared number means no call can be credited to the site that earned it.
+
+Found live: **+1 425 270 2226 renders on both `maplevalley-towing.com` and `millcreektowing.com`**,
+with **13 calls logged and `geo_campaign_id`, `template_slug` and `custom_domain` NULL on every
+one**. Not one of those calls is attributable. (`millcreektowing.com` has no campaign row at all.)
+
+Fixed by `geo_campaigns_tracking_number_uniq` (migration `20260856`, a partial unique index —
+route checks are advisory because bulk automation, scripts and hand-written SQL write the column
+too) plus a `number_in_use` 409 naming the campaign that holds it. Verified: attaching Grafton's
+live number to a second campaign raises the constraint.
+
+⚠️ **The index does not cover the content copy.** The number is shared in the published snapshots,
+and `millcreektowing.com` has no campaign row, so removing it from one of the two sites is a
+separate content edit and an owner call about which site keeps it.
+
+### 11a. The re-sweep, and the bug it exposed (2026-09-27)
+
+Swept the three markets (`runSweep`, towing, 5 km): South Hill 16 found, Cullman 19, Covington 14
+— normal depth. **But `rated` stayed 0**, which the "shallow July sweep" diagnosis did not predict.
+
+⚠️ **`PLACES_FIELD_MASK` has always requested `places.rating` + `places.userRatingCount` — at a
+pricier SKU, deliberately — and `runSweep` threw both away.** `ProspectInput` had no field for
+them, so the columns the field mask exists to fill sat null unless `backfillPlaceSignals` ran: a
+**second, separately-billed Place Details call per business**, flag-gated off. We paid the premium
+tier for two numbers, discarded them at the door, then paid again to fetch them back.
+
+Fixed: `ProspectInput.rating`/`reviewCount` → `toRow` → the sweep maps them off the search result.
+Plus `fillMissingPlaceSignals`, because `upsertProspects` sets `ignoreDuplicates: true` (correct —
+a re-sweep must not clobber a worked lead) which means a row created before ratings were stored
+could never acquire one however often the city is swept. The fill is **gap-only** (`.is('rating',
+null)`), never a refresh. Free — the values are already in the response.
+
+**What it changed.** Before, South Hill's top pick was PNW Towing & Recovery on an unrated 61–61
+tie with a 206 area code in a 253 town. After: **Too Cool Towing LLC, 4.8★ from 201 reviews, no
+website, local 253** — a different business. The tie would have picked wrong half the time.
+
+| campaign | pool | top pick |
+|---|---|---|
+| `covingtontow.com` | usable (11, 10 rated) | AL Ram Towing · (253) 234-7959 · 5★/71 · no site |
+| `southhilltowing.com` | usable (10, 9 rated) | Too Cool Towing LLC · (253) 442-5373 · 4.8★/201 · no site |
+| `cullmantow.com` | usable (5, 2 rated) | no clear winner — top three tie at 61 |
+
+`autoApplyEligible` is `false` for all three (margins of 4, 5 and 0 against a ≥15 threshold), which
+is the intended answer: pick one, then send the notice.
+
+### 11b. Ties always resolve to a pick (owner direction, 2026-09-27)
+
+> *"if there are ties now and in the future just have [it] pick one"*
+
+The recommender never reports an unresolved tie. Leaving one open means the number stays
+unattached and the calls go nowhere at all, which is worse for the caller than a well-reasoned
+arbitrary choice.
+
+⚠️ **But a tiebreak is not evidence, and the cascade is ordered so the arbitrary step is last.**
+`Candidate.decidedBy` records what actually separated it from the next candidate, and
+`decidedByLabel()` renders that on `/admin/ppl` beside the pick:
+
+| `decidedBy` | meaning |
+|---|---|
+| `score` | the signals separated them — a real pick |
+| `local_area_code` | tied; the local area code broke it |
+| `more_reviews` | tied; more public evidence the business is real |
+| `freshest` | tied; most recently confirmed to exist |
+| `stable_name` | tied on everything — a stable rule, **not** a claim it is better |
+
+**Why the area code is first.** It is deliberately kept *out* of the score (a tow operator's cell
+is weak evidence, too weak to move a ranking) but it is decisive when nothing else separates two
+businesses. Pre-ratings, South Hill tied 61–61 and fell to **PNW Towing (206)** over **Too Cool
+Towing (253)** purely because "P" sorts before "T". When ratings arrived, Too Cool won on
+4.8★/201. **The area code had the right answer the whole time and alphabetical order threw it
+away** — which is the argument for ordering tiebreakers by evidence rather than convenience.
+
+The last rung is the business name: deterministic, never random. A recommendation that changes on
+reload cannot be reviewed or reproduced; a test asserts the same pool yields the same pick
+regardless of input order.
+
+⚠️ **A tiebreak never counts toward `autoApplyEligible`** — the ≥15-point margin rule is unchanged,
+and a pick decided by rule is exactly the case an unattended write should not take. Picking one is
+not the same as being sure, and the two are reported separately.
+
+**Live picks after sweeping every market that needed it (2026-09-27).** Eleven cities swept;
+every pool but one is now `usable`, and nothing rests on the arbitrary tiebreak.
+
+| campaign | pick | pool | age | margin |
+|---|---|---|---|---|
+| `seatac-towing.com` | All Right Towing · (206) 414-1000 | usable 8/8 | 0d | **33 · AUTO-APPLY ELIGIBLE** |
+| `renton-electrical.com` | Madrona Electric LLC · (425) 902-9422 | usable 27/27 | 0d | 17 (flagged, see below) |
+| `renton-towing.com` | Gene Meyer's Towing · (425) 226-4343 | usable 15/15 | 0d | 12 |
+| `arab-towing.com` | AA Wrecker Service · (256) 621-2003 | usable 20/19 | 0d | 4 |
+| `covingtontow.com` | AL Ram Towing · (253) 234-7959 | usable 11/10 | 0d | 4 |
+| `southhilltowing.com` | Too Cool Towing LLC · (253) 442-5373 | usable 10/9 | 0d | 5 |
+| `florencetow.com` | Hicks Towing · (256) 827-5167 | usable 13/12 | 0d | 3 |
+| `richland-towing.com` | RAPID WRECKER SERVICES LLC · (509) 396-1256 | usable 14/13 | 0d | 1 |
+| `smyrna-towing.com` | Speed Wrecker Service Inc. · (615) 496-9742 | usable 6/5 | 0d | 4 |
+| `cullmantow.com` | Simple Man Towing · (256) 917-5946 | usable 6/3 | 0d | 0 (more reviews) |
+| `kent-restaurant.com` | Taqueria Del Sol · (253) 278-2905 | usable 60/60 | 45d | 2 |
+| `paterson-auto-repair.com` | Fija Auto Glass & Mirror · (973) 345-1713 | usable 38/38 | 11d | 1 |
+| `paterson-restaurants.com` | Deli DJ · (973) 345-5144 | usable 60/60 | 44d | 1 |
+| `maplevalley-towing.com` | All Right Towing And Recovery · (206) 487-3600 | **thin 1/1** | 0d | — |
+
+`seatac-towing.com` is the first campaign ever to clear `autoApplyEligible`: a usable pool, 8
+candidates, no flag on the winner, and a 33-point margin.
+
+### 11d. Distance, not the city label (2026-09-27)
+
+⚠️ **`outreach_prospects.city` is the city we SEARCHED, not where the business is.** `runSweep`
+stamps `input.city` onto every result, so a sweep centred on one town labels businesses tens of
+km away with that town's name. Matching on it asks *"did we happen to discover you under this
+label"*, which is not the question. **Maple Valley had 28 real candidates within range and
+qualified ONE.**
+
+`marketMatch()` now measures distance when both sides have coordinates, and falls back to
+city+region equality when they do not — a campaign with no centre narrows to the old behaviour
+rather than widening to everything.
+
+⚠️ **The radius is per-trade, because "nearby" means two different things.** A tow truck, an
+electrician or a plumber **drives to the customer**, so a shop 20 km out serves the town fine
+(`lib/ppl/marketRadius.ts`, 20–30 km). A restaurant is the reverse — the **customer travels** —
+and a taqueria 20 km away is simply not in the market (8 km). One global radius has to be wrong
+for one of them.
+
+⚠️ **The region guard now applies ONLY to the city-name fallback.** Distance already separates
+Covington WA from Covington GA far better (3,800 km); re-applying a region test on top would
+re-create the bug it was written to prevent, by excluding a business ten minutes over a state
+line that genuinely serves the town.
+
+#### The centres were NULL, and the first fix for that was wrong
+
+`center_lat`/`center_lon` existed from the start and were **NULL on all 129 rows** — the columns
+were declared and nothing ever wrote them. ⚠️ A session read the schema, saw the columns, and
+reported that campaigns *"carry"* their coordinates. They carry the columns. Not the same claim.
+
+Migration `20260858` seeded them from the **median prospect position** per city — local, free,
+and **wrong**, for the same reason the city label is wrong. The check that caught it:
+
+> AL Ram Towing's address is `25811 178th Pl SE, **Covington**, WA`. Against the median centres
+> it sat **4.5 km from "Maple Valley" and 5.9 km from "Covington"** — nearer another town's
+> centre than its own — so the recommender handed a Covington business to the Maple Valley
+> campaign. Geocoded properly: **0.6 km from Covington**, 4.6 km from Maple Valley.
+
+Fixed by `npm run backfill:campaign-centres` (`scripts/backfill-campaign-centres.mts`), which
+geocodes the town itself: **74 of 76 towns, 127 of 129 campaigns**. Geocoding stays in a script,
+never a migration — ~75 network calls at Nominatim's ~1 req/sec is not something to hold a
+transaction open for. The two that failed (`Montlake Terrace` — our typo for *Mountlake*
+Terrace — and `Marrowdale`) keep the city-name fallback and are reported, because degrading is
+right and inventing a centre is not.
+
+#### Overlapping markets: the shared-number bug in mirror image
+
+⚠️ Distance matching **created a new conflict**. Under city names each town had its own pool, so
+overlap was impossible. With a 25 km radius the Seattle-metro campaigns genuinely overlap, and
+the single best-scoring tow company became the top pick for **four** of them — `covingtontow`,
+`maplevalley-towing`, `renton-towing` and `seatac-towing` all recommended AL Ram Towing. Wiring
+four domains to one phone concentrates every market's calls on one operator, and a caller who
+rings two of our "different" sites reaches the same business. `forwardedElsewhere` does not
+catch it: that reads campaigns already *attached*, and in a fresh run none are.
+
+`deconflictTopPicks()` resolves it **by distance, not by score** — the business keeps the
+campaign whose town it is closest to (the market it most plausibly serves), and every other
+campaign moves to its next unclaimed candidate carrying a flag that says so. Resolving by score
+would hand it to whichever market rates it highest, which is not a fact about who it serves. A
+displaced pick is never `autoApplyEligible`, and a campaign whose every candidate went elsewhere
+says so rather than re-using one.
+
+#### The board after all of it
+
+| campaign | pick | km | pool | margin |
+|---|---|---|---|---|
+| `covingtontow.com` | AL Ram Towing · (253) 234-7959 | 0.6 | usable 35 | 4 |
+| `richland-towing.com` | Flatline Towing · (509) 380-0423 | 0.0 | usable 4 | 0 |
+| `renton-electrical.com` | Madrona Electric LLC · (425) 902-9422 | 2.4 | usable 23 | 17 |
+| `southhilltowing.com` | Too Cool Towing LLC · (253) 442-5373 | 4.8 | usable 29 | 5 |
+| `cullmantow.com` | Trimble Towing & Automotive · (256) 841-7882 | 5.5 | usable 9 | 2 |
+| `seatac-towing.com` | Prime Towing · (253) 326-5555 | 6.0 | usable 37 | 2 |
+| `renton-towing.com` | All Right Towing · (206) 414-1000 | 9.9 | usable 34 | 0 |
+| `maplevalley-towing.com` | V'Z Towing LLC · (253) 217-0639 | 11.2 | usable 28 | 1 |
+| `paterson-auto-repair.com` | D&A Autoglass · (973) 985-7152 | 16.4 | usable 48 | 2 |
+| `smyrna-towing.com` | White's Towing & Recovery · (615) 896-5844 | 16.7 | usable 29 | 0 |
+| `florencetow.com` | B & D Towing and recovery · (256) 349-8125 | 19.5 | usable 8 | 0 |
+| `arab-towing.com` | Osborne's Towing · (256) 498-0650 | 19.9 | usable 4 | 3 |
+| `kent-restaurant.com` | Taqueria Del Sol · (253) 278-2905 | — | usable 34 | 2 |
+| `paterson-restaurants.com` | Deli DJ · (973) 345-5144 | — | usable 39 | 1 |
+
+**Every pool is usable, every pick is a different business, and nothing rests on the arbitrary
+tiebreak.** Nothing is `autoApplyEligible`: the margins are 0–4 almost everywhere, and
+`renton-electrical` (17) is held by its area-code flag.
+
+⚠️ **One limitation deliberately left.** The "local" area code is derived from the pool, so a
+sweep reaching into a bigger neighbouring metro adopts the metro's code — Renton reads **206**,
+flagging Madrona Electric's genuinely local **425**. It fails safe (flags for a person rather
+than acting) and a hardcoded city→area-code table would be worse.
+
+### 11c. `last_seen_at` — freshness is the last observation (2026-09-27)
+
+⚠️ **`created_at` was standing in for freshness and could not do the job.** `upsertProspects` sets
+`ignoreDuplicates: true` (deliberate — a re-sweep must not clobber a worked lead), so a row is
+stamped once at first sight and never touched again.
+
+The failure: all 15 Renton towing rows carried `created_at = 2026-07-14`. A sweep re-observed 17
+businesses there and inserted **0**, so the pool still read `stale` and advised *"re-sweep this
+city"* — immediately after that city had been swept. **Advice the operator cannot satisfy by
+following it** is worse than none: it looks like a finding and loops them.
+
+`last_seen_at` (migration `20260857`, backfilled from `created_at`) is written by
+`markProspectsSeen` for every place a sweep observes, inserted or not — the only thing a re-sweep
+writes to a parked row, so status/owner/claim history stay untouched. `observedAt()` prefers it
+everywhere freshness is judged. After the fix the same Renton sweep reports `seen=17` and the pool
+reads `usable`, age 0d.

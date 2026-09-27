@@ -79,6 +79,30 @@ export async function POST(req: Request) {
       { status: 409 }
     );
   }
+  // ⚠️ THE OTHER DIRECTION, which is the one that breaks attribution. The check above stops one
+  // campaign holding two numbers; nothing stopped one NUMBER backing several campaigns, and a
+  // shared number makes every call it receives unattributable to the site that earned it — the
+  // exact claim rank-and-rent rests on. `geo_campaigns_tracking_number_uniq` (20260856) is the
+  // real enforcement; this exists so the operator reads which campaign holds it instead of a raw
+  // unique-violation from Postgres.
+  {
+    const { data: holder } = await supabaseAdmin
+      .from('geo_industry_campaigns')
+      .select('id, domain')
+      .eq('tracking_number', b.phoneNumber)
+      .neq('id', campaignId)
+      .maybeSingle();
+    if (holder) {
+      return NextResponse.json(
+        {
+          error: `${b.phoneNumber} already tracks ${holder.domain}. One number backs one campaign — buy a separate number, or release it from ${holder.domain} first.`,
+          code: 'number_in_use',
+          heldBy: holder.domain,
+        },
+        { status: 409 }
+      );
+    }
+  }
   const forwardTo = b.forwardTo ?? campaign.forward_to ?? null;
   if (!forwardTo)
     return NextResponse.json(

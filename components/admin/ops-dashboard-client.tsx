@@ -265,6 +265,32 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
                 <KpiTile label="Failed" value={guestFunnel.steps.signupFailed} tone={guestFunnel.steps.signupFailed > 0 ? 'bad' : 'neutral'} sub="our rules or an error" />
                 <KpiTile label="Already had an account" value={guestFunnel.steps.signupExistingAccount} tone="neutral" sub="offered log-in" />
               </div>
+
+              {/* ⚠️ AFTER THE FORM — the steps that were invisible until 2026-09-27.
+                  The funnel ended at confirmation, so the first person ever to complete guest
+                  sign-up (confirmed in 53 s) and then NOT publish looked like a success. These
+                  are written server-side at the moment the publish resolves, because a browser
+                  beacon claiming "the site went live" is the one event worth forging. */}
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <KpiTile
+                  label="Publish refused"
+                  value={guestFunnel.steps.publishBlocked}
+                  tone={guestFunnel.steps.publishBlocked > 0 ? 'warn' : 'neutral'}
+                  sub="pressed Publish, told to sign up"
+                />
+                <KpiTile
+                  label="Went live"
+                  value={guestFunnel.steps.published}
+                  tone={guestFunnel.steps.published > 0 ? 'good' : 'warn'}
+                  sub="the actual finish line"
+                />
+                <KpiTile
+                  label="Live on the clock"
+                  value={guestFunnel.steps.publishedOnGrace}
+                  tone={guestFunnel.steps.publishedOnGrace > 0 ? 'info' : 'neutral'}
+                  sub="unconfirmed — 7-day grace"
+                />
+              </div>
               <p className="mt-2 text-xs text-neutral-500">
                 Read them as a drop-off: shown → opened → submitted → email sent. The biggest gap is
                 the thing to fix. <strong className="text-neutral-400">Zeroes across the row mean the

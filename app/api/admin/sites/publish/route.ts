@@ -9,6 +9,7 @@ import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 import { mayPublishOnGrace } from '@/lib/guest/publishGrace';
 import { pendingEmailFor, startPublishGrace } from '@/lib/guest/publishGraceServer';
 import { NEEDS_SIGNUP_CODE } from '@/lib/auth/guestSignup';
+import { recordGuestPublishEvent } from '@/lib/analytics/guestFunnelServer';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -108,6 +109,9 @@ async function handle(req: Request) {
     if (gate.isAnonymous) {
       const pendingEmail = await pendingEmailFor(gate.userId);
       if (!mayPublishOnGrace({ isAnonymous: true, pendingEmail })) {
+        // Pressing Publish and being refused is the strongest intent signal in the funnel, and
+        // it was never recorded anywhere the server could vouch for.
+        void recordGuestPublishEvent('publish_blocked', gate.userId, { pageUrl: templateId });
         return j({ error: 'Sign up to publish your site.', code: NEEDS_SIGNUP_CODE }, 401);
       }
       // Recorded BEFORE the publish. A site that went live with no deadline written is the open
@@ -284,6 +288,15 @@ async function handle(req: Request) {
     } catch (e: any) {
       note('logTemplateEvent failed', { err: String(e?.message || e) });
     }
+
+    // ⚠️ The last step of the funnel, and until now the one nothing wrote. The first person to
+    // ever complete guest sign-up confirmed in 53 seconds and then never published — invisible,
+    // because "converted" was the final event. Grace publishes are counted separately: a site
+    // live on a 7-day clock is a promise, not a finished conversion.
+    void recordGuestPublishEvent(graceUntil ? 'published_on_grace' : 'published', gate.userId, {
+      pageUrl: templateId,
+      reason: finalDomain ? 'domain' : null,
+    });
 
     return j(
       {

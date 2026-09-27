@@ -78,6 +78,20 @@ export type GuestFunnelSteps = {
   signupExistingAccount: number;
   /** Distinct guests who reached at least `signup_opened` — people, not clicks. */
   buildersWhoOpened: number;
+  /**
+   * Pressed Publish and were refused for having committed nothing (anonymous, no pending email).
+   * The strongest intent signal in the funnel: they wanted the site live.
+   */
+  publishBlocked: number;
+  /**
+   * The site actually went live. ⚠️ THE FUNNEL USED TO END AT CONFIRMATION. The first person to
+   * ever complete guest sign-up (2026-09-26) confirmed in 53 seconds and then never published —
+   * a day later `templates.published` was still false, and nothing recorded it, so "converted"
+   * read as the finish line when it was not.
+   */
+  published: number;
+  /** Live on the 7-day grace clock — a promise with a deadline, not a finished conversion. */
+  publishedOnGrace: number;
 };
 
 const ms = (s?: string | null) => (s ? new Date(s).getTime() || 0 : 0);
@@ -144,5 +158,8 @@ export function computeGuestFunnelSteps(rows: readonly GuestFunnelEventRow[]): G
     signupFailed: n('signup_failed'),
     signupExistingAccount: n('signup_existing_account'),
     buildersWhoOpened: opened.size,
+    publishBlocked: n('publish_blocked'),
+    published: n('published'),
+    publishedOnGrace: n('published_on_grace'),
   };
 }

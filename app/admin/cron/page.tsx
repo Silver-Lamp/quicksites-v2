@@ -1,6 +1,7 @@
 // app/admin/cron/page.tsx — single-pane health dashboard for all scheduled jobs.
 // Joins the static CRON_JOBS registry (schedule + expected cadence) with the
 // most-recent + recent rows from cron_runs, and derives a health badge per job.
+import AlertChannelTest from '@/components/admin/alert-channel-test';
 import { createClient } from '@supabase/supabase-js';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import {
@@ -108,6 +109,10 @@ export default async function AdminCronPage() {
         Every scheduled job in one place. Health is derived from the latest recorded run and the
         job&rsquo;s expected cadence (overdue = no success within 2× the interval).
       </p>
+
+      {/* ⚠️ Here, because this page is where someone looks when they suspect a job is silent —
+          and a silent job you never hear about is the same failure as a job that never ran. */}
+      <AlertChannelTest />
 
       <div className="mt-6 flex flex-wrap gap-3 text-sm">
         <span className="text-neutral-400">{CRON_JOBS.length} jobs:</span>

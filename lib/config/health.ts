@@ -206,12 +206,21 @@ export const CONFIG_GATES: ConfigGate[] = [
       'The cron reaches its mail step every night and refuses with lob_not_configured, so drafts pile up "mailable" and nothing is ever delivered. POSTCARD_MAIL_ENABLED must also be 1 — the step honours the same kill-switch as the operator button.',
   },
   {
+    // ⚠️ THIS GATE CANNOT TELL A LIVE KEY FROM A REVOKED ONE, and on 2026-09-26 that mattered:
+    // it read `ready` for eight days while every AI call 500'd, because OPENAI_API_KEY was set
+    // and dead. Same shape as PostHog — configuration present is not the same as working.
+    //
+    // It deliberately stays a presence check. A live probe here would have /status calling a paid
+    // API on every public request, which is a cost and DoS amplifier (see the rule at the top of
+    // this file). The detector belongs on a cron, and now is one: `ai-cost-alert` alerts when
+    // `ai_usage_events` records NOTHING for AI_ALERT_SILENCE_HOURS.
     key: 'ai',
     label: 'AI (copy, hero images, backdrops)',
     requires: ['OPENAI_API_KEY'],
     degradeOnly: true,
     breaks:
-      'AI copy/image generation returns nothing. Site builds still work but fall back to placeholder copy and no hero image.',
+      'AI copy/image generation returns nothing. Site builds still work but fall back to placeholder copy and no hero image. ' +
+      'NOTE: this only checks the key is SET — a revoked key still reads ready here; the silence alert on the ai-cost-alert cron is what catches that.',
   },
   {
     key: 'email',

@@ -23,6 +23,8 @@
 // consent path (one-time SMS, says what is happening and how to stop it) and is part of the
 // action, never an optional follow-up.
 import { cleanCityName } from '@/lib/geo/cleanCityName';
+import { haversineDistance } from '@/lib/utils/distance';
+import { marketRadiusKm } from './marketRadius';
 
 export type ForwardProspect = {
   id: string;
@@ -35,6 +37,8 @@ export type ForwardProspect = {
   rating: number | null;
   review_count: number | null;
   status: string | null;
+  address_lat?: number | null;
+  address_lon?: number | null;
   /** ISO timestamp — when the row was first inserted. */
   created_at: string | null;
   /**
@@ -53,6 +57,15 @@ export type ForwardCampaign = {
   city: string | null;
   region: string | null;
   industry_key: string | null;
+  /**
+   * The town's coordinates.
+   *
+   * ⚠️ NULL on all 129 rows until the 20260858 backfill — the columns existed and nothing ever
+   * wrote them. When absent the matcher falls back to city+region equality, which is the old
+   * behaviour, so a campaign without a centre degrades rather than matching everything.
+   */
+  center_lat?: number | null;
+  center_lon?: number | null;
 };
 
 /** Phones already spoken for, so one business is not silently wired to two of our domains. */
@@ -69,6 +82,7 @@ export type DisqualifyReason =
   | 'no_phone'
   | 'industry_mismatch'
   | 'city_mismatch'
+  | 'outside_market'
   | 'region_mismatch'
   | 'opted_out';
 
@@ -137,6 +151,38 @@ function sameCity(a: string | null | undefined, b: string | null | undefined): b
   const x = cleanCityName(a).toLowerCase();
   const y = cleanCityName(b).toLowerCase();
   return !!x && !!y && x === y;
+}
+
+/**
+ * Is this business in the campaign's market?
+ *
+ * Distance when both sides have coordinates, city+region equality when they do not.
+ *
+ * ⚠️ Distance is the better rule and it is not merely a refinement: `prospects.city` is where a
+ * business was first swept, so the name test asks "did we happen to discover you under this
+ * label" rather than "do you serve this town". Maple Valley qualified 1 of 13 real candidates on
+ * the name test. But the fallback is kept, and kept STRICT, because a campaign with no centre
+ * must narrow to the old behaviour rather than widen to everything.
+ */
+export function marketMatch(
+  p: ForwardProspect,
+  campaign: ForwardCampaign,
+): { inMarket: boolean; km: number | null; by: 'distance' | 'city' } {
+  const clat = campaign.center_lat;
+  const clon = campaign.center_lon;
+  const plat = p.address_lat;
+  const plon = p.address_lon;
+  const haveCoords =
+    typeof clat === 'number' && typeof clon === 'number' &&
+    typeof plat === 'number' && typeof plon === 'number' &&
+    Number.isFinite(clat) && Number.isFinite(clon) &&
+    Number.isFinite(plat) && Number.isFinite(plon);
+
+  if (haveCoords) {
+    const km = haversineDistance(clat as number, clon as number, plat as number, plon as number);
+    return { inMarket: km <= marketRadiusKm(campaign.industry_key), km, by: 'distance' };
+  }
+  return { inMarket: sameCity(p.city, campaign.city), km: null, by: 'city' };
 }
 
 function hasWebsite(p: ForwardProspect): boolean {
@@ -368,16 +414,28 @@ export function recommendForwardTargets(
       disqualified.push({ prospect: p, reason: 'industry_mismatch' });
       continue;
     }
-    // ⚠️ Region is checked separately from city and BOTH matter: there is a Covington in WA and a
-    // Covington in GA, and a city-name-only match would happily forward Washington towing calls
-    // to Georgia. This is the same class as the résumé bug where "the sites you own" stood in for
-    // "the site that is about you" — a key that is unique in the sample but not in the world.
-    if (campaign.region && p.region && p.region.trim().toLowerCase() !== campaign.region.trim().toLowerCase()) {
-      disqualified.push({ prospect: p, reason: 'region_mismatch' });
-      continue;
-    }
-    if (campaign.city && !sameCity(p.city, campaign.city)) {
-      disqualified.push({ prospect: p, reason: 'city_mismatch' });
+    const market = marketMatch(p, campaign);
+    // ⚠️ The region guard belongs ONLY to the city-name fallback. There is a Covington in WA and
+    // a Covington in GA, and a name match alone would forward Washington towing calls to
+    // Georgia. Distance already answers that far better — the two Covingtons are 3,800 km apart
+    // — and applying a region test on top of it would re-introduce the bug it was written to
+    // prevent, by excluding a business ten minutes across a state line that genuinely serves the
+    // town. Only one of the two rules needs it, and it is the weaker one.
+    if (market.by === 'city') {
+      if (
+        campaign.region &&
+        p.region &&
+        p.region.trim().toLowerCase() !== campaign.region.trim().toLowerCase()
+      ) {
+        disqualified.push({ prospect: p, reason: 'region_mismatch' });
+        continue;
+      }
+      if (campaign.city && !market.inMarket) {
+        disqualified.push({ prospect: p, reason: 'city_mismatch' });
+        continue;
+      }
+    } else if (!market.inMarket) {
+      disqualified.push({ prospect: p, reason: 'outside_market' });
       continue;
     }
     if (optedOut.has(phone)) {
@@ -463,6 +521,12 @@ export function recommendForwardTargets(
       const ac = areaCodeFlag(p, marketPhones);
       if (ac) flags.push(ac);
 
+      // How far the caller's business actually is. Not scored — being closer is not being
+      // better within a radius the trade already justifies — but a person routing an emergency
+      // call should see it.
+      const km = marketMatch(p, campaign).km;
+      if (km !== null) reasons.push(`${km.toFixed(1)} km from ${campaign.city ?? 'the market'}`);
+
       const age = daysBetween(observedAt(p), now);
       if (age !== null && age > 60) flags.push(`last observed ${age} days ago`);
 
@@ -508,4 +572,97 @@ export function isAutoApplyEligible(ranked: Candidate[], pool: PoolQuality): boo
   if (!first || first.flags.length > 0) return false;
   if (first.score <= 0) return false;
   return first.score - second.score >= 15;
+}
+
+/**
+ * Stop one business becoming the top pick for several campaigns at once.
+ *
+ * ⚠️ THIS IS THE SHARED-NUMBER BUG IN MIRROR IMAGE, and distance matching created it. Under the
+ * old city-name rule each town had its own pool, so overlap was impossible. With a 25 km radius
+ * the Seattle-metro campaigns genuinely overlap, and the single highest-scoring tow company won
+ * **four** of them — `covingtontow`, `maplevalley-towing`, `renton-towing` and `seatac-towing`
+ * all recommended AL Ram Towing. Wiring four of our domains to one phone concentrates every
+ * market's calls on one operator, and a caller who rings two of our "different" sites reaches
+ * the same business.
+ *
+ * `forwardedElsewhere` does not catch it: that reads campaigns already ATTACHED, and in a fresh
+ * run none are. The conflict exists only between recommendations made in the same breath.
+ *
+ * ⚠️ Resolved by DISTANCE, not by score. The business keeps the campaign whose town it is
+ * closest to — the market it most plausibly serves — and every other campaign moves to its next
+ * unclaimed candidate with a flag saying so. Resolving by score instead would hand the business
+ * to whichever market happens to rate it highest, which is not a fact about who it serves.
+ *
+ * Campaigns with no distance (the city-name fallback) are resolved last and arbitrarily-but-
+ * stably by domain, since there is nothing better to go on.
+ */
+export function deconflictTopPicks(recs: ForwardRecommendation[]): ForwardRecommendation[] {
+  const claimed = new Map<string, string>(); // phone -> campaign id that keeps it
+  const cursor = new Map<string, number>(); // campaign id -> index of its current top pick
+
+  const distanceFor = (rec: ForwardRecommendation, idx: number): number => {
+    const c = rec.ranked[idx];
+    if (!c) return Number.MAX_SAFE_INTEGER;
+    const km = marketMatch(c.prospect, rec.campaign).km;
+    return km ?? Number.MAX_SAFE_INTEGER;
+  };
+
+  // Iterate to a fixed point: displacing a campaign can create a new collision further down.
+  for (let pass = 0; pass < recs.length + 1; pass++) {
+    let changed = false;
+    claimed.clear();
+    // Stable order so the same input always resolves the same way.
+    const order = [...recs].sort((a, b) => a.campaign.domain.localeCompare(b.campaign.domain));
+    for (const rec of order) {
+      const idx = cursor.get(rec.campaign.id) ?? 0;
+      const top = rec.ranked[idx];
+      if (!top) continue;
+      const phone = normalizePhone(top.prospect.phone);
+      const holderId = claimed.get(phone);
+      if (!holderId) {
+        claimed.set(phone, rec.campaign.id);
+        continue;
+      }
+      const holder = recs.find((r) => r.campaign.id === holderId)!;
+      const holderIdx = cursor.get(holderId) ?? 0;
+      // Closer campaign keeps it; the other advances.
+      const loser = distanceFor(rec, idx) < distanceFor(holder, holderIdx) ? holder : rec;
+      const winner = loser === rec ? holder : rec;
+      claimed.set(phone, winner.campaign.id);
+      cursor.set(loser.campaign.id, (cursor.get(loser.campaign.id) ?? 0) + 1);
+      changed = true;
+    }
+    if (!changed) break;
+  }
+
+  return recs.map((rec) => {
+    const idx = cursor.get(rec.campaign.id) ?? 0;
+    if (idx === 0) return rec;
+    const skipped = rec.ranked.slice(0, idx);
+    const ranked = rec.ranked.slice(idx);
+    if (!ranked.length) {
+      // Everything it wanted is spoken for. Report that honestly rather than re-using a pick.
+      return {
+        ...rec,
+        ranked,
+        autoApplyEligible: false,
+        pool: {
+          ...rec.pool,
+          advice:
+            `Every candidate here is a closer fit for a neighbouring campaign ` +
+            `(${skipped.map((c) => c.prospect.business_name).join(', ')}). ` +
+            'Widen the sweep or accept a shared forward-to deliberately.',
+        },
+      };
+    }
+    const note =
+      `${skipped.map((c) => c.prospect.business_name).join(', ')} ` +
+      `${skipped.length === 1 ? 'is' : 'are'} closer to another campaign's town and went there`;
+    return {
+      ...rec,
+      ranked: [{ ...ranked[0], flags: [...ranked[0].flags, note] }, ...ranked.slice(1)],
+      // A pick reached by displacement is not a clean unattended write.
+      autoApplyEligible: false,
+    };
+  });
 }

@@ -448,24 +448,94 @@ every pool but one is now `usable`, and nothing rests on the arbitrary tiebreak.
 `seatac-towing.com` is the first campaign ever to clear `autoApplyEligible`: a usable pool, 8
 candidates, no flag on the winner, and a 33-point margin.
 
-### Two limitations the sweeps exposed
+### 11d. Distance, not the city label (2026-09-27)
 
-⚠️ **The market's "local" area code is derived from the prospect pool, so a sweep that reaches
-into a bigger neighbouring metro adopts the metro's code.** Renton is a 425 town, but the
-electrician sweep pulled in enough Seattle firms that the modal code came out **206** — so
-Madrona Electric (425, genuinely local) is flagged "not the local 206" and blocked from
-auto-apply. The failure direction is safe (it flags for a person rather than acting) and the
-alternative — a hardcoded city→area-code table — is worse. Left as-is deliberately; the flag is
-advisory by design.
+⚠️ **`outreach_prospects.city` is the city we SEARCHED, not where the business is.** `runSweep`
+stamps `input.city` onto every result, so a sweep centred on one town labels businesses tens of
+km away with that town's name. Matching on it asks *"did we happen to discover you under this
+label"*, which is not the question. **Maple Valley had 28 real candidates within range and
+qualified ONE.**
 
-⚠️ **`outreach_prospects.city` records where a business was FIRST swept, not which markets it
-serves — and for a service business covering a radius that is the wrong matcher.** Maple Valley
-found 13 tow companies within 8 km and qualified **one**: the other twelve are parked under
-Renton or Covington from earlier sweeps, so a `city` equality excludes them. Campaigns carry
-`center_lat`/`center_lon` and prospects carry `address_lat`/`address_lon`, so a distance match is
-available and would be strictly better here — but it changes what "in this market" means for
-every campaign, and getting it wrong routes calls to the wrong town. **Not changed without a
-decision.**
+`marketMatch()` now measures distance when both sides have coordinates, and falls back to
+city+region equality when they do not — a campaign with no centre narrows to the old behaviour
+rather than widening to everything.
+
+⚠️ **The radius is per-trade, because "nearby" means two different things.** A tow truck, an
+electrician or a plumber **drives to the customer**, so a shop 20 km out serves the town fine
+(`lib/ppl/marketRadius.ts`, 20–30 km). A restaurant is the reverse — the **customer travels** —
+and a taqueria 20 km away is simply not in the market (8 km). One global radius has to be wrong
+for one of them.
+
+⚠️ **The region guard now applies ONLY to the city-name fallback.** Distance already separates
+Covington WA from Covington GA far better (3,800 km); re-applying a region test on top would
+re-create the bug it was written to prevent, by excluding a business ten minutes over a state
+line that genuinely serves the town.
+
+#### The centres were NULL, and the first fix for that was wrong
+
+`center_lat`/`center_lon` existed from the start and were **NULL on all 129 rows** — the columns
+were declared and nothing ever wrote them. ⚠️ A session read the schema, saw the columns, and
+reported that campaigns *"carry"* their coordinates. They carry the columns. Not the same claim.
+
+Migration `20260858` seeded them from the **median prospect position** per city — local, free,
+and **wrong**, for the same reason the city label is wrong. The check that caught it:
+
+> AL Ram Towing's address is `25811 178th Pl SE, **Covington**, WA`. Against the median centres
+> it sat **4.5 km from "Maple Valley" and 5.9 km from "Covington"** — nearer another town's
+> centre than its own — so the recommender handed a Covington business to the Maple Valley
+> campaign. Geocoded properly: **0.6 km from Covington**, 4.6 km from Maple Valley.
+
+Fixed by `npm run backfill:campaign-centres` (`scripts/backfill-campaign-centres.mts`), which
+geocodes the town itself: **74 of 76 towns, 127 of 129 campaigns**. Geocoding stays in a script,
+never a migration — ~75 network calls at Nominatim's ~1 req/sec is not something to hold a
+transaction open for. The two that failed (`Montlake Terrace` — our typo for *Mountlake*
+Terrace — and `Marrowdale`) keep the city-name fallback and are reported, because degrading is
+right and inventing a centre is not.
+
+#### Overlapping markets: the shared-number bug in mirror image
+
+⚠️ Distance matching **created a new conflict**. Under city names each town had its own pool, so
+overlap was impossible. With a 25 km radius the Seattle-metro campaigns genuinely overlap, and
+the single best-scoring tow company became the top pick for **four** of them — `covingtontow`,
+`maplevalley-towing`, `renton-towing` and `seatac-towing` all recommended AL Ram Towing. Wiring
+four domains to one phone concentrates every market's calls on one operator, and a caller who
+rings two of our "different" sites reaches the same business. `forwardedElsewhere` does not
+catch it: that reads campaigns already *attached*, and in a fresh run none are.
+
+`deconflictTopPicks()` resolves it **by distance, not by score** — the business keeps the
+campaign whose town it is closest to (the market it most plausibly serves), and every other
+campaign moves to its next unclaimed candidate carrying a flag that says so. Resolving by score
+would hand it to whichever market rates it highest, which is not a fact about who it serves. A
+displaced pick is never `autoApplyEligible`, and a campaign whose every candidate went elsewhere
+says so rather than re-using one.
+
+#### The board after all of it
+
+| campaign | pick | km | pool | margin |
+|---|---|---|---|---|
+| `covingtontow.com` | AL Ram Towing · (253) 234-7959 | 0.6 | usable 35 | 4 |
+| `richland-towing.com` | Flatline Towing · (509) 380-0423 | 0.0 | usable 4 | 0 |
+| `renton-electrical.com` | Madrona Electric LLC · (425) 902-9422 | 2.4 | usable 23 | 17 |
+| `southhilltowing.com` | Too Cool Towing LLC · (253) 442-5373 | 4.8 | usable 29 | 5 |
+| `cullmantow.com` | Trimble Towing & Automotive · (256) 841-7882 | 5.5 | usable 9 | 2 |
+| `seatac-towing.com` | Prime Towing · (253) 326-5555 | 6.0 | usable 37 | 2 |
+| `renton-towing.com` | All Right Towing · (206) 414-1000 | 9.9 | usable 34 | 0 |
+| `maplevalley-towing.com` | V'Z Towing LLC · (253) 217-0639 | 11.2 | usable 28 | 1 |
+| `paterson-auto-repair.com` | D&A Autoglass · (973) 985-7152 | 16.4 | usable 48 | 2 |
+| `smyrna-towing.com` | White's Towing & Recovery · (615) 896-5844 | 16.7 | usable 29 | 0 |
+| `florencetow.com` | B & D Towing and recovery · (256) 349-8125 | 19.5 | usable 8 | 0 |
+| `arab-towing.com` | Osborne's Towing · (256) 498-0650 | 19.9 | usable 4 | 3 |
+| `kent-restaurant.com` | Taqueria Del Sol · (253) 278-2905 | — | usable 34 | 2 |
+| `paterson-restaurants.com` | Deli DJ · (973) 345-5144 | — | usable 39 | 1 |
+
+**Every pool is usable, every pick is a different business, and nothing rests on the arbitrary
+tiebreak.** Nothing is `autoApplyEligible`: the margins are 0–4 almost everywhere, and
+`renton-electrical` (17) is held by its area-code flag.
+
+⚠️ **One limitation deliberately left.** The "local" area code is derived from the pool, so a
+sweep reaching into a bigger neighbouring metro adopts the metro's code — Renton reads **206**,
+flagging Madrona Electric's genuinely local **425**. It fails safe (flags for a person rather
+than acting) and a hardcoded city→area-code table would be worse.
 
 ### 11c. `last_seen_at` — freshness is the last observation (2026-09-27)
 

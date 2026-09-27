@@ -51,10 +51,10 @@
     "lint": "eslint . --ext .js,.ts,.jsx,.tsx",
     "lint:fix": "eslint . --ext .js,.ts,.jsx,.tsx --fix",
     "lint:links": "node scripts/check-links.js",
-    "lint:errors:rules": "eslint . --format json --max-warnings=0 | jq -r '.[] | select(.errorCount > 0) | .filePath as $file | .messages[] | select(.severity == 2) | \"\\($file):\\(.line):\\(.column) — \\(.message) [\\(.ruleId)]\"'",
+    "lint:errors:rules": "eslint . --format json --max-warnings=0 | jq -r '.[] | select(.errorCount > 0) | .filePath as $file | .messages[] | select(.severity == 2) | \"\\($file):\\(.line):\\(.column) \u2014 \\(.message) [\\(.ruleId)]\"'",
     "build:lint": "esbuild scripts/lint-digest.ts --outfile=.lint-tmp/scripts/lint-digest.js --platform=node --target=node20",
-    "lint:report": "echo ✅ Step 1: generate the json report && rm -f lint-report.json lint-summary.txt lint-summary.md && eslint . --ext .ts,.tsx,.js,.jsx --format json --output-file lint-report.json && tsx scripts/run-lint-report.ts",
-    "lint:digest": "echo ✅ Step 2: summarize the json report && tsx scripts/lint-digest.ts",
+    "lint:report": "echo \u2705 Step 1: generate the json report && rm -f lint-report.json lint-summary.txt lint-summary.md && eslint . --ext .ts,.tsx,.js,.jsx --format json --output-file lint-report.json && tsx scripts/run-lint-report.ts",
+    "lint:digest": "echo \u2705 Step 2: summarize the json report && tsx scripts/lint-digest.ts",
     "preflight": "npm run lint:err && npm run typecheck:err && npm run build",
     "typecheck:err": "tsc --noEmit --pretty false 2>&1 | grep -i 'error'",
     "typecheck:next": "CI=1 next build --no-lint",
@@ -78,7 +78,8 @@
     "render:worker": "tsx scripts/render-worker.ts",
     "outreach:backfill-addresses": "tsx --env-file=.env.local scripts/backfill-prospect-addresses.ts",
     "guests:contacts": "tsx --env-file=.env.local scripts/guest-contacts.ts",
-    "emit:lanes": "tsx --tsconfig tsconfig.json scripts/emit-lane-specs.ts"
+    "emit:lanes": "tsx --tsconfig tsconfig.json scripts/emit-lane-specs.ts",
+    "backfill:campaign-centres": "tsx scripts/backfill-campaign-centres.mts"
   },
   "scripts-meta": {
     "dev": "Start the development server",

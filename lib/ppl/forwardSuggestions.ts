@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
 import {
   recommendForwardTargets,
+  deconflictTopPicks,
   normalizePhone,
   type ForwardCampaign,
   type ForwardProspect,
@@ -14,7 +15,7 @@ import {
 } from './forwardCandidates';
 
 const PROSPECT_COLUMNS =
-  'id, business_name, phone, website, city, region, industry_key, rating, review_count, status, created_at, last_seen_at';
+  'id, business_name, phone, website, city, region, industry_key, rating, review_count, status, created_at, last_seen_at, address_lat, address_lon';
 
 /** A campaign needs this much real search demand before it is worth wiring to a business. */
 const MIN_IMPRESSIONS = 10;
@@ -39,7 +40,7 @@ export async function suggestForwardTargets(opts: { requireDemand?: boolean } = 
 }> {
   const { data: campaigns } = await supabaseAdmin
     .from('geo_industry_campaigns')
-    .select('id, domain, city, region, industry_key, forward_to, tracking_number, forward_opted_out_at')
+    .select('id, domain, city, region, industry_key, center_lat, center_lon, forward_to, tracking_number, forward_opted_out_at')
     .is('forward_to', null)
     .order('domain');
 
@@ -80,18 +81,23 @@ export async function suggestForwardTargets(opts: { requireDemand?: boolean } = 
       city: c.city,
       region: c.region,
       industry_key: c.industry_key,
+      center_lat: c.center_lat,
+      center_lon: c.center_lon,
     });
   }
 
   if (eligible.length === 0) return { recommendations: [], skipped };
 
-  const cities = [...new Set(eligible.map((c) => c.city).filter(Boolean) as string[])];
   const industries = [...new Set(eligible.map((c) => c.industry_key).filter(Boolean) as string[])];
 
+  // ⚠️ NO `.in('city', …)` FILTER ANY MORE. It was the SQL half of the same mistake the module
+  // just stopped making: pre-filtering on the city name discards exactly the businesses the
+  // distance match exists to find — the twelve Maple Valley tow companies parked under "Renton"
+  // would never reach the matcher to be measured. Narrow by trade only; let the module decide
+  // what is in the market.
   const { data: prospects } = await supabaseAdmin
     .from('outreach_prospects')
     .select(PROSPECT_COLUMNS)
-    .in('city', cities)
     .in('industry_key', industries);
 
   // Two opt-out surfaces, and both have to be honoured: the global phone list written by the
@@ -123,5 +129,7 @@ export async function suggestForwardTargets(opts: { requireDemand?: boolean } = 
     ),
   );
 
-  return { recommendations, skipped };
+  // ⚠️ Deconflict AFTER ranking: distance matching makes neighbouring markets overlap, and
+  // without this one business is the top pick for four campaigns at once.
+  return { recommendations: deconflictTopPicks(recommendations), skipped };
 }

@@ -46,7 +46,10 @@ describe('wired into the ops dashboard', () => {
     expect(snap).toMatch(/guestFunnel: GuestFunnel/);
     expect(snap).toMatch(/loadGuestFunnel\(\)/);
     const ui = readFileSync('components/admin/ops-dashboard-client.tsx', 'utf8');
-    for (const label of ['Guests', 'Edited 10+ min', 'Came back', 'Started sign-up', 'Converted']) expect(ui).toContain(`label="${label}"`);
+    // ⚠️ "Started sign-up" was renamed to "Awaiting confirm" on 2026-09-27 — it counts a PENDING
+    // state (unconfirmed `new_email`) that a successful signup clears, so the old label showed 0
+    // exactly when the flow first worked. See the describe block at the foot of this file.
+    for (const label of ['Guests', 'Edited 10+ min', 'Came back', 'Awaiting confirm', 'Converted']) expect(ui).toContain(`label="${label}"`);
     // "Reachable" is a tile + panel unit that lives with the panel (guest-leads-panel.tsx).
     expect(ui).toMatch(/<GuestReachableTile funnel=\{guestFunnel\} \/>/);
     expect(ui).toMatch(/href="\/admin\/users"/);
@@ -100,5 +103,43 @@ describe('computeGuestFunnelSteps', () => {
     const s = computeGuestFunnelSteps([]);
     expect(s.promptShown).toBe(0);
     expect(s.buildersWhoOpened).toBe(0);
+  });
+});
+
+/**
+ * ⚠️ "AWAITING CONFIRM" IS A PENDING STATE, NOT A FUNNEL STEP — and the tile said otherwise.
+ *
+ * `startedSignup` counts guests whose `new_email` is unconfirmed, so CONFIRMING CLEARS IT. It was
+ * rendered as "Started sign-up" with a warn tone at zero, which meant that on 2026-09-27 — the
+ * first time anyone ever completed guest signup — the dashboard read "Started sign-up 0 ⚠" next
+ * to "Converted 1 ✓". A true number answering a different question, and it looked worst exactly
+ * when the thing finally worked.
+ *
+ * These pin the distinction rather than the wording: the cumulative step is `signupSubmitted`,
+ * and a successful conversion must not make the pending count look like a failure.
+ */
+describe('pending confirmations are not the same as signups started', () => {
+  const src = require('fs').readFileSync(
+    require('path').join(process.cwd(), 'components/admin/ops-dashboard-client.tsx'),
+    'utf8',
+  );
+  const stripped = require('@/test/stripComments').stripComments(src);
+
+  it('the tile no longer claims to count sign-ups started', () => {
+    expect(stripped).not.toContain('label="Started sign-up"');
+  });
+
+  it('zero pending is not a warning once something has been submitted', () => {
+    // The old expression was a bare `startedSignup > 0 ? 'good' : 'warn'`.
+    expect(stripped).not.toMatch(/guestFunnel\.startedSignup > 0 \? 'good' : 'warn'/);
+    // It must consult the cumulative step before calling zero a problem.
+    const i = stripped.indexOf('guestFunnel.startedSignup');
+    const window = stripped.slice(i, i + 600);
+    expect(window).toContain('signupSubmitted');
+  });
+
+  it('the cumulative step is still rendered somewhere', () => {
+    // Relabelling the pending tile must not leave the funnel with no "submitted" number at all.
+    expect(stripped).toContain('steps.signupSubmitted');
   });
 });

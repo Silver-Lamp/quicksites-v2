@@ -212,6 +212,8 @@ export default function PageHeaderEditor({
   const [isSavingLocal, setIsSavingLocal] = useState(false);
   const [showLogoLibrary, setShowLogoLibrary] = useState(false);
   // One header surface flipped between the edit fields and the live render.
+  // Deliberately still 'edit', unlike the hero. A header is links and a logo — there is no
+  // generated result to reveal, so opening on a preview would just add a click before the fields.
   const [headerView, setHeaderView] = useState<'edit' | 'preview'>('edit');
   const [previewCompact, setPreviewCompact] = useState(true);
 

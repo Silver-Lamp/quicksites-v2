@@ -15,6 +15,7 @@ import PplDisputeActions from '@/components/admin/ppl-dispute-actions';
 import { listOpenDisputes, DISPUTE_CATEGORIES } from '@/lib/ppl/disputes';
 import { statementUrl } from '@/lib/ppl/statementToken';
 import { suggestForwardTargets } from '@/lib/ppl/forwardSuggestions';
+import { decidedByLabel } from '@/lib/ppl/forwardCandidates';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import { accountFamily, listTrackingNumbers, twilioConfigured } from '@/lib/outreach/callTracking';
 import { supabaseAdmin } from '@/lib/supabase/admin';
@@ -519,11 +520,17 @@ export default async function PplOpsPage() {
                     ))}
                   </ol>
                 )}
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {r.autoApplyEligible
-                    ? 'Clear winner in a healthy pool — still attach it yourself, then send the forwarding notice.'
-                    : 'Not a clean enough call to make unattended. Pick one below, then send the forwarding notice.'}
-                </p>
+                {r.ranked[0] && (
+                  <p className="mt-2 text-xs">
+                    <span className="font-medium text-foreground">
+                      Pick: {r.ranked[0].prospect.business_name} · {r.ranked[0].prospect.phone}
+                    </span>{' '}
+                    <span className="text-muted-foreground">
+                      ({decidedByLabel(r.ranked[0].decidedBy)}) — attach it, then send the
+                      forwarding notice.
+                    </span>
+                  </p>
+                )}
               </div>
             ))}
           </div>

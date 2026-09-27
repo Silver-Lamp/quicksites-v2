@@ -389,3 +389,42 @@ website, local 253** — a different business. The tie would have picked wrong h
 
 `autoApplyEligible` is `false` for all three (margins of 4, 5 and 0 against a ≥15 threshold), which
 is the intended answer: pick one, then send the notice.
+
+### 11b. Ties always resolve to a pick (owner direction, 2026-09-27)
+
+> *"if there are ties now and in the future just have [it] pick one"*
+
+The recommender never reports an unresolved tie. Leaving one open means the number stays
+unattached and the calls go nowhere at all, which is worse for the caller than a well-reasoned
+arbitrary choice.
+
+⚠️ **But a tiebreak is not evidence, and the cascade is ordered so the arbitrary step is last.**
+`Candidate.decidedBy` records what actually separated it from the next candidate, and
+`decidedByLabel()` renders that on `/admin/ppl` beside the pick:
+
+| `decidedBy` | meaning |
+|---|---|
+| `score` | the signals separated them — a real pick |
+| `local_area_code` | tied; the local area code broke it |
+| `more_reviews` | tied; more public evidence the business is real |
+| `freshest` | tied; most recently confirmed to exist |
+| `stable_name` | tied on everything — a stable rule, **not** a claim it is better |
+
+**Why the area code is first.** It is deliberately kept *out* of the score (a tow operator's cell
+is weak evidence, too weak to move a ranking) but it is decisive when nothing else separates two
+businesses. Pre-ratings, South Hill tied 61–61 and fell to **PNW Towing (206)** over **Too Cool
+Towing (253)** purely because "P" sorts before "T". When ratings arrived, Too Cool won on
+4.8★/201. **The area code had the right answer the whole time and alphabetical order threw it
+away** — which is the argument for ordering tiebreakers by evidence rather than convenience.
+
+The last rung is the business name: deterministic, never random. A recommendation that changes on
+reload cannot be reviewed or reproduced; a test asserts the same pool yields the same pick
+regardless of input order.
+
+⚠️ **A tiebreak never counts toward `autoApplyEligible`** — the ≥15-point margin rule is unchanged,
+and a pick decided by rule is exactly the case an unattended write should not take. Picking one is
+not the same as being sure, and the two are reported separately.
+
+Live picks (2026-09-27): 13 campaigns, 11 `clear on the signals`, `cullmantow.com` on more reviews
+(Simple Man Towing), `florencetow.com` and `richland-towing.com` on the stable rule — both stale
+two-candidate pools where re-sweeping is the real fix.

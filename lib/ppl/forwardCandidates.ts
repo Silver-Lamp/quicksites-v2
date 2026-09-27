@@ -64,6 +64,14 @@ export type DisqualifyReason =
   | 'region_mismatch'
   | 'opted_out';
 
+/**
+ * What settled this candidate's place in the order.
+ *
+ * `score` means the scoring signals separated it. Everything else means they did NOT, and a
+ * tiebreaker did — which is a materially weaker claim and is reported as one.
+ */
+export type DecidedBy = 'score' | 'local_area_code' | 'more_reviews' | 'freshest' | 'stable_name';
+
 export type Candidate = {
   prospect: ForwardProspect;
   score: number;
@@ -71,6 +79,14 @@ export type Candidate = {
   reasons: string[];
   /** Things a person should look at. Deliberately NOT scored: see `areaCodeFlag`. */
   flags: string[];
+  /**
+   * How this candidate was separated from the one below it.
+   *
+   * ⚠️ Set on the whole ordered list, so the top entry's value is the one that matters: it says
+   * whether the pick is evidence or a coin flip resolved by rule. A tiebreak is never dressed up
+   * as a reason the winner is better.
+   */
+  decidedBy: DecidedBy;
 };
 
 export type PoolVerdict = 'usable' | 'thin' | 'stale' | 'empty';
@@ -166,6 +182,91 @@ export function areaCodeFlag(
   const mine = areaCode(candidate.phone);
   if (!mine || !modal || mine === modal[0]) return null;
   return `area code ${mine} is not the local ${modal[0]} — check they actually serve this town`;
+}
+
+/**
+ * The market's own area code, or '' when too few phones to have an opinion.
+ *
+ * Same evidence `areaCodeFlag` uses, exposed separately because the tiebreak needs the code
+ * itself rather than the sentence.
+ */
+export function modalAreaCode(marketPhones: (string | null)[]): string {
+  const MIN_SAMPLES = 5;
+  const codes = marketPhones.map(areaCode).filter(Boolean);
+  if (codes.length < MIN_SAMPLES) return '';
+  const tally = new Map<string, number>();
+  for (const c of codes) tally.set(c, (tally.get(c) ?? 0) + 1);
+  return [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+}
+
+/**
+ * Tiebreakers, in order, for when the score cannot separate two candidates.
+ *
+ * ⚠️ ALWAYS PRODUCES A WINNER. The operator asked for a pick rather than a reported tie, and
+ * that is the right call: leaving it open means the number stays unattached and the calls go
+ * nowhere at all, which is strictly worse for the caller than a well-reasoned arbitrary choice.
+ *
+ * ⚠️ But a tiebreak is NOT evidence, and the cascade is ordered so the arbitrary step is last.
+ * Real signals first:
+ *   1. **Local area code** — the one signal deliberately kept out of the score (a tow operator's
+ *      cell is weak evidence, too weak to move a ranking) but decisive when nothing else
+ *      separates two businesses. This is not hypothetical: pre-ratings, South Hill tied 61–61 and
+ *      fell to PNW Towing (206) over Too Cool Towing (253) purely because "P" sorts before "T" —
+ *      and when ratings arrived, Too Cool won on 4.8★/201. The area code had the right answer the
+ *      whole time and alphabetical order threw it away.
+ *   2. **More reviews** — more public evidence the business is real and operating, independent of
+ *      the shrunk rating that already tied.
+ *   3. **Freshest observation** — most recently confirmed to exist.
+ *   4. **Name** — purely deterministic, so the same pool always yields the same pick. Never
+ *      random: a recommendation that changes on reload cannot be reviewed or reproduced.
+ */
+function separatedBy(a: Candidate, b: Candidate, localCode: string, now: Date): DecidedBy {
+  if (a.score !== b.score) return 'score';
+  if (localCode) {
+    const aLocal = areaCode(a.prospect.phone) === localCode;
+    const bLocal = areaCode(b.prospect.phone) === localCode;
+    if (aLocal !== bLocal) return 'local_area_code';
+  }
+  const aRev = a.prospect.review_count ?? 0;
+  const bRev = b.prospect.review_count ?? 0;
+  if (aRev !== bRev) return 'more_reviews';
+  const aAge = daysBetween(a.prospect.created_at, now);
+  const bAge = daysBetween(b.prospect.created_at, now);
+  if (aAge !== bAge) return 'freshest';
+  return 'stable_name';
+}
+
+/** The ordering `separatedBy` describes. Kept adjacent so the two can never disagree. */
+function compareCandidates(a: Candidate, b: Candidate, localCode: string, now: Date): number {
+  if (a.score !== b.score) return b.score - a.score;
+  if (localCode) {
+    const aLocal = areaCode(a.prospect.phone) === localCode ? 1 : 0;
+    const bLocal = areaCode(b.prospect.phone) === localCode ? 1 : 0;
+    if (aLocal !== bLocal) return bLocal - aLocal;
+  }
+  const aRev = a.prospect.review_count ?? 0;
+  const bRev = b.prospect.review_count ?? 0;
+  if (aRev !== bRev) return bRev - aRev;
+  const aAge = daysBetween(a.prospect.created_at, now) ?? Number.MAX_SAFE_INTEGER;
+  const bAge = daysBetween(b.prospect.created_at, now) ?? Number.MAX_SAFE_INTEGER;
+  if (aAge !== bAge) return aAge - bAge;
+  return (a.prospect.business_name ?? '').localeCompare(b.prospect.business_name ?? '');
+}
+
+/** Operator-readable sentence for how the top pick was settled. */
+export function decidedByLabel(d: DecidedBy): string {
+  switch (d) {
+    case 'score':
+      return 'clear on the signals';
+    case 'local_area_code':
+      return 'tied on the signals — picked for the local area code';
+    case 'more_reviews':
+      return 'tied on the signals — picked for having more reviews';
+    case 'freshest':
+      return 'tied on the signals — picked as the most recently confirmed';
+    case 'stable_name':
+      return 'tied on every signal — picked by a stable rule, not because it is better';
+  }
 }
 
 /**
@@ -300,6 +401,7 @@ export function recommendForwardTargets(
   const deduped = [...byPhone.values()];
 
   const marketPhones = deduped.map((p) => p.phone);
+  const localCode = modalAreaCode(marketPhones);
 
   const ranked: Candidate[] = deduped
     .map((p) => {
@@ -351,9 +453,17 @@ export function recommendForwardTargets(
       const age = daysBetween(p.created_at, now);
       if (age !== null && age > 60) flags.push(`last observed ${age} days ago`);
 
-      return { prospect: p, score, reasons, flags };
+      return { prospect: p, score, reasons, flags, decidedBy: 'score' as DecidedBy };
     })
-    .sort((a, b) => b.score - a.score || (a.prospect.business_name ?? '').localeCompare(b.prospect.business_name ?? ''));
+    .sort((a, b) => compareCandidates(a, b, localCode, now));
+
+  // Record what actually separated each candidate from the next, so the top entry can say
+  // whether it won on evidence or on a tiebreak. Computed after sorting because it is a property
+  // of adjacent pairs, not of a candidate alone.
+  for (let i = 0; i < ranked.length; i++) {
+    const next = ranked[i + 1];
+    ranked[i].decidedBy = next ? separatedBy(ranked[i], next, localCode, now) : 'score';
+  }
 
   const pool = assessPool(ranked, prospects.length, now);
 

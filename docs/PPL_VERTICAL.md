@@ -359,3 +359,33 @@ live number to a second campaign raises the constraint.
 ⚠️ **The index does not cover the content copy.** The number is shared in the published snapshots,
 and `millcreektowing.com` has no campaign row, so removing it from one of the two sites is a
 separate content edit and an owner call about which site keeps it.
+
+### 11a. The re-sweep, and the bug it exposed (2026-09-27)
+
+Swept the three markets (`runSweep`, towing, 5 km): South Hill 16 found, Cullman 19, Covington 14
+— normal depth. **But `rated` stayed 0**, which the "shallow July sweep" diagnosis did not predict.
+
+⚠️ **`PLACES_FIELD_MASK` has always requested `places.rating` + `places.userRatingCount` — at a
+pricier SKU, deliberately — and `runSweep` threw both away.** `ProspectInput` had no field for
+them, so the columns the field mask exists to fill sat null unless `backfillPlaceSignals` ran: a
+**second, separately-billed Place Details call per business**, flag-gated off. We paid the premium
+tier for two numbers, discarded them at the door, then paid again to fetch them back.
+
+Fixed: `ProspectInput.rating`/`reviewCount` → `toRow` → the sweep maps them off the search result.
+Plus `fillMissingPlaceSignals`, because `upsertProspects` sets `ignoreDuplicates: true` (correct —
+a re-sweep must not clobber a worked lead) which means a row created before ratings were stored
+could never acquire one however often the city is swept. The fill is **gap-only** (`.is('rating',
+null)`), never a refresh. Free — the values are already in the response.
+
+**What it changed.** Before, South Hill's top pick was PNW Towing & Recovery on an unrated 61–61
+tie with a 206 area code in a 253 town. After: **Too Cool Towing LLC, 4.8★ from 201 reviews, no
+website, local 253** — a different business. The tie would have picked wrong half the time.
+
+| campaign | pool | top pick |
+|---|---|---|
+| `covingtontow.com` | usable (11, 10 rated) | AL Ram Towing · (253) 234-7959 · 5★/71 · no site |
+| `southhilltowing.com` | usable (10, 9 rated) | Too Cool Towing LLC · (253) 442-5373 · 4.8★/201 · no site |
+| `cullmantow.com` | usable (5, 2 rated) | no clear winner — top three tie at 61 |
+
+`autoApplyEligible` is `false` for all three (margins of 4, 5 and 0 against a ≥15 threshold), which
+is the intended answer: pick one, then send the notice.

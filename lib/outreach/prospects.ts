@@ -28,6 +28,18 @@ export type ProspectInput = {
   freshnessScore?: number | null;
   freshnessSignals?: string[];
   leadTier: LeadTier;
+  /**
+   * Google star rating and its review count, as returned by the SEARCH call.
+   *
+   * ⚠️ These ride along free. `PLACES_FIELD_MASK` already requests `places.rating` +
+   * `places.userRatingCount` — deliberately, at a pricier SKU — so the search response has
+   * carried them all along while `runSweep` dropped them on the floor and the columns sat unused.
+   * The only thing that ever filled them was `backfillPlaceSignals`, a SECOND, separately-billed
+   * Place Details call per business, flag-gated off by default. We were paying the premium tier
+   * for these two numbers, discarding them, then paying again to fetch them back.
+   */
+  rating?: number | null;
+  reviewCount?: number | null;
   sweepId?: string | null;
   discoveredBy?: string | null;
   source?: string;
@@ -94,6 +106,10 @@ function toRow(p: ProspectInput) {
     freshness_score: p.freshnessScore ?? null,
     freshness_signals: p.freshnessSignals ?? [],
     lead_tier: p.leadTier,
+    // ⚠️ `?? null` and never 0 — mapPlace already distinguishes "unrated" from "rated 0.0", and
+    // collapsing them here would rank an unmeasured business as the worst one in the market.
+    rating: p.rating ?? null,
+    review_count: p.reviewCount ?? null,
     sweep_id: p.sweepId ?? null,
     discovered_by: p.discoveredBy ?? null,
     source: p.source ?? 'google_places',
@@ -113,6 +129,36 @@ export async function upsertProspects(rows: ProspectInput[]): Promise<number> {
     .select('id');
   if (error) throw new Error(`upsertProspects failed: ${error.message}`);
   return data?.length ?? 0;
+}
+
+/**
+ * Fill `rating` / `review_count` on rows a re-sweep just skipped.
+ *
+ * ⚠️ `upsertProspects` sets `ignoreDuplicates: true` so a re-sweep never clobbers a worked lead —
+ * correct for `status`, `template_id`, `claimed_at`, and the reason a business swept twice keeps
+ * its history. The side effect is that a row inserted before ratings were stored can never
+ * acquire one, no matter how often the city is swept: the second sweep fetches the rating, pays
+ * for it, and discards it at the door.
+ *
+ * So this fills ONLY where the column is currently null. It is not a refresh — an existing rating
+ * is left alone, because the alternative is a search-tier number silently overwriting a
+ * Place-Details one, and gap-filling is the whole need. No extra API call: the values are already
+ * in the sweep response.
+ */
+export async function fillMissingPlaceSignals(rows: ProspectInput[]): Promise<number> {
+  const withSignals = rows.filter((r) => r.rating != null || r.reviewCount != null);
+  if (!withSignals.length) return 0;
+  let filled = 0;
+  for (const r of withSignals) {
+    const { data } = await supabaseAdmin
+      .from('outreach_prospects')
+      .update({ rating: r.rating ?? null, review_count: r.reviewCount ?? null })
+      .eq('place_id', r.placeId)
+      .is('rating', null)
+      .select('id');
+    filled += data?.length ?? 0;
+  }
+  return filled;
 }
 
 export type ListProspectsFilter = {

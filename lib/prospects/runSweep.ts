@@ -7,7 +7,7 @@
 import { searchNearby, type NearbyBusiness } from '@/lib/places/searchNearby';
 import { searchTextNearby } from '@/lib/places/searchTextNearby';
 import { scoreSiteFreshness } from '@/lib/rebuild/siteFreshness';
-import { classifyLeadTier, upsertProspects, type ProspectInput, type LeadTier } from '@/lib/outreach/prospects';
+import { classifyLeadTier, upsertProspects, fillMissingPlaceSignals, type ProspectInput, type LeadTier } from '@/lib/outreach/prospects';
 import { backfillPlaceSignals, placeSignalsBackfillOnSweepEnabled, placeSignalsBackfillLimit } from '@/lib/outreach/placeSignals';
 import { getLatLonForCityState } from '@/lib/utils/geocode';
 import { typeToIndustryKey } from '@/lib/places/typeToIndustry';
@@ -30,6 +30,8 @@ export type SweepResult = {
   found: number;
   tallies: Record<string, number>;
   signals: Awaited<ReturnType<typeof backfillPlaceSignals>> | null;
+  /** Rows whose rating/review_count were filled from the search response (free, gap-only). */
+  signalsFilled: number;
   /** Prospect inputs as parked — the pipeline builds from the no-website ones straight away. */
   rows: ProspectInput[];
 };
@@ -121,6 +123,9 @@ export async function runSweep(input: SweepInput): Promise<SweepResult> {
       freshnessScore,
       freshnessSignals,
       leadTier: tier,
+      // Already in the search response and already paid for — see ProspectInput.rating.
+      rating: b.rating ?? null,
+      reviewCount: b.reviewCount ?? null,
       sweepId,
       discoveredBy: input.operatorId ?? undefined,
     } as ProspectInput;
@@ -129,6 +134,11 @@ export async function runSweep(input: SweepInput): Promise<SweepResult> {
 
   // 3) Park them (dedupe on place_id — re-sweeps never clobber worked leads).
   const inserted = await upsertProspects(rows);
+
+  // 3a) Fill ratings on rows that dedupe just skipped. Free — the values came back with the
+  // search — and gap-only, so a worked lead's existing signals are untouched. Without this a row
+  // created before ratings were stored could never acquire one however often the city is swept.
+  const signalsFilled = await fillMissingPlaceSignals(rows).catch(() => 0);
 
   // 3b) Paid Place Details signals — flag-gated OFF, bounded, best-effort.
   let signals: SweepResult['signals'] = null;
@@ -149,5 +159,5 @@ export async function runSweep(input: SweepInput): Promise<SweepResult> {
     { no_website: 0, dated: 0, has_site: 0, total: 0 } as Record<string, number>,
   );
 
-  return { sweepId, inserted, found: rows.length, tallies, signals, rows };
+  return { sweepId, inserted, found: rows.length, tallies, signals, signalsFilled, rows };
 }

@@ -22,6 +22,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import {
   GUEST_FUNNEL_EVENTS,
+  isServerOnlyGuestEvent,
   GUEST_FUNNEL_METHODS,
   GUEST_FUNNEL_REASONS,
   GUEST_FUNNEL_SURFACES,
@@ -51,6 +52,16 @@ export async function POST(req: Request) {
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ ok: false }, { status: 400 });
+
+  // ⚠️ THE BROWSER MAY NOT CLAIM A SITE WENT LIVE. `publish_blocked` / `published` /
+  // `published_on_grace` are written by the server at the moment the publish actually resolves
+  // (lib/analytics/guestFunnelServer.ts). They are the last step of the funnel and the one a
+  // decision would rest on, so a forged beacon must not be able to manufacture one — an inflated
+  // `prompt_shown` costs a denominator, an invented `published` costs the answer.
+  // Dropped quietly with a 200: a rejected beacon is not worth teaching a caller to retry.
+  if (isServerOnlyGuestEvent(parsed.data.event)) {
+    return NextResponse.json({ ok: true, ignored: 'server_only_event' });
+  }
 
   // ⚠️ Anonymous users are the ENTIRE population here, so this route must accept them — but it
   // still requires a real session, so a row always belongs to someone who was actually building.

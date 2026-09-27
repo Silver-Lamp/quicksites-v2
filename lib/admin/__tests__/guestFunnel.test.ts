@@ -143,3 +143,68 @@ describe('pending confirmations are not the same as signups started', () => {
     expect(stripped).toContain('steps.signupSubmitted');
   });
 });
+
+/**
+ * ⚠️ THE FUNNEL NOW RUNS PAST CONFIRMATION, because ending there hid the real last step.
+ *
+ * On 2026-09-26 the first person ever to complete guest sign-up confirmed their email in 53
+ * seconds — and never published. A day later `templates.published` was still false. Nothing
+ * recorded that, so "converted 1" read as the finish line when the site was not live.
+ *
+ * `publish_blocked` / `published` / `published_on_grace` are written SERVER-side at the moment
+ * the publish resolves. A browser beacon claiming a site went live is the one event in this
+ * funnel actually worth forging, which is why the public route refuses them.
+ */
+describe('the publish steps', () => {
+  const { computeGuestFunnelSteps } = require('../guestFunnel');
+
+  it('counts refusals, publishes and grace publishes separately', () => {
+    const rows = [
+      { event: 'published', guest_user_id: 'a' },
+      { event: 'published', guest_user_id: 'b' },
+      { event: 'published_on_grace', guest_user_id: 'c' },
+      { event: 'publish_blocked', guest_user_id: 'd' },
+    ];
+    const s = computeGuestFunnelSteps(rows);
+    expect(s.published).toBe(2);
+    expect(s.publishedOnGrace).toBe(1);
+    expect(s.publishBlocked).toBe(1);
+  });
+
+  it('does NOT fold a grace publish into published', () => {
+    // A site live on a 7-day clock is a promise with a deadline. Counting the two together
+    // would overstate how many sites are safely live.
+    const s = computeGuestFunnelSteps([{ event: 'published_on_grace', guest_user_id: 'a' }]);
+    expect(s.published).toBe(0);
+    expect(s.publishedOnGrace).toBe(1);
+  });
+});
+
+describe('the browser cannot claim a site went live', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { stripComments } = require('@/test/stripComments');
+  const route = stripComments(
+    fs.readFileSync(path.join(process.cwd(), 'app/api/guest/funnel/route.ts'), 'utf8'),
+  );
+  const publish = stripComments(
+    fs.readFileSync(path.join(process.cwd(), 'app/api/admin/sites/publish/route.ts'), 'utf8'),
+  );
+
+  it('the public beacon route rejects the server-only events', () => {
+    expect(route).toContain('isServerOnlyGuestEvent');
+  });
+
+  it('the publish route records them itself, at both outcomes', () => {
+    expect(publish).toContain("recordGuestPublishEvent('publish_blocked'");
+    expect(publish).toMatch(/recordGuestPublishEvent\(\s*graceUntil \? 'published_on_grace' : 'published'/);
+  });
+
+  it('never awaits the recorder — instrumentation must not break a publish', () => {
+    // A publish that 500s because an analytics insert failed turns "we cannot see the last step"
+    // into "the last step does not work".
+    for (const m of publish.match(/recordGuestPublishEvent\(/g) ?? []) void m;
+    expect(publish).not.toMatch(/await recordGuestPublishEvent/);
+    expect(publish).toMatch(/void recordGuestPublishEvent/);
+  });
+});

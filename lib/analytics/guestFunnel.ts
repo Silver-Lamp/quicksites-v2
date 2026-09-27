@@ -41,6 +41,25 @@ export const GUEST_FUNNEL_EVENTS = [
   'signup_failed',
   /** The email was already registered, so we offered "log in instead". */
   'signup_existing_account',
+  /**
+   * They pressed Publish and were refused for having committed nothing yet (anonymous, no
+   * pending email). Distinct from `signup_opened:publish`, which is the FORM opening — this is
+   * the refusal itself, recorded server-side where it actually happens.
+   */
+  'publish_blocked',
+  /**
+   * The site went live. ⚠️ THE FUNNEL USED TO END AT CONFIRMATION, and that hid the next drop:
+   * the first person ever to complete guest sign-up (2026-09-26) confirmed their email in 53
+   * seconds and then **never published**, a day later `templates.published` still false. Nothing
+   * recorded that, so "converted" read as success and the real last step was invisible.
+   */
+  'published',
+  /**
+   * Published under the 7-day grace clock — signed up, not yet confirmed (lib/guest/publishGrace).
+   * Kept separate from `published` because it is a promise with a deadline, not a finished
+   * conversion, and counting the two together would overstate how many sites are safely live.
+   */
+  'published_on_grace',
 ] as const;
 
 export type GuestFunnelEvent = (typeof GUEST_FUNNEL_EVENTS)[number];
@@ -99,6 +118,14 @@ export function triggerReason(
 ): string | null {
   const parts = [surface, method, reason].filter(Boolean);
   return parts.length ? parts.join(':') : null;
+}
+
+/** Events the SERVER records directly; the browser beacon must never be trusted for these. */
+export const GUEST_FUNNEL_SERVER_EVENTS = ['publish_blocked', 'published', 'published_on_grace'] as const;
+export type GuestFunnelServerEvent = (typeof GUEST_FUNNEL_SERVER_EVENTS)[number];
+
+export function isServerOnlyGuestEvent(v: unknown): v is GuestFunnelServerEvent {
+  return typeof v === 'string' && (GUEST_FUNNEL_SERVER_EVENTS as readonly string[]).includes(v);
 }
 
 export const GUEST_FUNNEL_ENDPOINT = '/api/guest/funnel';

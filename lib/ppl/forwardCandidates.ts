@@ -35,8 +35,16 @@ export type ForwardProspect = {
   rating: number | null;
   review_count: number | null;
   status: string | null;
-  /** ISO timestamp — how old the observation is, which is a fact about the pool, not the business. */
+  /** ISO timestamp — when the row was first inserted. */
   created_at: string | null;
+  /**
+   * ISO timestamp — when a sweep last OBSERVED this business.
+   *
+   * ⚠️ Prefer this over `created_at` for every freshness judgement, via `observedAt()`. A
+   * dedupe-ignoring upsert freezes `created_at` at first sight, so re-sweeping a market writes
+   * nothing to it and the pool reads stale no matter how recently it was confirmed.
+   */
+  last_seen_at?: string | null;
 };
 
 export type ForwardCampaign = {
@@ -136,6 +144,11 @@ function hasWebsite(p: ForwardProspect): boolean {
   return !!w && w.toLowerCase() !== 'no site';
 }
 
+/** When we last had evidence this business exists — the observation, not the row's birthday. */
+function observedAt(p: ForwardProspect): string | null {
+  return p.last_seen_at ?? p.created_at;
+}
+
 function daysBetween(then: string | null, now: Date): number | null {
   if (!then) return null;
   const t = Date.parse(then);
@@ -230,8 +243,8 @@ function separatedBy(a: Candidate, b: Candidate, localCode: string, now: Date): 
   const aRev = a.prospect.review_count ?? 0;
   const bRev = b.prospect.review_count ?? 0;
   if (aRev !== bRev) return 'more_reviews';
-  const aAge = daysBetween(a.prospect.created_at, now);
-  const bAge = daysBetween(b.prospect.created_at, now);
+  const aAge = daysBetween(observedAt(a.prospect), now);
+  const bAge = daysBetween(observedAt(b.prospect), now);
   if (aAge !== bAge) return 'freshest';
   return 'stable_name';
 }
@@ -247,8 +260,8 @@ function compareCandidates(a: Candidate, b: Candidate, localCode: string, now: D
   const aRev = a.prospect.review_count ?? 0;
   const bRev = b.prospect.review_count ?? 0;
   if (aRev !== bRev) return bRev - aRev;
-  const aAge = daysBetween(a.prospect.created_at, now) ?? Number.MAX_SAFE_INTEGER;
-  const bAge = daysBetween(b.prospect.created_at, now) ?? Number.MAX_SAFE_INTEGER;
+  const aAge = daysBetween(observedAt(a.prospect), now) ?? Number.MAX_SAFE_INTEGER;
+  const bAge = daysBetween(observedAt(b.prospect), now) ?? Number.MAX_SAFE_INTEGER;
   if (aAge !== bAge) return aAge - bAge;
   return (a.prospect.business_name ?? '').localeCompare(b.prospect.business_name ?? '');
 }
@@ -282,7 +295,7 @@ export function assessPool(
   now: Date,
 ): PoolQuality {
   const rated = qualified.filter((c) => typeof c.prospect.rating === 'number' && c.prospect.rating! > 0).length;
-  const ages = qualified.map((c) => daysBetween(c.prospect.created_at, now)).filter((d): d is number => d !== null);
+  const ages = qualified.map((c) => daysBetween(observedAt(c.prospect), now)).filter((d): d is number => d !== null);
   const freshestDays = ages.length ? Math.min(...ages) : null;
 
   const base = {
@@ -394,8 +407,8 @@ export function recommendForwardTargets(
       if (pRated) byPhone.set(key, p);
       continue;
     }
-    const pAge = daysBetween(p.created_at, now);
-    const prevAge = daysBetween(prev.created_at, now);
+    const pAge = daysBetween(observedAt(p), now);
+    const prevAge = daysBetween(observedAt(prev), now);
     if (pAge !== null && (prevAge === null || pAge < prevAge)) byPhone.set(key, p);
   }
   const deduped = [...byPhone.values()];
@@ -450,7 +463,7 @@ export function recommendForwardTargets(
       const ac = areaCodeFlag(p, marketPhones);
       if (ac) flags.push(ac);
 
-      const age = daysBetween(p.created_at, now);
+      const age = daysBetween(observedAt(p), now);
       if (age !== null && age > 60) flags.push(`last observed ${age} days ago`);
 
       return { prospect: p, score, reasons, flags, decidedBy: 'score' as DecidedBy };

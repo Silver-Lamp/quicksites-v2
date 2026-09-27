@@ -425,32 +425,61 @@ regardless of input order.
 and a pick decided by rule is exactly the case an unattended write should not take. Picking one is
 not the same as being sure, and the two are reported separately.
 
-**Live picks after re-sweeping five markets (2026-09-27).** Florence and Richland were the last two
-resting on `stable_name`; sweeping them took each from 2 unrated rows to 14/15 mostly-rated, and
-both now resolve on the signals. **No campaign picks by the arbitrary rule any more.**
+**Live picks after sweeping every market that needed it (2026-09-27).** Eleven cities swept;
+every pool but one is now `usable`, and nothing rests on the arbitrary tiebreak.
 
-| campaign | pick | pool | margin | how |
+| campaign | pick | pool | age | margin |
 |---|---|---|---|---|
-| `arab-towing.com` | AA Wrecker Service · (256) 621-2003 | usable 20/19 | 4 | clear |
-| `covingtontow.com` | AL Ram Towing · (253) 234-7959 | usable 11/10 | 4 | clear |
-| `southhilltowing.com` | Too Cool Towing LLC · (253) 442-5373 | usable 10/9 | 5 | clear |
-| `florencetow.com` | Hicks Towing · (256) 827-5167 | usable 13/12 | 3 | clear |
-| `richland-towing.com` | RAPID WRECKER SERVICES LLC · (509) 396-1256 | usable 14/13 | 1 | clear |
-| `cullmantow.com` | Simple Man Towing · (256) 917-5946 | usable 5/2 | 0 | more reviews |
-| `kent-restaurant.com` | Taqueria Del Sol · (253) 278-2905 | usable 60/60 | 2 | clear |
-| `paterson-auto-repair.com` | Fija Auto Glass & Mirror · (973) 345-1713 | usable 38/38 | 1 | clear |
-| `paterson-restaurants.com` | Deli DJ · (973) 345-5144 | usable 60/60 | 1 | clear |
-| `renton-electrical.com` | Madrona Electric LLC · (425) 902-9422 | **stale** 20/20 | **40** | clear |
-| `renton-towing.com` | Gene Meyer's Towing · (425) 226-4343 | **stale** 15/15 | 12 | clear |
-| `seatac-towing.com` | A1 Seatac Towing · (206) 259-6000 | **stale** 1/1 | — | clear |
-| `smyrna-towing.com` | Southern Belle Towing · (615) 500-4149 | **stale** 1/0 | — | clear |
-| `maplevalley-towing.com` | — | **empty** | — | no qualifying business |
+| `seatac-towing.com` | All Right Towing · (206) 414-1000 | usable 8/8 | 0d | **33 · AUTO-APPLY ELIGIBLE** |
+| `renton-electrical.com` | Madrona Electric LLC · (425) 902-9422 | usable 27/27 | 0d | 17 (flagged, see below) |
+| `renton-towing.com` | Gene Meyer's Towing · (425) 226-4343 | usable 15/15 | 0d | 12 |
+| `arab-towing.com` | AA Wrecker Service · (256) 621-2003 | usable 20/19 | 0d | 4 |
+| `covingtontow.com` | AL Ram Towing · (253) 234-7959 | usable 11/10 | 0d | 4 |
+| `southhilltowing.com` | Too Cool Towing LLC · (253) 442-5373 | usable 10/9 | 0d | 5 |
+| `florencetow.com` | Hicks Towing · (256) 827-5167 | usable 13/12 | 0d | 3 |
+| `richland-towing.com` | RAPID WRECKER SERVICES LLC · (509) 396-1256 | usable 14/13 | 0d | 1 |
+| `smyrna-towing.com` | Speed Wrecker Service Inc. · (615) 496-9742 | usable 6/5 | 0d | 4 |
+| `cullmantow.com` | Simple Man Towing · (256) 917-5946 | usable 6/3 | 0d | 0 (more reviews) |
+| `kent-restaurant.com` | Taqueria Del Sol · (253) 278-2905 | usable 60/60 | 45d | 2 |
+| `paterson-auto-repair.com` | Fija Auto Glass & Mirror · (973) 345-1713 | usable 38/38 | 11d | 1 |
+| `paterson-restaurants.com` | Deli DJ · (973) 345-5144 | usable 60/60 | 44d | 1 |
+| `maplevalley-towing.com` | All Right Towing And Recovery · (206) 487-3600 | **thin 1/1** | 0d | — |
 
-⚠️ **Nothing is `autoApplyEligible`, and the margins say why**: a dozen markets sit at 0–5 against
-the ≥15 threshold, i.e. their top two really are close. The one big margin is
-`renton-electrical.com` at **40** — blocked only because its pool is stale, so it is the first
-campaign that would clear the bar after a re-sweep.
+`seatac-towing.com` is the first campaign ever to clear `autoApplyEligible`: a usable pool, 8
+candidates, no flag on the winner, and a 33-point margin.
 
-⚠️ **`maplevalley-towing.com` has an empty pool** — no qualifying business at all. It is also the
-campaign whose number is shared with `millcreektowing.com` (§12), so it needs a sweep and a
-content fix before it can forward anywhere.
+### Two limitations the sweeps exposed
+
+⚠️ **The market's "local" area code is derived from the prospect pool, so a sweep that reaches
+into a bigger neighbouring metro adopts the metro's code.** Renton is a 425 town, but the
+electrician sweep pulled in enough Seattle firms that the modal code came out **206** — so
+Madrona Electric (425, genuinely local) is flagged "not the local 206" and blocked from
+auto-apply. The failure direction is safe (it flags for a person rather than acting) and the
+alternative — a hardcoded city→area-code table — is worse. Left as-is deliberately; the flag is
+advisory by design.
+
+⚠️ **`outreach_prospects.city` records where a business was FIRST swept, not which markets it
+serves — and for a service business covering a radius that is the wrong matcher.** Maple Valley
+found 13 tow companies within 8 km and qualified **one**: the other twelve are parked under
+Renton or Covington from earlier sweeps, so a `city` equality excludes them. Campaigns carry
+`center_lat`/`center_lon` and prospects carry `address_lat`/`address_lon`, so a distance match is
+available and would be strictly better here — but it changes what "in this market" means for
+every campaign, and getting it wrong routes calls to the wrong town. **Not changed without a
+decision.**
+
+### 11c. `last_seen_at` — freshness is the last observation (2026-09-27)
+
+⚠️ **`created_at` was standing in for freshness and could not do the job.** `upsertProspects` sets
+`ignoreDuplicates: true` (deliberate — a re-sweep must not clobber a worked lead), so a row is
+stamped once at first sight and never touched again.
+
+The failure: all 15 Renton towing rows carried `created_at = 2026-07-14`. A sweep re-observed 17
+businesses there and inserted **0**, so the pool still read `stale` and advised *"re-sweep this
+city"* — immediately after that city had been swept. **Advice the operator cannot satisfy by
+following it** is worse than none: it looks like a finding and loops them.
+
+`last_seen_at` (migration `20260857`, backfilled from `created_at`) is written by
+`markProspectsSeen` for every place a sweep observes, inserted or not — the only thing a re-sweep
+writes to a parked row, so status/owner/claim history stay untouched. `observedAt()` prefers it
+everywhere freshness is judged. After the fix the same Renton sweep reports `seen=17` and the pool
+reads `usable`, age 0d.

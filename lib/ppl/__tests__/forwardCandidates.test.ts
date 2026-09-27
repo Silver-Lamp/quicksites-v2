@@ -319,6 +319,36 @@ describe('ties always resolve to a pick', () => {
   });
 });
 
+describe('freshness is the last observation, not the row birthday', () => {
+  it('a long-parked business re-seen today is not stale', () => {
+    // ⚠️ The bug this exists to prevent: all 15 Renton towing rows carry created_at 2026-07-14,
+    // a sweep re-observed 17 businesses and inserted 0, and the pool still advised "re-sweep
+    // this city" — advice the operator had just followed. Unsatisfiable advice reads as a real
+    // finding and sends them in a loop.
+    const rows = Array.from({ length: 5 }, (_, i) =>
+      prospect({
+        id: `p${i}`,
+        phone: `253555010${i}`,
+        rating: 4.5,
+        review_count: 30,
+        created_at: STALE,
+        last_seen_at: FRESH,
+      }),
+    );
+    const out = recommendForwardTargets(CAMPAIGN, rows, { now: NOW });
+    expect(out.pool.verdict).toBe('usable');
+    expect(out.pool.freshestDays).toBe(7);
+    expect(out.ranked[0].flags.join(' ')).not.toMatch(/last observed/);
+  });
+
+  it('falls back to created_at when nothing has re-observed the row', () => {
+    const rows = [prospect({ id: 'old', created_at: STALE, last_seen_at: null })];
+    const out = recommendForwardTargets(CAMPAIGN, rows, { now: NOW });
+    expect(out.pool.verdict).toBe('stale');
+    expect(out.pool.advice).toMatch(/re-sweep/i);
+  });
+});
+
 describe('the consent path is not optional', () => {
   it('always reports that the forwarding notice is required', () => {
     const out = recommendForwardTargets(CAMPAIGN, [prospect({ id: 'a' })], { now: NOW });

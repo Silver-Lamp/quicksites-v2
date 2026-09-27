@@ -7,7 +7,7 @@
 import { searchNearby, type NearbyBusiness } from '@/lib/places/searchNearby';
 import { searchTextNearby } from '@/lib/places/searchTextNearby';
 import { scoreSiteFreshness } from '@/lib/rebuild/siteFreshness';
-import { classifyLeadTier, upsertProspects, fillMissingPlaceSignals, type ProspectInput, type LeadTier } from '@/lib/outreach/prospects';
+import { classifyLeadTier, upsertProspects, fillMissingPlaceSignals, markProspectsSeen, type ProspectInput, type LeadTier } from '@/lib/outreach/prospects';
 import { backfillPlaceSignals, placeSignalsBackfillOnSweepEnabled, placeSignalsBackfillLimit } from '@/lib/outreach/placeSignals';
 import { getLatLonForCityState } from '@/lib/utils/geocode';
 import { typeToIndustryKey } from '@/lib/places/typeToIndustry';
@@ -32,6 +32,8 @@ export type SweepResult = {
   signals: Awaited<ReturnType<typeof backfillPlaceSignals>> | null;
   /** Rows whose rating/review_count were filled from the search response (free, gap-only). */
   signalsFilled: number;
+  /** Rows re-stamped as observed by this sweep (inserted or already parked). */
+  seen: number;
   /** Prospect inputs as parked — the pipeline builds from the no-website ones straight away. */
   rows: ProspectInput[];
 };
@@ -140,7 +142,12 @@ export async function runSweep(input: SweepInput): Promise<SweepResult> {
   // created before ratings were stored could never acquire one however often the city is swept.
   const signalsFilled = await fillMissingPlaceSignals(rows).catch(() => 0);
 
-  // 3b) Paid Place Details signals — flag-gated OFF, bounded, best-effort.
+  // 3b) Stamp everything we just saw as seen NOW, inserted or not. Without this a re-sweep that
+  // re-confirms an existing market writes nothing, and the pool reads stale forever — see
+  // markProspectsSeen.
+  const seen = await markProspectsSeen(rows.map((r) => r.placeId)).catch(() => 0);
+
+  // 3c) Paid Place Details signals — flag-gated OFF, bounded, best-effort.
   let signals: SweepResult['signals'] = null;
   if (placeSignalsBackfillOnSweepEnabled()) {
     try {
@@ -159,5 +166,5 @@ export async function runSweep(input: SweepInput): Promise<SweepResult> {
     { no_website: 0, dated: 0, has_site: 0, total: 0 } as Record<string, number>,
   );
 
-  return { sweepId, inserted, found: rows.length, tallies, signals, signalsFilled, rows };
+  return { sweepId, inserted, found: rows.length, tallies, signals, signalsFilled, seen, rows };
 }

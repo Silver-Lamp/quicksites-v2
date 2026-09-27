@@ -14,7 +14,7 @@ import {
 } from './forwardCandidates';
 
 const PROSPECT_COLUMNS =
-  'id, business_name, phone, website, city, region, industry_key, rating, review_count, status, created_at';
+  'id, business_name, phone, website, city, region, industry_key, rating, review_count, status, created_at, last_seen_at';
 
 /** A campaign needs this much real search demand before it is worth wiring to a business. */
 const MIN_IMPRESSIONS = 10;

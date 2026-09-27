@@ -132,6 +132,30 @@ export async function upsertProspects(rows: ProspectInput[]): Promise<number> {
 }
 
 /**
+ * Stamp every place a sweep observed as seen now — inserted or not.
+ *
+ * ⚠️ This is the only thing a re-sweep writes to an already-parked row, and it exists because
+ * `created_at` cannot answer "is this business still there". With `ignoreDuplicates: true` a row
+ * is stamped once at first sight and never again, so re-observing 17 Renton tow companies in
+ * September left them all reading 2026-07-14 and the pool stayed permanently `stale` — advising
+ * a re-sweep of the city that had just been swept.
+ *
+ * Deliberately narrow: it touches `last_seen_at` and nothing else, so a worked lead's status,
+ * owner and claim history are untouched.
+ */
+export async function markProspectsSeen(placeIds: string[]): Promise<number> {
+  const ids = [...new Set(placeIds.filter(Boolean))];
+  if (!ids.length) return 0;
+  const { data, error } = await supabaseAdmin
+    .from('outreach_prospects')
+    .update({ last_seen_at: new Date().toISOString() })
+    .in('place_id', ids)
+    .select('id');
+  if (error) return 0;
+  return data?.length ?? 0;
+}
+
+/**
  * Fill `rating` / `review_count` on rows a re-sweep just skipped.
  *
  * ⚠️ `upsertProspects` sets `ignoreDuplicates: true` so a re-sweep never clobbers a worked lead —

@@ -507,7 +507,14 @@ export default function HeroEditor({
   const [imgStyle, setImgStyle] = useState<'photo' | 'illustration' | '3d' | 'minimal'>('photo');
   const [showLibrary, setShowLibrary] = useState(false);
   // Hero canvas: one surface flipped between the editable text and the live render.
-  const [heroView, setHeroView] = useState<'edit' | 'preview'>('edit');
+  // ⚠️ PREVIEW FIRST. The hero's whole payload is an IMAGE and a headline, and "Suggest All"
+  // generates both — but the panel opened on Edit, which shows a URL in a text field. So the
+  // moment the generation everyone waits ~20s for finally lands, the result is invisible unless
+  // you know to click a tab. A gpt-image-1 call costs $0.05; showing it by default is the least
+  // we can do with it.
+  //
+  // Edit is one click away and unchanged; this only moves which side you land on.
+  const [heroView, setHeroView] = useState<'edit' | 'preview'>('preview');
   const [previewCompact, setPreviewCompact] = useState(true);
 
   const update = <K extends keyof typeof local>(

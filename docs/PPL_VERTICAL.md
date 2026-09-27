@@ -425,6 +425,32 @@ regardless of input order.
 and a pick decided by rule is exactly the case an unattended write should not take. Picking one is
 not the same as being sure, and the two are reported separately.
 
-Live picks (2026-09-27): 13 campaigns, 11 `clear on the signals`, `cullmantow.com` on more reviews
-(Simple Man Towing), `florencetow.com` and `richland-towing.com` on the stable rule — both stale
-two-candidate pools where re-sweeping is the real fix.
+**Live picks after re-sweeping five markets (2026-09-27).** Florence and Richland were the last two
+resting on `stable_name`; sweeping them took each from 2 unrated rows to 14/15 mostly-rated, and
+both now resolve on the signals. **No campaign picks by the arbitrary rule any more.**
+
+| campaign | pick | pool | margin | how |
+|---|---|---|---|---|
+| `arab-towing.com` | AA Wrecker Service · (256) 621-2003 | usable 20/19 | 4 | clear |
+| `covingtontow.com` | AL Ram Towing · (253) 234-7959 | usable 11/10 | 4 | clear |
+| `southhilltowing.com` | Too Cool Towing LLC · (253) 442-5373 | usable 10/9 | 5 | clear |
+| `florencetow.com` | Hicks Towing · (256) 827-5167 | usable 13/12 | 3 | clear |
+| `richland-towing.com` | RAPID WRECKER SERVICES LLC · (509) 396-1256 | usable 14/13 | 1 | clear |
+| `cullmantow.com` | Simple Man Towing · (256) 917-5946 | usable 5/2 | 0 | more reviews |
+| `kent-restaurant.com` | Taqueria Del Sol · (253) 278-2905 | usable 60/60 | 2 | clear |
+| `paterson-auto-repair.com` | Fija Auto Glass & Mirror · (973) 345-1713 | usable 38/38 | 1 | clear |
+| `paterson-restaurants.com` | Deli DJ · (973) 345-5144 | usable 60/60 | 1 | clear |
+| `renton-electrical.com` | Madrona Electric LLC · (425) 902-9422 | **stale** 20/20 | **40** | clear |
+| `renton-towing.com` | Gene Meyer's Towing · (425) 226-4343 | **stale** 15/15 | 12 | clear |
+| `seatac-towing.com` | A1 Seatac Towing · (206) 259-6000 | **stale** 1/1 | — | clear |
+| `smyrna-towing.com` | Southern Belle Towing · (615) 500-4149 | **stale** 1/0 | — | clear |
+| `maplevalley-towing.com` | — | **empty** | — | no qualifying business |
+
+⚠️ **Nothing is `autoApplyEligible`, and the margins say why**: a dozen markets sit at 0–5 against
+the ≥15 threshold, i.e. their top two really are close. The one big margin is
+`renton-electrical.com` at **40** — blocked only because its pool is stale, so it is the first
+campaign that would clear the bar after a re-sweep.
+
+⚠️ **`maplevalley-towing.com` has an empty pool** — no qualifying business at all. It is also the
+campaign whose number is shared with `millcreektowing.com` (§12), so it needs a sweep and a
+content fix before it can forward anywhere.

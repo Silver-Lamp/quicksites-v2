@@ -297,6 +297,54 @@ in crosstalk (2026-09-19 21:41); their feed URL + region data will replace the r
 a tracking number per state page → free forward to the best listed builder → notice → PPL at a
 dome lead price. National domains (`domebuildersnearme.com`, …) are registered but unpointed.
 
+#### ⚠️ That "next" is on hold — the first monetization attempt was declined (2026-09-28)
+
+**Growing Spaces** (Pagosa Springs CO, the Growing Dome kit maker) rejected an application to
+their Ambassador Program. Shelby Lucero, Marketing Manager:
+
+> *"Our Ambassador Program is intended primarily for Growing Dome owners and established partners
+> who have firsthand experience with our products… we've decided not to move forward with an
+> ambassador partnership at this time."*
+
+⚠️ **Read it as a category mismatch, not a verdict on us.** The gate is *ownership* and firsthand
+product experience. A directory operator cannot satisfy that by construction, and no follow-up
+changes it — expect the same answer from other manufacturer programs, so do not spend the effort
+twice.
+
+✅ **PERMISSION TO KEEP LISTING THEM, IN WRITING** — the reason this is recorded at all:
+
+> *"We appreciate your consideration of Growing Spaces and are happy for you to continue linking
+> to our website as a resource within your directory."*
+
+The listing already matches what was permitted, verified the same day: `website` points at
+`https://growingspaces.com/` and `source_url` at `domesketch.ai/builders#growing-spaces` with
+`source_label: "Listing from the DomeSketch builders directory"` — their site is the destination,
+DomeSketch is credited as the provenance.
+
+#### What the cohort's own data says about a phone
+
+⚠️ **The 124 listings are TWO populations, and only one could ever support pay-per-call:**
+
+| source | listings | fields |
+|---|---|---|
+| DomeSketch (`orgs.json`) | 58 | manufacturers / kit makers — no `phone`, no `city` |
+| Google Maps | 66 | **`phone` + `city`** — plausibly local businesses |
+
+A national kit maker has nothing to route a local call to. The 66 Maps-sourced entries do — but
+**they already display their own phone numbers on the page**, so a tracking number means
+replacing a real business's number without asking. That is the same consent wall the towing
+sites cleared by presenting as ONE business forwarding to ONE notified operator; a directory
+listing many builders has no honest answer to *"who answers the phone?"*.
+
+Growing Spaces declining a *lighter* ask is weak evidence the heavier one lands better.
+
+**Monetization actually live: 1 of 55 builders** — Ekodome (`affiliate_url`, `?ref=1052`). The
+DomeSketch calculator CTA remains the cohort's real revenue path, and unlike a phone number it
+needs nobody to answer it.
+
+⚠️ And the demand side is not there yet either: across all dome + treehouse domains,
+**152 GSC impressions and ZERO clicks** over 2026-08-25 → 09-25.
+
 ### Explicitly not planned
 
 - ZIP/intent IVR menus before the bridge (friction; disputes cover it).

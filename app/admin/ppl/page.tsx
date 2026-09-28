@@ -13,6 +13,7 @@ import PplAccountActions from '@/components/admin/ppl-account-actions';
 import PplAttachNumberForm from '@/components/admin/ppl-attach-number-form';
 import PplUseSuggestion from '@/components/admin/ppl-use-suggestion';
 import PplBuyAndAttach from '@/components/admin/ppl-buy-and-attach';
+import PplRebuyNumber from '@/components/admin/ppl-rebuy-number';
 import PplDisputeActions from '@/components/admin/ppl-dispute-actions';
 import { listOpenDisputes, DISPUTE_CATEGORIES } from '@/lib/ppl/disputes';
 import { statementUrl } from '@/lib/ppl/statementToken';
@@ -437,7 +438,22 @@ export default async function PplOpsPage() {
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">{c.rank_status ?? '—'}</td>
                     <td className="px-3 py-2 tabular-nums">
-                      {c.tracking_number ?? <span className="text-amber-300">none</span>}
+                      {c.tracking_number ? (
+                        <span className="flex flex-wrap items-center gap-2">
+                          {c.tracking_number}
+                          {/* Only renders when the area code does not match the forward-to's —
+                              the market's own code, by definition. See the component. */}
+                          <PplRebuyNumber
+                            campaignId={c.id}
+                            domain={c.domain}
+                            trackingNumber={c.tracking_number}
+                            forwardTo={c.forward_to ?? null}
+                            enabled={s.flags.callTracking}
+                          />
+                        </span>
+                      ) : (
+                        <span className="text-amber-300">none</span>
+                      )}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-muted-foreground">
                       {c.forward_to ?? '—'}

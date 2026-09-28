@@ -16,6 +16,7 @@ import {
   areaCodeFromPhone,
 } from '@/lib/outreach/callTracking';
 import { isOptedOut, sendForwardNotice } from '@/lib/ppl/forwardNotice';
+import { pushTrackingNumberToSite } from '@/lib/ppl/pushTrackingNumberToSite';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 
 export const runtime = 'nodejs';
@@ -83,6 +84,16 @@ export async function POST(req: Request) {
       areaCode: areaCodeFromPhone(forwardTo),
     });
     await setCampaignTracking(campaignId, { number: phoneNumber, sid, forwardTo });
+
+    // ⚠️ THE STEP THAT MAKES THE PURCHASE MEAN ANYTHING. Everything above succeeds while the
+    // page a caller sees still advertises the old phone — so the calls go somewhere untracked,
+    // the campaign reads "0 calls", and the business we are about to text gets nothing. Never
+    // fatal: the number is already bought, so a failure here reports rather than 500s.
+    const sitePush = await pushTrackingNumberToSite({
+      templateId: campaign.template_id,
+      trackingNumber: phoneNumber,
+      actorId: operator.id ?? null,
+    }).catch((e) => ({ ok: false, fields: 0, republished: false, warning: String(e?.message || e) }));
     // The forwarded business is told once, and can reply STOP (docs/PPL_VERTICAL.md §9).
     // Refused for an opted-out phone: the number is bought but nothing forwards to that business.
     if (await isOptedOut(forwardTo)) {
@@ -92,13 +103,14 @@ export async function POST(req: Request) {
         number: phoneNumber,
         forwardTo: null,
         notice: { sent: false, reason: 'opted_out' },
+        site: sitePush,
       });
     }
     const notice =
       body.sendNotice === false
         ? { sent: false, reason: 'skipped' }
         : await sendForwardNotice(campaignId);
-    return NextResponse.json({ ok: true, number: phoneNumber, forwardTo, notice });
+    return NextResponse.json({ ok: true, number: phoneNumber, forwardTo, notice, site: sitePush });
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message || 'Could not provision a number.' },

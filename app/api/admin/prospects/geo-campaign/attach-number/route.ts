@@ -17,6 +17,7 @@ import { attachTrackingNumber, twilioConfigured } from '@/lib/outreach/callTrack
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { sendForwardNotice } from '@/lib/ppl/forwardNotice';
+import { pushTrackingNumberToSite } from '@/lib/ppl/pushTrackingNumberToSite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -115,6 +116,14 @@ export async function POST(req: Request) {
   try {
     const r = await attachTrackingNumber({ phoneNumber: b.phoneNumber, voiceUrl, smsUrl });
     await setCampaignTracking(campaignId, { number: b.phoneNumber, sid: r.sid, forwardTo });
+
+    // Same reason as provision-number: a number the site does not show produces no calls.
+    // Attaching a number the account already holds has exactly the same failure mode as buying.
+    const sitePush = await pushTrackingNumberToSite({
+      templateId: campaign.template_id,
+      trackingNumber: b.phoneNumber,
+      actorId: null,
+    }).catch((e) => ({ ok: false, fields: 0, republished: false, warning: String(e?.message || e) }));
     // The forwarded business is told once (§9). The operator can hold it back at attach time,
     // e.g. when the business has already agreed in person.
     const notice =

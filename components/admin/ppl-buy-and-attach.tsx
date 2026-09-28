@@ -66,10 +66,19 @@ export default function PplBuyAndAttach({
       const notice = j.notice?.sent
         ? 'notice sent'
         : `notice NOT sent (${j.notice?.reason ?? 'unknown'})`;
+      // ⚠️ Say whether the SITE was updated too. Everything else can succeed while the page
+      // keeps advertising the old phone — in which case the number produces no calls, the
+      // campaign reads "0 calls", and the market looks dead. A silent partial success here is
+      // the most expensive outcome, because it looks exactly like a working one.
+      const site = j.site?.ok
+        ? j.site.republished
+          ? `site updated (${j.site.fields} field${j.site.fields === 1 ? '' : 's'})`
+          : `site saved but NOT republished${j.site.warning ? ` — ${j.site.warning}` : ''}`
+        : `⚠️ SITE NOT UPDATED${j.site?.warning ? ` — ${j.site.warning}` : ''}; run scripts/set-site-phone.mjs`;
       setMsg(
         j.alreadyProvisioned
           ? `already had ${j.number}`
-          : `bought ${j.number} → ${j.forwardTo ?? 'nobody (opted out)'}; ${notice}`,
+          : `bought ${j.number} → ${j.forwardTo ?? 'nobody (opted out)'}; ${notice}; ${site}`,
       );
       router.refresh();
     } catch (e: any) {

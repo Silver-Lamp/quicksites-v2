@@ -11,6 +11,8 @@ import { assemblePplOps, type PplStep } from '@/lib/ppl/ops';
 import { usd } from '@/lib/ppl/rules';
 import PplAccountActions from '@/components/admin/ppl-account-actions';
 import PplAttachNumberForm from '@/components/admin/ppl-attach-number-form';
+import PplUseSuggestion from '@/components/admin/ppl-use-suggestion';
+import PplBuyAndAttach from '@/components/admin/ppl-buy-and-attach';
 import PplDisputeActions from '@/components/admin/ppl-dispute-actions';
 import { listOpenDisputes, DISPUTE_CATEGORIES } from '@/lib/ppl/disputes';
 import { statementUrl } from '@/lib/ppl/statementToken';
@@ -467,6 +469,17 @@ export default async function PplOpsPage() {
           unrated candidates produces a confident-looking #1 that is really a coin flip, and the
           thing being decided is where a stranger’s call lands at 2am.
         </p>
+        {!s.flags.callTracking && forwardSuggestions.recommendations.length > 0 ? (
+          // ⚠️ A greyed button with only a tooltip is a dead end for anyone who does not hover.
+          // The blocker is one env var, so say which one and say that it needs a redeploy —
+          // env attaches at deploy time, so setting it alone changes nothing.
+          <p className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-200">
+            Buying is off. Set <code>CALL_TRACKING_ENABLED=1</code> in Vercel production and
+            redeploy — env attaches at deploy time, so the value alone will not take effect.
+            Twilio creds are already set. Until then, “Use this pick” still fills the attach form
+            below for a number the account already holds.
+          </p>
+        ) : null}
         {forwardSuggestions.recommendations.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">
             No campaign is waiting on a forward-to.
@@ -521,15 +534,38 @@ export default async function PplOpsPage() {
                   </ol>
                 )}
                 {r.ranked[0] && (
-                  <p className="mt-2 text-xs">
-                    <span className="font-medium text-foreground">
-                      Pick: {r.ranked[0].prospect.business_name} · {r.ranked[0].prospect.phone}
-                    </span>{' '}
-                    <span className="text-muted-foreground">
-                      ({decidedByLabel(r.ranked[0].decidedBy)}) — attach it, then send the
-                      forwarding notice.
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs">
+                      <span className="font-medium text-foreground">
+                        Pick: {r.ranked[0].prospect.business_name} · {r.ranked[0].prospect.phone}
+                      </span>{' '}
+                      <span className="text-muted-foreground">
+                        {/* ⚠️ This used to read "attach it, then send the forwarding notice",
+                            which described two steps where there is one: attach-number calls
+                            sendForwardNotice unless the operator unticks the box. Copy that
+                            invents a second step invites someone to go looking for it. */}
+                        ({decidedByLabel(r.ranked[0].decidedBy)}) — attaching also texts them the
+                        one-time notice.
+                      </span>
+                    </p>
+                    <span className="flex flex-wrap items-center gap-2">
+                      {/* Buy is the normal path: 8 of the 10 campaigns with a pick hold no number
+                          at all. "Use this pick" covers the other case by carrying the fields to
+                          the attach form, where the operator chooses which held number. */}
+                      <PplBuyAndAttach
+                        campaignId={r.campaign.id}
+                        domain={r.campaign.domain}
+                        forwardTo={r.ranked[0].prospect.phone ?? ''}
+                        businessName={r.ranked[0].prospect.business_name}
+                        enabled={s.flags.callTracking}
+                      />
+                      <PplUseSuggestion
+                        domain={r.campaign.domain}
+                        forwardTo={r.ranked[0].prospect.phone ?? ''}
+                        businessName={r.ranked[0].prospect.business_name}
+                      />
                     </span>
-                  </p>
+                  </div>
                 )}
               </div>
             ))}

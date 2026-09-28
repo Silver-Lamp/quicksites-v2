@@ -48,16 +48,36 @@ describe('formatUsPhone', () => {
 });
 
 describe('telHref', () => {
-  it('produces a dialable href from either form', () => {
-    expect(telHref('+12536552016')).toBe('+12536552016');
-    expect(telHref('(253) 655-2016')).toBe('+12536552016');
-    expect(telHref('2536552016')).toBe('+12536552016');
+  it('returns a COMPLETE href, scheme included', () => {
+    // ⚠️ It once returned bare digits while being named telHref, and the caller wrote
+    // href={telHref(raw)} — shipping <a href="+12536552016">, which a browser treats as a
+    // relative path. Tap-to-call silently dead on a towing site.
+    expect(telHref('+12536552016')).toBe('tel:+12536552016');
+    expect(telHref('(253) 655-2016')).toBe('tel:+12536552016');
+    expect(telHref('2536552016')).toBe('tel:+12536552016');
+  });
+
+  it('always starts with the scheme when there is anything to dial', () => {
+    for (const raw of ['2536552016', '+12536552016', '(253) 655-2016', '5551234']) {
+      expect(telHref(raw).startsWith('tel:')).toBe(true);
+    }
   });
 
   it('agrees with the display form on the same input', () => {
-    // The text and the link drifting apart is what let the bug survive a click test.
+    // The text and the link drifting apart is what let the original bug survive a click test.
     const raw = '+12536552016';
     expect(telHref(raw)).toContain(formatUsPhone(raw).replace(/\D/g, ''));
+  });
+
+  it('no caller has to add the scheme itself', () => {
+    const { readFileSync } = require('fs');
+    const { join } = require('path');
+    const src = readFileSync(
+      join(process.cwd(), 'components/admin/templates/render-blocks/contact-form.tsx'),
+      'utf8',
+    );
+    // `href={`tel:${telHref(...)}`}` would double the scheme.
+    expect(src).not.toMatch(/tel:\$\{telHref/);
   });
 
   it('is empty for no input rather than a bare "tel:"', () => {

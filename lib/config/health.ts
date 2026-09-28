@@ -320,6 +320,26 @@ export const CONFIG_GATES: ConfigGate[] = [
       'The Buy button is shown with a price but the purchase fails at submit — ICANN requires a complete registrant contact. The operator sees a price, clicks, and gets an error.',
   },
   {
+    // ⚠️ THE OTHER FLAG THAT SPENDS MONEY, and it had no gate while `domain_purchase` did.
+    // `CALL_TRACKING_ENABLED` authorises BUYING a Twilio number (~$1.15/mo recurring, per
+    // campaign) from `/admin/prospects/geo-campaign/provision-number` and the "Buy number &
+    // attach" button on /admin/ppl.
+    //
+    // Why it needed one: the flag was set in Vercel production on 2026-09-27 and nothing outside
+    // an authenticated admin page could say whether the deploy had picked it up. `sms: ready`
+    // looks like the answer and is not — that gate only proves Twilio creds exist, which is what
+    // SENDING needs; buying additionally needs this flag. An operator reading `sms: ready` and
+    // concluding "we can buy numbers" is the same class of mistake as reading `ai: ready` off a
+    // key that had been revoked for nine days.
+    key: 'call_tracking',
+    label: 'Buy Twilio tracking numbers (spends money)',
+    enabledBy: 'CALL_TRACKING_ENABLED',
+    requires: ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN'],
+    degradeOnly: true,
+    breaks:
+      'The "Buy number & attach" button on /admin/ppl is disabled and provision-number returns 403 `disabled`, so a ranked campaign cannot get a tracking number and its calls stay unmeasured. Note the flag is read at boot: setting it in Vercel without a redeploy changes nothing.',
+  },
+  {
     key: 'captcha',
     label: 'Signup/subscribe captcha',
     requires: ['RECAPTCHA_SECRET_KEY'],

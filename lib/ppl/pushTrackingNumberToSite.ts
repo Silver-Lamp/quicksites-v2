@@ -48,10 +48,29 @@ export type PushResult = {
 export function rewritePhoneFields(node: unknown, e164: string, display: string): number {
   let n = 0;
   const walk = (v: unknown, parent: any, key: string | number | null) => {
+    const isPhoneKey = key !== null && PHONE_KEYS.has(String(key));
+
+    // ⚠️ AN EMPTY PHONE FIELD IS THE COMMON CASE, AND THE FIRST VERSION SKIPPED IT ENTIRELY.
+    // It only handled `typeof v === 'string'`, so a field sitting at `null` — which is what a
+    // pitch site that never had a phone looks like — was never even visited. Four campaigns
+    // (renton-towing, renton-electrical, seatac-towing, smyrna-towing) bought a number, had it
+    // saved, had the business texted, and rendered NO phone at all, because
+    // `data.meta.contact.phone` was `null` rather than a wrong string.
+    if (isPhoneKey && (v === null || v === undefined || v === '')) {
+      parent[key as any] = e164;
+      n++;
+      return;
+    }
+
     if (typeof v === 'string') {
-      if (key === null || !PHONE_KEYS.has(String(key))) return;
+      if (!isPhoneKey) return;
       const s = v.trim();
-      if (!s || !PHONEISH.test(s)) return;
+      if (!s) {
+        parent[key as any] = e164;
+        n++;
+        return;
+      }
+      if (!PHONEISH.test(s)) return;
       const next = /[()\-\s.]/.test(s) && !s.startsWith('+') ? display : e164;
       if (next === v) return;
       parent[key as any] = next;
@@ -65,6 +84,29 @@ export function rewritePhoneFields(node: unknown, e164: string, display: string)
   };
   walk(node, null, null);
   return n;
+}
+
+/**
+ * Guarantee the path the CONTACT BLOCK actually reads, creating it when absent.
+ *
+ * ⚠️ `templates.phone` is NOT enough, and that is the trap. `contact-form.tsx` resolves
+ * `t.phone` first, which reads fine in the editor — but a PUBLISHED page renders from the
+ * snapshot, and the snapshot carries `data`, not the column. So setting the column alone
+ * produces a site that looks correct everywhere except to a visitor.
+ *
+ * `meta.contact.phone` is the first `data.*` path in that resolver's list, so it is the one
+ * worth guaranteeing.
+ */
+export function ensureContactPhone(data: any, e164: string): boolean {
+  if (!data || typeof data !== 'object') return false;
+  data.meta = data.meta ?? {};
+  data.meta.contact = data.meta.contact ?? {};
+  const cur = data.meta.contact.phone;
+  if (typeof cur === 'string' && cur.replace(/\D/g, '').replace(/^1/, '') === e164.replace(/\D/g, '').replace(/^1/, '')) {
+    return false;
+  }
+  data.meta.contact.phone = e164;
+  return true;
 }
 
 /** `+12536552016` → `(253) 655-2016`. Assumes a 10-digit US number, which is all we buy. */
@@ -105,7 +147,11 @@ export async function pushTrackingNumberToSite(opts: {
   }
 
   const next = structuredClone((tpl as any).data ?? {});
-  const fields = rewritePhoneFields(next, e164, display);
+  let fields = rewritePhoneFields(next, e164, display);
+  // Belt and braces: if the tree carried no phone field at all, create the one the contact
+  // block reads. A site with a bought number and nothing on the page is the failure this
+  // whole function exists to prevent.
+  if (ensureContactPhone(next, e164)) fields++;
 
   // ⚠️ `phone` goes in the SAME patch as `data`. The hero falls back to the column when
   // `cta_phone` is empty (`resolvedPhoneDigits = cta_phone || dbPhoneDigits`), so a site whose

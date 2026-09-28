@@ -78,10 +78,16 @@ export async function POST(req: Request) {
 
   const voiceUrl = `${publicBaseUrl()}/api/twilio/geo/${campaignId}`;
   try {
-    const { phoneNumber, sid } = await provisionTrackingNumber({
+    // Region + centre so a sold-out area code narrows to the same STATE rather than to
+    // anywhere in the US — see provisionTrackingNumber. `allowAnywhere` stays off: an Ohio
+    // number on a Washington towing site is a different product, not a lesser success.
+    const { phoneNumber, sid, locality } = await provisionTrackingNumber({
       voiceUrl,
       smsUrl: `${publicBaseUrl()}/api/twilio/sms/inbound`,
       areaCode: areaCodeFromPhone(forwardTo),
+      region: (campaign as any).region ?? null,
+      lat: (campaign as any).center_lat ?? null,
+      lon: (campaign as any).center_lon ?? null,
     });
     await setCampaignTracking(campaignId, { number: phoneNumber, sid, forwardTo });
 
@@ -104,13 +110,14 @@ export async function POST(req: Request) {
         forwardTo: null,
         notice: { sent: false, reason: 'opted_out' },
         site: sitePush,
+        locality,
       });
     }
     const notice =
       body.sendNotice === false
         ? { sent: false, reason: 'skipped' }
         : await sendForwardNotice(campaignId);
-    return NextResponse.json({ ok: true, number: phoneNumber, forwardTo, notice, site: sitePush });
+    return NextResponse.json({ ok: true, number: phoneNumber, forwardTo, notice, site: sitePush, locality });
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message || 'Could not provision a number.' },

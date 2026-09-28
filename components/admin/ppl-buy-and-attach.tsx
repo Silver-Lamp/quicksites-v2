@@ -75,10 +75,17 @@ export default function PplBuyAndAttach({
           ? `site updated (${j.site.fields} field${j.site.fields === 1 ? '' : 's'})`
           : `site saved but NOT republished${j.site.warning ? ` — ${j.site.warning}` : ''}`
         : `⚠️ SITE NOT UPDATED${j.site?.warning ? ` — ${j.site.warning}` : ''}; run scripts/set-site-phone.mjs`;
+      // ⚠️ Say it loudly when the number is not local. seatac-towing.com was given an OHIO
+      // number because 206 was sold out and the old code fell back to "anywhere" without a
+      // word. On a geo site the area code IS the pitch.
+      const loc =
+        j.locality && j.locality !== 'area_code'
+          ? ` ⚠️ NOT a local area code (${j.locality}) — consider releasing and retrying`
+          : '';
       setMsg(
         j.alreadyProvisioned
           ? `already had ${j.number}`
-          : `bought ${j.number} → ${j.forwardTo ?? 'nobody (opted out)'}; ${notice}; ${site}`,
+          : `bought ${j.number} → ${j.forwardTo ?? 'nobody (opted out)'}; ${notice}; ${site}${loc}`,
       );
       router.refresh();
     } catch (e: any) {

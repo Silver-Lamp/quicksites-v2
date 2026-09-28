@@ -11,7 +11,7 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { stripComments } from '@/test/stripComments';
-import { rewritePhoneFields, displayUs } from '../pushTrackingNumberToSite';
+import { rewritePhoneFields, displayUs, ensureContactPhone } from '../pushTrackingNumberToSite';
 
 const read = (p: string) => stripComments(readFileSync(join(process.cwd(), p), 'utf8'));
 
@@ -52,6 +52,53 @@ describe('rewritePhoneFields', () => {
   it('leaves a field that already holds the number alone', () => {
     const tree = { x: { phone: '+12536552016' } };
     expect(rewritePhoneFields(tree, '+12536552016', '(253) 655-2016')).toBe(0);
+  });
+});
+
+describe('an EMPTY phone field is the common case', () => {
+  it('fills a null phone field instead of skipping it', () => {
+    // ⚠️ The regression, by value. The first version only handled `typeof v === 'string'`, so a
+    // field sitting at null — what a pitch site that never had a phone looks like — was never
+    // visited. Four campaigns bought a number, had it saved, had the business texted, and
+    // rendered NO phone at all.
+    const tree = { meta: { contact: { phone: null } } };
+    expect(rewritePhoneFields(tree, '+12533568119', '(253) 356-8119')).toBe(1);
+    expect(tree.meta.contact.phone).toBe('+12533568119');
+  });
+
+  it('fills an empty-string phone field too', () => {
+    const tree = { identity: { contact: { phone: '' } } };
+    expect(rewritePhoneFields(tree, '+12533568119', '(253) 356-8119')).toBe(1);
+    expect((tree.identity.contact as any).phone).toBe('+12533568119');
+  });
+
+  it('still ignores a null under a NON-phone key', () => {
+    const tree = { meta: { tagline: null, contact: { phone: null } } };
+    rewritePhoneFields(tree, '+12533568119', '(253) 356-8119');
+    expect(tree.meta.tagline).toBeNull();
+  });
+});
+
+describe('ensureContactPhone', () => {
+  it('creates meta.contact.phone when the tree has no phone at all', () => {
+    // ⚠️ templates.phone is NOT enough: a published page renders from the snapshot, which
+    // carries `data`, not the column. Setting the column alone looks right everywhere except
+    // to a visitor.
+    const data: any = {};
+    expect(ensureContactPhone(data, '+12533568119')).toBe(true);
+    expect(data.meta.contact.phone).toBe('+12533568119');
+  });
+
+  it('does not churn when the number is already there in another format', () => {
+    const data: any = { meta: { contact: { phone: '(253) 356-8119' } } };
+    expect(ensureContactPhone(data, '+12533568119')).toBe(false);
+    expect(data.meta.contact.phone).toBe('(253) 356-8119');
+  });
+
+  it('replaces a DIFFERENT number', () => {
+    const data: any = { meta: { contact: { phone: '+13604582555' } } };
+    expect(ensureContactPhone(data, '+12533568119')).toBe(true);
+    expect(data.meta.contact.phone).toBe('+12533568119');
   });
 });
 
@@ -100,5 +147,50 @@ describe('both routes that give a campaign a number push it to the site', () => 
   it('only republishes what is already live', () => {
     // publish_template_demo would happily take an unpublished draft live as a side effect.
     expect(LIB).toContain('republishIfPublished');
+  });
+});
+
+/**
+ * A NUMBER IN THE WRONG STATE IS A DIFFERENT PRODUCT, NOT A LESSER SUCCESS.
+ *
+ * ⚠️ `provisionTrackingNumber` asked Twilio for the requested area code and, on an empty
+ * result, retried with NO filter at all — so `seatac-towing.com` (206 requested, sold out) was
+ * given **+1 419 557 4374, Ohio**, and the route returned `{ ok: true }` with nothing to say it
+ * had missed. A geo rank-and-rent site's whole pitch is "the local people"; an out-of-state area
+ * code undercuts that before anyone dials, and the purchase looked clean.
+ */
+describe('provisioning stays local', () => {
+  const SRC = read('lib/outreach/callTracking.ts');
+  const ROUTE = read('app/api/admin/prospects/geo-campaign/provision-number/route.ts');
+  const BUTTON = read('components/admin/ppl-buy-and-attach.tsx');
+
+  it('no longer retries with an unfiltered search by default', () => {
+    // The old fallback was a bare `.list({ voiceEnabled: true, limit: 5 })`.
+    expect(SRC).toContain('allowAnywhere');
+    expect(SRC).toMatch(/if \(!candidate && opts\.allowAnywhere\)/);
+  });
+
+  it('narrows by state and then by distance before giving up', () => {
+    expect(SRC).toContain('inRegion');
+    expect(SRC).toContain('nearLatLong');
+  });
+
+  it('throws rather than silently buying out of area', () => {
+    expect(SRC).toMatch(/Refusing to buy an out-of-area number/);
+  });
+
+  it('reports which rung it landed on', () => {
+    expect(SRC).toContain("locality");
+    expect(ROUTE).toContain('locality');
+  });
+
+  it('the route passes region and centre, and does NOT allow anywhere', () => {
+    expect(ROUTE).toMatch(/region:/);
+    expect(ROUTE).toMatch(/lat:/);
+    expect(ROUTE).not.toMatch(/allowAnywhere:\s*true/);
+  });
+
+  it('the operator is told when the number is not local', () => {
+    expect(BUTTON).toMatch(/NOT a local area code/);
   });
 });

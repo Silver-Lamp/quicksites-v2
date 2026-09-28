@@ -11,6 +11,7 @@
 // lib/domains/namecheap.ts#registerDomain — a campaign never buys a domain by accident.
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { toE164 } from '@/lib/auth/claimVerify';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import { buildCityServicePage, insertPage } from '@/lib/seo/localPages';
 import { defaultOutreachOrgSlug, orgIdForSlug } from '@/lib/outreach/campaignBrand';
@@ -253,16 +254,33 @@ export async function listGeoCampaignsForRankSync(): Promise<GeoCampaign[]> {
   return (data ?? []) as GeoCampaign[];
 }
 
+/**
+ * ⚠️ `forward_to` IS DIALLED VERBATIM — normalise it here or a call fails at Twilio.
+ *
+ * `lib/ppl/ivr.ts` emits `<Number>{forward_to}</Number>` with only XML escaping, so whatever is
+ * stored is what Twilio is asked to ring. A display-format string like `(253) 442-5373` is not
+ * E.164 and is not something to gamble a stranger's towing call on.
+ *
+ * This is not hypothetical: the first number ever bought through the "Buy number & attach"
+ * button (southhilltowing.com, 2026-09-28) stored the prospect's DISPLAY phone, because the
+ * caller passed `prospect.phone` straight through. The manual attach form asks for E.164 and its
+ * placeholder says so, which is exactly why the gap survived — every path a human typed into was
+ * fine, and the first programmatic caller was not. Normalising at the WRITE means no future
+ * caller has to remember.
+ */
 export async function setCampaignTracking(
   id: string,
   t: { number: string; sid: string; forwardTo: string | null },
 ): Promise<void> {
+  // Unparseable input is stored as-is rather than dropped: a wrong number a person can see and
+  // correct beats a silent null that makes the line ring nowhere.
+  const forwardTo = t.forwardTo ? (toE164(t.forwardTo) ?? t.forwardTo) : t.forwardTo;
   const { error } = await supabaseAdmin
     .from('geo_industry_campaigns')
     .update({
       tracking_number: t.number,
       tracking_number_sid: t.sid,
-      forward_to: t.forwardTo,
+      forward_to: forwardTo,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id);

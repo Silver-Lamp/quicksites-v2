@@ -31,15 +31,22 @@ export function formatUsPhone(raw?: string | null): string {
 }
 
 /**
- * Digits for a `tel:` href — `+1` kept when the input carried it.
+ * A COMPLETE `tel:` href — scheme included.
  *
- * Separate from the display form on purpose: a dialer wants unpunctuated digits, a reader wants
- * punctuation, and conflating them is how the text and the link drifted apart in the first place.
+ * ⚠️ It returns `tel:+12536552016`, not `+12536552016`, and the difference is not pedantry: the
+ * first version of this returned bare digits while being called `telHref`, and the very next
+ * line of the caller wrote `href={telHref(raw)}`. That shipped `<a href="+12536552016">`, which
+ * a browser reads as a RELATIVE PATH — tap-to-call silently dead on a towing site, minutes after
+ * a fix that was supposed to make the phone number right.
+ *
+ * A function named for what it returns must return that thing. Separate from the display form on
+ * purpose: a dialer wants unpunctuated digits, a reader wants punctuation, and conflating them is
+ * how the text and the link drifted apart to begin with.
  */
 export function telHref(raw?: string | null): string {
   const digits = String(raw ?? '').replace(/\D/g, '');
   if (!digits) return '';
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-  if (digits.length === 10) return `+1${digits}`;
-  return digits;
+  if (digits.length === 11 && digits.startsWith('1')) return `tel:+${digits}`;
+  if (digits.length === 10) return `tel:+1${digits}`;
+  return `tel:${digits}`;
 }

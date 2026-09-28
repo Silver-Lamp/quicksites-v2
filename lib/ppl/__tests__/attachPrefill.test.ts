@@ -77,3 +77,48 @@ describe('the copy does not invent a second step', () => {
     expect(PAGE).toMatch(/attaching also texts them/i);
   });
 });
+
+/**
+ * BUYING A NUMBER FROM THE SUGGESTION CARD.
+ *
+ * `provision-number` already did the whole sequence — search a local number near the forward-to's
+ * area code, buy it, wire voice + SMS webhooks, save it on the campaign, text the one-time notice
+ * — but had no button anywhere near the recommendation.
+ *
+ * ⚠️ It SPENDS MONEY (~$1.15/mo, recurring) and sends a stranger their first contact from us, so
+ * the confirm has to say both, and the flag that gates it has to explain itself on the page
+ * rather than only in a tooltip.
+ */
+describe('buy number & attach', () => {
+  const BUY = read('components/admin/ppl-buy-and-attach.tsx');
+
+  it('calls the provisioning route, not attach', () => {
+    expect(BUY).toContain('geo-campaign/provision-number');
+    expect(BUY).not.toContain('attach-number');
+  });
+
+  it('confirms with the cost AND the text message, in words', () => {
+    expect(BUY).toContain('window.confirm');
+    expect(BUY).toMatch(/\$1\.15/);
+    expect(BUY).toMatch(/one-time notice/i);
+    expect(BUY).toMatch(/STOP/);
+  });
+
+  it('reports whether the notice actually went out', () => {
+    // An opted-out business gets the number bought and the forward dropped. Success and a silent
+    // non-delivery look identical otherwise — and that is the case where a caller reaches nobody.
+    expect(BUY).toMatch(/notice NOT sent/);
+    expect(BUY).toMatch(/opted out/);
+  });
+
+  it('is disabled, with a reason, when call tracking is off', () => {
+    expect(BUY).toMatch(/disabled=\{!enabled/);
+    expect(BUY).toContain('CALL_TRACKING_ENABLED=1');
+  });
+
+  it('the page states the blocker where it can be read without hovering', () => {
+    expect(PAGE).toContain('CALL_TRACKING_ENABLED=1');
+    // Setting the var alone does nothing — env attaches at deploy time.
+    expect(PAGE).toMatch(/redeploy/i);
+  });
+});

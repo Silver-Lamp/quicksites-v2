@@ -28,6 +28,12 @@ export default async function OutreachPage() {
         </div>
         <div className="flex flex-col items-end gap-1 text-sm">
           <Link
+            href="/admin/outreach/returns"
+            className="text-amber-300 underline underline-offset-4 hover:text-amber-200"
+          >
+            Returned postcards →
+          </Link>
+          <Link
             href="/admin/go-live"
             className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300"
           >

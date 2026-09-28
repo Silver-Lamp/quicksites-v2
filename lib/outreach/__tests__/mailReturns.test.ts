@@ -121,3 +121,46 @@ describe('closing a prospect actually stops the spend', () => {
     expect(fn).toMatch(/address,/);
   });
 });
+
+/**
+ * THE OPERATOR'S SCREEN.
+ *
+ * ⚠️ Two of the six reasons CLOSE the business. The screen has to say that before the dropdown
+ * is touched, not only in a confirm — a reason picked casually costs either money (mailing a
+ * dead business forever) or a live lead (closing one that exists).
+ */
+describe('the returns screen', () => {
+  const UI = read('components/admin/postcard-returns-client.tsx');
+  const PAGE = read('app/admin/outreach/returns/page.tsx');
+  const LOADER = read('lib/outreach/mail/returnsList.ts');
+
+  it('searches what is PRINTED on the card, not the current record', () => {
+    // The address may already have been corrected; searching the current one would fail to find
+    // the card in the operator's hand.
+    expect(UI).toMatch(/r\.to_name/);
+    expect(UI).toMatch(/r\.to_address/);
+  });
+
+  it('labels every reason with what it does', () => {
+    expect(UI).toMatch(/CLOSES them everywhere/);
+    expect(UI).toMatch(/fixable — you can re-send/);
+  });
+
+  it('confirms before a terminal reason', () => {
+    expect(UI).toMatch(/window\.confirm/);
+    expect(UI).toMatch(/chosen\.terminal/);
+  });
+
+  it('warns on the page itself, not only in the confirm', () => {
+    expect(PAGE).toMatch(/close the business/i);
+  });
+
+  it('excludes test mailings from the list', () => {
+    // Test rows look identical by eye; marking one "out of business" would close a real prospect.
+    expect(LOADER).toMatch(/\.neq\('status',\s*'test'\)/);
+  });
+
+  it('is reachable from the outreach pipeline', () => {
+    expect(read('app/admin/outreach/page.tsx')).toContain('/admin/outreach/returns');
+  });
+});

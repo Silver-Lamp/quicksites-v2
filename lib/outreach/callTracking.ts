@@ -37,29 +37,84 @@ export function areaCodeFromPhone(phone?: string | null): string | undefined {
  * Buy a local US number (near `areaCode` when possible) whose voice webhook points at
  * `voiceUrl`. Returns the E.164 number + its SID. Throws if none is available.
  */
+/**
+ * Buy a local US number for a campaign.
+ *
+ * ⚠️ THE OLD FALLBACK BOUGHT A NUMBER IN ANY STATE, SILENTLY, AND THAT IS WORSE THAN FAILING.
+ * It asked for the requested area code and, on an empty result, retried with NO filter at all —
+ * so `seatac-towing.com` (206 requested, none available) was given **+1 419 557 4374, Ohio**,
+ * and the route returned `{ ok: true }` with nothing to say it had missed. A geo rank-and-rent
+ * site's entire pitch is "the local people"; an out-of-state area code on the page undercuts
+ * that before anyone dials, and nobody finds out because the purchase looked clean.
+ *
+ * Now it narrows in steps and REPORTS which one it landed on:
+ *   1. the exact area code
+ *   2. any number in the same STATE (`inRegion`) — a neighbouring area code still reads local
+ *   3. near the market's coordinates, when the campaign has them
+ *   4. anywhere — only if the caller explicitly allows it
+ *
+ * `locality` tells the caller what it got, so a non-local number can be surfaced instead of
+ * discovered later on a live page.
+ */
+export type ProvisionedNumber = {
+  phoneNumber: string;
+  sid: string;
+  /** How close the number is to the market it was bought for. */
+  locality: 'area_code' | 'same_state' | 'nearby' | 'anywhere';
+};
+
 export async function provisionTrackingNumber(opts: {
   voiceUrl: string;
   areaCode?: string;
+  /** Two-letter state, used when the exact area code is sold out. */
+  region?: string | null;
+  /** Market centre, used when the state has nothing either. */
+  lat?: number | null;
+  lon?: number | null;
+  /**
+   * Buy a number anywhere in the US rather than fail. Default FALSE: an Ohio number on a
+   * Washington towing site is not a lesser success, it is a different (worse) product.
+   */
+  allowAnywhere?: boolean;
   /** Inbound SMS webhook (STOP handling). */
   smsUrl?: string;
-}): Promise<{ phoneNumber: string; sid: string }> {
+}): Promise<ProvisionedNumber> {
   const c = client();
+  const pick = async (params: Record<string, unknown>): Promise<string | undefined> => {
+    try {
+      const list = await c.availablePhoneNumbers('US').local.list({
+        voiceEnabled: true,
+        limit: 5,
+        ...params,
+      } as any);
+      return list?.[0]?.phoneNumber;
+    } catch {
+      return undefined;
+    }
+  };
+
   let candidate: string | undefined;
-  try {
-    const list = await c.availablePhoneNumbers('US').local.list({
-      areaCode: opts.areaCode ? Number(opts.areaCode) : undefined,
-      voiceEnabled: true,
-      limit: 5,
-    });
-    candidate = list?.[0]?.phoneNumber;
-  } catch {
-    /* fall through to a broader search */
+  let locality: ProvisionedNumber['locality'] = 'area_code';
+
+  if (opts.areaCode) candidate = await pick({ areaCode: Number(opts.areaCode) });
+  if (!candidate && opts.region) {
+    candidate = await pick({ inRegion: String(opts.region).toUpperCase() });
+    if (candidate) locality = 'same_state';
+  }
+  if (!candidate && Number.isFinite(opts.lat) && Number.isFinite(opts.lon)) {
+    candidate = await pick({ nearLatLong: `${opts.lat},${opts.lon}`, distance: 100 });
+    if (candidate) locality = 'nearby';
+  }
+  if (!candidate && opts.allowAnywhere) {
+    candidate = await pick({});
+    if (candidate) locality = 'anywhere';
   }
   if (!candidate) {
-    const list = await c.availablePhoneNumbers('US').local.list({ voiceEnabled: true, limit: 5 });
-    candidate = list?.[0]?.phoneNumber;
+    throw new Error(
+      `No number available near ${opts.areaCode ?? opts.region ?? 'that market'}. ` +
+        'Refusing to buy an out-of-area number — pass allowAnywhere to override.',
+    );
   }
-  if (!candidate) throw new Error('No available phone numbers to provision.');
 
   const bought = await c.incomingPhoneNumbers.create({
     phoneNumber: candidate,
@@ -67,7 +122,7 @@ export async function provisionTrackingNumber(opts: {
     voiceMethod: 'GET',
     ...(opts.smsUrl ? { smsUrl: opts.smsUrl, smsMethod: 'POST' as const } : {}),
   });
-  return { phoneNumber: bought.phoneNumber, sid: bought.sid };
+  return { phoneNumber: bought.phoneNumber, sid: bought.sid, locality };
 }
 
 export async function releaseTrackingNumber(sid?: string | null): Promise<void> {

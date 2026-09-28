@@ -85,10 +85,19 @@ const PHONEISH = /^\+?1?[\s.(-]*\d{3}[\s.)-]*\d{3}[\s.-]*\d{4}$/;
 function sweep(root, write) {
   const hits = [];
   (function walk(node, path, parent, key) {
+    const isPhoneKey = key !== null && PHONE_KEYS.has(String(key));
+    // ⚠️ A null/empty phone field is the COMMON case on a pitch site that never had a phone,
+    // and the first version never even visited it (it only handled strings). Four campaigns
+    // bought a number and rendered nothing because `meta.contact.phone` was null.
+    if (isPhoneKey && (node === null || node === undefined || node === '')) {
+      hits.push([path, String(node), E164]);
+      if (write && parent) parent[key] = E164;
+      return;
+    }
     if (typeof node === 'string') {
       // ⚠️ Keyed on the FIELD NAME, not on "does this look like a phone". A number-shaped string
       // in prose ("serving 253 homes") is not a contact field, and rewriting it would edit copy.
-      if (!PHONE_KEYS.has(String(key))) return;
+      if (!isPhoneKey) return;
       if (!node.trim()) return;
       if (!PHONEISH.test(node.trim())) return;
       const next = node.includes('(') || node.includes('-') ? DISPLAY : E164;
@@ -161,6 +170,13 @@ if (!APPLY) {
 
 const nextData = structuredClone(tpl.data);
 sweep(nextData, true);
+// The path contact-form.tsx reads from a published SNAPSHOT (the column is not in the snapshot).
+nextData.meta = nextData.meta ?? {};
+nextData.meta.contact = nextData.meta.contact ?? {};
+if ((nextData.meta.contact.phone ?? '').toString().replace(/\D/g, '').replace(/^1/, '') !== digits) {
+  nextData.meta.contact.phone = E164;
+  console.log('  ensured $.meta.contact.phone');
+}
 if (PROSE) sweepProse(nextData, true);
 
 const { repointed } = await republishTemplate(

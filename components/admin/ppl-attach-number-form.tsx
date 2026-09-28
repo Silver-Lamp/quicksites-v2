@@ -4,8 +4,9 @@
 // Vercel), so this is the only place the repoint can be done. The notice checkbox is the
 // operator's call at click time: on by default, off when the business already agreed in person.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { PPL_PREFILL_EVENT, type PplPrefillDetail } from './ppl-prefill';
 
 export default function PplAttachNumberForm({
   campaigns,
@@ -26,6 +27,25 @@ export default function PplAttachNumberForm({
   const [sendNotice, setSendNotice] = useState(true);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Filled from a "Use this pick" button on a suggestion card above. The operator still chooses
+  // the Twilio number and still presses Attach — this only carries the two fields that are
+  // otherwise re-typed, where a dropped digit routes a real call to the wrong person.
+  useEffect(() => {
+    function onPrefill(e: Event) {
+      const d = (e as CustomEvent<PplPrefillDetail>).detail;
+      if (!d?.domain) return;
+      setDomain(d.domain);
+      setForwardTo(d.forwardTo ?? '');
+      setPrefilledFor(d.businessName ?? null);
+      setResult(null);
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    window.addEventListener(PPL_PREFILL_EVENT, onPrefill);
+    return () => window.removeEventListener(PPL_PREFILL_EVENT, onPrefill);
+  }, []);
 
   const picked = campaigns.find(
     (c) =>
@@ -80,6 +100,7 @@ export default function PplAttachNumberForm({
 
   return (
     <form
+      ref={formRef}
       onSubmit={submit}
       className="mt-3 grid gap-3 rounded-xl border border-border bg-card p-4 text-sm text-card-foreground sm:grid-cols-2 lg:grid-cols-5"
     >
@@ -141,6 +162,13 @@ export default function PplAttachNumberForm({
           {busy ? 'Attaching…' : 'Attach number'}
         </button>
       </div>
+      {prefilledFor ? (
+        <p className="text-xs text-sky-300 sm:col-span-2 lg:col-span-5">
+          Filled from the suggestion for <span className="font-medium">{prefilledFor}</span>. Pick
+          a Twilio number, then Attach — attaching also texts that business the one-time notice
+          unless you untick it.
+        </p>
+      ) : null}
       {result ? (
         <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-5">{result}</p>
       ) : null}

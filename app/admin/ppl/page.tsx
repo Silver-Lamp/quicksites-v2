@@ -11,6 +11,7 @@ import { assemblePplOps, type PplStep } from '@/lib/ppl/ops';
 import { usd } from '@/lib/ppl/rules';
 import PplAccountActions from '@/components/admin/ppl-account-actions';
 import PplAttachNumberForm from '@/components/admin/ppl-attach-number-form';
+import PplUseSuggestion from '@/components/admin/ppl-use-suggestion';
 import PplDisputeActions from '@/components/admin/ppl-dispute-actions';
 import { listOpenDisputes, DISPUTE_CATEGORIES } from '@/lib/ppl/disputes';
 import { statementUrl } from '@/lib/ppl/statementToken';
@@ -521,15 +522,26 @@ export default async function PplOpsPage() {
                   </ol>
                 )}
                 {r.ranked[0] && (
-                  <p className="mt-2 text-xs">
-                    <span className="font-medium text-foreground">
-                      Pick: {r.ranked[0].prospect.business_name} · {r.ranked[0].prospect.phone}
-                    </span>{' '}
-                    <span className="text-muted-foreground">
-                      ({decidedByLabel(r.ranked[0].decidedBy)}) — attach it, then send the
-                      forwarding notice.
-                    </span>
-                  </p>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs">
+                      <span className="font-medium text-foreground">
+                        Pick: {r.ranked[0].prospect.business_name} · {r.ranked[0].prospect.phone}
+                      </span>{' '}
+                      <span className="text-muted-foreground">
+                        {/* ⚠️ This used to read "attach it, then send the forwarding notice",
+                            which described two steps where there is one: attach-number calls
+                            sendForwardNotice unless the operator unticks the box. Copy that
+                            invents a second step invites someone to go looking for it. */}
+                        ({decidedByLabel(r.ranked[0].decidedBy)}) — attaching also texts them the
+                        one-time notice.
+                      </span>
+                    </p>
+                    <PplUseSuggestion
+                      domain={r.campaign.domain}
+                      forwardTo={r.ranked[0].prospect.phone ?? ''}
+                      businessName={r.ranked[0].prospect.business_name}
+                    />
+                  </div>
                 )}
               </div>
             ))}

@@ -2,6 +2,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { formatUsPhone } from '@/lib/phone/formatUs';
 import Link from 'next/link';
 import { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import type { Block } from '@/types/blocks';
@@ -108,11 +109,9 @@ function normalizeFooterLinks(final: any): FooterLink[] {
   return out;
 }
 
-function fmtPhone(raw?: string | null): string {
-  const digits = (raw || '').replace(/\D/g, '');
-  if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-  return raw || '';
-}
+// Shared with the contact form and hero — they disagreed on exactly the input a tracking
+// number produces (11 digits with a country code), and only one of the three lied about it.
+const fmtPhone = (raw?: string | null): string => formatUsPhone(raw);
 function withScheme(url?: string | null): string {
   if (!url) return '';
   if (/^https?:\/\//i.test(url)) return url;

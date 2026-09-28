@@ -32,6 +32,19 @@ const arg = (k) => {
   return i >= 0 ? args[i + 1] : null;
 };
 const APPLY = args.includes('--apply');
+/**
+ * Also rewrite phone numbers that appear in PROSE (rich-text `html` / tiptap `text`).
+ *
+ * ⚠️ OFF BY DEFAULT, AND THAT IS DELIBERATE. The field-name rule exists because a number-shaped
+ * string in copy ("serving 253 homes") is not a contact field. But baked-in prose is a real
+ * problem: southhilltowing.com told visitors "Contact us at 262-302-8118" on three pages — a
+ * WISCONSIN number on a South Hill page, in both the html and the tiptap json — while the
+ * contact block showed the right one. Anyone reading the paragraph rang a stranger.
+ *
+ * So it is opt-in, it only ever replaces a number that is NOT already this site's, and the dry
+ * run prints every string it would touch. Visible and reviewed beats clever.
+ */
+const PROSE = args.includes('--prose');
 const DOMAIN = arg('domain');
 if (!DOMAIN) {
   console.error('Usage: --domain <host> [--number +1XXXXXXXXXX] [--apply]');
@@ -61,6 +74,10 @@ const [tpl] = await rest(
 if (!tpl) throw new Error(`No template for ${DOMAIN}`);
 
 const PHONE_KEYS = new Set(['phone', 'cta_phone', 'telephone', 'phone_number']);
+/** Rich-text carriers. Both are rewritten or the editor and the page disagree. */
+const PROSE_KEYS = new Set(['html', 'text']);
+/** A phone inside a sentence — punctuated forms only, so a bare 10-digit id is not a target. */
+const PROSE_PHONE = /\(?\d{3}\)?[ .-]{1,2}\d{3}[ .-]{1,2}\d{4}/g;
 /** Anything that looks like a US phone, so the OLD number is found whatever its formatting. */
 const PHONEISH = /^\+?1?[\s.(-]*\d{3}[\s.)-]*\d{3}[\s.-]*\d{4}$/;
 
@@ -88,6 +105,33 @@ function sweep(root, write) {
   return hits;
 }
 
+/** Replace foreign phone numbers inside rich text. Only when --prose. */
+function sweepProse(root, write) {
+  const hits = [];
+  (function walk(node, path, parent, key) {
+    if (typeof node === 'string') {
+      if (!PROSE_KEYS.has(String(key))) return;
+      PROSE_PHONE.lastIndex = 0;
+      const found = node.match(PROSE_PHONE);
+      if (!found) return;
+      // Leave anything that is already this site's number, however punctuated.
+      const foreign = found.filter((f) => f.replace(/\D/g, '').replace(/^1/, '') !== digits);
+      if (!foreign.length) return;
+      const next = node.replace(PROSE_PHONE, (m) =>
+        m.replace(/\D/g, '').replace(/^1/, '') === digits ? m : DISPLAY,
+      );
+      hits.push([path, [...new Set(foreign)].join(', '), node.length > 90 ? node.slice(0, 90) + '…' : node]);
+      if (write && parent) parent[key] = next;
+      return;
+    }
+    if (Array.isArray(node)) return node.forEach((v, i) => walk(v, `${path}[${i}]`, node, i));
+    if (node && typeof node === 'object') {
+      return Object.entries(node).forEach(([k, v]) => walk(v, `${path}.${k}`, node, k));
+    }
+  })(root, '$', null, null);
+  return hits;
+}
+
 console.log(`${DOMAIN} → ${E164}`);
 console.log(`template ${tpl.id} published=${tpl.published} phone_column=${tpl.phone ?? '(null)'}`);
 if (campaign?.forward_to) console.log(`forwards to ${campaign.forward_to}`);
@@ -96,6 +140,20 @@ const preview = sweep(structuredClone(tpl.data), false);
 console.log(`\n${preview.length} phone field(s) to rewrite:`);
 for (const [p, from, to] of preview) console.log(`  ${p}\n    "${from}" -> "${to}"`);
 
+const prosePreview = PROSE ? sweepProse(structuredClone(tpl.data), false) : [];
+if (PROSE) {
+  console.log(`\n${prosePreview.length} prose string(s) carry a DIFFERENT number:`);
+  for (const [p, found, v] of prosePreview) console.log(`  ${p}\n    replacing ${found}\n    "${v}"`);
+} else {
+  const scan = sweepProse(structuredClone(tpl.data), false);
+  if (scan.length) {
+    console.log(
+      `\n⚠️ ${scan.length} prose string(s) mention a different phone number ` +
+        `(${[...new Set(scan.map((h) => h[1]))].join(', ')}). Re-run with --prose to rewrite them.`,
+    );
+  }
+}
+
 if (!APPLY) {
   console.log('\nDry run. Re-run with --apply to write.');
   process.exit(0);
@@ -103,13 +161,17 @@ if (!APPLY) {
 
 const nextData = structuredClone(tpl.data);
 sweep(nextData, true);
+if (PROSE) sweepProse(nextData, true);
 
 const { repointed } = await republishTemplate(
   rest,
   tpl,
   nextData,
   (snap) => {
-    if (snap?.data) sweep(snap.data, true);
+    if (snap?.data) {
+      sweep(snap.data, true);
+      if (PROSE) sweepProse(snap.data, true);
+    }
   },
   `set site phone to tracking number ${E164}`,
   { publish: tpl.published === true },

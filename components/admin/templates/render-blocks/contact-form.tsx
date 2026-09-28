@@ -2,6 +2,7 @@
 'use client';
 
 import type { Block } from '@/types/blocks';
+import { formatUsPhone, telHref } from '@/lib/phone/formatUs';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import { defaultContactHeading, isPersonTemplate } from '@/lib/sites/personSite';
@@ -18,12 +19,10 @@ const norm = (arr: unknown): string[] =>
 const isValidEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email ?? '').trim());
 
-const fmtPhone = (raw: string) => {
-  const d = String(raw ?? '').replace(/\D/g, '').slice(0, 10);
-  return d.replace(/(\d{0,3})(\d{0,3})(\d{0,4})/, (_, a, b, c) =>
-    [a && `(${a}`, b && `) ${b}`, c && `-${c}`].filter(Boolean).join('')
-  );
-};
+// ⚠️ This used to truncate with `.slice(0, 10)`, turning the E.164 `+12536552016` into
+// `1253655201` and rendering "(125) 365-5201" — a plausible, dialable, WRONG number, live on
+// southhilltowing.com. Shared formatter now; it strips a country code and never invents digits.
+const fmtPhone = (raw: string) => formatUsPhone(raw);
 
 // ---- NEW: robust value resolvers -------------------------------------------
 
@@ -308,7 +307,7 @@ Service: ${formData.service || 'N/A'}
             {displayPhone && (
               <div className="text-muted-foreground">
                 Or call us at{' '}
-                <a href={`tel:${phoneDigits}`} className="underline">
+                <a href={telHref(phoneRaw)} className="underline">
                   {displayPhone}
                 </a>
               </div>

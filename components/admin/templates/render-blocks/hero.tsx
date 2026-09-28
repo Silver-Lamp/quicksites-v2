@@ -1,6 +1,7 @@
 'use client';
 
 import type { Block } from '@/types/blocks';
+import { formatUsPhone } from '@/lib/phone/formatUs';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import PainterlyBackdrop from '@/components/site/painterly-backdrop';
@@ -104,11 +105,8 @@ function selectHeroContent(propsRaw: any, contentRaw: any) {
   return merged;
 }
 
-function formatPhoneDisplay(digits: string) {
-  const d = digits.replace(/\D/g, '');
-  if (d.length !== 10) return digits;
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-}
+// Shared — see lib/phone/formatUs.ts. This one already failed safe; the contact form did not.
+const formatPhoneDisplay = (digits: string) => formatUsPhone(digits);
 
 function toPercent(v?: string, axis: 'x' | 'y' = 'x') {
   if (!v) return 50;

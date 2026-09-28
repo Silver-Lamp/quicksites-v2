@@ -66,6 +66,10 @@ export async function selectMailableDrafts(opts: SelectOptions = {}): Promise<Ma
     .eq('status', 'draft_built')
     .eq('lead_tier', 'no_website')
     .is('postcard_sent_at', null)
+    // ⚠️ Never mail a business that came back "out of business" or "refused". Without this the
+    // operator marks a returned card, the record is perfect, and the next run posts another one
+    // to the same dead address — see lib/outreach/mail/returns.ts.
+    .is('closed_at', null)
     .not('template_id', 'is', null)
     .neq('industry_key', 'restaurant')
     .order('created_at', { ascending: false })

@@ -82,8 +82,15 @@ export function computeCardResponse(mailings: CardMailingRow[], prospects: CardP
     if (!prev || m.created_at < prev.created_at) firstCard.set(m.prospect_id!, m);
   }
 
+  // ⚠️ A RETURNED CARD NEVER ARRIVED, and until returns could be recorded this line could not
+  // know that. `arrived` was purely "the expected delivery date has passed", so a card sitting
+  // in the operator's hands marked Return To Sender still counted toward the denominator the
+  // scan rate is measured against — quietly understating how well the surviving cards did.
   const arrivedIds = new Set<string>();
-  for (const [pid, m] of firstCard) if (m.expected_delivery_date && m.expected_delivery_date <= today) arrivedIds.add(pid);
+  for (const [pid, m] of firstCard) {
+    if (m.returned_at) continue;
+    if (m.expected_delivery_date && m.expected_delivery_date <= today) arrivedIds.add(pid);
+  }
 
   let visited = 0, visits = 0, claimed = 0, preDeliveryVisited = 0;
   let firstVisitAt: string | null = null, lastVisitAt: string | null = null;

@@ -149,8 +149,19 @@ export function orderQueue<T extends { priority: number; created_at: string }>(r
   return [...rows].sort((a, b) => b.priority - a.priority || a.created_at.localeCompare(b.created_at));
 }
 
-/** Pure: which parked prospects the pipeline builds — no website, no draft, a trade, not dismissed. */
-export function isBuildable(p: Pick<Prospect, 'status' | 'lead_tier' | 'template_id' | 'industry_key'>): boolean {
+/**
+ * Pure: which parked prospects the pipeline builds — no website, no draft, a trade, not dismissed,
+ * and NOT CLOSED.
+ *
+ * ⚠️ `closed_at` is the terminal state set when a postcard comes back "out of business" or
+ * "refused" (lib/outreach/mail/returns.ts). Without this check the nightly cron cheerfully
+ * builds a fresh site for a business the operator has already confirmed is gone — spending AI
+ * and a domain slot on a page nobody will ever claim.
+ */
+export function isBuildable(
+  p: Pick<Prospect, 'status' | 'lead_tier' | 'template_id' | 'industry_key'> & { closed_at?: string | null },
+): boolean {
+  if (p.closed_at) return false;
   return p.status === 'discovered' && p.lead_tier === 'no_website' && !p.template_id && isTradeIndustry(p.industry_key);
 }
 

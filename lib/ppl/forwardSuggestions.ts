@@ -35,15 +35,23 @@ const MIN_IMPRESSIONS = 10;
  * rank — the proven list came from the GSC query harvest. Filtering on `page1` would have
  * excluded precisely the campaigns in question while looking like a principled filter.
  */
-export async function suggestForwardTargets(opts: { requireDemand?: boolean } = {}): Promise<{
+export async function suggestForwardTargets(
+  opts: { requireDemand?: boolean; includeAssigned?: boolean } = {},
+): Promise<{
   recommendations: ForwardRecommendation[];
   skipped: { domain: string; why: string }[];
 }> {
-  const { data: campaigns } = await supabaseAdmin
+  // ⚠️ `includeAssigned` exists because "who should this go to instead" had no answer. The
+  // `.is('forward_to', null)` filter meant a campaign was ranked exactly once — before it had a
+  // destination — and never again, so the re-point box on /admin/ppl opened empty and the
+  // operator had to type an E.164 number from memory. On 2026-09-30 that produced a format
+  // error on an untouched field whose placeholder looked like a value. A recommender that
+  // cannot answer the question being asked at the moment it is asked is not much of one.
+  const query = supabaseAdmin
     .from('geo_industry_campaigns')
     .select('id, domain, city, region, industry_key, center_lat, center_lon, forward_to, tracking_number, forward_opted_out_at')
-    .is('forward_to', null)
     .order('domain');
+  const { data: campaigns } = await (opts.includeAssigned ? query : query.is('forward_to', null));
 
   // Impressions per campaign domain. GSC stores a property (`sc-domain:x`, `https://www.x/`),
   // so both sides go through the same normalizer rather than comparing raw strings.
@@ -84,6 +92,7 @@ export async function suggestForwardTargets(opts: { requireDemand?: boolean } = 
       industry_key: c.industry_key,
       center_lat: c.center_lat,
       center_lon: c.center_lon,
+      current_forward_to: c.forward_to ?? null,
     });
   }
 
@@ -128,15 +137,45 @@ export async function suggestForwardTargets(opts: { requireDemand?: boolean } = 
   // not a rejected candidate, it is an unrelated row, and burying the real rejections in it is
   // how a report stops being read. City stays in the module because it needs the service-area
   // normalisation ("Serving Renton, WA") that a SQL equality cannot do.
-  const recommendations = eligible.map((c) =>
-    recommendForwardTargets(
+  const recommendations = eligible.map((c) => {
+    // ⚠️ A campaign's OWN destination must not read as "taken by another campaign". The map is
+    // built globally, so without this a re-point would show the incumbent flagged
+    // `already receives forwarded calls from <its own domain>` and penalised 50 points for it —
+    // a warning about a conflict with itself.
+    const self = normalizePhone(c.current_forward_to);
+    const others = self
+      ? new Map([...forwardedElsewhere].filter(([phone]) => phone !== self))
+      : forwardedElsewhere;
+    return recommendForwardTargets(
       c,
       all.filter((p) => p.industry_key === c.industry_key),
-      { optedOut, unresponsive, forwardedElsewhere },
-    ),
-  );
+      {
+        optedOut,
+        unresponsive,
+        forwardedElsewhere: others,
+        currentDestination: c.current_forward_to ?? null,
+      },
+    );
+  });
 
   // ⚠️ Deconflict AFTER ranking: distance matching makes neighbouring markets overlap, and
   // without this one business is the top pick for four campaigns at once.
-  return { recommendations: deconflictTopPicks(recommendations), skipped };
+  //
+  // ⚠️ BUT ONLY OVER CAMPAIGNS THAT ARE ACTUALLY BEING ASSIGNED ONE. Deconfliction reserves a
+  // business for the campaign whose town it is closest to; a campaign that already forwards
+  // somewhere is not competing for anybody, so letting it into the pass makes it hoard a
+  // candidate for a re-point that will never happen.
+  //
+  // This is not hypothetical — it appeared the moment `includeAssigned` was added. Covington,
+  // the one campaign genuinely needing a new destination, lost Prime Towing (5.0★/10, fresh),
+  // Hook Towing and Affordable Towing Issaquah to seatac / renton / maplevalley — all three of
+  // which have working forward-tos — and fell through to King's Towing: unrated and last
+  // observed 79 days ago. A live destination is not a claim on the market's next best business.
+  //
+  // Real assignments are still respected everywhere: `forwardedElsewhere` is built from every
+  // campaign that actually forwards, so an assigned business is already penalised and flagged
+  // for everyone. Deconfliction covers only the different case of two FRESH picks colliding.
+  const unassigned = recommendations.filter((r) => !r.campaign.current_forward_to);
+  const assigned = recommendations.filter((r) => !!r.campaign.current_forward_to);
+  return { recommendations: [...deconflictTopPicks(unassigned), ...assigned], skipped };
 }

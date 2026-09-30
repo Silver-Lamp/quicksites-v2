@@ -50,3 +50,28 @@ export function telHref(raw?: string | null): string {
   if (digits.length === 10) return `tel:+1${digits}`;
   return `tel:${digits}`;
 }
+
+/**
+ * The API form: `+12536552016`, or **null** when the input is not a parseable US number.
+ *
+ * The third representation, and it lives here for the reason the header gives — the reader form,
+ * the dialer href and the machine form disagree precisely on the awkward inputs, so they belong
+ * where a change to one is read beside the others.
+ *
+ * ⚠️ NULL RATHER THAN A BEST EFFORT. `formatUsPhone` can safely return its input unchanged
+ * because a human reads the result and notices; this value is DIALLED, so a half-parsed number
+ * is a call placed to the wrong person. The caller must handle null.
+ *
+ * ⚠️ Its job is to spare a human the format, not to enforce it. Every phone we hold about a
+ * business is display-format (`(253) 326-5555` — it is what Places returns), while every phone
+ * we dial must be E.164, and asking an operator to convert between them by hand is how the
+ * re-point box shipped a validation error on a number that was already correct.
+ */
+export function usE164(raw?: string | null): string | null {
+  const digits = String(raw ?? '').replace(/\D/g, '');
+  const national = digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+  if (national.length !== 10) return null;
+  // NANP: neither the area code nor the exchange may begin with 0 or 1.
+  if (national[0] === '0' || national[0] === '1') return null;
+  return `+1${national}`;
+}

@@ -85,10 +85,23 @@ export default async function PplOpsPage() {
   const twilioNumbers = twilioConfigured() ? await listTrackingNumbers().catch(() => []) : [];
   const family = twilioConfigured() ? await accountFamily().catch(() => null) : null;
   const openDisputes = await listOpenDisputes().catch(() => []);
-  const forwardSuggestions = await suggestForwardTargets().catch(() => ({
+  // ⚠️ `includeAssigned` so the Re-point box can open PRE-FILLED. The section below still shows
+  // only the unassigned ones (a campaign that already forwards is not "waiting on a forward-to"),
+  // but the table rows need a next pick too — otherwise re-pointing is a typing exercise against
+  // an E.164 number the operator has to find somewhere else.
+  const forwardSuggestions = await suggestForwardTargets({ includeAssigned: true }).catch(() => ({
     recommendations: [],
-    skipped: [],
+    skipped: [] as { domain: string; why: string }[],
   }));
+  const nextPickFor = (campaignId: string) => {
+    const rec = forwardSuggestions.recommendations.find((r) => r.campaign.id === campaignId);
+    const top = rec?.ranked[0];
+    return top ? { phone: top.prospect.phone, name: top.prospect.business_name } : null;
+  };
+  // The suggestion cards keep their original scope: campaigns with nowhere to send calls.
+  const unassignedSuggestions = forwardSuggestions.recommendations.filter(
+    (r) => !r.campaign.current_forward_to,
+  );
   // Dial outcomes keyed by campaign AND the destination that was actually rung, so a campaign
   // re-pointed last week does not show the previous business's failures against the new one.
   // Only rows carrying `forwarded_to` count; `unattributed` is everything dialled before
@@ -503,6 +516,8 @@ export default async function PplOpsPage() {
                                 forwardTo={c.forward_to}
                                 answered={h?.answered ?? 0}
                                 unanswered={h?.unanswered ?? 0}
+                                suggestedPhone={nextPickFor(c.id)?.phone ?? null}
+                                suggestedName={nextPickFor(c.id)?.name ?? null}
                               />
                             </>
                           );
@@ -536,7 +551,7 @@ export default async function PplOpsPage() {
           unrated candidates produces a confident-looking #1 that is really a coin flip, and the
           thing being decided is where a stranger’s call lands at 2am.
         </p>
-        {!s.flags.callTracking && forwardSuggestions.recommendations.length > 0 ? (
+        {!s.flags.callTracking && unassignedSuggestions.length > 0 ? (
           // ⚠️ A greyed button with only a tooltip is a dead end for anyone who does not hover.
           // The blocker is one env var, so say which one and say that it needs a redeploy —
           // env attaches at deploy time, so setting it alone changes nothing.
@@ -547,13 +562,13 @@ export default async function PplOpsPage() {
             below for a number the account already holds.
           </p>
         ) : null}
-        {forwardSuggestions.recommendations.length === 0 ? (
+        {unassignedSuggestions.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">
             No campaign is waiting on a forward-to.
           </p>
         ) : (
           <div className="mt-3 space-y-3">
-            {forwardSuggestions.recommendations.map((r) => (
+            {unassignedSuggestions.map((r) => (
               <div key={r.campaign.id} className="rounded-xl border border-border p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="font-medium">

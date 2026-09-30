@@ -14,6 +14,7 @@
 // guess.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usE164 } from '@/lib/phone/formatUs';
 
 export default function PplRepointForward({
   campaignId,
@@ -36,7 +37,11 @@ export default function PplRepointForward({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [phone, setPhone] = useState(suggestedPhone ?? '');
+  // ⚠️ NORMALISED ON THE WAY IN. Every phone we hold about a business is display-format —
+  // `(253) 326-5555`, which is what Places returns — and the route requires E.164. Pre-filling
+  // the raw suggestion would hand the operator a value that fails validation the moment they
+  // press the button, which is a worse version of the empty field this replaces.
+  const [phone, setPhone] = useState(usE164(suggestedPhone) ?? '');
   const [mark, setMark] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -46,9 +51,20 @@ export default function PplRepointForward({
   const looksDead = answered === 0 && unanswered >= 2;
 
   async function run() {
-    const e164 = phone.trim();
-    if (!/^\+[1-9]\d{7,14}$/.test(e164)) {
-      setMsg('Needs an E.164 number, e.g. +12533265555');
+    const typed = phone.trim();
+    // ⚠️ AN EMPTY FIELD IS NOT A FORMAT PROBLEM, AND SAYING SO COST A REAL ATTEMPT. The first
+    // version answered a blank box with "Needs an E.164 number, e.g. +1…" — while the box
+    // displayed a placeholder that reads exactly like a filled-in value. The operator saw a
+    // number, pressed the button, and was told the number was malformed. Name the actual fault.
+    if (!typed) {
+      setMsg('Enter the number to forward to — the box is empty (the grey number is an example).');
+      return;
+    }
+    // Accept whatever a person can paste. Our own data is display-format, so demanding E.164
+    // from a human when we can derive it is friction we invented.
+    const e164 = usE164(typed);
+    if (!e164) {
+      setMsg(`"${typed}" is not a US phone number I can dial. Ten digits, any punctuation.`);
       return;
     }
     if (
@@ -89,7 +105,10 @@ export default function PplRepointForward({
       const notice = j.notice?.sent
         ? 'notice sent'
         : `⚠️ NOTICE NOT SENT (${j.notice?.reason ?? 'unknown'}) — they have not been told`;
-      setMsg(`now ${j.to}${j.from ? ` (was ${j.from})` : ''}; ${notice}`);
+      const shared = j.alsoForwardsFor?.length
+        ? ` ⚠️ also receives calls from ${j.alsoForwardsFor.join(', ')}`
+        : '';
+      setMsg(`now ${j.to}${j.from ? ` (was ${j.from})` : ''}; ${notice}${shared}`);
       setOpen(false);
       router.refresh();
     } catch (e: any) {
@@ -115,17 +134,23 @@ export default function PplRepointForward({
       </button>
       {open ? (
         <span className="inline-flex flex-wrap items-center gap-2">
-          {/* The placeholder is a 555 number on purpose: a format example that cannot be
-              mistaken for a real destination someone half-read off the screen and dialled. */}
+          {/* ⚠️ The placeholder is prose, not a number. A grey `+1…` in an empty box is
+              indistinguishable from a filled one at a glance — that is exactly how a blank
+              field got submitted and answered with a format complaint. */}
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="+12065550123"
-            className="w-40 rounded-md border border-border bg-background px-2 py-0.5 text-[11px] font-mono"
+            placeholder="phone to forward to"
+            aria-label={`New forward-to number for ${domain}`}
+            className="w-44 rounded-md border border-border bg-background px-2 py-0.5 text-[11px] font-mono"
           />
           {suggestedName ? (
-            <span className="text-[11px] text-muted-foreground">next pick: {suggestedName}</span>
-          ) : null}
+            <span className="text-[11px] text-muted-foreground">
+              pre-filled: {suggestedName}
+            </span>
+          ) : (
+            <span className="text-[11px] text-amber-300">no suggestion — type a number</span>
+          )}
           {/* ⚠️ The label names the TEST, not the conclusion, and that is the whole point.
               Missed calls through our own bridge cannot distinguish "they answer nobody" from
               "they screen the unknown number WE call from" — every one of those calls shares

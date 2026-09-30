@@ -66,6 +66,14 @@ export type ForwardCampaign = {
    */
   center_lat?: number | null;
   center_lon?: number | null;
+  /**
+   * Where this campaign's calls go today, when it already has a destination.
+   *
+   * Carried on the campaign so a caller can tell a first assignment from a REPLACEMENT without
+   * a second query — the two want different surfaces (a suggestion card vs a pre-filled
+   * re-point box) and, before this, only unassigned campaigns were ever ranked at all.
+   */
+  current_forward_to?: string | null;
 };
 
 /** Phones already spoken for, so one business is not silently wired to two of our domains. */
@@ -85,6 +93,14 @@ export type ForwardContext = {
    * the reason a candidate was dropped is reported as the one it actually was.
    */
   unresponsive?: Set<string>;
+  /**
+   * The campaign's CURRENT forward-to, when recommending a replacement for it.
+   *
+   * Dropped from the ranking rather than left in it: the question a re-point asks is "who else",
+   * and answering it with the business already receiving the calls is not an answer. Reported as
+   * its own disqualify reason so the pool does not appear to have silently lost a candidate.
+   */
+  currentDestination?: string | null;
   /** Evaluation date; injected so tests are not time-dependent. */
   now?: Date;
 };
@@ -96,7 +112,8 @@ export type DisqualifyReason =
   | 'outside_market'
   | 'region_mismatch'
   | 'opted_out'
-  | 'unresponsive';
+  | 'unresponsive'
+  | 'current_destination';
 
 /**
  * What settled this candidate's place in the order.
@@ -412,6 +429,7 @@ export function recommendForwardTargets(
   const now = ctx.now ?? new Date();
   const optedOut = ctx.optedOut ?? new Set<string>();
   const unresponsive = ctx.unresponsive ?? new Set<string>();
+  const currentDestination = normalizePhone(ctx.currentDestination) || null;
   const forwardedElsewhere = ctx.forwardedElsewhere ?? new Map<string, string>();
 
   const disqualified: { prospect: ForwardProspect; reason: DisqualifyReason }[] = [];
@@ -457,6 +475,10 @@ export function recommendForwardTargets(
     }
     if (unresponsive.has(phone)) {
       disqualified.push({ prospect: p, reason: 'unresponsive' });
+      continue;
+    }
+    if (currentDestination && phone === currentDestination) {
+      disqualified.push({ prospect: p, reason: 'current_destination' });
       continue;
     }
     kept.push(p);

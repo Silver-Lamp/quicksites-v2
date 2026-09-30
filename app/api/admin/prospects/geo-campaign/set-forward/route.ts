@@ -116,5 +116,17 @@ export async function POST(req: Request) {
 
   const notice = await sendForwardNotice(campaignId);
 
-  return NextResponse.json({ ok: true, campaignId, from, to, previous, notice });
+  // ⚠️ REPORTED, NOT BLOCKED. One operator legitimately covers two towns, so two of our domains
+  // ringing one phone is a judgement call — but it is also something a caller can notice, and
+  // the re-point box can suggest the same business to several campaigns at once (they are
+  // hypotheticals until pressed, so deconfliction deliberately leaves them alone). Saying it
+  // out loud after the fact costs nothing; refusing would strand a market with one real business.
+  const { data: shared } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('domain')
+    .eq('forward_to', to)
+    .neq('id', campaignId);
+  const alsoForwardsFor = (shared ?? []).map((r) => (r as { domain: string }).domain);
+
+  return NextResponse.json({ ok: true, campaignId, from, to, previous, notice, alsoForwardsFor });
 }

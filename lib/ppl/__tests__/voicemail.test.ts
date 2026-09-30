@@ -12,6 +12,8 @@ import {
   voicemailUrl,
   voicemailPromptTwiml,
   voicemailFirstPromptTwiml,
+  voicemailGreetingUrl,
+  VOICEMAIL_GREETING_SCRIPT,
   missedCallSmsText,
   VOICEMAIL_LINK_TTL_MS,
 } from '@/lib/ppl/voicemail';
@@ -272,4 +274,71 @@ describe('the flip protects itself', () => {
     const select = src.slice(src.indexOf('.select('), src.indexOf('.order('));
     expect(select).toContain('forward_notice_sent_to');
   });
+});
+
+describe('the recorded greeting', () => {
+  const rec = voicemailFirstPromptTwiml({
+    trade: 'Towing',
+    city: 'Covington',
+    recordActionUrl: 'https://x.test/vm',
+    greetingUrl: 'https://cdn.test/greeting.mp3',
+  });
+  const tts = voicemailFirstPromptTwiml({
+    trade: 'Towing',
+    city: 'Covington',
+    recordActionUrl: 'https://x.test/vm',
+    greetingUrl: null,
+  });
+
+  it('plays the recording when there is one', () => {
+    expect(rec).toContain('<Play>https://cdn.test/greeting.mp3</Play>');
+    expect(rec).not.toMatch(/<Say[^>]*>Thanks for calling/);
+  });
+
+  // ⚠️ Unset is a supported state, not a broken one. A missing file must land on the voice
+  // that has been serving callers all along — never on silence, which would drop the caller
+  // straight onto the beep with no instruction.
+  it('falls back to TTS, and still records either way', () => {
+    expect(tts).toMatch(/<Say[^>]*>Thanks for calling/);
+    expect(tts).not.toContain('<Play>');
+    for (const t of [rec, tts]) expect(t).toContain('<Record');
+  });
+
+  // ⚠️ A recording cannot interpolate, so the script claims LESS than the TTS line — "local
+  // companies in the area" is safe on every campaign, where "towing companies in Covington"
+  // read off a generic file would be wrong on eleven of twelve.
+  it('the written script names no city or trade', () => {
+    expect(VOICEMAIL_GREETING_SCRIPT).toMatch(/local companies in the area/i);
+    expect(VOICEMAIL_GREETING_SCRIPT).not.toMatch(/covington|towing/i);
+    // Same promise as the TTS version: a relay, and the number goes with it.
+    expect(VOICEMAIL_GREETING_SCRIPT).toMatch(/leave a message/i);
+    expect(VOICEMAIL_GREETING_SCRIPT).toMatch(/with your number/i);
+    expect(VOICEMAIL_GREETING_SCRIPT).toMatch(/call you back/i);
+  });
+
+  it('only accepts an https URL, so a stray value cannot become a <Play> target', () => {
+    const prev = process.env.VOICEMAIL_GREETING_URL;
+    for (const bad of ['', 'http://cdn.test/x.mp3', 'javascript:x', 'cdn.test/x.mp3']) {
+      process.env.VOICEMAIL_GREETING_URL = bad;
+      expect(voicemailGreetingUrl()).toBeNull();
+    }
+    process.env.VOICEMAIL_GREETING_URL = 'https://cdn.test/x.mp3';
+    expect(voicemailGreetingUrl()).toBe('https://cdn.test/x.mp3');
+    process.env.VOICEMAIL_GREETING_URL = prev;
+  });
+});
+
+describe('the notification outcome is recorded', () => {
+  // ⚠️ `voicemail_notified_at` is stamped by the CLAIM, before either channel runs, so it only
+  // says we tried. On the first real call the email arrived and the SMS did not, and because
+  // the result was discarded the cause had to be reconstructed from Vercel deploy timestamps.
+  it('the webhook writes which channels succeeded', () => {
+    const src = stripComments(
+      readFileSync('app/api/twilio/geo/[campaignId]/voicemail/route.ts', 'utf8'),
+    );
+    expect(src).toMatch(/voicemail_notify_result/);
+    expect(src).toMatch(/operator_email: r\.email/);
+    expect(src).toMatch(/operator_sms: r\.sms/);
+    // And the business branch records its own outcome rather than dropping it.
+    expect(src).toMatch(/business_sms: !!r\.ok/);  });
 });

@@ -289,6 +289,39 @@ export async function markUnresponsive(
   );
 }
 
+/**
+ * THE NUMBER THE VOICEMAIL-FIRST FLIP EXISTS TO PRODUCE: of the callers who reached our
+ * prompt, what fraction left a message (docs/CALL_CASCADE_PLAN.md §13).
+ *
+ * ⚠️ SEGMENTED ON `handling`, NEVER ON `forwarded_to IS NULL`. That null is also true of every
+ * row predating 20260861, every PPL call with no account, and every campaign that never had a
+ * destination — four populations in one denominator, producing a ratio that looks measured and
+ * answers nothing.
+ *
+ * ⚠️ A caller who hangs up during the greeting still counts in the denominator, and should.
+ * "Would a stranded person rather leave a message than tap the next Google result" is the
+ * question, and someone who hangs up has answered it.
+ */
+export async function voicemailFirstRate(opts: { sinceDays?: number } = {}): Promise<{
+  reached: number;
+  leftMessage: number;
+  rate: number | null;
+}> {
+  const since = new Date(Date.now() - (opts.sinceDays ?? 90) * 86_400_000).toISOString();
+  const { data } = await supabaseAdmin
+    .from('call_logs')
+    .select('recording_url')
+    .eq('handling', 'voicemail_first')
+    .gte('timestamp', since)
+    .limit(5000);
+  const rows = (data ?? []) as { recording_url: string | null }[];
+  const reached = rows.length;
+  const leftMessage = rows.filter((r) => !!r.recording_url).length;
+  // ⚠️ null, not 0, when nobody has called yet. A rate of "0%" off an empty denominator reads
+  // as a finding about callers; it is a fact about our traffic.
+  return { reached, leftMessage, rate: reached > 0 ? leftMessage / reached : null };
+}
+
 /** Give a destination another chance. The row stays, so the history survives. */
 export async function clearUnresponsive(phone: string, reason: string): Promise<void> {
   await supabaseAdmin

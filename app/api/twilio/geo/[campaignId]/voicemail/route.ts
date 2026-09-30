@@ -15,7 +15,12 @@ import { createClient } from '@supabase/supabase-js';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import { verifyTwilioWebhook, xmlResponse, rejectedTwiml } from '@/lib/twilio/verifyWebhook';
-import { voicemailThanksTwiml, missedCallSmsText, voicemailUrl } from '@/lib/ppl/voicemail';
+import {
+  voicemailThanksTwiml,
+  missedCallSmsText,
+  voicemailUrl,
+  notifyOperatorOfVoicemail,
+} from '@/lib/ppl/voicemail';
 import { sendSms } from '@/lib/sms/sendSms';
 import { getSenderProfile } from '@/lib/outreach/senderProfile';
 import { isOptedOut } from '@/lib/ppl/forwardNotice';
@@ -56,16 +61,36 @@ export async function POST(req: Request, ctx: { params: Promise<{ campaignId: st
 
   const campaign = await getGeoCampaign(campaignId).catch(() => null);
   const to = campaign?.forward_to ?? null;
+  const callerPhone = claimed[0]?.from_number ?? from;
+  const link = voicemailUrl(callSid, publicBaseUrl());
+
   if (to && !(await isOptedOut(to).catch(() => false))) {
     const sender = await getSenderProfile().catch(() => null);
-    const text = missedCallSmsText({
-      domain: campaign?.domain ?? 'your QuickSites site',
-      callerPhone: claimed[0]?.from_number ?? from,
-      link: voicemailUrl(callSid, publicBaseUrl()),
-      senderName: sender?.name ?? null,
+    await sendSms(
+      to,
+      missedCallSmsText({
+        domain: campaign?.domain ?? 'your QuickSites site',
+        callerPhone,
+        link,
+        senderName: sender?.name ?? null,
+        hasRecording: !!recordingUrl,
+      }),
+    ).catch(() => ({ ok: false }));
+  } else {
+    // ⚠️ VOICEMAIL-FIRST: there is no business to text, and a message nobody is told about is a
+    // lead dying in a table. The caller was promised we would pass it on, so somebody has to be
+    // told — and during the experiment that somebody is the operator, who relays it by hand.
+    //
+    // ⚠️ THE PROMISE IS MADE TO THE CALLER, SO IT CANNOT WAIT ON A DASHBOARD BEING CHECKED.
+    // /admin/call-logs would show the row, but at roughly one call every five days nobody is
+    // watching, and "it was visible if you looked" is how the two leads on 2026-09-30 were
+    // lost in the first place.
+    await notifyOperatorOfVoicemail({
+      domain: campaign?.domain ?? 'a QuickSites site',
+      callerPhone,
+      link,
       hasRecording: !!recordingUrl,
     });
-    await sendSms(to, text).catch(() => ({ ok: false }));
   }
 
   return xmlResponse(voicemailThanksTwiml());

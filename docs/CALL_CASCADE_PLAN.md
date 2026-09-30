@@ -179,3 +179,58 @@ should be pulled rather than tuned.
    and nothing currently consumes the recordings.
 4. **Ship Phase 0 first, or wait and ship the cascade whole?** Suggest Phase 0 now — callers are
    being dropped in silence today, and it is the cascade's fallback regardless.
+
+---
+
+## 10. Built 2026-09-30
+
+**Phase 0 — shipped (#1073).** An unanswered forward takes a message and texts the business the
+callback number. `/voicemail/<token>` streams the audio with our credentials (a raw
+`api.twilio.com` recording URL 401s, so texting one sends a link that looks delivered and plays
+nothing). The bridged leg is no longer recorded, per §9.3 — and the consent obligation **moved**
+to the voicemail prompt rather than being dropped, which discloses more than the notice it
+replaced: the caller is told the message is kept *and* where it goes.
+
+**Phase 1 — built, flag-gated OFF (`CALL_CASCADE_ENABLED`).** Pure logic in `lib/ppl/cascade.ts`,
+I/O in `cascadeStore.ts`, state in `cascade_attempts` (migration `20260864`). The loop is five
+Twilio routes under `/api/twilio/geo/[campaignId]/`: `cascade` (pick and ring), `whisper` (the
+accept Gather), `accept` (the keypress), `cascade-leg` (outcome, then advance), `voicemail`
+(terminal fallback, shared with Phase 0).
+
+Settled at the owner's answers to §9: depth **5**, ring **22 s**, **no** recording of the
+bridged leg, Phase 0 first.
+
+### What the build changed about the plan
+
+⚠️ **`getGeoCampaign()` does not return `center_lat`/`center_lon`.** Passing its result to the
+pool loader — the obvious thing to write, and what the first draft did — makes `marketMatch`
+find no coordinates and silently fall back to **city-name equality**, which is the bug distance
+matching exists to kill: `outreach_prospects.city` records where a business was first swept, not
+which town it serves, and it qualified **1 of 13** real candidates in Maple Valley. The cascade
+would have rung one business in a market holding thirty-three and nothing would have looked
+broken. `loadCascadePool` now takes a campaign **id** and loads the columns it needs itself, so
+no caller can hand it the wrong shape.
+
+⚠️ **Unresponsive businesses are ordered last, not excluded.** In a cascade the distinction
+matters: ringing a business that has never picked up costs 22 seconds and might work, while
+striking it off shrinks a thin market permanently. A STOP still excludes absolutely — that is
+the business's own decision, not our observation. **This is `forward_unresponsive` doing a
+better job than it did as a blacklist**, and it retires the worry in §1 that the list would
+eventually swallow the market.
+
+⚠️ **Unknown sorts between known-good and known-bad.** Last means a freshly-swept market never
+gets rung; first means one lucky answer outranks a business with a real record. Most of any pool
+is unknown at any moment.
+
+⚠️ **`I tried 0 and couldn't reach anyone`** was the first draft's output on an empty pool — a
+machine reading a variable aloud, and a claim about attempts that never happened. An empty
+market is a real state and gets its own sentence.
+
+## 11. Before turning the flag on
+
+1. **A business notice** (phase 2, not built). The forwarding notice covers *being the
+   designated destination*. It does not cover being cold-dialed as one of thirty candidates with
+   a live customer attached. ⚠️ **A business whose first knowledge of us is an unexpected call
+   with a stranger on the line is a complaint, not a lead.**
+2. **One end-to-end call on a real campaign**, watching `cascade_attempts` fill.
+3. Then the two numbers in §8 — attempts-per-call, and whether `accepted` is ever true.

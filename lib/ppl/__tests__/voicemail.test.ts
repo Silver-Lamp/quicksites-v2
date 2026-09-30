@@ -252,3 +252,24 @@ describe('voicemail-first source guards', () => {
     for (const call of calls) expect(call).toMatch(/handling:/);
   });
 });
+
+describe('the flip protects itself', () => {
+  // ⚠️ Voicemail-first is switched on by CLEARING forward_to, which makes a campaign look
+  // identical to one that never had a destination — so it reappears under "Suggested
+  // forward-to" with a pick and an attach button. A week later that reads as a to-do, someone
+  // attaches a business, and the experiment ends silently with nothing recording that it did.
+  it('a deliberately cleared destination is skipped, not re-suggested', () => {
+    const src = stripComments(readFileSync('lib/ppl/forwardSuggestions.ts', 'utf8'));
+    expect(src).toMatch(/if \(!c\.forward_to && c\.forward_notice_sent_to\)/);
+    expect(src).toMatch(/voicemail-first — destination deliberately cleared/);
+  });
+
+  // ⚠️ The guard reads a column the query must actually SELECT. It did not at first, so
+  // `c.forward_notice_sent_to` was undefined and the whole branch was a silent no-op that
+  // typechecked and passed every unit test.
+  it('and the column it reads is selected', () => {
+    const src = stripComments(readFileSync('lib/ppl/forwardSuggestions.ts', 'utf8'));
+    const select = src.slice(src.indexOf('.select('), src.indexOf('.order('));
+    expect(select).toContain('forward_notice_sent_to');
+  });
+});

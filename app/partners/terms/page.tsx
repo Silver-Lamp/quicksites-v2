@@ -27,6 +27,7 @@ import {
   DEFAULT_UPLINE_FEE_SHARE,
   AFFILIATE_FEE_SHARE,
   AFFILIATE_MAX_FEE_SHARE,
+  ORIGINATION_UPLINE_POOL_SHARE,
 } from '@/lib/commerce/partner-terms';
 import { marketingOg } from '@/lib/marketingOg';
 
@@ -37,6 +38,7 @@ const house = pct(QS_FEE_SHARE);
 const upline = pct(DEFAULT_UPLINE_FEE_SHARE);
 const affiliate = pct(AFFILIATE_FEE_SHARE);
 const affiliateMax = pct(AFFILIATE_MAX_FEE_SHARE);
+const originationPool = pct(ORIGINATION_UPLINE_POOL_SHARE);
 const residual = RESIDUAL_MONTHS > 0 ? `${RESIDUAL_MONTHS} months` : 'for the life of the account';
 
 export const metadata = marketingOg({
@@ -148,13 +150,48 @@ export default function PartnerTermsPage() {
               />
               <Row
                 k="Who funds it"
-                v={`The QuickSites ${house} — never the reseller's ${keep}`}
-                note="Clamped in code. Someone above you in the chain cannot reduce what the person doing the work earns."
+                v="The QuickSites share — never the seller's"
+                note="Clamped in code. Someone above you in the chain cannot reduce what the person doing the work earns, however many levels are added."
+              />
+              <Row
+                k="How big the pool is"
+                v={`${house} on an operator sale, ${originationPool} on an origination sale`}
+                note="An operator already keeps most of the fee, so little is left to share upward. An origination chain leaves more in the house, and more of it is available to the people above the sale — which is what makes a multi-level sales organisation payable at all."
               />
               <Row
                 k="Order of payment"
                 v="Nearest the sale first"
-                note={`Overrides share the ${house} house slice, so the total across all tiers cannot exceed it.`}
+                note="A level that does not fit under the pool is paid nothing rather than a quietly reduced rate — so a rate you agreed to never shrinks because somebody added a level above you. It shows up as a shortfall we have to fix instead."
+              />
+            </tbody>
+          </table>
+
+          <H>Two tiers, and the difference is who supports the merchant</H>
+          {/* ⚠️ THIS SECTION EXISTS BECAUSE THE 80% WAS BEING READ AS A CLOSING COMMISSION.
+              It is an OPERATING margin: it buys onboarding, branding and support. A sales chain
+              that closes an account and moves on does none of that — QuickSites does — so the
+              same number cannot apply to both without the house funding support out of nothing.
+              Stated up front rather than discovered at the first payout. */}
+          <p className="mt-3 text-zinc-400">
+            The share you keep depends on <span className="text-white">who does the ongoing work</span>,
+            not on who signed the merchant up. Both are lifetime residuals on the same fee.
+          </p>
+          <table className="mt-4 w-full text-[15px]">
+            <tbody>
+              <Row
+                k="Operator"
+                v={`${keep} of the fee`}
+                note="You onboard the merchant, they see your brand, and they come to you when something breaks. The larger share is what pays for that support."
+              />
+              <Row
+                k="Origination"
+                v={`${affiliate} of the fee`}
+                note={`You bring the merchant and move on; we support them. Up to ${affiliateMax} for founding-cohort codes. A smaller share because you are not carrying the support cost.`}
+              />
+              <Row
+                k="Which one you are"
+                v="Chosen when your code is set up"
+                note="Not a judgement about effort — a sales team closing volume can out-earn an operator with a handful of accounts. It only records who answers the merchant's questions."
               />
             </tbody>
           </table>
@@ -162,7 +199,7 @@ export default function PartnerTermsPage() {
           <H>Just referring, not operating?</H>
           <p className="mt-3 text-zinc-400">
             A reseller onboards merchants, brands the product and supports their book. If you only
-            want to pass along a name, that is the affiliate tier instead.
+            want to pass along a name, that is the origination tier above.
           </p>
           <table className="mt-4 w-full text-[15px]">
             <tbody>

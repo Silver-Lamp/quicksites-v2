@@ -61,6 +61,38 @@ export function clampPlatformFeePercent(pct: number): number {
 export const DEFAULT_UPLINE_FEE_SHARE =
   Number(process.env.QS_DEFAULT_UPLINE_FEE_SHARE ?? '0.05') || 0.05;
 
+/**
+ * How much of one fee ALL uplines together may draw from, given who sold it.
+ *
+ * ⚠️ THE 80/20 SPLIT IS AN OPERATING MARGIN, NOT A CLOSING COMMISSION, AND CONFLATING THOSE IS
+ * WHAT THIS FUNCTION EXISTS TO STOP. A reseller "onboards merchants, brands the product and
+ * supports their book" (/partners/terms) — the 80% buys that ongoing work. An ORIGINATION chain
+ * (an ISO rep who closes a merchant and moves on, the sales manager above them, the recruiter
+ * above that) does none of it: **QuickSites supports that merchant.** Paying the closer an
+ * operator's share leaves the house funding support out of the remainder.
+ *
+ * ⚠️ AND THE OLD CAP WAS WRONG ON EXACTLY THAT CASE. Uplines were always capped at
+ * `QS_FEE_SHARE` (20%) whichever tier sold — but on an affiliate sale the closer takes ~25% and
+ * the house retains ~75%, so the chain was fenced out of money sitting right there. Conservative
+ * (it never overpaid) and wrong in the direction that makes a three-level channel unpayable:
+ * Daryle's ISO structure, priced at 5% a level, exhausts a 20% pool at the fourth person and the
+ * house earns nothing — while still doing the support.
+ *
+ * Origination pool default 40%: with a 25% closer that leaves the house 35%, which is what
+ * answering the merchant's phone is funded from. Raise it when the channel proves out; it is
+ * the easy direction to move, and cutting it later is not.
+ */
+export const ORIGINATION_UPLINE_POOL_SHARE =
+  Number(process.env.QS_ORIGINATION_UPLINE_POOL_SHARE ?? '0.40') || 0.4;
+
+export function uplinePoolShare(ownerType: string | null | undefined): number {
+  // ⚠️ Never more than what the house actually retains on that tier, or an upline is funded out
+  // of the closer's residual — the one thing the whole override design promises it will not do.
+  return isAffiliateOwnerType(ownerType)
+    ? Math.min(ORIGINATION_UPLINE_POOL_SHARE, 1 - AFFILIATE_MAX_FEE_SHARE)
+    : QS_FEE_SHARE;
+}
+
 export function clampOverrideShare(share: number): number {
   const v = Number(share) || 0;
   return Math.min(Math.max(v, 0), QS_FEE_SHARE);

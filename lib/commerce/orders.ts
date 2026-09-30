@@ -9,6 +9,7 @@ import {
   PARTNER_FEE_SHARE,
   QS_FEE_SHARE,
   isAffiliateOwnerType,
+  uplinePoolShare,
   affiliateResidualCents,
   AFFILIATE_FEE_SHARE,
 } from './partner-terms';
@@ -549,12 +550,18 @@ export async function markOrderPaid(
           // (CLAUDE.md §8 — the columns are live, verified against prod; the generated types lag).
           codeRow as any
         );
-        //     `QS_FEE_SHARE` is passed explicitly: the reseller's share is protected, so every upline on
-        //     this rail draws from QuickSites' slice and nothing else.
+        //     ⚠️ THE POOL DEPENDS ON WHO SOLD IT. This used to pass `QS_FEE_SHARE` (20%) for every
+        //     sale — correct for a RESELLER, whose 80% operating margin leaves the house exactly
+        //     that. On an AFFILIATE sale the closer takes ~25% and the house retains ~75%, so the
+        //     flat 20% fenced the chain out of money that was sitting right there. That is not a
+        //     rounding issue: an origination channel priced at 5% a level exhausts a 20% pool at
+        //     the fourth person, and the house earns nothing while still supporting the merchant.
+        //     `uplinePoolShare` is capped at what the tier actually retains, so a closer's residual
+        //     still cannot fund an upline.
         const allocation = allocateUplineOverrides(
           orderRow.platform_fee_cents,
           uplineChain,
-          QS_FEE_SHARE
+          uplinePoolShare((codeRow as any)?.owner_type)
         );
 
         // ⚠️ A shortfall means somebody is configured for a rate this order cannot pay. Report it —

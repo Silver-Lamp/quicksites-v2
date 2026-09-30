@@ -51,6 +51,7 @@ import {
   hubOverrideCents,
 } from '@/lib/commerce/partner-terms';
 import { allocateUplineOverrides } from '@/lib/commerce/uplineChain';
+import { hubShareFor } from '@/lib/commerce/hubShare';
 import { DEFAULT_UPLINE_FEE_SHARE } from '@/lib/commerce/partner-terms';
 
 const closerPct = Math.round(SPLIT.closer * 100);
@@ -329,6 +330,15 @@ export default async function ForAmyPage({
     const sp = await searchParams;
     return <PinPrompt error={sp?.e} />;
   }
+
+  // ⚠️ READ FROM THE LIVE ROW, NEVER TYPED. This page told Amy her rate was "not set" for months,
+  // which was true until 2026-09-30 and then quietly was not — the exact shape of claim that
+  // outlives its condition on a page nobody re-reads. Reading it means the page cannot be wrong
+  // about her pay in either direction, and if the row is cleared it says so rather than quoting
+  // a number that no longer exists.
+  const amyShare = await hubShareFor('daryle24').catch(() => null);
+  const amyRatePct = amyShare === null ? null : Math.round(amyShare * 1000) / 10;
+  const amyOnExample = amyShare === null ? 0 : hubOverrideCents(exFeeCents, amyShare);
 
   return (
     <>
@@ -712,6 +722,52 @@ export default async function ForAmyPage({
               </p>
             </Card>
 
+            {/* ⚠️ THIS CARD REPLACED "your rate is not set". It was true for months and stopped
+                being true on 2026-09-30, which is exactly the kind of sentence that outlives its
+                condition on a page nobody re-reads. The figures below are read from the live row,
+                not typed, so the page cannot go stale in that direction again. */}
+            <Card
+              title={
+                amyRatePct === null
+                  ? 'Your rate on this chain is not configured'
+                  : `Your rate is set: ${amyRatePct}% of the fee`
+              }
+              tag={amyRatePct === null ? 'todo' : 'live'}
+              tone={amyRatePct === null ? 'amber' : 'emerald'}
+            >
+              {/* ⚠️ Both branches are real states and the page reads which one is true from the
+                  live row. Rendering "0%" for a missing link would tell her she earns nothing
+                  when the truth is that nobody set it up — different sentence, different fix. */}
+              {amyRatePct === null ? (
+                <>
+                  There is no override configured above the channel code right now, so this chain
+                  would pay you nothing. That is a setup gap, not a decision — tell me and I will
+                  set it.
+                </>
+              ) : (
+                <>
+                  It was zero on every code until 2026-09-30. It is now{' '}
+                  <strong className="text-zinc-200">{amyRatePct}% of the platform fee</strong> on
+                  anything the channel code sells — the head-of-business-development default, not a
+                  number invented for you. On the {money(exFeeCents)} fee in the table above that
+                  is {money(amyOnExample)} a month, recurring, per merchant.
+                </>
+              )}
+              <p className="mt-3">
+                <strong className="text-zinc-200">One limit worth knowing now:</strong> that pays
+                when <em>his own code</em> sells. He is a hub — he recruits resellers rather than
+                merchants — so for you to earn on <em>their</em> volume, each reseller he brings in
+                has to be linked under him as they sign up. That link is a field someone sets, not
+                something that happens by itself, and if it is missed you earn nothing on that
+                branch and nothing reports it.
+              </p>
+              <p className="mt-3 text-zinc-300">
+                So the thing to ask me, every time a new reseller joins under him:{' '}
+                <em>&ldquo;is that one linked?&rdquo;</em> It takes me ten seconds to check and it
+                is the difference between a branch paying you and not.
+              </p>
+            </Card>
+
             <Card title="Both rails now pay every level above the sale" tag="built" tone="emerald">
               Your intent is the rule: as head of business development you earn on everything that
               goes through anyone downstream of you. That is now true on <em>both</em> rails —
@@ -735,8 +791,7 @@ export default async function ForAmyPage({
               <p className="mt-3 text-zinc-300">
                 So the rates of everyone between you and the work are the same budget as yours. That
                 is a real tension in a team you&rsquo;re building, and it&rsquo;s better on the
-                table now than discovered later. Every rate is currently zero, so nothing is paying
-                anyone yet — that part is the conversation we still need to have.
+                table now than discovered later.
               </p>
             </Card>
 

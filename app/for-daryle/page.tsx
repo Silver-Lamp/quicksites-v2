@@ -9,6 +9,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
+import NetworkScenarios from '@/components/commissions/network-scenarios';
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE, QS_FEE_SHARE, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
 
 const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
@@ -203,6 +204,30 @@ export default function ForDarylePage() {
               door-opener for their sales team.
             </Card>
           </div>
+        </section>
+
+        {/* What it pays at network scale — the question from the 2026-09-30 call */}
+        <section className="mx-auto max-w-3xl px-6 pt-10 pb-4">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+            What it pays, at your scale
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            You asked how much your people can make. Move the sliders — these run the same
+            allocator the payment path runs, so nothing here is a rate the system would refuse
+            to pay. Recurring per merchant, for the life of each account.
+          </p>
+          {/* ⚠️ The finding worth the screen space: depth costs money, width does not. An ISO's
+              reps sit one rung further from the sale, so his override is paid AFTER theirs out
+              of the same pool — identical headcount, different take. */}
+          <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4">
+            <NetworkScenarios maxFeePercent={MAX_PLATFORM_FEE_PERCENT} />
+          </div>
+          <p className="mt-4 text-xs leading-relaxed text-zinc-500">
+            ⚠️ Two honest caveats. Every figure assumes a merchant accepts that platform fee on
+            top of card processing — there has been one real order through this system, so that
+            tolerance is untested and it multiplies everything above. And no override has ever
+            been paid to anyone: the mechanism is built and live, the ledger is empty.
+          </p>
         </section>
 
         {/* The Stripe question */}

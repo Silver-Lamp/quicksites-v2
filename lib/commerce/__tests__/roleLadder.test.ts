@@ -99,3 +99,37 @@ describe('the exported diagram', () => {
     expect(m).not.toContain('[one]');
   });
 });
+
+describe('what depth actually costs (the claim a first draft got backwards)', () => {
+  const base = { monthlyVolumeCents: 1_000_000, feePercent: 0.05 } as const;
+  const topOf = (shares: number[], tier: 'operator' | 'origination') => {
+    const r = applyLadderScenario({ ...base, tier, uplineShares: shares });
+    return r.rungs[r.rungs.length - 1];
+  };
+
+  // ⚠️ An override is a share of the FEE, not of what is left after the level below. So adding
+  // a level between you and the sale does NOT reduce your cut. A first draft of the Daryle page
+  // asserted the opposite in prose; running it disproved it.
+  it('a level in between does not reduce the rate above it', () => {
+    const direct = topOf([0.05], 'origination');
+    for (const middle of [0.05, 0.1, 0.15, 0.18]) {
+      expect(topOf([middle, 0.05], 'origination').cents).toBe(direct.cents);
+    }
+  });
+
+  // ⚠️ It is a CLIFF, not a slope: past the pool you are paid nothing, not less. A slope would
+  // be survivable and visible in a number; this is neither.
+  it('but past the pool the top of the chain gets nothing, not less', () => {
+    const ok = topOf([0.15, 0.05], 'operator');
+    expect(ok.shorted).toBeFalsy();
+    const over = topOf([0.18, 0.05], 'operator');
+    expect(over.shorted).toBe(true);
+    expect(over.cents).toBe(0);
+  });
+
+  // The tier decides whether there is a cliff at all — same rates, same depth.
+  it('the same rates that zero you on one tier fit on the other', () => {
+    expect(topOf([0.18, 0.05], 'operator').shorted).toBe(true);
+    expect(topOf([0.18, 0.05], 'origination').shorted).toBeFalsy();
+  });
+});

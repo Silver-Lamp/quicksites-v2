@@ -287,6 +287,39 @@ export async function setCampaignTracking(
   if (error) throw new Error(`setCampaignTracking failed: ${error.message}`);
 }
 
+/**
+ * Re-point an existing campaign at a different business, keeping its number.
+ *
+ * ⚠️ THIS HAD NO PATH AT ALL UNTIL 2026-09-30, AND THE ABSENCE WAS INVISIBLE. Every existing
+ * writer (`provision-number`, `attach-number`, `rebuy-number`) treats the forward-to as a field
+ * you pass while doing something to a NUMBER, so "the destination stopped answering" had no
+ * verb. covingtontow.com dropped two real leads into a phone that rings out, and the only way to
+ * change it was a hand-written UPDATE.
+ *
+ * ⚠️ It deliberately does NOT clear `forward_notice_sent_at`. That timestamp records that a
+ * notice was sent, which stays true; what changes is WHO the current destination is, and
+ * `forward_notice_sent_to` is the field that answers it. `sendForwardNotice` compares the two,
+ * so the new business is notified and the old send is not rewritten out of history.
+ */
+export async function setCampaignForwardTo(id: string, phone: string): Promise<{ from: string | null; to: string }> {
+  const { data: before, error: readErr } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('forward_to')
+    .eq('id', id)
+    .maybeSingle();
+  if (readErr) throw new Error(`setCampaignForwardTo lookup failed: ${readErr.message}`);
+
+  // Same reasoning as setCampaignTracking: forward_to is dialled verbatim, so normalise at the
+  // write and no future caller has to remember.
+  const to = toE164(phone) ?? phone;
+  const { error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .update({ forward_to: to, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(`setCampaignForwardTo failed: ${error.message}`);
+  return { from: (before as { forward_to: string | null } | null)?.forward_to ?? null, to };
+}
+
 function uuid(): string {
   return globalThis.crypto?.randomUUID?.() ?? `id_${Math.random().toString(36).slice(2)}${Date.now()}`;
 }

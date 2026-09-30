@@ -601,3 +601,87 @@ following it** is worse than none: it looks like a finding and loops them.
 writes to a parked row, so status/owner/claim history stay untouched. `observedAt()` prefers it
 everywhere freshness is judged. After the fix the same Renton sweep reports `seen=17` and the pool
 reads `usable`, age 0d.
+
+### 11e. A forward-to can go dead, and nothing could see it (2026-09-30)
+
+**What happened.** `covingtontow.com` took two real inbound calls at 07:33 and 07:34 Pacific. Both
+rang out at AL Ram Towing — a 5.0★/71-review business 0.6 km from the town centre, the highest
+scorer in the market by a clear margin, notified two days earlier and having sent no STOP. It was
+found because the operator happened to dial his own site and read the call log. Three separate
+things had to be missing for that to be the discovery path:
+
+**1. The status column was painted green.** `/admin/call-logs` hard-coded `text-green-400` on the
+status cell, so `Dial-No-Answer` rendered in the success colour. The evidence had been on screen
+since the calls landed. **A dashboard that paints failure as success is worse than one that omits
+it, because it is consulted and believed.** Colour now comes from `classifyDial`, the same
+function the rollups use, so the page cannot disagree with the numbers above it.
+
+**2. Nothing recorded WHO was dialled.** `call_logs.to_number` is *our* tracking number; the
+destination lived only on the mutable `geo_industry_campaigns.forward_to`. An answer rate could
+therefore only be computed against whoever holds the line today — so the instant a campaign is
+re-pointed, every historical no-answer is re-attributed to the business that just inherited it,
+and a new destination's first achievement is inheriting its predecessor's failures. `forwarded_to`
+(migration `20260861`) is written at dial time. ⚠️ **It is deliberately not backfilled.** Filling
+it from the current `forward_to` would look complete and would be a guess about history presented
+as a record of it — the exact thing the column exists to prevent. NULL reads as "not recorded",
+which is true, and `forwardHealth` counts only rows that know their own destination.
+
+**3. There was no verb for "send these calls somewhere else".** Every writer
+(`provision-number`, `attach-number`, `rebuy-number`) changes a NUMBER and carries the forward-to
+along as a field, so the failure that actually occurs had no action — the only fix was a
+hand-written `UPDATE` against production. Now: `setCampaignForwardTo`,
+`POST /api/admin/prospects/geo-campaign/set-forward`, and a **Re-point** control on `/admin/ppl`
+that shows the destination's own answer record beside it, because "0 of 3 answered" is the reason
+to press it and a bare button is an invitation to guess.
+
+**The consent bug this uncovered, which is the worst of the four.** `sendForwardNotice` returned
+`already_sent` whenever `forward_notice_sent_at` was non-null — a timestamp with no subject. The
+first re-point would have started ringing a business that had been told nothing, while the system
+recorded the notice as handled. The notice **is** the consent path; it was one field from being
+skipped exactly when it matters most. `forward_notice_sent_to` makes the claim checkable: this
+NUMBER was told, not this campaign. ⚠️ The legacy fallback is load-bearing — a timestamp with no
+recorded subject still counts as sent, or improving our own bookkeeping would have re-texted
+twelve businesses that were told two days ago.
+
+**`forward_unresponsive` is not `forward_opt_outs`, and the distinction is the point.** An opt-out
+is the business's own decision. "Does not answer" is *our* conclusion from *our* evidence, and it
+may be wrong — they may be screening the unknown number **we** call from, since the notice SMS
+goes out from `TWILIO_FROM` while the calls present the campaign's tracking number, so a recipient
+has no way to connect the two. Filing an observation as an opt-out would put words in their mouth
+and, because `applyStop` clears the forward everywhere, would be near-impossible to revisit. Same
+shape as `20260860`'s `bad_address` vs `out_of_business`: one is a fact about them, the other a
+fact about us, and the remedies differ. An active row disqualifies the phone in the recommender —
+otherwise the next suggestion is always the market's top scorer, which is precisely the business
+just dropped for not picking up.
+
+⚠️ **`classifyDial` distrusts Twilio's `completed`.** `DialCallStatus = completed` means the
+dialled leg ended normally, which is also what voicemail answering looks like. So `answered`
+requires `completed` **and** ≥ `ANSWERED_MIN_SECONDS` (15s); anything shorter is counted as
+`brief` rather than folded into either side. Calling a 4-second voicemail pickup a delivered lead
+is the flattering reading, and the flattering reading is what let this run. An *unrecognised*
+status is `in_progress`, never a failure — a vocabulary change at Twilio must not write real
+businesses onto the unresponsive list.
+
+**The caller-ID hypothesis was tested the same day and is FALSE — and the test is now the
+procedure.** The worry was that destinations screen us: the notice SMS goes out from
+`TWILIO_FROM` while the calls present the campaign's tracking number, so a recipient cannot
+connect the two and sees only an unknown 253 number ringing repeatedly. If that were the cause,
+re-pointing would move the problem rather than fix it. Sandon dialled `(253) 234-7959` directly
+from his own phone and reached **"the Google subscriber you have dialed is not available, please
+leave a message."** An ordinary call from an unrelated number is not answered either, so the
+failure is theirs, our bridge is exonerated, and switching destinations is the right remedy.
+
+⚠️ **Run that test before marking a destination unresponsive.** Thirty seconds on an ordinary
+phone distinguishes the two explanations — *they do not answer* versus *they do not answer US* —
+and only one of them is fixed by re-pointing. N missed calls through our own bridge cannot tell
+them apart however large N gets, because every one of those calls shares the suspect variable.
+`forward_unresponsive.note` is where the result goes, so the next reader inherits the evidence
+rather than the conclusion.
+
+⚠️ **A pattern worth one person's glance, not a feature.** AL Ram is 5.0★ from 71 reviews and its
+listed number is an unanswered Google Voice line. In this cohort the established operators rate
+poorly (Lynn's 2.9/324, Gene Meyer's 3.2/252, Royal 3.6/83) while every perfect score has a
+handful of reviews — 5.0 from 71 is an outlier against the market's own shape. `shrunkRating`
+rewards exactly that combination, so if a high score with many reviews is less trustworthy in
+towing than elsewhere, the scorer selects for it. One data point is not a finding and nothing
+here should be built on it; noted so a second instance is recognised as the second.

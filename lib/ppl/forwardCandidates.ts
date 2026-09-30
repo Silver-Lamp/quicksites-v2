@@ -74,6 +74,17 @@ export type ForwardContext = {
   forwardedElsewhere?: Map<string, string>;
   /** Normalized phones that replied STOP, globally (`forward_opt_outs`). */
   optedOut?: Set<string>;
+  /**
+   * Normalized phones we OBSERVED not answering forwarded calls (`forward_unresponsive`).
+   *
+   * ⚠️ A separate input from `optedOut` because it is a separate fact, and the difference is not
+   * bookkeeping: an opt-out is the business's decision and is permanent until they say
+   * otherwise, while this is OUR conclusion from OUR evidence and may be wrong (they may simply
+   * be screening the unknown number we call from). It disqualifies all the same — there is no
+   * point routing an emergency call to a phone that does not pick up — but it is clearable, and
+   * the reason a candidate was dropped is reported as the one it actually was.
+   */
+  unresponsive?: Set<string>;
   /** Evaluation date; injected so tests are not time-dependent. */
   now?: Date;
 };
@@ -84,7 +95,8 @@ export type DisqualifyReason =
   | 'city_mismatch'
   | 'outside_market'
   | 'region_mismatch'
-  | 'opted_out';
+  | 'opted_out'
+  | 'unresponsive';
 
 /**
  * What settled this candidate's place in the order.
@@ -399,6 +411,7 @@ export function recommendForwardTargets(
 ): ForwardRecommendation {
   const now = ctx.now ?? new Date();
   const optedOut = ctx.optedOut ?? new Set<string>();
+  const unresponsive = ctx.unresponsive ?? new Set<string>();
   const forwardedElsewhere = ctx.forwardedElsewhere ?? new Map<string, string>();
 
   const disqualified: { prospect: ForwardProspect; reason: DisqualifyReason }[] = [];
@@ -440,6 +453,10 @@ export function recommendForwardTargets(
     }
     if (optedOut.has(phone)) {
       disqualified.push({ prospect: p, reason: 'opted_out' });
+      continue;
+    }
+    if (unresponsive.has(phone)) {
+      disqualified.push({ prospect: p, reason: 'unresponsive' });
       continue;
     }
     kept.push(p);

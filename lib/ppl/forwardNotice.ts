@@ -54,6 +54,34 @@ export function isStartMessage(
   return ['START', 'UNSTOP', 'YES'].includes(b);
 }
 
+/** Digits-only comparison, so `(253) 326-5555` and `+12533265555` are the same destination. */
+function samePhone(a: string | null | undefined, b: string | null | undefined): boolean {
+  const norm = (v: string | null | undefined) => {
+    const d = String(v ?? '').replace(/\D+/g, '');
+    return d.length === 11 && d.startsWith('1') ? d.slice(1) : d;
+  };
+  const x = norm(a);
+  return !!x && x === norm(b);
+}
+
+/**
+ * Has THIS destination been told?
+ *
+ * ⚠️ The legacy fallback is the load-bearing half. Rows written before 20260861 have a timestamp
+ * and no `forward_notice_sent_to`; treating those as unnotified would re-text twelve businesses
+ * that were already told two days ago, which is spam we would have caused by improving our own
+ * bookkeeping. So a timestamp with no recorded subject still counts as sent — but ONLY while the
+ * subject is unknown. Once a destination is recorded, it is the answer.
+ */
+export function noticeAlreadySent(
+  forwardTo: string | null,
+  noticeSentTo: string | null | undefined,
+  noticeSentAt: string | null | undefined,
+): boolean {
+  if (noticeSentTo) return samePhone(forwardTo, noticeSentTo);
+  return !!noticeSentAt;
+}
+
 export async function isOptedOut(phone: string): Promise<boolean> {
   const { data } = await supabaseAdmin
     .from('forward_opt_outs')
@@ -64,8 +92,17 @@ export async function isOptedOut(phone: string): Promise<boolean> {
 }
 
 /**
- * Send the notice once per campaign. Returns why it did not send when it did not; never throws
- * for a business reason (opted out / already sent / no number) — those are outcomes, not errors.
+ * Send the notice once per DESTINATION. Returns why it did not send when it did not; never
+ * throws for a business reason (opted out / already sent / no number) — those are outcomes,
+ * not errors.
+ *
+ * ⚠️ "ALREADY SENT" IS A CLAIM ABOUT A PHONE NUMBER, NOT ABOUT A CAMPAIGN. This used to return
+ * `already_sent` whenever `forward_notice_sent_at` was non-null, which is a timestamp with no
+ * subject. The moment a campaign was re-pointed — the whole purpose of `set-forward` — the new
+ * business would start receiving a stranger's towing calls having been told nothing, while the
+ * system recorded the notice as handled. The notice is the consent path, so the check compares
+ * `forward_notice_sent_to` with the current `forward_to` (20260861) and a changed destination is
+ * an unnotified one by definition.
  */
 export async function sendForwardNotice(campaignId: string): Promise<
   | { sent: true }
@@ -77,12 +114,14 @@ export async function sendForwardNotice(campaignId: string): Promise<
 > {
   const { data: c, error } = await supabaseAdmin
     .from('geo_industry_campaigns')
-    .select('id, domain, industry_key, forward_to, forward_notice_sent_at')
+    .select('id, domain, industry_key, forward_to, forward_notice_sent_at, forward_notice_sent_to')
     .eq('id', campaignId)
     .maybeSingle();
   if (error || !c) throw new Error(`campaign lookup failed: ${error?.message ?? 'not found'}`);
   if (!c.forward_to) return { sent: false, reason: 'no_forward_to' };
-  if (c.forward_notice_sent_at) return { sent: false, reason: 'already_sent' };
+  if (noticeAlreadySent(c.forward_to, c.forward_notice_sent_to, c.forward_notice_sent_at)) {
+    return { sent: false, reason: 'already_sent' };
+  }
   if (await isOptedOut(c.forward_to)) return { sent: false, reason: 'opted_out' };
 
   const sender = await getSenderProfile().catch(() => null);
@@ -98,6 +137,9 @@ export async function sendForwardNotice(campaignId: string): Promise<
     .from('geo_industry_campaigns')
     .update({
       forward_notice_sent_at: new Date().toISOString(),
+      // Recorded together with the timestamp: a send whose subject is not written down is the
+      // gap this whole change closes.
+      forward_notice_sent_to: c.forward_to,
       updated_at: new Date().toISOString(),
     })
     .eq('id', campaignId);

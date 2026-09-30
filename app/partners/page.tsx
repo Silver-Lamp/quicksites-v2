@@ -6,7 +6,6 @@ import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
 import PageBackdrop from '@/components/site/page-backdrop';
 import ResellerDiagram from '@/components/home/reseller-diagram';
-import RoleLadderTool from '@/components/admin/role-ladder-tool';
 import { getResellers } from '@/lib/home/getResellers';
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE, QS_FEE_SHARE, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
 import { marketingOg } from '@/lib/marketingOg';
@@ -130,35 +129,6 @@ export default function PartnersPage() {
               </dl>
               <p className="mt-3 text-xs text-zinc-500">…on every order, {residualLabel}. The merchant keeps the rest of the sale.</p>
             </div>
-          </div>
-        </section>
-
-        {/* If you recruit others — the chain, and what each rung earns */}
-        <section className="border-t border-zinc-800/70">
-          <div className="mx-auto max-w-4xl px-6 py-14">
-            <h2 className="text-2xl md:text-3xl font-semibold">If you recruit others</h2>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-              Everything above is one partner and one merchant. Bring in other partners and you
-              earn on their volume too — for the life of those accounts. Move the sliders to see
-              what each level takes home.
-            </p>
-            {/* ⚠️ Partner audience: the rung-name caveat is reworded, never dropped. A name that
-                exists only in a diagram must not come back quoted as a commitment. The house row
-                stays visible on purpose — a constraint you can see beats one we assert. */}
-            <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
-              <RoleLadderTool maxFeePercent={MAX_PLATFORM_FEE_PERCENT} audience="partner" />
-            </div>
-            <p className="mt-4 max-w-2xl text-xs leading-relaxed text-zinc-500">
-              ⚠️ Two things we would rather you heard from us. Overrides are paid nearest the sale
-              first out of a shared pool, so if the rates above you add up past it, the person
-              furthest from the sale is paid nothing rather than a reduced amount — the tool shows
-              you when that happens. And no override has been paid to anyone yet: the mechanism is
-              live, the ledger is empty. See{' '}
-              <Link href="/partners/terms" className="text-sky-400 underline underline-offset-4">
-                the full terms
-              </Link>
-              .
-            </p>
           </div>
         </section>
 

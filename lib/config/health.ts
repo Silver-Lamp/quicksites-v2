@@ -189,6 +189,23 @@ export const CONFIG_GATES: ConfigGate[] = [
       'A campaign marked pricing_model=ppl bridges calls but cannot bill them (no signed callback), cannot credit a deposit (webhook secret), or bills silently (no statement email). With the flag off, ppl campaigns fall back to the plain forward-and-log path and nothing is charged.',
   },
   {
+    key: 'voicemail_relay',
+    label: 'A voicemail-first message can actually reach the operator',
+    // ⚠️ NO `enabledBy`, deliberately. Voicemail-first is switched on by clearing a campaign's
+    // forward_to — a DATA change, not an env flag — so there is no variable to key on and a
+    // gate that waited for one would stay silent in exactly the configuration that matters.
+    //
+    // ⚠️ THE CALLER IS PROMISED A RELAY. If neither channel is configured the message lands in
+    // call_logs and nobody is told, which breaks that promise while looking fine from here —
+    // the same shape as the two leads lost on 2026-09-30, and the same shape as PostHog
+    // no-oping for the life of the feature. Either channel is enough; neither is not.
+    requiresAnyOf: [['OPERATOR_ALERT_SMS'], ['ADMIN_EMAILS', 'RESEND_API_KEY']],
+    requires: [],
+    breaks:
+      'A caller who leaves a message on a voicemail-first campaign is told we will pass it to local businesses, and then nobody is notified. The recording is saved and visible on /admin/call-logs, but only to someone who happens to look — at roughly one call every five days, that is a lost lead and a broken promise.',
+    degradeOnly: true,
+  },
+  {
     key: 'call_cascade',
     label: 'Ring local businesses one at a time until one takes the call',
     enabledBy: 'CALL_CASCADE_ENABLED',

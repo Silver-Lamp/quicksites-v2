@@ -32,7 +32,7 @@ export type CascadeCandidate = {
   /** E.164. */
   phone: string;
   /** Answered calls we can attribute to this destination — null when unknown, never 0 for unknown. */
-  answered: number | null;
+  connected: number | null;
   unanswered: number | null;
 };
 
@@ -55,11 +55,11 @@ export type CascadeAttempt = {
  */
 export function orderCascade(candidates: CascadeCandidate[]): CascadeCandidate[] {
   const rank = (c: CascadeCandidate): number => {
-    const a = c.answered;
+    const a = c.connected;
     const u = c.unanswered;
     if (a === null && u === null) return 1; // never rung — middle
-    if ((a ?? 0) > 0) return 0; // has answered us — first
-    if ((u ?? 0) > 0) return 2; // rung and never answered — last
+    if ((a ?? 0) > 0) return 0; // has connected us — first
+    if ((u ?? 0) > 0) return 2; // rung and never connected — last
     return 1;
   };
   return [...candidates].sort((x, y) => {
@@ -68,8 +68,8 @@ export function orderCascade(candidates: CascadeCandidate[]): CascadeCandidate[]
     if (rx !== ry) return rx - ry;
     // Within a band, more answers first, then fewer failures, then a stable name so the same
     // pool always produces the same order — a cascade that reshuffles cannot be reasoned about.
-    const ax = x.answered ?? 0;
-    const ay = y.answered ?? 0;
+    const ax = x.connected ?? 0;
+    const ay = y.connected ?? 0;
     if (ax !== ay) return ay - ax;
     const ux = x.unanswered ?? 0;
     const uy = y.unanswered ?? 0;

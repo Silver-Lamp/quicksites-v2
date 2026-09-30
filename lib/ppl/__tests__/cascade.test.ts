@@ -23,17 +23,17 @@ import { stripComments } from '@/test/stripComments';
 const c = (over: Partial<CascadeCandidate> & { phone: string }): CascadeCandidate => ({
   prospectId: 'p',
   businessName: 'A Towing',
-  answered: null,
+  connected: null,
   unanswered: null,
   ...over,
 });
 
 describe('orderCascade', () => {
-  it('puts businesses that have answered us first and never-answered last', () => {
+  it('puts businesses that have connected us first and never-connected last', () => {
     const out = orderCascade([
-      c({ phone: '+12530000003', businessName: 'Never', answered: 0, unanswered: 4 }),
+      c({ phone: '+12530000003', businessName: 'Never', connected: 0, unanswered: 4 }),
       c({ phone: '+12530000001', businessName: 'Unknown' }),
-      c({ phone: '+12530000002', businessName: 'Answers', answered: 3, unanswered: 1 }),
+      c({ phone: '+12530000002', businessName: 'Answers', connected: 3, unanswered: 1 }),
     ]);
     expect(out.map((x) => x.businessName)).toEqual(['Answers', 'Unknown', 'Never']);
   });
@@ -44,7 +44,7 @@ describe('orderCascade', () => {
   it('sorts unknown between known-good and known-bad', () => {
     const out = orderCascade([
       c({ phone: '+12530000001', businessName: 'Unknown' }),
-      c({ phone: '+12530000002', businessName: 'Bad', answered: 0, unanswered: 9 }),
+      c({ phone: '+12530000002', businessName: 'Bad', connected: 0, unanswered: 9 }),
     ]);
     expect(out[0].businessName).toBe('Unknown');
   });

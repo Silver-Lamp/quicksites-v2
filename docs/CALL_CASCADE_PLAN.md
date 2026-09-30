@@ -234,3 +234,37 @@ market is a real state and gets its own sentence.
    with a stranger on the line is a complaint, not a lead.**
 2. **One end-to-end call on a real campaign**, watching `cascade_attempts` fill.
 3. Then the two numbers in §8 — attempts-per-call, and whether `accepted` is ever true.
+
+## 12. ⚠️ The measured result that changed the vocabulary (2026-09-30 11:19 PT)
+
+Phase 0 shipped, the operator rang `covingtontow.com` and let it go. **He never heard our
+voicemail prompt, and Prime Towing was never texted.** What he heard was the tail of Prime's own
+greeting — *"…leave a message"* — and the message he left is sitting in Prime's box.
+
+The row: `dial-completed`, `forwarded_to = +12533265555`, **duration 20**.
+
+**Why our fallback did not fire.** `classifyDial` called ≥15 s `answered`, so `after-dial`
+concluded a person had taken the call and hung up cleanly. The 15 was reasoned from when a
+voicemail GREETING STARTS — a second or two — which is **the wrong quantity**. The leg does not
+end at the greeting; it lasts as long as the message the caller leaves.
+
+⚠️ **Duration cannot separate a person from a voicemail the caller talked to, and no threshold
+can.** A 20-second conversation and a 20-second voicemail message are the same row. The outcome
+is now `connected` — the leg lasted — and the vocabulary deliberately contains **no** word
+meaning "a human took it", because nothing derived from `DialCallStatus` can mean that.
+
+**The sequence, reconstructed:** Prime's voicemail answered → our whisper played *into the
+voicemail* (~4 s), so the caller was bridged mid-greeting → he heard the end of it, then the
+beep → 20 s total. A side effect worth knowing: **our whisper is recorded onto the
+destination's voicemail**, so Prime's box now holds "New lead from covingtontow.com, calling
+from 262 302 8118" followed by the message.
+
+**This is the strongest evidence yet for the cascade, and it is a better argument than the plan
+made.** §2 justified the keypress as the thing that stops a voicemail *halting* the cascade. It
+is more than that: **the keypress is the only signal in the entire system that a human took a
+call.** Everything else is a guess wearing a number.
+
+⚠️ **Do not "fix" this by raising the threshold, and do not reach for answering-machine
+detection without checking it first.** AMD is a REST-call feature; whether it is available on a
+`<Dial><Number>` leg is unverified here and should not be assumed. The keypress is free,
+certain, and already built.

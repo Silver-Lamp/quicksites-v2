@@ -101,7 +101,7 @@ export async function POST(req: Request) {
   await clearUnresponsive(to, 'repointed to this destination by an operator').catch(() => {});
 
   let previous:
-    | { phone: string; marked: boolean; unanswered: number | null; answered: number | null }
+    | { phone: string; marked: boolean; unanswered: number | null; connected: number | null }
     | null = null;
   if (b.markPreviousUnresponsive && from) {
     // ⚠️ `?? null`, NOT `?? 0`. When no call row could be attributed to this destination the
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
     const h = previousHealth.find((r) => r.phone === from) ?? null;
     await markUnresponsive(from, {
       unanswered: h ? h.unanswered : null,
-      answered: h ? h.answered : null,
+      connected: h ? h.connected : null,
       source: 'operator',
       note: b.note ?? null,
     });
@@ -120,10 +120,10 @@ export async function POST(req: Request) {
       phone: from,
       marked: true,
       unanswered: h ? h.unanswered : null,
-      answered: h ? h.answered : null,
+      connected: h ? h.connected : null,
     };
   } else if (from) {
-    previous = { phone: from, marked: false, unanswered: null, answered: null };
+    previous = { phone: from, marked: false, unanswered: null, connected: null };
   }
 
   const notice = await sendForwardNotice(campaignId);

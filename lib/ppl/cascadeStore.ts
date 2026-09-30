@@ -67,7 +67,7 @@ export async function loadCascadePool(campaignId: string): Promise<CascadeCandid
       prospectId: p.id,
       businessName: p.business_name,
       phone: e164,
-      answered: h ? h.answered : null,
+      connected: h ? h.connected : null,
       // An operator-marked unresponsive destination with no countable history still sorts last.
       unanswered: h ? h.unanswered : unresponsive.has(key) ? 1 : null,
     });

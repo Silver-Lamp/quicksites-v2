@@ -10,7 +10,7 @@
 // against production.
 //
 // ⚠️ It shows the destination's own answer record rather than asking the operator to remember it.
-// "0 of 3 answered" is the reason to press this; a bare "Re-point" button is an invitation to
+// "0 of 3 connected" is the reason to press this; a bare "Re-point" button is an invitation to
 // guess.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -20,7 +20,7 @@ export default function PplRepointForward({
   campaignId,
   domain,
   forwardTo,
-  answered,
+  connected,
   unanswered,
   suggestedPhone,
   suggestedName,
@@ -28,7 +28,7 @@ export default function PplRepointForward({
   campaignId: string;
   domain: string;
   forwardTo: string | null;
-  answered: number;
+  connected: number;
   unanswered: number;
   /** The recommender's next pick, pre-filled so the common case is one click plus a confirm. */
   suggestedPhone?: string | null;
@@ -45,10 +45,10 @@ export default function PplRepointForward({
   const [mark, setMark] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // Only meaningful once something has been dialled and nothing has been answered. A destination
+  // Only meaningful once something has been dialled and nothing has connected. A destination
   // with no calls yet is untested, not failing, and flagging it would train the operator to
   // ignore the flag.
-  const looksDead = answered === 0 && unanswered >= 2;
+  const looksDead = connected === 0 && unanswered >= 2;
 
   async function run() {
     const typed = phone.trim();
@@ -122,7 +122,7 @@ export default function PplRepointForward({
     <span className="inline-flex flex-wrap items-center gap-2">
       {looksDead ? (
         <span className="rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-[11px] text-rose-200">
-          0 of {unanswered} answered
+          0 of {unanswered} connected
         </span>
       ) : null}
       <button

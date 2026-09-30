@@ -189,6 +189,17 @@ export const CONFIG_GATES: ConfigGate[] = [
       'A campaign marked pricing_model=ppl bridges calls but cannot bill them (no signed callback), cannot credit a deposit (webhook secret), or bills silently (no statement email). With the flag off, ppl campaigns fall back to the plain forward-and-log path and nothing is charged.',
   },
   {
+    key: 'call_cascade',
+    label: 'Ring local businesses one at a time until one takes the call',
+    enabledBy: 'CALL_CASCADE_ENABLED',
+    // Twilio signs every webhook in the loop — the cascade step, the whisper, the accept
+    // keypress and the leg outcome. Without the auth token each one fails closed, which a
+    // caller hears as "an application error has occurred".
+    requires: ['TWILIO_AUTH_TOKEN'],
+    breaks:
+      'With the flag on but no Twilio auth token, every step of the cascade rejects its own webhook and the caller hears an error instead of being connected. With the flag off, calls take the single-destination forward and an unanswered one goes to voicemail (phase 0), which is the safe behaviour.',
+  },
+  {
     key: 'trade_pipeline',
     label: 'Auto-built trade sites — nightly sweep-and-build cron',
     enabledBy: 'TRADE_PIPELINE_ENABLED',

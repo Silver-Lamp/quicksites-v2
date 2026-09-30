@@ -15,7 +15,7 @@ import { formatUsPhone } from '@/lib/phone/formatUs';
 export const dynamic = 'force-dynamic';
 
 const OUTCOME_CLASS: Record<DialOutcome, string> = {
-  answered: 'text-emerald-400',
+  connected: 'text-emerald-400',
   // Amber, not green: a "completed" dial too short to be a conversation is usually voicemail
   // picking up. It is not a failure and it is not a lead.
   brief: 'text-amber-300',
@@ -24,7 +24,10 @@ const OUTCOME_CLASS: Record<DialOutcome, string> = {
 };
 
 const OUTCOME_LABEL: Record<DialOutcome, string> = {
-  answered: 'answered',
+  // ⚠️ Deliberately does not say "answered". The leg lasted, which is all we know — a person
+  // talking for 20s and a caller leaving a 20s message on the destination's voicemail produce
+  // the identical row. Only a cascade keypress proves a human.
+  connected: 'the call went on — could be a person, could be a message left on their voicemail',
   brief: 'too short to be a conversation — likely voicemail',
   unanswered: 'never picked up',
   in_progress: 'no final outcome recorded',
@@ -49,7 +52,7 @@ export default async function CallLogsPage() {
       acc[classifyDial(l.call_status, l.call_duration)] += 1;
       return acc;
     },
-    { answered: 0, brief: 0, unanswered: 0, in_progress: 0 } as Record<DialOutcome, number>
+    { connected: 0, brief: 0, unanswered: 0, in_progress: 0 } as Record<DialOutcome, number>
   );
 
   return (
@@ -59,7 +62,7 @@ export default async function CallLogsPage() {
           <h2 className="text-xl font-semibold flex items-center gap-2">📞 Twilio Call Logs</h2>
           <p className="text-xs text-zinc-400">
             Last {rows.length} calls ·{' '}
-            <span className="text-emerald-400">{tally.answered} answered</span> ·{' '}
+            <span className="text-emerald-400">{tally.connected} connected</span> ·{' '}
             <span className="text-amber-300">{tally.brief} too short</span> ·{' '}
             <span className="text-rose-400">{tally.unanswered} never picked up</span>
             {tally.in_progress > 0 ? ` · ${tally.in_progress} no outcome` : ''}

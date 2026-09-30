@@ -14,6 +14,9 @@ import { pplEnabled } from '@/lib/ppl/billing';
 import { getPplAccountByCampaign } from '@/lib/ppl/accounts';
 import { canRouteCall } from '@/lib/ppl/rules';
 import { bridgeTwiml, notConnectingTwiml } from '@/lib/ppl/ivr';
+import { cascadeGreetingTwiml } from '@/lib/ppl/cascade';
+import { cascadeEnabled } from '@/lib/ppl/cascadeFlag';
+import { KEY_TO_LABEL } from '@/lib/industries';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -112,6 +115,23 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
         actionUrl: `${base}/api/twilio/ppl/complete?campaignId=${encodeURIComponent(campaignId)}`,
         whisperUrl: `${base}/api/twilio/whisper?message=${encodeURIComponent(whisper)}`,
       })
+    );
+  }
+
+  // ⚠️ CASCADE FIRST WHEN ENABLED, AND IT DELIBERATELY DOES NOT DEPEND ON `forward_to`. The
+  // whole finding is that a single designated destination is the wrong mechanism for a trade
+  // whose operators are driving — so a campaign with no forward-to at all is a perfectly good
+  // cascade, not a broken forward. Flag-gated OFF until the two numbers in
+  // docs/CALL_CASCADE_PLAN.md §8 are measured: do callers hold, and does anyone press 1.
+  if (cascadeEnabled()) {
+    await logCall({ forwarded_to: null });
+    const trade = (KEY_TO_LABEL as Record<string, string>)[campaign?.industry_key ?? ''] ?? 'local';
+    return xml(
+      cascadeGreetingTwiml({
+        trade,
+        city: campaign?.city ?? null,
+        nextUrl: `${base}/api/twilio/geo/${encodeURIComponent(campaignId)}/cascade?attempt=1`,
+      }),
     );
   }
 

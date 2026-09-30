@@ -491,12 +491,12 @@ export default async function PplOpsPage() {
                             <>
                               {h ? (
                                 <span className="text-[11px]">
-                                  {h.answered > 0 ? (
+                                  {h.connected > 0 ? (
                                     <span className="text-emerald-400">
-                                      {h.answered} answered
+                                      {h.connected} connected
                                     </span>
                                   ) : (
-                                    <span className="text-muted-foreground">0 answered</span>
+                                    <span className="text-muted-foreground">0 connected</span>
                                   )}
                                   {h.unanswered > 0 ? (
                                     <span className="text-rose-400"> · {h.unanswered} rang out</span>
@@ -514,7 +514,7 @@ export default async function PplOpsPage() {
                                 campaignId={c.id}
                                 domain={c.domain}
                                 forwardTo={c.forward_to}
-                                answered={h?.answered ?? 0}
+                                connected={h?.connected ?? 0}
                                 unanswered={h?.unanswered ?? 0}
                                 suggestedPhone={nextPickFor(c.id)?.phone ?? null}
                                 suggestedName={nextPickFor(c.id)?.name ?? null}

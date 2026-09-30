@@ -8,7 +8,7 @@
 // direction — toward "everything is fine" — which is why covingtontow.com dropped two real leads
 // with the evidence already on screen.
 import { readFileSync } from 'node:fs';
-import { classifyDial, suggestsUnresponsive, ANSWERED_MIN_SECONDS } from '@/lib/ppl/forwardHealth';
+import { classifyDial, suggestsUnresponsive, CONNECTED_MIN_SECONDS, type DialOutcome } from '@/lib/ppl/forwardHealth';
 import { noticeAlreadySent } from '@/lib/ppl/forwardNotice';
 import { recommendForwardTargets, type ForwardProspect } from '@/lib/ppl/forwardCandidates';
 import { usE164 } from '@/lib/phone/formatUs';
@@ -22,17 +22,40 @@ describe('classifyDial', () => {
   });
 
   // ⚠️ The case that made this necessary. Twilio's `completed` means the dialled leg ended
-  // normally, which is ALSO what voicemail answering looks like. Reading it as "answered" turns
+  // normally, which is ALSO what voicemail answering looks like. Reading it as "connected" turns
   // a dead line into a delivered lead.
   it('does not read a short "completed" dial as a person picking up', () => {
     expect(classifyDial('dial-completed', 4)).toBe('brief');
-    expect(classifyDial('dial-completed', ANSWERED_MIN_SECONDS - 1)).toBe('brief');
-    expect(classifyDial('dial-completed', ANSWERED_MIN_SECONDS)).toBe('answered');
-    expect(classifyDial('dial-completed', 120)).toBe('answered');
+    expect(classifyDial('dial-completed', CONNECTED_MIN_SECONDS - 1)).toBe('brief');
+    expect(classifyDial('dial-completed', CONNECTED_MIN_SECONDS)).toBe('connected');
+    expect(classifyDial('dial-completed', 120)).toBe('connected');
   });
 
   // An unknown status is missing information, not a failure. If Twilio renames an outcome we
   // must not start writing businesses onto the unresponsive list because of it.
+  // ⚠️ THE MEASURED CASE, 2026-09-30 11:19 PT. The operator rang covingtontow.com, was bridged
+  // into Prime Towing's voicemail (our whisper played into it first, so he joined mid-greeting),
+  // left a message, and the leg ran 20 seconds. `connected` — correctly, because that is all the
+  // row can support. It is NOT evidence a person answered, and the outcome is named so nobody
+  // reads it as such. No threshold fixes this: a 20s conversation and a 20s voicemail message
+  // are the same row.
+  it('cannot tell a person from a voicemail the caller talked to, and does not pretend to', () => {
+    expect(classifyDial('dial-completed', 20)).toBe('connected');
+    expect(classifyDial('dial-completed', 300)).toBe('connected');
+    // The only honest reading of `connected` is "the leg lasted", so the vocabulary offers no
+    // word that means "a human took it". `cascade_attempts.accepted` is that signal.
+    const outcomes: DialOutcome[] = ['connected', 'brief', 'unanswered', 'in_progress'];
+    expect(outcomes).not.toContain('answered');
+  });
+
+  // ⚠️ Twilio's INPUT vocabulary is not ours to rename. A bulk rename of the outcome word once
+  // turned `'answered'` — a status Twilio can send — into `'connected'`, which it never sends,
+  // silently reclassifying those legs as in_progress.
+  it("still recognises Twilio's own 'answered' status as an input", () => {
+    expect(classifyDial('answered', 60)).toBe('connected');
+    expect(classifyDial('dial-answered', 2)).toBe('brief');
+  });
+
   it('treats an unrecognised or in-flight status as no verdict, never as a failure', () => {
     expect(classifyDial('ringing', null)).toBe('in_progress');
     expect(classifyDial('queued', null)).toBe('in_progress');
@@ -43,30 +66,30 @@ describe('classifyDial', () => {
 
 describe('suggestsUnresponsive', () => {
   it('needs a run of failures, not a bad morning', () => {
-    expect(suggestsUnresponsive({ answered: 0, brief: 0, unanswered: 2 })).toBe(false);
-    expect(suggestsUnresponsive({ answered: 0, brief: 0, unanswered: 3 })).toBe(true);
+    expect(suggestsUnresponsive({ connected: 0, brief: 0, unanswered: 2 })).toBe(false);
+    expect(suggestsUnresponsive({ connected: 0, brief: 0, unanswered: 3 })).toBe(true);
   });
 
-  // One answered call means the line works and somebody is there. Whatever else is happening,
+  // One connected call means the line works and somebody is there. Whatever else is happening,
   // it is not "this business never picks up" — the claim the flag would be making.
-  it('is cleared by a single answered call, however many failures surround it', () => {
-    expect(suggestsUnresponsive({ answered: 1, brief: 0, unanswered: 20 })).toBe(false);
+  it('is cleared by a single connected call, however many failures surround it', () => {
+    expect(suggestsUnresponsive({ connected: 1, brief: 0, unanswered: 20 })).toBe(false);
   });
 
   // `brief` is voicemail-shaped. It proves the line is alive, which is exactly why it must not
   // be counted as evidence of a person — and equally must not count as a failure.
   it('does not let voicemail pickups vouch for a business or condemn one', () => {
-    expect(suggestsUnresponsive({ answered: 0, brief: 5, unanswered: 1 })).toBe(false);
-    expect(suggestsUnresponsive({ answered: 0, brief: 5, unanswered: 3 })).toBe(true);
+    expect(suggestsUnresponsive({ connected: 0, brief: 5, unanswered: 1 })).toBe(false);
+    expect(suggestsUnresponsive({ connected: 0, brief: 5, unanswered: 3 })).toBe(true);
   });
 
   // ⚠️ The trap the first real row laid. AL Ram Towing was filed with NULL counts because its
   // three calls predate `call_logs.forwarded_to`; reading NULL as 0 makes this return false and
   // recommend clearing a correct entry, on the strength of a number that means "we don't know".
   it('has no opinion when the counts are unknown, rather than reading them as zero', () => {
-    expect(suggestsUnresponsive({ answered: null, brief: null, unanswered: null })).toBe(false);
-    expect(suggestsUnresponsive({ answered: null, unanswered: 9 })).toBe(false);
-    expect(suggestsUnresponsive({ answered: 0, unanswered: null })).toBe(false);
+    expect(suggestsUnresponsive({ connected: null, brief: null, unanswered: null })).toBe(false);
+    expect(suggestsUnresponsive({ connected: null, unanswered: 9 })).toBe(false);
+    expect(suggestsUnresponsive({ connected: 0, unanswered: null })).toBe(false);
   });
 });
 
@@ -252,7 +275,7 @@ describe('source guards', () => {
     expect(src).not.toMatch(/deconflictTopPicks\(recommendations\)/);
   });
 
-  // The empty field was answered with a format complaint while the box displayed a grey number
+  // The empty field was connected with a format complaint while the box displayed a grey number
   // that reads as a value. Both halves have to stay fixed: a distinct empty-state message, and
   // a placeholder that cannot be mistaken for input.
   // An unattributable count must reach the row as NULL. `?? 0` is the whole bug: it turns
@@ -263,7 +286,7 @@ describe('source guards', () => {
       readFileSync('app/api/admin/prospects/geo-campaign/set-forward/route.ts', 'utf8'),
     );
     expect(src).not.toMatch(/unanswered:\s*h\?\.\w+\s*\?\?\s*0/);
-    expect(src).not.toMatch(/answered:\s*h\?\.\w+\s*\?\?\s*0/);
+    expect(src).not.toMatch(/connected:\s*h\?\.\w+\s*\?\?\s*0/);
     expect(src).toMatch(/unanswered:\s*h\s*\?\s*h\.unanswered\s*:\s*null/);
   });
 

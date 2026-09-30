@@ -52,7 +52,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ campaignId: st
   const outcome = classifyDial(status, duration);
 
   // A real conversation happened — the call is genuinely over, so ending it is correct here.
-  if (outcome === 'answered') return xmlResponse(HANGUP_TWIML);
+  if (outcome === 'connected') return xmlResponse(HANGUP_TWIML);
 
   // ⚠️ `brief` goes to voicemail TOO, and that is the Prime Towing case. Twilio reported
   // `dial-completed` after 3 seconds while the caller got three SIT beeps and a disconnect.

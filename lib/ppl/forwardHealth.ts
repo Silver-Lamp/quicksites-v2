@@ -7,12 +7,24 @@
 // dashboard reads a call as delivered. covingtontow.com dropped two real leads that way on
 // 2026-09-30 and it was found by the operator dialling his own site.
 //
-// ⚠️ THE OUTCOME VOCABULARY IS TWILIO'S AND IT IS MISLEADING IN ONE PLACE. `DialCallStatus`
-// `completed` means the dialled leg ENDED NORMALLY, which includes voicemail answering and the
-// caller hanging up mid-ring. It does NOT mean a person picked up. So `answered` here is
-// completed AND long enough to be a conversation; anything shorter is counted separately as
-// `brief` rather than quietly folded into either side. Calling a 4-second voicemail pickup an
-// answered lead is the flattering reading, and the flattering reading is what let this run.
+// ⚠️ THIS FILE CANNOT TELL YOU A PERSON ANSWERED, AND IT USED TO CLAIM IT COULD.
+//
+// The outcome was called `answered` and meant "Twilio said completed and the leg lasted ≥15s".
+// The 15 was reasoned from when a voicemail GREETING STARTS — a second or two — which is the
+// wrong quantity: the leg does not end at the greeting, it lasts as long as the message the
+// caller leaves. On 2026-09-30 the operator rang covingtontow.com, was bridged into Prime
+// Towing's voicemail, left a message, and the leg ran **20 seconds**. It was filed as
+// `answered`, our own voicemail fallback never fired, and the business was never texted.
+//
+// **Duration cannot separate a person from a voicemail the caller talked to.** No threshold
+// can: the two produce identical rows. So the outcome is now `connected` — the leg lasted long
+// enough to be a conversation *or* a message left on the destination's machine — and the name
+// no longer asserts the thing we cannot see.
+//
+// ⚠️ THE ONLY RELIABLE "A HUMAN TOOK THIS CALL" SIGNAL IS `cascade_attempts.accepted`, written
+// by a keypress a voicemail cannot press (docs/CALL_CASCADE_PLAN.md §3). Anything derived from
+// `DialCallStatus` is a guess wearing a number. If you need to know whether a person answered,
+// read that column; do not add a cleverer threshold here.
 //
 // ⚠️ ONLY ROWS THAT RECORD THEIR OWN DESTINATION COUNT. `call_logs.forwarded_to` is written at
 // dial time (20260861); rows predating it are NULL and are reported as `unattributed` rather
@@ -22,13 +34,18 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 /**
- * Seconds a bridged call must last to count as answered by a person.
+ * Seconds a bridged leg must last before we call it `connected` rather than `brief`.
  *
- * Chosen to sit above voicemail pickup (a greeting starts within a second or two of the leg
- * being "answered") and below any real exchange. The PPL biller uses 90s for a BILLABLE lead,
- * which is a different and stricter question — this one is only "did a human take the call".
+ * ⚠️ IT SEPARATES "SOMETHING ANSWERED AND THE CALL WENT ON" FROM "SOMETHING ANSWERED AND IT WAS
+ * OVER IN SECONDS" — nothing more. It does NOT identify a human, and the first version of this
+ * comment claimed it did. Below it sits the 3-second SIT-tone case (Prime Towing, same day);
+ * above it sits both a real conversation and a 20-second voicemail message, which this module
+ * has no way to tell apart.
+ *
+ * The PPL biller's 90s is a different and stricter question (is this a BILLABLE lead), and it
+ * has the same blind spot.
  */
-export const ANSWERED_MIN_SECONDS = 15;
+export const CONNECTED_MIN_SECONDS = 15;
 
 /** Twilio dial outcomes that mean the destination never took the call. */
 const UNANSWERED_STATUSES = new Set([
@@ -41,13 +58,18 @@ const UNANSWERED_STATUSES = new Set([
   'failed',
 ]);
 
-export type DialOutcome = 'answered' | 'brief' | 'unanswered' | 'in_progress';
+export type DialOutcome = 'connected' | 'brief' | 'unanswered' | 'in_progress';
 
 export function classifyDial(status: string | null, durationSec: number | null): DialOutcome {
   const s = (status ?? '').trim().toLowerCase();
   if (UNANSWERED_STATUSES.has(s)) return 'unanswered';
-  if (s === 'dial-completed' || s === 'completed' || s === 'answered') {
-    return (durationSec ?? 0) >= ANSWERED_MIN_SECONDS ? 'answered' : 'brief';
+  // ⚠️ These are TWILIO'S status strings and are not ours to rename. A bulk rename of the
+  // outcome word turned `'answered'` — a value Twilio can actually send — into `'connected'`,
+  // a string it never sends, which would have silently reclassified those legs as
+  // `in_progress`. An input vocabulary and an output vocabulary that share a word are not the
+  // same vocabulary.
+  if (s === 'dial-completed' || s === 'completed' || s === 'answered' || s === 'dial-answered') {
+    return (durationSec ?? 0) >= CONNECTED_MIN_SECONDS ? 'connected' : 'brief';
   }
   // 'ringing', 'initiated', 'in-progress' and anything unrecognised. Deliberately NOT counted as
   // a failure: an unknown status is missing information, and inventing a verdict from it would
@@ -57,11 +79,11 @@ export function classifyDial(status: string | null, durationSec: number | null):
 
 export type DestinationHealth = {
   phone: string;
-  answered: number;
+  connected: number;
   brief: number;
   unanswered: number;
   inProgress: number;
-  lastAnsweredAt: string | null;
+  lastConnectedAt: string | null;
   lastCallAt: string | null;
   /** Campaign domains that have dialled this number. */
   domains: string[];
@@ -72,11 +94,11 @@ export type CampaignForwardHealth = {
   domain: string | null;
   /** The destination these counts belong to — the one on the CALL rows, not the campaign. */
   phone: string;
-  answered: number;
+  connected: number;
   brief: number;
   unanswered: number;
   inProgress: number;
-  lastAnsweredAt: string | null;
+  lastConnectedAt: string | null;
   lastCallAt: string | null;
 };
 
@@ -90,12 +112,12 @@ type CallRow = {
 };
 
 function blank<T extends object>(base: T) {
-  return { answered: 0, brief: 0, unanswered: 0, inProgress: 0, lastAnsweredAt: null as string | null, lastCallAt: null as string | null, ...base };
+  return { connected: 0, brief: 0, unanswered: 0, inProgress: 0, lastConnectedAt: null as string | null, lastCallAt: null as string | null, ...base };
 }
 
-function tally(acc: { answered: number; brief: number; unanswered: number; inProgress: number; lastAnsweredAt: string | null; lastCallAt: string | null }, row: CallRow) {
+function tally(acc: { connected: number; brief: number; unanswered: number; inProgress: number; lastConnectedAt: string | null; lastCallAt: string | null }, row: CallRow) {
   const outcome = classifyDial(row.call_status, row.call_duration);
-  if (outcome === 'answered') acc.answered += 1;
+  if (outcome === 'connected') acc.connected += 1;
   else if (outcome === 'brief') acc.brief += 1;
   else if (outcome === 'unanswered') acc.unanswered += 1;
   else acc.inProgress += 1;
@@ -103,8 +125,8 @@ function tally(acc: { answered: number; brief: number; unanswered: number; inPro
   const ts = row.timestamp;
   if (ts) {
     if (!acc.lastCallAt || ts > acc.lastCallAt) acc.lastCallAt = ts;
-    if (outcome === 'answered' && (!acc.lastAnsweredAt || ts > acc.lastAnsweredAt)) {
-      acc.lastAnsweredAt = ts;
+    if (outcome === 'connected' && (!acc.lastConnectedAt || ts > acc.lastConnectedAt)) {
+      acc.lastConnectedAt = ts;
     }
   }
 }
@@ -157,16 +179,16 @@ export async function loadDestinationHealth(
   for (const r of rows) {
     let e = byPhone.get(r.phone);
     if (!e) {
-      e = { phone: r.phone, answered: 0, brief: 0, unanswered: 0, inProgress: 0, lastAnsweredAt: null, lastCallAt: null, domains: [] };
+      e = { phone: r.phone, connected: 0, brief: 0, unanswered: 0, inProgress: 0, lastConnectedAt: null, lastCallAt: null, domains: [] };
       byPhone.set(r.phone, e);
     }
-    e.answered += r.answered;
+    e.connected += r.connected;
     e.brief += r.brief;
     e.unanswered += r.unanswered;
     e.inProgress += r.inProgress;
     if (r.lastCallAt && (!e.lastCallAt || r.lastCallAt > e.lastCallAt)) e.lastCallAt = r.lastCallAt;
-    if (r.lastAnsweredAt && (!e.lastAnsweredAt || r.lastAnsweredAt > e.lastAnsweredAt)) {
-      e.lastAnsweredAt = r.lastAnsweredAt;
+    if (r.lastConnectedAt && (!e.lastConnectedAt || r.lastConnectedAt > e.lastConnectedAt)) {
+      e.lastConnectedAt = r.lastConnectedAt;
     }
     if (r.domain && !e.domains.includes(r.domain)) e.domains.push(r.domain);
   }
@@ -179,14 +201,14 @@ export async function loadDestinationHealth(
  * ⚠️ PURE, AND DELIBERATELY HARDER TO SATISFY THAN IT FEELS. The cost of a false positive is
  * dropping the best business in a market on a bad morning; the cost of a false negative is the
  * operator noticing a week later, which is what already happens. So it needs a real run of
- * failures AND nothing that looks like a working line — one answered call, ever, clears it.
+ * failures AND nothing that looks like a working line — one connected call, ever, clears it.
  *
  * It is a SUGGESTION, never an automatic write. `markUnresponsive` is called by a person or by a
  * job that reports; nothing in the recommender flips this on by itself, because "they did not
  * answer our unknown caller ID" is a conclusion about them drawn from evidence about us.
  */
 export function suggestsUnresponsive(h: {
-  answered: number | null;
+  connected: number | null;
   brief?: number | null;
   unanswered: number | null;
 }): boolean {
@@ -196,8 +218,8 @@ export function suggestsUnresponsive(h: {
   // recommend clearing a correct entry — the first real row, AL Ram Towing, was exactly that
   // case. No data means no automated opinion, never "no failures".
   if (h.unanswered === null || h.unanswered === undefined) return false;
-  if (h.answered === null || h.answered === undefined) return false;
-  if (h.answered > 0) return false;
+  if (h.connected === null || h.connected === undefined) return false;
+  if (h.connected > 0) return false;
   return h.unanswered >= 3;
 }
 
@@ -238,7 +260,7 @@ export async function markUnresponsive(
   opts: {
     /** Attributed counts, or null/omitted when none could be attributed — never 0 for unknown. */
     unanswered?: number | null;
-    answered?: number | null;
+    connected?: number | null;
     source?: 'operator' | 'call_outcomes';
     note?: string | null;
   } = {},
@@ -257,7 +279,7 @@ export async function markUnresponsive(
       // ⚠️ `?? null`, never `?? 0`. An absent count means we could not attribute any calls to
       // this destination; a zero would claim we looked and found none.
       unanswered_calls: opts.unanswered ?? null,
-      answered_calls: opts.answered ?? null,
+      answered_calls: opts.connected ?? null,
       source: opts.source ?? 'operator',
       note: opts.note ?? null,
       cleared_at: null,

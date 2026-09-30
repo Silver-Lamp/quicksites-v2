@@ -133,3 +133,35 @@ describe('what depth actually costs (the claim a first draft got backwards)', ()
     expect(topOf([0.18, 0.05], 'origination').shorted).toBeFalsy();
   });
 });
+
+describe('the partner-facing view hides jargon, never the caveat', () => {
+  const src = (() => {
+    const { readFileSync } = require('node:fs') as typeof import('node:fs');
+    const { stripComments } = require('@/test/stripComments') as typeof import('@/test/stripComments');
+    return stripComments(readFileSync('components/admin/role-ladder-tool.tsx', 'utf8'));
+  })();
+
+  // ⚠️ A partner reading `referral_codes.owner_type` learns nothing and may read it as
+  // unfinished, so the source column is internal-only.
+  it('shows the source column only internally', () => {
+    expect(src).toMatch(/audience === 'internal' \? \(\s*<span[^>]*>\{r\.established\}/);
+  });
+
+  // ⚠️ But the unnamed-rung caveat SURVIVES for partners, reworded. Dropping it would let a
+  // name that exists only in a diagram be quoted back to us as a commitment — the precise risk
+  // the marking exists for.
+  it('still warns a partner when a rung has no settled name', () => {
+    expect(src).toMatch(/levels this deep are supported, but we have not settled/);
+  });
+
+  // ⚠️ The house row is deliberately visible to partners — /for-amy's own voice settled that a
+  // constraint you can see is easier to trust than one we assert. Asserted as BEHAVIOUR, not by
+  // matching the comment that explains it: the first version of this test did the latter and
+  // failed, because stripComments had already removed the thing it was looking for.
+  it('never hides what QuickSites keeps, and gates nothing else on audience', () => {
+    expect(src).toContain('QuickSites');
+    // `audience` may only ever decide the rung-name note. Two uses, both in that branch.
+    const uses = src.match(/audience ===/g) ?? [];
+    expect(uses).toHaveLength(2);
+  });
+});

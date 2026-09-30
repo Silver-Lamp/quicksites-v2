@@ -41,6 +41,7 @@ import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import { pageRequiresPin, pagePinCookie, verifyPagePinGrant } from '@/lib/auth/pagePin';
 import ScenarioLab from '@/components/commissions/scenario-lab';
+import RoleLadderTool from '@/components/admin/role-ladder-tool';
 import { SPLIT, splitRentalPayment } from '@/lib/commerce/rentalSplits';
 import {
   MAX_PLATFORM_FEE_PERCENT,
@@ -688,6 +689,30 @@ export default async function ForAmyPage({
               personName="You"
               middleName="Someone between you and the sale"
             />
+          </div>
+
+          {/* ⚠️ The chain view, because the lab above models ONE level between her and the sale
+              and the channel she is actually above is deeper than that. Seeing where she sits
+              is the point: on the ISO shape she is the furthest rung from the sale, which is
+              exactly the position the allocator pays last and zeroes first. */}
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold text-zinc-200">
+              Where you sit, once there is a chain under you
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              The lab above is you, one person between you, and a sale. The channel being built
+              now is deeper than that, so here is the whole ladder — what each rung is called,
+              what they do, and what reaches them. Names are stand-ins.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-amber-200/90">
+              Watch the top row as you raise the rates below it. You are the furthest rung from
+              the sale, which is the one the system pays last — and when the shared pool runs out
+              it pays you <em>nothing</em>, not a smaller amount. That is the single thing about
+              this design I most want you to have seen before it matters.
+            </p>
+            <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4">
+              <RoleLadderTool maxFeePercent={MAX_PLATFORM_FEE_PERCENT} audience="partner" />
+            </div>
           </div>
         </section>
 

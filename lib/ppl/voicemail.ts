@@ -129,14 +129,64 @@ export function voicemailFirstPromptTwiml(opts: {
   trade: string;
   city: string | null;
   recordActionUrl: string;
+  /**
+   * A recording of the operator reading the greeting. Optional.
+   *
+   * ⚠️ IT IS A REAL RECORDING OF A REAL PERSON, NOT A CLONE, and that is why it needs no
+   * label. The audio-honesty standard's rule 2 governs a person's voice being *synthesised* —
+   * it must be a consented clone with `voice_basis: 'self'` reported, or it reads as unknown.
+   * None of that applies to someone recording their own greeting, which is what every business
+   * phone line in the world already is. A cloned version would also be permitted (it is the
+   * sanctioned case) and buys nothing here: the script is short, static, and the partner-audio
+   * seam is inert.
+   *
+   * ⚠️ The standard's outbound extension — disclose-first, name the origin — governs calls WE
+   * place to someone who did not summon them. This is inbound: they dialled us. Consent is
+   * present by the strongest possible action.
+   */
+  greetingUrl?: string | null;
 }): string {
   const where = opts.city ? ` in ${opts.city}` : '';
+  // ⚠️ FALLS BACK TO TTS, never to silence. If the file is missing or the CDN 404s, Twilio logs
+  // the failed <Play> and moves to the next verb — so without a <Say> alongside it the caller
+  // would hit the beep with no instruction at all, which is worse than a robot voice. The
+  // recording is an improvement on the prompt, never a dependency of it.
+  const greeting = opts.greetingUrl
+    ? `<Play>${esc(opts.greetingUrl)}</Play>`
+    : `<Say voice="Polly.Joanna">Thanks for calling. Leave a message after the tone with your number and what you need, and I'll pass it to ${escText(opts.trade)} companies${escText(where)} so one can call you back.</Say>`;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="Polly.Joanna">Thanks for calling. Leave a message after the tone with your number and what you need, and I'll pass it to ${escText(opts.trade)} companies${escText(where)} so one can call you back.</Say>
+  ${greeting}
   <Record maxLength="120" playBeep="true" trim="trim-silence" action="${esc(opts.recordActionUrl)}" method="POST"/>
   <Say voice="Polly.Joanna">I didn't get a message. Please try again shortly.</Say>
 </Response>`;
+}
+
+/**
+ * The script to read, and the only thing that has to stay true of the recording.
+ *
+ * ⚠️ A RECORDING CANNOT INTERPOLATE, so the spoken version drops the city and trade that the
+ * TTS version names. That is a deliberate trade and it is the honest direction: "local
+ * companies in the area" claims less than "towing companies in Covington", so one file is safe
+ * on every campaign. Per-city recordings can come later; a generic one cannot be WRONG on a
+ * campaign nobody remembered to re-record.
+ *
+ * Exported so a test can pin that the written script still matches what the fallback says, and
+ * so the operator has one place to read from.
+ */
+export const VOICEMAIL_GREETING_SCRIPT =
+  "Thanks for calling. Leave a message after the tone with your number and what you need, " +
+  "and I'll pass it to local companies in the area so one can call you back.";
+
+/**
+ * Where the recorded greeting lives, or null to use TTS.
+ *
+ * ⚠️ Unset is a supported, working state — not a broken one. The prompt degrades to the voice
+ * that has been serving callers all along.
+ */
+export function voicemailGreetingUrl(): string | null {
+  const u = (process.env.VOICEMAIL_GREETING_URL || '').trim();
+  return u.startsWith('https://') ? u : null;
 }
 
 /** After the caller leaves a message. Short: they are done and want to hang up. */

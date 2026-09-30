@@ -15,7 +15,7 @@ import { getPplAccountByCampaign } from '@/lib/ppl/accounts';
 import { canRouteCall } from '@/lib/ppl/rules';
 import { bridgeTwiml, notConnectingTwiml } from '@/lib/ppl/ivr';
 import { cascadeGreetingTwiml } from '@/lib/ppl/cascade';
-import { voicemailFirstPromptTwiml } from '@/lib/ppl/voicemail';
+import { voicemailFirstPromptTwiml, voicemailGreetingUrl } from '@/lib/ppl/voicemail';
 import { cascadeEnabled } from '@/lib/ppl/cascadeFlag';
 import { KEY_TO_LABEL } from '@/lib/industries';
 
@@ -153,6 +153,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
       voicemailFirstPromptTwiml({
         trade,
         city: campaign?.city ?? null,
+        greetingUrl: voicemailGreetingUrl(),
         recordActionUrl: `${base}/api/twilio/geo/${encodeURIComponent(campaignId)}/voicemail`,
       }),
     );

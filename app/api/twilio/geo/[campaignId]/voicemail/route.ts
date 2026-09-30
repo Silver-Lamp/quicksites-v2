@@ -64,9 +64,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ campaignId: st
   const callerPhone = claimed[0]?.from_number ?? from;
   const link = voicemailUrl(callSid, publicBaseUrl());
 
+  // ⚠️ WHAT ACTUALLY REACHED SOMEONE, RECORDED. `voicemail_notified_at` is stamped by the
+  // CLAIM, before either channel runs, so it only ever says we tried. On the first real
+  // voicemail-first call the email arrived and the SMS did not, and because this outcome was
+  // discarded the cause had to be reconstructed from Vercel deployment timestamps. A
+  // notification that silently did not happen is the same silence this whole feature exists to
+  // prevent, one level up. See 20260866.
+  let result: Record<string, boolean> = {};
+
   if (to && !(await isOptedOut(to).catch(() => false))) {
     const sender = await getSenderProfile().catch(() => null);
-    await sendSms(
+    const r = await sendSms(
       to,
       missedCallSmsText({
         domain: campaign?.domain ?? 'your QuickSites site',
@@ -76,6 +84,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ campaignId: st
         hasRecording: !!recordingUrl,
       }),
     ).catch(() => ({ ok: false }));
+    result = { business_sms: !!r.ok };
   } else {
     // ⚠️ VOICEMAIL-FIRST: there is no business to text, and a message nobody is told about is a
     // lead dying in a table. The caller was promised we would pass it on, so somebody has to be
@@ -85,13 +94,25 @@ export async function POST(req: Request, ctx: { params: Promise<{ campaignId: st
     // /admin/call-logs would show the row, but at roughly one call every five days nobody is
     // watching, and "it was visible if you looked" is how the two leads on 2026-09-30 were
     // lost in the first place.
-    await notifyOperatorOfVoicemail({
+    const r = await notifyOperatorOfVoicemail({
       domain: campaign?.domain ?? 'a QuickSites site',
       callerPhone,
       link,
       hasRecording: !!recordingUrl,
     });
+    result = { operator_email: r.email, operator_sms: r.sms };
   }
+
+  // Best-effort: a write failure here must not fail the webhook and trigger a retry that
+  // re-records the caller. Losing the diagnostic is bad; losing the lead is worse.
+  await admin
+    .from('call_logs')
+    .update({ voicemail_notify_result: result })
+    .eq('call_sid', callSid)
+    .then(
+      () => undefined,
+      () => undefined,
+    );
 
   return xmlResponse(voicemailThanksTwiml());
 }

@@ -82,6 +82,11 @@ export default function PartnersPage() {
             </a>
           </div>
           <p className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-sm">
+            {/* The forwardable one: a partner recruiting their own network needs terms to send,
+                not a pitch to paraphrase. */}
+            <Link href="/partners/terms" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+              Read the full terms →
+            </Link>
             <Link href="/partners/calculator" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
               Estimate your earnings vs. a flat-markup builder →
             </Link>

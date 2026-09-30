@@ -133,13 +133,22 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   const ownNumber = campaign?.tracking_number ?? searchParams.get('To');
   const callerIdAttr = ownNumber ? ` callerId="${esc(ownNumber)}"` : '';
   await logCall({ forwarded_to: dialled });
-  // The bridged leg is recorded, so the caller hears the notice first — Washington and other
-  // two-party-consent states require it, and the forwarded business may not be a client.
+  // ⚠️ THE BRIDGED LEG IS NO LONGER RECORDED (owner decision, docs/CALL_CASCADE_PLAN.md §9.3).
+  // Recording a conversation between a member of the public and a business that never asked us
+  // to is a two-party-consent question we could not answer, and nothing consumed the audio. The
+  // caller's own VOICEMAIL is still recorded — that one is unambiguous, because leaving it is
+  // the caller's deliberate act — so the "may be recorded" notice goes with the prompt that
+  // records, not here. Say it where it is true.
+  //
+  // ⚠️ `action` points at our own after-dial handler rather than /api/twilio-callback. That
+  // shared route answers everything with an empty <Response/>, which tells Twilio to HANG UP —
+  // which is how a failed forward dropped callers in silence until 2026-09-30. after-dial takes
+  // a message instead, and does the call_logs write this route used to rely on it for.
   return xml(
     `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="Polly.Joanna">This call may be recorded. Please hold while we connect you.</Say>
-  <Dial record="record-from-answer-dual" answerOnBridge="true"${callerIdAttr} action="${base}/api/twilio-callback" method="POST" recordingStatusCallback="${base}/api/twilio-callback" recordingStatusCallbackMethod="POST">
+  <Say voice="Polly.Joanna">Thanks for calling. Please hold while I connect you.</Say>
+  <Dial answerOnBridge="true"${callerIdAttr} action="${base}/api/twilio/geo/${encodeURIComponent(campaignId)}/after-dial" method="POST">
     <Number url="${esc(whisperUrl)}">${esc(forwardTo)}</Number>
   </Dial>
 </Response>`

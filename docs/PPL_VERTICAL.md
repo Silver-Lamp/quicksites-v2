@@ -678,6 +678,18 @@ them apart however large N gets, because every one of those calls shares the sus
 `forward_unresponsive.note` is where the result goes, so the next reader inherits the evidence
 rather than the conclusion.
 
+⚠️ **THE REPLACEMENT DID NOT ANSWER EITHER, WHICH CHANGES THE DIAGNOSIS — see
+[`docs/CALL_CASCADE_PLAN.md`](CALL_CASCADE_PLAN.md).** Prime Towing went to voicemail on a direct
+call minutes after being attached, and through our bridge produced a 3-second `dial-completed`
+with SIT beeps. Two destinations, chosen independently, both failing, means the hypothesis is no
+longer "we picked a bad business" — it is that **single-destination forwarding is the wrong
+mechanism for a trade whose operators are driving a truck.** Left alone, `forward_unresponsive`
+would swallow the whole market one honest observation at a time. ⚠️ Confirmed live the same
+hour: **when the dial fails we hang up on the caller** — `/api/twilio-callback` returns an empty
+`<Response/>`, which tells Twilio to disconnect — so every ring-out loses the lead in silence,
+including the two real ones that morning. That defect is ours and stands whatever is decided
+about cascading.
+
 ⚠️ **A pattern worth one person's glance, not a feature.** AL Ram is 5.0★ from 71 reviews and its
 listed number is an unanswered Google Voice line. In this cohort the established operators rate
 poorly (Lynn's 2.9/324, Gene Meyer's 3.2/252, Royal 3.6/83) while every perfect score has a

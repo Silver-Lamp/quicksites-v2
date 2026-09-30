@@ -56,7 +56,9 @@ export default function PplRepointForward({
         `Send ${domain}'s calls to ${e164}?\n\n` +
           `• ${forwardTo ?? 'nothing'} stops receiving them immediately\n` +
           `• ${e164} is texted the one-time notice as part of this — they are not rung unannounced\n` +
-          (mark ? `• ${forwardTo} is recorded as not answering, so it is not re-suggested\n` : '') +
+          (mark
+            ? `• ${forwardTo} is recorded as not answering, so it is not re-suggested\n`
+            : `• ${forwardTo ?? 'The old number'} is NOT written off — it can be suggested again\n`) +
           `• The tracking number and the site are unchanged`,
       )
     )
@@ -67,7 +69,14 @@ export default function PplRepointForward({
       const r = await fetch('/api/admin/prospects/geo-campaign/set-forward', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaignId, forwardTo: e164, markPreviousUnresponsive: mark }),
+        body: JSON.stringify({
+          campaignId,
+          forwardTo: e164,
+          markPreviousUnresponsive: mark,
+          // What the conclusion rests on, stored with it. A later reader inherits the evidence
+          // rather than a verdict they have to take on trust.
+          note: mark ? 'operator dialled it directly from an ordinary phone; no answer' : undefined,
+        }),
       });
       const j = await r.json();
       if (!r.ok) {
@@ -117,9 +126,19 @@ export default function PplRepointForward({
           {suggestedName ? (
             <span className="text-[11px] text-muted-foreground">next pick: {suggestedName}</span>
           ) : null}
-          <label className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+          {/* ⚠️ The label names the TEST, not the conclusion, and that is the whole point.
+              Missed calls through our own bridge cannot distinguish "they answer nobody" from
+              "they screen the unknown number WE call from" — every one of those calls shares
+              the suspect variable, so a hundred of them settle nothing. Dialling from an
+              ordinary phone settles it in thirty seconds. AL Ram Towing (2026-09-30) reached
+              "the Google subscriber you have dialed is not available", which is what made
+              re-pointing the right fix rather than a way to move the problem. */}
+          <label
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+            title="Missed calls through our bridge cannot tell you whether they are screening our number. A direct call can."
+          >
             <input type="checkbox" checked={mark} onChange={(e) => setMark(e.target.checked)} />
-            {forwardTo ?? 'the old number'} does not answer
+            I dialled {forwardTo ?? 'it'} myself and it did not answer
           </label>
           <button
             type="button"

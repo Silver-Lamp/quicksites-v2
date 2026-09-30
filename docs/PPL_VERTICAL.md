@@ -662,6 +662,26 @@ is the flattering reading, and the flattering reading is what let this run. An *
 status is `in_progress`, never a failure — a vocabulary change at Twilio must not write real
 businesses onto the unresponsive list.
 
-**Still unmeasured:** whether the caller-ID mismatch is *why* destinations do not answer. The
-cheap test is to dial a non-answering forward-to from an ordinary phone: if it answers, the
-problem is ours, and switching destinations only moves it.
+**The caller-ID hypothesis was tested the same day and is FALSE — and the test is now the
+procedure.** The worry was that destinations screen us: the notice SMS goes out from
+`TWILIO_FROM` while the calls present the campaign's tracking number, so a recipient cannot
+connect the two and sees only an unknown 253 number ringing repeatedly. If that were the cause,
+re-pointing would move the problem rather than fix it. Sandon dialled `(253) 234-7959` directly
+from his own phone and reached **"the Google subscriber you have dialed is not available, please
+leave a message."** An ordinary call from an unrelated number is not answered either, so the
+failure is theirs, our bridge is exonerated, and switching destinations is the right remedy.
+
+⚠️ **Run that test before marking a destination unresponsive.** Thirty seconds on an ordinary
+phone distinguishes the two explanations — *they do not answer* versus *they do not answer US* —
+and only one of them is fixed by re-pointing. N missed calls through our own bridge cannot tell
+them apart however large N gets, because every one of those calls shares the suspect variable.
+`forward_unresponsive.note` is where the result goes, so the next reader inherits the evidence
+rather than the conclusion.
+
+⚠️ **A pattern worth one person's glance, not a feature.** AL Ram is 5.0★ from 71 reviews and its
+listed number is an unanswered Google Voice line. In this cohort the established operators rate
+poorly (Lynn's 2.9/324, Gene Meyer's 3.2/252, Royal 3.6/83) while every perfect score has a
+handful of reviews — 5.0 from 71 is an outlier against the market's own shape. `shrunkRating`
+rewards exactly that combination, so if a high score with many reviews is less trustworthy in
+towing than elsewhere, the scorer selects for it. One data point is not a finding and nothing
+here should be built on it; noted so a second instance is recognised as the second.

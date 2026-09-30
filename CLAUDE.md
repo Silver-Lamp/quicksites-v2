@@ -244,8 +244,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `forward_notice_sent_to` (a legacy timestamp with no subject still counts as sent, or the fix
   itself re-texts twelve businesses). ⚠️ `forward_unresponsive` is **not** `forward_opt_outs` —
   an opt-out is their decision, "does not answer" is *our* conclusion from *our* evidence and may
-  be wrong, since the notice SMS goes from `TWILIO_FROM` while calls present the tracking number,
-  so the recipient cannot connect the two. ⚠️ `classifyDial` distrusts Twilio's `completed`
+  be wrong. ⚠️ **So dial the number from an ordinary phone before writing it off** — the notice
+  SMS goes from `TWILIO_FROM` while calls present the tracking number, so a recipient sees only
+  an unknown number and *"they screen us"* and *"they answer nobody"* look identical through our
+  own bridge, however many calls we log. Only one is fixed by re-pointing. Tested for AL Ram
+  2026-09-30: a direct call reached **"the Google subscriber you have dialed is not available"**,
+  so our bridge was exonerated and the switch was right. The result goes in
+  `forward_unresponsive.note`. ⚠️ `classifyDial` distrusts Twilio's `completed`
   (voicemail answers too): `answered` needs ≥15s, shorter is `brief`, and an **unknown** status is
   never a failure.
 - **Dome builders — directory sites on `<state>domebuilders.com` with DomeSketch (2026-09-19)**:

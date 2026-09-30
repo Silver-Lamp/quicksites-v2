@@ -49,7 +49,9 @@ export async function suggestForwardTargets(
   // cannot answer the question being asked at the moment it is asked is not much of one.
   const query = supabaseAdmin
     .from('geo_industry_campaigns')
-    .select('id, domain, city, region, industry_key, center_lat, center_lon, forward_to, tracking_number, forward_opted_out_at')
+    .select(
+      'id, domain, city, region, industry_key, center_lat, center_lon, forward_to, tracking_number, forward_opted_out_at, forward_notice_sent_to',
+    )
     .order('domain');
   const { data: campaigns } = await (opts.includeAssigned ? query : query.is('forward_to', null));
 
@@ -75,6 +77,23 @@ export async function suggestForwardTargets(
     }
     if (!c.city || !c.industry_key) {
       skipped.push({ domain: c.domain, why: 'campaign has no city or industry to match on' });
+      continue;
+    }
+    // ⚠️ A CLEARED DESTINATION IS A DECISION, NOT A GAP — and without this the UI invites
+    // someone to undo it. Voicemail-first is switched on by clearing `forward_to`
+    // (docs/CALL_CASCADE_PLAN.md §13), which makes the campaign look exactly like one that
+    // never had a destination, so it reappears under "Suggested forward-to" with a pick and an
+    // attach button. A week from now that reads as a to-do, someone attaches a business, and
+    // the experiment ends silently with nothing recording that it did.
+    //
+    // Told apart without a second flag: `forward_notice_sent_to` is only ever written when a
+    // destination WAS set, so notice-sent plus no-destination means it was cleared on purpose.
+    // A STOP also clears `forward_to`, but stamps `forward_opted_out_at` and is skipped above.
+    if (!c.forward_to && c.forward_notice_sent_to) {
+      skipped.push({
+        domain: c.domain,
+        why: 'voicemail-first — destination deliberately cleared; re-attach from the campaigns table if that is wrong',
+      });
       continue;
     }
     if (opts.requireDemand !== false && !c.tracking_number) {

@@ -14,6 +14,8 @@ import PplAttachNumberForm from '@/components/admin/ppl-attach-number-form';
 import PplUseSuggestion from '@/components/admin/ppl-use-suggestion';
 import PplBuyAndAttach from '@/components/admin/ppl-buy-and-attach';
 import PplRebuyNumber from '@/components/admin/ppl-rebuy-number';
+import PplRepointForward from '@/components/admin/ppl-repoint-forward';
+import { loadCampaignForwardHealth } from '@/lib/ppl/forwardHealth';
 import PplDisputeActions from '@/components/admin/ppl-dispute-actions';
 import { listOpenDisputes, DISPUTE_CATEGORIES } from '@/lib/ppl/disputes';
 import { statementUrl } from '@/lib/ppl/statementToken';
@@ -87,6 +89,17 @@ export default async function PplOpsPage() {
     recommendations: [],
     skipped: [],
   }));
+  // Dial outcomes keyed by campaign AND the destination that was actually rung, so a campaign
+  // re-pointed last week does not show the previous business's failures against the new one.
+  // Only rows carrying `forwarded_to` count; `unattributed` is everything dialled before
+  // 20260861 started recording it, reported rather than guessed at.
+  const forwardHealth = await loadCampaignForwardHealth({ sinceDays: 90 }).catch(() => ({
+    rows: [],
+    unattributed: 0,
+  }));
+  const healthFor = (campaignId: string, phone: string | null) =>
+    forwardHealth.rows.find((r) => r.campaignId === campaignId && r.phone === phone) ?? null;
+
   const base = publicBaseUrl();
   const { data: allCampaigns } = await supabaseAdmin
     .from('geo_industry_campaigns')
@@ -456,7 +469,45 @@ export default async function PplOpsPage() {
                       )}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-muted-foreground">
-                      {c.forward_to ?? '—'}
+                      <span className="flex flex-col gap-1">
+                        <span>{c.forward_to ?? '—'}</span>
+                        {(() => {
+                          const h = healthFor(c.id, c.forward_to ?? null);
+                          if (!c.forward_to) return null;
+                          return (
+                            <>
+                              {h ? (
+                                <span className="text-[11px]">
+                                  {h.answered > 0 ? (
+                                    <span className="text-emerald-400">
+                                      {h.answered} answered
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">0 answered</span>
+                                  )}
+                                  {h.unanswered > 0 ? (
+                                    <span className="text-rose-400"> · {h.unanswered} rang out</span>
+                                  ) : null}
+                                  {h.brief > 0 ? (
+                                    <span className="text-amber-300"> · {h.brief} too short</span>
+                                  ) : null}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground">
+                                  no calls recorded
+                                </span>
+                              )}
+                              <PplRepointForward
+                                campaignId={c.id}
+                                domain={c.domain}
+                                forwardTo={c.forward_to}
+                                answered={h?.answered ?? 0}
+                                unanswered={h?.unanswered ?? 0}
+                              />
+                            </>
+                          );
+                        })()}
+                      </span>
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{c.calls_30d}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{c.qualified_30d}</td>

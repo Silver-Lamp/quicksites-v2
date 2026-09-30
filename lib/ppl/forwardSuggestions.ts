@@ -13,6 +13,7 @@ import {
   type ForwardProspect,
   type ForwardRecommendation,
 } from './forwardCandidates';
+import { loadUnresponsivePhones } from './forwardHealth';
 
 const PROSPECT_COLUMNS =
   'id, business_name, phone, website, city, region, industry_key, rating, review_count, status, created_at, last_seen_at, address_lat, address_lon';
@@ -105,6 +106,12 @@ export async function suggestForwardTargets(opts: { requireDemand?: boolean } = 
   const { data: optOutRows } = await supabaseAdmin.from('forward_opt_outs').select('phone');
   const optedOut = new Set((optOutRows ?? []).map((r) => normalizePhone(r.phone)).filter(Boolean));
 
+  // A third exclusion, and the one that is our observation rather than the business's decision:
+  // destinations seen not answering forwarded calls. Without it the recommender re-picks the
+  // highest-scoring business in the market every time, which is exactly the one just dropped for
+  // not picking up — AL Ram Towing scored 68 in Covington on the morning its third call rang out.
+  const unresponsive = await loadUnresponsivePhones();
+
   const { data: taken } = await supabaseAdmin
     .from('geo_industry_campaigns')
     .select('domain, forward_to')
@@ -125,7 +132,7 @@ export async function suggestForwardTargets(opts: { requireDemand?: boolean } = 
     recommendForwardTargets(
       c,
       all.filter((p) => p.industry_key === c.industry_key),
-      { optedOut, forwardedElsewhere },
+      { optedOut, unresponsive, forwardedElsewhere },
     ),
   );
 

@@ -228,6 +228,26 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   is the business's balance, and it is a *prepaid balance*, never "escrow". Adapted from a Gemini
   draft that never wired its billing step, accepted unsigned Stripe events, and could credit a
   reload twice; each is a constraint or a test here. Flag `PPL_ENABLED`; gate `ppl` on `/status`.
+  ⚠️ **A FORWARD-TO CAN GO DEAD AND FOUR THINGS HID IT (2026-09-30, §11e).** `covingtontow.com`
+  rang out on two real leads at the market's top-scoring business; found only because the owner
+  dialled his own site. (1) `/admin/call-logs` painted **every** status `text-green-400`, so
+  `Dial-No-Answer` read as success — colour now comes from `classifyDial`, pinned by a source
+  guard. (2) Nothing recorded **who was dialled** (`to_number` is *our* number; `forward_to` is
+  mutable), so any answer rate re-attributed the old destination's failures to the new one —
+  `call_logs.forwarded_to` (`20260861`) is written at dial time and **deliberately not
+  backfilled**, because filling it from the current `forward_to` is a guess about history
+  presented as a record of it. (3) There was **no verb** for "send these calls elsewhere" — every
+  writer changes a NUMBER and carries the forward-to along — now `setCampaignForwardTo` +
+  `POST …/geo-campaign/set-forward` + a Re-point control. (4) Worst: `sendForwardNotice` returned
+  `already_sent` on a bare `forward_notice_sent_at`, so the **first re-point would have rung a
+  business that had been told nothing** while recording the notice as handled; it now compares
+  `forward_notice_sent_to` (a legacy timestamp with no subject still counts as sent, or the fix
+  itself re-texts twelve businesses). ⚠️ `forward_unresponsive` is **not** `forward_opt_outs` —
+  an opt-out is their decision, "does not answer" is *our* conclusion from *our* evidence and may
+  be wrong, since the notice SMS goes from `TWILIO_FROM` while calls present the tracking number,
+  so the recipient cannot connect the two. ⚠️ `classifyDial` distrusts Twilio's `completed`
+  (voicemail answers too): `answered` needs ≥15s, shorter is `brief`, and an **unknown** status is
+  never a failure.
 - **Dome builders — directory sites on `<state>domebuilders.com` with DomeSketch (2026-09-19)**:
   the first pay-per-call mass-deploy cohort (`docs/PPL_VERTICAL.md` §9). 13 state + 8 national
   exact-match domains bought after a Places sweep showed supply per state; a **directory** site

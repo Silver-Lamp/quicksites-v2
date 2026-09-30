@@ -48,10 +48,15 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   const campaign = await getGeoCampaign(campaignId).catch(() => null);
   const forwardTo = campaign?.forward_to || process.env.CALL_TRACKING_FALLBACK_NUMBER || '';
 
+  // PPL dials the account holder, not the campaign's forward_to (see the branch below), so the
+  // destination is resolved before logging and the log records whichever one is really rung.
+  let dialled: string | null = forwardTo || null;
+
   // Tag the inbound call with the campaign (best-effort — never block forwarding).
-  try {
-    const callSid = searchParams.get('CallSid');
-    if (callSid) {
+  const callSid = searchParams.get('CallSid');
+  const logCall = async (extra: Record<string, unknown> = {}) => {
+    try {
+      if (!callSid) return;
       await admin.from('call_logs').upsert(
         {
           call_sid: callSid,
@@ -61,13 +66,18 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
           call_status: searchParams.get('CallStatus') || 'ringing',
           geo_campaign_id: campaignId,
           custom_domain: campaign?.domain ?? null,
+          // ⚠️ The destination, written at DIAL TIME. `to_number` is our tracking number and the
+          // campaign's forward_to is mutable, so without this an answer rate can only be
+          // computed against whoever holds the line today — and a re-point silently re-attributes
+          // the old destination's no-answers to the new one. See 20260861.
+          ...extra,
         },
         { onConflict: 'call_sid' }
       );
+    } catch {
+      /* logging is best-effort — never block forwarding */
     }
-  } catch {
-    /* logging is best-effort */
-  }
+  };
 
   // Pay-per-call campaigns (docs/PPL_VERTICAL.md): the balance gate runs BEFORE the bridge, and
   // the bridged leg's outcome goes to the signed /api/twilio/ppl/complete callback, which bills.
@@ -82,10 +92,15 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
     // contact_phone connects nothing rather than guessing.
     const dest = account?.contact_phone || null;
     if (!account || !canRouteCall(account) || !dest) {
+      // Nothing was dialled, so nothing is recorded as the destination — a call that never
+      // reached anyone must not read later as a business failing to answer.
+      await logCall({ forwarded_to: null });
       return xml(
         notConnectingTwiml({ businessName, recordActionUrl: `${base}/api/twilio-callback` })
       );
     }
+    dialled = dest;
+    await logCall({ forwarded_to: dialled });
     const caller = searchParams.get('From');
     const whisper = `New lead from ${campaign.domain ?? 'your QuickSites site'}${caller ? `, calling from ${spokenNumber(caller)}` : ''}.`;
     return xml(
@@ -101,6 +116,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   }
 
   if (!forwardTo) {
+    await logCall({ forwarded_to: null });
     // No destination yet (unclaimed / no fallback) — take a message instead of failing.
     return xml(
       `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">Thanks for calling. Please leave a message after the tone.</Say><Record maxLength="120" action="${base}/api/twilio-callback" method="POST"/></Response>`
@@ -116,6 +132,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   // own. Our own number carries full attestation; the caller's number rides in the whisper.
   const ownNumber = campaign?.tracking_number ?? searchParams.get('To');
   const callerIdAttr = ownNumber ? ` callerId="${esc(ownNumber)}"` : '';
+  await logCall({ forwarded_to: dialled });
   // The bridged leg is recorded, so the caller hears the notice first — Washington and other
   // two-party-consent states require it, and the forwarded business may not be a client.
   return xml(

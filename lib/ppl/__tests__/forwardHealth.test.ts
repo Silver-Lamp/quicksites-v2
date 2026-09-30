@@ -59,6 +59,15 @@ describe('suggestsUnresponsive', () => {
     expect(suggestsUnresponsive({ answered: 0, brief: 5, unanswered: 1 })).toBe(false);
     expect(suggestsUnresponsive({ answered: 0, brief: 5, unanswered: 3 })).toBe(true);
   });
+
+  // ⚠️ The trap the first real row laid. AL Ram Towing was filed with NULL counts because its
+  // three calls predate `call_logs.forwarded_to`; reading NULL as 0 makes this return false and
+  // recommend clearing a correct entry, on the strength of a number that means "we don't know".
+  it('has no opinion when the counts are unknown, rather than reading them as zero', () => {
+    expect(suggestsUnresponsive({ answered: null, brief: null, unanswered: null })).toBe(false);
+    expect(suggestsUnresponsive({ answered: null, unanswered: 9 })).toBe(false);
+    expect(suggestsUnresponsive({ answered: 0, unanswered: null })).toBe(false);
+  });
 });
 
 describe('noticeAlreadySent', () => {
@@ -246,6 +255,18 @@ describe('source guards', () => {
   // The empty field was answered with a format complaint while the box displayed a grey number
   // that reads as a value. Both halves have to stay fixed: a distinct empty-state message, and
   // a placeholder that cannot be mistaken for input.
+  // An unattributable count must reach the row as NULL. `?? 0` is the whole bug: it turns
+  // "we could not attribute any calls" into "we checked and found none", on the record whose
+  // only job is to hold the evidence for writing a business off.
+  it('the repoint route records unknown counts as null, never zero', () => {
+    const src = stripComments(
+      readFileSync('app/api/admin/prospects/geo-campaign/set-forward/route.ts', 'utf8'),
+    );
+    expect(src).not.toMatch(/unanswered:\s*h\?\.\w+\s*\?\?\s*0/);
+    expect(src).not.toMatch(/answered:\s*h\?\.\w+\s*\?\?\s*0/);
+    expect(src).toMatch(/unanswered:\s*h\s*\?\s*h\.unanswered\s*:\s*null/);
+  });
+
   it('the repoint box distinguishes an empty field from a malformed one', () => {
     const src = stripComments(readFileSync('components/admin/ppl-repoint-forward.tsx', 'utf8'));
     expect(src).toMatch(/the box is empty/);

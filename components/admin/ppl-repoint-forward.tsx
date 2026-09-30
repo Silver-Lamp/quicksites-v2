@@ -106,10 +106,12 @@ export default function PplRepointForward({
       </button>
       {open ? (
         <span className="inline-flex flex-wrap items-center gap-2">
+          {/* The placeholder is a 555 number on purpose: a format example that cannot be
+              mistaken for a real destination someone half-read off the screen and dialled. */}
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="+12533265555"
+            placeholder="+12065550123"
             className="w-40 rounded-md border border-border bg-background px-2 py-0.5 text-[11px] font-mono"
           />
           {suggestedName ? (

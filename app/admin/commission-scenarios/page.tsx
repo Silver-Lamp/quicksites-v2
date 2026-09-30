@@ -9,6 +9,7 @@
 import Link from 'next/link';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import CommissionScenarios from '@/components/admin/commission-scenarios';
+import RoleLadderTool from '@/components/admin/role-ladder-tool';
 import {
   MAX_PLATFORM_FEE_PERCENT,
   PARTNER_FEE_SHARE,
@@ -69,6 +70,26 @@ export default async function CommissionScenariosPage() {
           originationPool={ORIGINATION_UPLINE_POOL_SHARE}
         />
       </div>
+
+      <section className="mt-12">
+        <h2 className="text-xl font-semibold">The ladder — who is in the chain, and what they earn</h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          How far down this can go, what each rung is called, what they are responsible for, and
+          what they take home. Examples use stand-in names — <strong>Alice</strong> and{' '}
+          <strong>Danny</strong> for the two real people, invented names for everyone else, because
+          these diagrams get forwarded.
+        </p>
+        {/* ⚠️ The finding this makes visible: the ladder runs out of vocabulary before it runs out
+            of rungs. Three names are real (`owner_type`, `set-hub`); above that they are
+            proposals, and the person the owner most wants paid sits on an unnamed rung. */}
+        <p className="mt-2 max-w-2xl text-sm text-amber-300/90">
+          Rungs are marked with where their name actually comes from. Only three are real names
+          the code branches on — the rest are proposed here and nowhere else.
+        </p>
+        <div className="mt-5">
+          <RoleLadderTool maxFeePercent={MAX_PLATFORM_FEE_PERCENT} />
+        </div>
+      </section>
 
       <p className="mt-8 text-xs text-muted-foreground">
         Nothing is configured from this page — rates live on{' '}

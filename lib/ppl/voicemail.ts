@@ -73,11 +73,23 @@ export function voicemailUrl(callSid: string, base: string): string {
   return `${base.replace(/\/+$/, '')}/voicemail/${encodeURIComponent(mintVoicemailToken(callSid))}`;
 }
 
+/** For an XML ATTRIBUTE — quotes included, because they would close the attribute. */
 function esc(s: string): string {
   return s.replace(
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c] as string,
   );
+}
+
+/**
+ * For TEXT a voice reads aloud — only the three characters XML requires.
+ *
+ * Same split as `lib/ppl/cascade.ts`: escaping quotes inside `<Say>` renders "couldn&apos;t"
+ * beside a literal "I'll", which Polly reads identically, so nothing sounds wrong and the
+ * inconsistency survives. Attributes use `esc`; speech uses this.
+ */
+function escText(s: string): string {
+  return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] as string);
 }
 
 /**
@@ -91,6 +103,37 @@ export function voicemailPromptTwiml(opts: { recordActionUrl: string }): string 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Polly.Joanna">Sorry, I couldn't reach them just now. Leave a message after the tone and I'll pass it straight to them, along with your number.</Say>
+  <Record maxLength="120" playBeep="true" trim="trim-silence" action="${esc(opts.recordActionUrl)}" method="POST"/>
+  <Say voice="Polly.Joanna">I didn't get a message. Please try again shortly.</Say>
+</Response>`;
+}
+
+/**
+ * VOICEMAIL-FIRST: no business is rung at all. The caller leaves a message and we get it to a
+ * local company (docs/CALL_CASCADE_PLAN.md §13).
+ *
+ * ⚠️ IT PROMISES A RELAY, NOT A CALLBACK TIME, AND NOT A COMPANY. We cannot promise anyone will
+ * ring back — nobody has agreed to anything at the moment this plays — so it says what we will
+ * do ("pass it to local towing companies"), never what they will do. "Someone will call you
+ * right back" is a claim about a third party we have no contract with, and it is the sentence
+ * this wording exists to avoid.
+ *
+ * ⚠️ AND IT DISCLOSES THE ONWARD DISCLOSURE. The message and the caller's number go to
+ * businesses. Saying so is what separates this from quietly brokering a stranger's details; it
+ * is also what makes the whole model honest enough to advertise.
+ *
+ * ⚠️ While the experiment runs, the relay is a PERSON doing it by hand. That does not change
+ * what the caller is told, because from their side the promise is identical and it is kept.
+ */
+export function voicemailFirstPromptTwiml(opts: {
+  trade: string;
+  city: string | null;
+  recordActionUrl: string;
+}): string {
+  const where = opts.city ? ` in ${opts.city}` : '';
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">Thanks for calling. Leave a message after the tone with your number and what you need, and I'll pass it to ${escText(opts.trade)} companies${escText(where)} so one can call you back.</Say>
   <Record maxLength="120" playBeep="true" trim="trim-silence" action="${esc(opts.recordActionUrl)}" method="POST"/>
   <Say voice="Polly.Joanna">I didn't get a message. Please try again shortly.</Say>
 </Response>`;
@@ -116,6 +159,63 @@ export function voicemailThanksTwiml(): string {
  * are being forwarded to you"; it did not cover us texting them about missed ones, and a
  * recipient must be able to end it without ending the calls.
  */
+/**
+ * Tell the operator a voicemail-first message landed, so they can relay it by hand.
+ *
+ * ⚠️ BOTH CHANNELS, AND IT SAYS WHICH ONES WORKED. The caller was promised a relay; an
+ * unnoticed notification breaks that promise while looking fine from here. Email always (the
+ * addresses are already configured), SMS as well when `OPERATOR_ALERT_SMS` is set — because at
+ * roughly one call every five days an email can sit unread for a day and the lead is cold.
+ *
+ * ⚠️ It never throws. A notification failure must not make the Twilio webhook non-2xx, which
+ * would have Twilio retry the whole thing and re-record the caller.
+ */
+export async function notifyOperatorOfVoicemail(opts: {
+  domain: string;
+  callerPhone: string | null;
+  link: string;
+  hasRecording: boolean;
+}): Promise<{ email: boolean; sms: boolean }> {
+  const caller = opts.callerPhone ? formatUsPhone(opts.callerPhone) : 'unknown number';
+  const body = opts.hasRecording
+    ? `New lead on ${opts.domain} from ${caller}. Listen: ${opts.link}`
+    : `Call on ${opts.domain} from ${caller} — reached the prompt but left no message.`;
+
+  let email = false;
+  let sms = false;
+  try {
+    const admins = String(process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (admins.length) {
+      const { sendEmail } = await import('@/lib/email');
+      await sendEmail({
+        to: admins,
+        subject: `[QuickSites] ${opts.hasRecording ? 'Lead' : 'Hang-up'} — ${opts.domain}`,
+        html:
+          `<p>${body}</p>` +
+          `<p>Relay it to a local business, then note who took it.</p>`,
+      });
+      email = true;
+    }
+  } catch {
+    /* never throw — see the header */
+  }
+
+  try {
+    const phone = (process.env.OPERATOR_ALERT_SMS || '').trim();
+    if (phone) {
+      const { sendSms } = await import('@/lib/sms/sendSms');
+      const r = await sendSms(phone, body);
+      sms = !!r.ok;
+    }
+  } catch {
+    /* never throw */
+  }
+  return { email, sms };
+}
+
 export function missedCallSmsText(opts: {
   domain: string;
   callerPhone: string | null;

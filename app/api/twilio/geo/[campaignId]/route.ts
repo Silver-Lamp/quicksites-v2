@@ -15,6 +15,7 @@ import { getPplAccountByCampaign } from '@/lib/ppl/accounts';
 import { canRouteCall } from '@/lib/ppl/rules';
 import { bridgeTwiml, notConnectingTwiml } from '@/lib/ppl/ivr';
 import { cascadeGreetingTwiml } from '@/lib/ppl/cascade';
+import { voicemailFirstPromptTwiml } from '@/lib/ppl/voicemail';
 import { cascadeEnabled } from '@/lib/ppl/cascadeFlag';
 import { KEY_TO_LABEL } from '@/lib/industries';
 
@@ -97,13 +98,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
     if (!account || !canRouteCall(account) || !dest) {
       // Nothing was dialled, so nothing is recorded as the destination — a call that never
       // reached anyone must not read later as a business failing to answer.
-      await logCall({ forwarded_to: null });
+      await logCall({ forwarded_to: null, handling: 'no_destination' });
       return xml(
         notConnectingTwiml({ businessName, recordActionUrl: `${base}/api/twilio-callback` })
       );
     }
     dialled = dest;
-    await logCall({ forwarded_to: dialled });
+    await logCall({ forwarded_to: dialled, handling: 'ppl' });
     const caller = searchParams.get('From');
     const whisper = `New lead from ${campaign.domain ?? 'your QuickSites site'}${caller ? `, calling from ${spokenNumber(caller)}` : ''}.`;
     return xml(
@@ -124,7 +125,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   // cascade, not a broken forward. Flag-gated OFF until the two numbers in
   // docs/CALL_CASCADE_PLAN.md §8 are measured: do callers hold, and does anyone press 1.
   if (cascadeEnabled()) {
-    await logCall({ forwarded_to: null });
+    await logCall({ forwarded_to: null, handling: 'cascade' });
     const trade = (KEY_TO_LABEL as Record<string, string>)[campaign?.industry_key ?? ''] ?? 'local';
     return xml(
       cascadeGreetingTwiml({
@@ -135,11 +136,25 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
     );
   }
 
+  // ⚠️ VOICEMAIL-FIRST. No business is rung: we take the message and relay it
+  // (docs/CALL_CASCADE_PLAN.md §13). A campaign reaches this branch by having its `forward_to`
+  // cleared, which is the whole flip — there is no second flag, because "who do we ring" and
+  // "do we ring anyone" are the same question and two switches could disagree.
+  //
+  // ⚠️ The old copy here was "Thanks for calling. Please leave a message after the tone." and
+  // its Record posted to /api/twilio-callback, which stores the audio and tells NOBODY. That
+  // was survivable when this branch only caught campaigns with no destination yet; as the
+  // primary path it would be a lead dying silently in a table. It now says what happens to the
+  // message and routes to the handler that notifies someone.
   if (!forwardTo) {
-    await logCall({ forwarded_to: null });
-    // No destination yet (unclaimed / no fallback) — take a message instead of failing.
+    await logCall({ forwarded_to: null, handling: 'voicemail_first' });
+    const trade = (KEY_TO_LABEL as Record<string, string>)[campaign?.industry_key ?? ''] ?? 'local';
     return xml(
-      `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="Polly.Joanna">Thanks for calling. Please leave a message after the tone.</Say><Record maxLength="120" action="${base}/api/twilio-callback" method="POST"/></Response>`
+      voicemailFirstPromptTwiml({
+        trade,
+        city: campaign?.city ?? null,
+        recordActionUrl: `${base}/api/twilio/geo/${encodeURIComponent(campaignId)}/voicemail`,
+      }),
     );
   }
 
@@ -152,7 +167,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   // own. Our own number carries full attestation; the caller's number rides in the whisper.
   const ownNumber = campaign?.tracking_number ?? searchParams.get('To');
   const callerIdAttr = ownNumber ? ` callerId="${esc(ownNumber)}"` : '';
-  await logCall({ forwarded_to: dialled });
+  await logCall({ forwarded_to: dialled, handling: 'forward' });
   // ⚠️ THE BRIDGED LEG IS NO LONGER RECORDED (owner decision, docs/CALL_CASCADE_PLAN.md §9.3).
   // Recording a conversation between a member of the public and a business that never asked us
   // to is a two-party-consent question we could not answer, and nothing consumed the audio. The

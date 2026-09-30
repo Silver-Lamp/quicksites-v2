@@ -11,6 +11,7 @@ import {
   verifyVoicemailToken,
   voicemailUrl,
   voicemailPromptTwiml,
+  voicemailFirstPromptTwiml,
   missedCallSmsText,
   VOICEMAIL_LINK_TTL_MS,
 } from '@/lib/ppl/voicemail';
@@ -82,6 +83,45 @@ describe('what the caller hears', () => {
     const lower = twiml.toLowerCase();
     for (const phrase of FORBIDDEN_IVR_PHRASES) {
       expect(lower).not.toContain(phrase.toLowerCase());
+    }
+  });
+});
+
+describe('the voicemail-first prompt', () => {
+  const twiml = voicemailFirstPromptTwiml({
+    trade: 'Towing',
+    city: 'Covington',
+    recordActionUrl: 'https://x.test/vm',
+  });
+
+  // ⚠️ It promises what WE will do, never what a business will do. Nobody has agreed to
+  // anything at the moment this plays, so "someone will call you right back" would be a claim
+  // about a third party we have no contract with.
+  it('promises a relay, not a callback', () => {
+    expect(twiml).toMatch(/I'll pass it to Towing companies in Covington/i);
+    for (const bad of [
+      'will call you right back',
+      'someone will call you within',
+      'guaranteed',
+      'immediately',
+    ]) {
+      expect(twiml.toLowerCase()).not.toContain(bad);
+    }
+  });
+
+  // ⚠️ The message and the caller's number go to businesses. Saying so is what separates this
+  // from quietly brokering a stranger's details.
+  it('discloses that the message goes to other companies', () => {
+    expect(twiml).toMatch(/pass it to .* companies/i);
+    expect(twiml).toMatch(/with your number/i);
+  });
+
+  it('records, and carries no forbidden IVR phrase', () => {
+    expect(twiml).toContain('<Record');
+    const lower = twiml.toLowerCase();
+    for (const phrase of FORBIDDEN_IVR_PHRASES) expect(lower).not.toContain(phrase.toLowerCase());
+    for (const bad of ['our network', 'our partners', 'vetted', 'approved']) {
+      expect(lower).not.toContain(bad);
     }
   });
 });
@@ -180,5 +220,35 @@ describe('source guards', () => {
   it('the shared verifier signs over pathname AND search', () => {
     const src = stripComments(readFileSync('lib/twilio/verifyWebhook.ts', 'utf8'));
     expect(src).toMatch(/\$\{u\.pathname\}\$\{u\.search\}/);
+  });
+});
+
+describe('voicemail-first source guards', () => {
+  // ⚠️ The caller is promised a relay. A message that only lands in a table breaks that promise
+  // while looking fine from our side — and "it was visible if you looked" is exactly how the
+  // two leads on 2026-09-30 were lost.
+  it('a voicemail with no business destination still notifies someone', () => {
+    const src = stripComments(
+      readFileSync('app/api/twilio/geo/[campaignId]/voicemail/route.ts', 'utf8'),
+    );
+    expect(src).toContain('notifyOperatorOfVoicemail');
+    // And it is the else of the business-text branch, not an extra call alongside it.
+    expect(src).toMatch(/\}\s*else\s*\{[\s\S]*notifyOperatorOfVoicemail/);
+  });
+
+  // ⚠️ `forwarded_to IS NULL` is true of four different populations. Segmenting the experiment
+  // on it would mix them into one denominator and produce a ratio that answers nothing.
+  it('the rate is segmented on handling, not on a null destination', () => {
+    const src = stripComments(readFileSync('lib/ppl/forwardHealth.ts', 'utf8'));
+    expect(src).toMatch(/\.eq\('handling', 'voicemail_first'\)/);
+  });
+
+  // Every branch of the voice route must say which model served the call, or the denominator
+  // is wrong in a way nothing reports.
+  it('every handling branch tags the call row', () => {
+    const src = stripComments(readFileSync('app/api/twilio/geo/[campaignId]/route.ts', 'utf8'));
+    const calls = src.match(/logCall\(\{[^}]*\}\)/g) ?? [];
+    expect(calls.length).toBeGreaterThanOrEqual(4);
+    for (const call of calls) expect(call).toMatch(/handling:/);
   });
 });

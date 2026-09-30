@@ -268,3 +268,82 @@ call.** Everything else is a guess wearing a number.
 detection without checking it first.** AMD is a REST-call feature; whether it is available on a
 `<Dial><Number>` leg is unverified here and should not be assumed. The keypress is free,
 certain, and already built.
+
+---
+
+## 13. Voicemail-first — the model change (owner direction, 2026-09-30)
+
+**Stop trying to connect the call.** Take the message, then offer the job to local businesses
+and let the first one claim it.
+
+Every hard problem above disappears: no hold time, no live-answer dependency, no
+voicemail-versus-human detection, no keypress, no state machine. An operator under a truck
+cannot answer a call but can read a text in five minutes.
+
+⚠️ **The bigger prize is acquisition, not call handling.** The current funnel is build a site →
+mail a postcard → hope for a claim → then forward calls, and it is **176 postcards → 4 scans →
+0 claims**, dead at the top. All five funnels end at "create an account", which has converted
+**zero strangers**. Voicemail-first inverts it: the first touch becomes *"a customer in
+Covington just asked for towing — want it?"*, delivered to a phone, no account, nothing to
+install. **The lead is the pitch**, and value arrives before we ask for anything.
+
+⚠️ **First-to-claim also fixes the objection that killed the broadcast idea** (§ the
+pros-and-cons discussion): one claimer means **one** callback, so a stranded person is not rung
+by five businesses.
+
+### What could kill it, and it is specific
+
+**Towing is the worst possible vertical for async.** Someone stranded on a shoulder will not
+leave a message and wait — they will hang up and tap the next result. Non-emergency work (car
+won't start at home, junk removal, scheduled transport) tolerates a ten-minute callback
+perfectly well. ⚠️ **Nobody here knows the split, and it decides everything.** Our campaigns are
+11 towing and 1 electrical, so the model is being tested in its hardest case.
+
+### The flip, and why it is the whole first step
+
+Point a campaign at nothing (`forward_to = NULL`) and it takes the message itself. That is the
+entire mechanism — **no second flag**, because "who do we ring" and "do we ring anyone" are the
+same question and two switches could disagree.
+
+⚠️ **Measure one thing: of the callers who reach the prompt, what fraction leave a message.**
+`voicemailFirstRate()`, surfaced on `/admin/ppl`. It is the model's riskiest assumption and the
+cheapest possible test of it — **and it needs zero cold texts to businesses**, because nothing
+is offered to anyone until a message actually exists. If callers will not leave messages we
+learn that for free and nobody was bothered.
+
+⚠️ **Segmented on `call_logs.handling` (20260865), never on `forwarded_to IS NULL`** — that null
+is also true of rows predating 20260861, of PPL calls with no account, and of campaigns that
+never had a destination. Four populations in one denominator produces a ratio that looks
+measured and answers nothing.
+
+⚠️ **A caller who hangs up during the greeting counts in the denominator, and should.** The
+question is whether a stranded person would rather leave a message than tap the next result,
+and someone who hangs up has answered it.
+
+### What is kept honest while it runs
+
+- The prompt promises **a relay, never a callback**: nobody has agreed to anything when it
+  plays, so "someone will call you right back" would be a claim about a third party we have no
+  contract with.
+- It **discloses the onward disclosure** — the message and the number go to companies. That is
+  what separates this from quietly brokering a stranger's details, and it is why the model can
+  be advertised at all.
+- **During the experiment a person does the relay by hand.** The caller is told the same thing
+  either way, and the promise is kept.
+- A message with no business to text **notifies the operator** (email always, SMS when
+  `OPERATOR_ALERT_SMS` is set). ⚠️ A lead that only lands in a table breaks the promise while
+  looking fine from here — "it was visible if you looked" is precisely how the two leads on
+  2026-09-30 were lost.
+
+### What survives from the cascade work
+
+The voicemail capture, the signed playback link, the market pool and ordering, the answer
+history, the STOP plumbing, the honest-copy tests. Only the cascade state machine becomes
+unnecessary, and it stays behind `CALL_CASCADE_ENABLED=0` costing nothing.
+
+### Next, only if the rate is decent
+
+Build the claim flow: text the top N local businesses one link, first to claim gets the number
+and the recording, expiry when nobody claims. **That step needs the phase-2 notice** — but by
+then it is a far easier conversation, because the text carries a real job rather than a warning
+that strangers will start ringing.

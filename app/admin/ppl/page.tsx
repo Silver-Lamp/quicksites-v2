@@ -15,7 +15,7 @@ import PplUseSuggestion from '@/components/admin/ppl-use-suggestion';
 import PplBuyAndAttach from '@/components/admin/ppl-buy-and-attach';
 import PplRebuyNumber from '@/components/admin/ppl-rebuy-number';
 import PplRepointForward from '@/components/admin/ppl-repoint-forward';
-import { loadCampaignForwardHealth } from '@/lib/ppl/forwardHealth';
+import { loadCampaignForwardHealth, voicemailFirstRate } from '@/lib/ppl/forwardHealth';
 import PplDisputeActions from '@/components/admin/ppl-dispute-actions';
 import { listOpenDisputes, DISPUTE_CATEGORIES } from '@/lib/ppl/disputes';
 import { statementUrl } from '@/lib/ppl/statementToken';
@@ -112,6 +112,13 @@ export default async function PplOpsPage() {
   }));
   const healthFor = (campaignId: string, phone: string | null) =>
     forwardHealth.rows.find((r) => r.campaignId === campaignId && r.phone === phone) ?? null;
+
+  // The voicemail-first experiment's one number (docs/CALL_CASCADE_PLAN.md §13).
+  const vmFirst = await voicemailFirstRate({ sinceDays: 90 }).catch(() => ({
+    reached: 0,
+    leftMessage: 0,
+    rate: null as number | null,
+  }));
 
   const base = publicBaseUrl();
   const { data: allCampaigns } = await supabaseAdmin
@@ -421,6 +428,37 @@ export default async function PplOpsPage() {
             ))}
           </ul>
         )}
+      </section>
+
+      {/* Voicemail-first experiment */}
+      <section className="mt-10 rounded-xl border border-border bg-muted/30 p-4">
+        <h2 className="text-lg font-semibold">Voicemail-first — do callers leave a message?</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          A campaign with no forward-to takes the message itself and we relay it. This is the one
+          number that decides whether the model works: a stranded caller may simply hang up and
+          tap the next Google result.
+        </p>
+        <p className="mt-3 text-sm">
+          {vmFirst.reached === 0 ? (
+            // ⚠️ Never render "0%" here. An empty denominator is a fact about our traffic, not
+            // a finding about callers, and a percentage would read as the latter.
+            <span className="text-muted-foreground">
+              No calls have reached the prompt yet — nothing to report.
+            </span>
+          ) : (
+            <>
+              <span className="font-medium text-foreground">
+                {vmFirst.leftMessage} of {vmFirst.reached} left a message
+              </span>{' '}
+              <span className="text-muted-foreground">
+                ({Math.round((vmFirst.rate ?? 0) * 100)}%, last 90 days).{' '}
+                {vmFirst.reached < 10
+                  ? 'Too few calls to conclude anything — the plan wants about ten.'
+                  : 'Enough to start reading.'}
+              </span>
+            </>
+          )}
+        </p>
       </section>
 
       {/* Tracked campaigns */}

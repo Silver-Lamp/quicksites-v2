@@ -186,10 +186,17 @@ export async function loadDestinationHealth(
  * answer our unknown caller ID" is a conclusion about them drawn from evidence about us.
  */
 export function suggestsUnresponsive(h: {
-  answered: number;
-  brief: number;
-  unanswered: number;
+  answered: number | null;
+  brief?: number | null;
+  unanswered: number | null;
 }): boolean {
+  // ⚠️ NULL IS NOT ZERO, AND READING IT AS ZERO IS THE TRAP THIS GUARDS. A row whose counts are
+  // unattributable (calls predating `call_logs.forwarded_to`) carries its evidence in the note,
+  // not in the numbers. Treating those NULLs as zeros would make this return false and quietly
+  // recommend clearing a correct entry — the first real row, AL Ram Towing, was exactly that
+  // case. No data means no automated opinion, never "no failures".
+  if (h.unanswered === null || h.unanswered === undefined) return false;
+  if (h.answered === null || h.answered === undefined) return false;
   if (h.answered > 0) return false;
   return h.unanswered >= 3;
 }
@@ -198,8 +205,8 @@ export type UnresponsiveRow = {
   phone: string;
   first_observed_at: string;
   last_observed_at: string;
-  unanswered_calls: number;
-  answered_calls: number;
+  unanswered_calls: number | null;
+  answered_calls: number | null;
   source: string;
   note: string | null;
   cleared_at: string | null;
@@ -229,8 +236,9 @@ export async function loadUnresponsivePhones(): Promise<Set<string>> {
 export async function markUnresponsive(
   phone: string,
   opts: {
-    unanswered?: number;
-    answered?: number;
+    /** Attributed counts, or null/omitted when none could be attributed — never 0 for unknown. */
+    unanswered?: number | null;
+    answered?: number | null;
     source?: 'operator' | 'call_outcomes';
     note?: string | null;
   } = {},
@@ -246,8 +254,10 @@ export async function markUnresponsive(
       phone,
       first_observed_at: (existing as { first_observed_at?: string } | null)?.first_observed_at ?? now,
       last_observed_at: now,
-      unanswered_calls: opts.unanswered ?? 0,
-      answered_calls: opts.answered ?? 0,
+      // ⚠️ `?? null`, never `?? 0`. An absent count means we could not attribute any calls to
+      // this destination; a zero would claim we looked and found none.
+      unanswered_calls: opts.unanswered ?? null,
+      answered_calls: opts.answered ?? null,
       source: opts.source ?? 'operator',
       note: opts.note ?? null,
       cleared_at: null,

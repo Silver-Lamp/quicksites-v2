@@ -100,18 +100,30 @@ export async function POST(req: Request) {
   // one rather than leaving a stale row that would disqualify it from every future suggestion.
   await clearUnresponsive(to, 'repointed to this destination by an operator').catch(() => {});
 
-  let previous: { phone: string; marked: boolean; unanswered: number; answered: number } | null = null;
+  let previous:
+    | { phone: string; marked: boolean; unanswered: number | null; answered: number | null }
+    | null = null;
   if (b.markPreviousUnresponsive && from) {
-    const h = previousHealth.find((r) => r.phone === from);
+    // ⚠️ `?? null`, NOT `?? 0`. When no call row could be attributed to this destination the
+    // honest record is "unknown", and the operator's note carries the evidence instead. The
+    // first real re-point filed AL Ram Towing as `0 unanswered` on a morning it missed two
+    // leads, purely because those rows predate `call_logs.forwarded_to` — a zero that reads as
+    // "we checked and found nothing" beside a note saying the opposite. See 20260862.
+    const h = previousHealth.find((r) => r.phone === from) ?? null;
     await markUnresponsive(from, {
-      unanswered: h?.unanswered ?? 0,
-      answered: h?.answered ?? 0,
+      unanswered: h ? h.unanswered : null,
+      answered: h ? h.answered : null,
       source: 'operator',
       note: b.note ?? null,
     });
-    previous = { phone: from, marked: true, unanswered: h?.unanswered ?? 0, answered: h?.answered ?? 0 };
+    previous = {
+      phone: from,
+      marked: true,
+      unanswered: h ? h.unanswered : null,
+      answered: h ? h.answered : null,
+    };
   } else if (from) {
-    previous = { phone: from, marked: false, unanswered: 0, answered: 0 };
+    previous = { phone: from, marked: false, unanswered: null, answered: null };
   }
 
   const notice = await sendForwardNotice(campaignId);

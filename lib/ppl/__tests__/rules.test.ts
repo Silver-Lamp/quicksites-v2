@@ -118,7 +118,12 @@ describe('the voice route bridges a PPL call only to the account holder', () => 
   // the PPL branch may never fall back to the campaign's forward_to. A source guard, because
   // a unit test cannot see a `|| forwardTo` that someone adds back for convenience.
   const { readFileSync } = require('node:fs') as typeof import('node:fs');
-  const src = readFileSync('app/api/twilio/geo/[campaignId]/route.ts', 'utf8');
+  // ⚠️ Comments stripped first. The route's own comment EXPLAINS why the recording notice was
+  // removed, so it necessarily contains the phrase — and a raw grep then reports the notice as
+  // still present. Exactly the mistake §4 of CLAUDE.md records about `ROUTER_STRATEGY.md`,
+  // where a corrected document tripped a mentions-it check by explaining its own correction.
+  const { stripComments } = require('@/test/stripComments') as typeof import('@/test/stripComments');
+  const src = stripComments(readFileSync('app/api/twilio/geo/[campaignId]/route.ts', 'utf8'));
   const pplBlock = src.slice(
     src.indexOf("pricing_model === 'ppl'"),
     src.indexOf('if (!forwardTo)')
@@ -128,10 +133,28 @@ describe('the voice route bridges a PPL call only to the account holder', () => 
     expect(pplBlock).not.toMatch(/contact_phone \|\| forwardTo/);
     expect(pplBlock).not.toMatch(/forwardTo:\s*forwardTo/);
   });
-  it('the plain forward path says the recording notice before it dials', () => {
+  // ⚠️ THIS ASSERTION USED TO READ "says the recording notice before it dials", AND THE RULE IT
+  // PROTECTED STILL HOLDS — the thing being protected MOVED. The plain forward no longer records
+  // the bridged leg at all (owner decision, docs/CALL_CASCADE_PLAN.md §9.3: recording a
+  // conversation between a member of the public and a business that never asked us to is a
+  // two-party-consent question nobody here could answer, and nothing consumed the audio). With
+  // no recording there is nothing to give notice of, and a "this call may be recorded" warning
+  // about a recording that does not happen is its own small dishonesty.
+  //
+  // The obligation now lives where recording actually happens: the voicemail prompt, asserted in
+  // voicemail.test.ts. Deleting this test rather than moving it would have quietly dropped a
+  // consent guarantee on the strength of a passing suite.
+  it('the plain forward path does not record the bridged leg', () => {
     const plain = src.slice(src.indexOf('if (!forwardTo)'));
-    expect(plain.indexOf('may be recorded')).toBeGreaterThan(0);
-    expect(plain.indexOf('may be recorded')).toBeLessThan(plain.indexOf('<Dial record='));
+    expect(plain).not.toMatch(/<Dial[^>]*record=/);
+    expect(plain).not.toContain('may be recorded');
+  });
+  it('and its dial hands off to a handler that takes a message', () => {
+    const plain = src.slice(src.indexOf('if (!forwardTo)'));
+    // An empty <Response/> from the action URL is a hang-up; /api/twilio-callback returns one
+    // for everything, which is how failed forwards dropped callers in silence.
+    expect(plain).toContain('/after-dial');
+    expect(plain).not.toMatch(/<Dial[^>]*action="\$\{base\}\/api\/twilio-callback"/);
   });
 });
 

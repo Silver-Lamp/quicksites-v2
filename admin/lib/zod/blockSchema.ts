@@ -869,7 +869,24 @@ export const blockContentSchemaMap = {
             rating: z.number().min(1).max(5).optional(),
           })
         )
-        .min(1),
+        // ⚠️ NO `.min(1)`. EMPTY IS THE INTENDED STARTING STATE, AND REQUIRING CONTENT HERE MADE
+        // EVERY NEW SITE BORN INVALID.
+        //
+        // `industryScaffold.ts` seeds this block deliberately empty — it used to carry invented
+        // quotes interpolating the real business name ("I'd hire {business} again", — Satisfied
+        // Client ★5), which on an auto-built site for a real named business is a fabricated
+        // review: a person who does not exist vouching for one who never earned it. That seeding
+        // was removed; this `.min(1)` was not, so the two halves have disagreed ever since.
+        //
+        // The result was the first thing a new guest saw: a red "Some block(s) have validation
+        // errors — Must include at least 1 item" above a site they had not touched. Seen live in
+        // a demo on 2026-09-30.
+        //
+        // ⚠️ The min was also redundant. The renderer already refuses to publish an empty
+        // section — `if (!list.length && !previewOnly) return null` — so a visitor never sees a
+        // "Testimonials" heading over "No testimonials yet". The schema was guarding something
+        // the renderer had already guaranteed, and charging a new user for it.
+        .default([]),
       randomized: z.boolean().optional(),
     }),
   },

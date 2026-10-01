@@ -136,6 +136,24 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 
 - **Homepage showcase** ("Built with QuickSites"): an SSR'd row of curated published sites. `app/page.tsx` is now a **server component** that calls `getShowcaseData()` (`lib/home/getShowcaseData.ts`) and passes data into the client homepage (`components/home/home-client.tsx`) + `components/home/site-showcase.tsx` (localStorage cache; admin display-mode/hide/drag-reorder). Feed: `app/api/public/showcase`; generated thumbnails: `app/api/public/showcase/[slug]/thumb`. Curated list: `lib/home/featured-sites.ts`.
 - **Builder first-run chooser**: `/admin/templates/new` shows industry / duplicate-template / blank (`components/admin/templates/start/start-your-site.tsx`). Industry scaffold seeds services + theme (`lib/builder/industryScaffold.ts`); industry themes (`lib/theme/industryPresets.ts`) are wired through the public render via `lib/theme/resolveSiteTheme.ts` + `TemplateThemeWrapper`. **`color_mode` defaults to `dark` everywhere**; the editor action toolbar has a light/dark toggle (persists to the template).
+  ⚠️ **A just-created site opens on the CANVAS, not the Pages tray (2026-10-01).** The tray is a
+  bottom drawer that defaults to **open** (`qs:toolbar:pageMgrOpen`, whose localStorage read falls
+  back to `'1'`), so the first thing anyone saw after building a site was **their hero covered by a
+  file list containing one item called "Home"** — on the guest flow, i.e. the main acquisition
+  funnel. Found in a recorded walkthrough, not from a bug report. The creation redirect now carries
+  a flag (`lib/editor/newTemplateUrl.ts`, `?created=1`, stripped on read) which
+  `TemplateActionToolbar` consumes to start the tray closed. ⚠️ **Build the URL with
+  `newTemplateEditorUrl()`** — there are SIX creation→editor navigations across four files (admin
+  chooser ×2, guest hero ×2, start-your-site, duplicate), a seventh will be added, and a path that
+  hand-rolls the URL fails silently (a drawer over a hero on one route); `newTemplateUrl.test.ts`
+  greps every creation file and fails on an inline editor URL. ⚠️ **The auto-close must NOT be
+  persisted** or creating one site turns the tray off on every other site that browser opens — and
+  the obvious guard is wrong: `if (autoClosedRef.current)` alone is consumed by the effect's MOUNT
+  pass (state is still `true` then), so the real `true→false` write clobbers the preference anyway.
+  It must match the value: `if (autoClosedRef.current && pageMgrOpen === false)`. **The source
+  guard asserting the flag existed passed the entire time this was broken** — it was caught by
+  reading `localStorage` in a real browser after a real guest build. Separate mechanisms, not to be
+  merged: the `?walkthrough=1` DB-backed tour and the `qs:editor:coachHintDismissed` tip banner.
 - **AI demo generation**: "Generate demos" admin button → `app/api/admin/demos/generate` (admin+cron) → `lib/builder/generateDemoSite.ts` (metered OpenAI copy+hero → insert → publish via `public.publish_template_demo` RPC). Random, category-diversifying spec: `lib/builder/randomDemoSpec.ts`. Nightly top-up cron `app/api/cron/demo-refresh` (OFF unless `DEMO_AUTOGEN_ENABLED=true`). Generated sites are tagged `claim_source='demo_seed'` + `data.meta.is_demo`.
 - **Templates admin**: card view (`components/admin/templates/templates-card-grid.tsx`) with a Cards/Table toggle + shimmer placeholders during generation; admins see **all** templates (the list API + secure-MV gating in `app/api/admin/templates/list`).
 - **Agency billing + finished take-rate (Pricing Phase 2)**: per-user + per-site tiers in `lib/billing/*` (`plans`, `agency`, `entitlements`) + `app/api/billing/*`; refund fee-reversal (`lib/commerce/refunds.ts`), agency fee-exemption + margin-aware fee in `createDraftOrder`, reconciliation `app/api/admin/commerce/reconcile`. See [`docs/PRICING_REDESIGN.md`](docs/PRICING_REDESIGN.md).

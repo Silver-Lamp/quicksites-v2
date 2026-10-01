@@ -72,3 +72,6 @@ leads*.json
 
 # Working copy of the OG painting — kept so recomposites are free, not a build input.
 public/assets/.og-source.png
+
+# Recorded demo walkthroughs (scripts/record-demo.mts) — generated, not source
+demo-videos/

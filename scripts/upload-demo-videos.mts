@@ -18,8 +18,13 @@
 // gallery and the admin UI counts it as images (see migration 20260868).
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { planDemoClips } from '@/lib/demos/planDemoClips';
+
+const run = promisify(execFile);
 
 const BUCKET = 'videos';
 const LOCAL_DIR = 'demo-videos';
@@ -32,21 +37,79 @@ const APPLY = process.argv.includes('--apply');
  * wrong claim about what the product does, and a slug typo must fail loudly here rather than
  * quietly attach nothing — so every key is checked against the DB before anything uploads.
  */
-const CLIPS: Record<string, { feature: string; label: string; primary?: boolean }> = {
+type ClipSpec = {
+  feature: string;
+  label: string;
+  /** One line under the thumbnail: what a viewer will actually see. */
+  blurb: string;
+  /**
+   * Seconds into the clip to cut the poster from.
+   *
+   * ⚠️ DECLARED PER CLIP, NOT CHOSEN BY A FILTER. ffmpeg's `thumbnail` filter picks the most
+   * visually DISTINCTIVE frame, which for editor-tour was the colourful loading animation —
+   * a poster reading "Building your site …" on a card labelled "Editing blocks, theme and
+   * publish". The filter worked; the result was wrong, and only looking at the frames showed
+   * it. Each value below was picked off a contact sheet of the real recording.
+   */
+  posterAt: number;
+  primary?: boolean;
+};
+
+const CLIPS: Record<string, ClipSpec> = {
   'guest-build': {
     feature: 'block-based-template-editor',
     label: 'Building a site from scratch, signed out',
+    blurb: 'Describe a business, watch the site appear. No account.',
+    // The form with the name being typed — distinct from editor-tour's poster (the editor).
+    posterAt: 16,
   },
   'editor-tour': {
     feature: 'block-based-template-editor',
     label: 'Editing blocks, theme and publish',
+    blurb: 'Rearranging sections, switching the theme, going live.',
+    // A block selected with its edit controls showing — the frame that means "editing".
+    posterAt: 10,
     primary: true,
   },
   'finished-site': {
     feature: 'seo-foundations-out-of-the-box',
     label: 'The published result',
+    blurb: 'What a visitor gets: storefront, services, contact.',
+    // The product grid with real prices and Add to Cart — the storefront, not just a hero.
+    posterAt: 4.3,
   },
 };
+
+/** Seconds, measured. Returns undefined rather than a guess if ffprobe cannot read the file. */
+async function probeDuration(file: string): Promise<number | undefined> {
+  try {
+    const { stdout } = await run('ffprobe', [
+      '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file,
+    ]);
+    const n = Number(stdout.trim());
+    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Cut a poster JPEG at `at` seconds. Returns the temp path, or undefined if ffmpeg failed. */
+async function cutPoster(file: string, at: number, outDir: string, name: string): Promise<string | undefined> {
+  const out = path.join(outDir, `${name}.jpg`);
+  try {
+    await run('ffmpeg', [
+      '-loglevel', 'error', '-y', '-ss', String(at), '-i', file,
+      '-frames:v', '1', '-vf', 'scale=640:-1', '-q:v', '4', out,
+    ]);
+    // ⚠️ A zero-byte or missing file means ffmpeg "succeeded" past the end of the clip. A
+    // poster that 404s is worse than none: the card renders a broken image instead of the
+    // labelled placeholder it falls back to.
+    const st = fs.existsSync(out) ? fs.statSync(out) : null;
+    return st && st.size > 1024 ? out : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** `editor-tour-2026-10-01.mp4` → { name, date }. Refuses an undated file. */
 function parseName(file: string): { name: string; date: string } | null {
@@ -64,7 +127,10 @@ async function main() {
 
   // Validate everything before writing anything: a half-applied run leaves the page in a state
   // nobody chose, and the expensive part (upload) is the hard part to undo.
-  const planned: Array<{ file: string; name: string; date: string; feature: string; label: string; primary: boolean; storagePath: string }> = [];
+  const planned: Array<{
+    file: string; name: string; date: string; feature: string;
+    label: string; blurb: string; posterAt: number; primary: boolean; storagePath: string;
+  }> = [];
   const problems: string[] = [];
 
   for (const file of files) {
@@ -84,6 +150,8 @@ async function main() {
       date: parsed.date,
       feature: spec.feature,
       label: spec.label,
+      blurb: spec.blurb,
+      posterAt: spec.posterAt,
       primary: !!spec.primary,
       storagePath: `demos/${parsed.date}/${parsed.name}.mp4`,
     });
@@ -119,15 +187,42 @@ async function main() {
   // Upload first, then attach: a row pointing at a URL that 404s is worse than a file nobody
   // references yet, because the page renders a dead player rather than no player.
   const urls = new Map<string, string>();
+  const posters = new Map<string, string>();
+  const durations = new Map<string, number>();
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'qs-posters-'));
+
   for (const p of planned) {
-    const body = fs.readFileSync(path.join(dir, p.file));
+    const local = path.join(dir, p.file);
+    const body = fs.readFileSync(local);
     const { error } = await supabaseAdmin.storage
       .from(BUCKET)
       .upload(p.storagePath, body, { contentType: 'video/mp4', upsert: true });
     if (error) throw new Error(`upload ${p.storagePath} failed: ${error.message}`);
-    const { data } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(p.storagePath);
-    urls.set(p.file, data.publicUrl);
+    urls.set(p.file, supabaseAdmin.storage.from(BUCKET).getPublicUrl(p.storagePath).data.publicUrl);
     console.log(`  ✓ uploaded ${p.storagePath}`);
+
+    const secs = await probeDuration(local);
+    if (secs) durations.set(p.file, secs);
+
+    // ⚠️ THE POSTER IS LOAD-BEARING, NOT DECORATION. These recordings open on a loading page,
+    // so a <video> with no poster shows a WHITE first frame: the clip row was three blank
+    // rectangles, which reads as broken rather than as video. Beside the clip and dated the
+    // same, so a re-record replaces its own poster and never another day's.
+    const posterLocal = await cutPoster(local, p.posterAt, tmp, p.name);
+    if (!posterLocal) {
+      console.warn(`  ⚠ no poster for ${p.name} (ffmpeg found no frame at ${p.posterAt}s) — the card will show a placeholder`);
+      continue;
+    }
+    const posterPath = p.storagePath.replace(/\.mp4$/, '.jpg');
+    const { error: pErr } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .upload(posterPath, fs.readFileSync(posterLocal), { contentType: 'image/jpeg', upsert: true });
+    if (pErr) {
+      console.warn(`  ⚠ poster upload failed for ${p.name}: ${pErr.message}`);
+      continue;
+    }
+    posters.set(p.file, supabaseAdmin.storage.from(BUCKET).getPublicUrl(posterPath).data.publicUrl);
+    console.log(`  ✓ poster   ${posterPath}  (at ${p.posterAt}s)`);
   }
 
   // One update per feature, so two clips on the same feature cannot clobber each other.
@@ -145,6 +240,9 @@ async function main() {
         name: p.name,
         date: p.date,
         label: p.label,
+        blurb: p.blurb,
+        poster: posters.get(p.file),
+        durationSeconds: durations.get(p.file),
         primary: p.primary,
       })),
     });

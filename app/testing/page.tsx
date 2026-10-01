@@ -394,7 +394,7 @@ Assumed:  that the shopping list consumes it — I did not check.`}
           <div className="mt-14 border-t border-white/10 pt-8">
             <h2 className="text-xl font-bold tracking-tight">Where this leaves us</h2>
             <p className="mt-3 text-[15px] leading-relaxed text-zinc-300">
-              More than 190 test files of our own, and not one of them existed in a form that would
+              More than 350 test files of our own, and not one of them existed in a form that would
               have caught the seven failures above. That is not an argument against tests — it is
               an argument about{' '}
               <strong>what they are evidence of</strong>. A test asserts that the code does what its

@@ -28,7 +28,11 @@ describe('rule 1 — repointing the big player', () => {
   it('fills an empty video_url with the primary take', () => {
     const r = planDemoClips({ currentVideoUrl: null, currentClips: [], uploaded: [tour] });
     expect(r.videoUrl).toBe(dated('editor-tour'));
-    expect(r.clips).toEqual([]); // the primary is not also an extra clip
+    // ⚠️ CHANGED DELIBERATELY 2026-10-01, not a regression. The primary used to be excluded
+    // from the catalogue because it rendered as a big inline player above the rest. They are
+    // now peer cards in one row, so a primary left out would be the one card with no poster
+    // and no duration — the single blank box in the row.
+    expect(r.clips.map((c) => c.src)).toEqual([dated('editor-tour')]);
   });
 
   // ⚠️ The first version used `!videoUrl` alone. The editor's player already pointed at the old
@@ -73,7 +77,8 @@ describe('rule 2 — an "earlier take" must really be earlier', () => {
     });
     expect(r.videoUrl).toBe(dated('editor-tour'));
     expect(r.clips.map((c) => c.src)).not.toContain(undated('editor-tour'));
-    expect(r.clips).toEqual([]);
+    // The dated take is in the catalogue (as a peer card); the undated duplicate is not.
+    expect(r.clips.map((c) => c.src)).toEqual([dated('editor-tour')]);
   });
 
   it('DOES keep a genuinely different earlier take', () => {
@@ -109,8 +114,12 @@ describe('idempotency and ordering', () => {
       currentClips: before.clips,
       uploaded: [{ ...guest, label: 'Signed-out build (re-cut)' }],
     });
-    expect(after.clips).toHaveLength(1);
-    expect(after.clips[0].label).toBe('Signed-out build (re-cut)');
+    // tour (the primary) + the re-cut guest clip — the re-cut replaced its own entry rather
+    // than appending a second one, which is what this test is about.
+    expect(after.clips).toHaveLength(2);
+    expect(after.clips.find((c) => c.src === dated('guest-build'))?.label).toBe(
+      'Signed-out build (re-cut)',
+    );
   });
 
   it('orders newest first and tolerates an undated entry', () => {
@@ -120,6 +129,25 @@ describe('idempotency and ordering', () => {
       uploaded: [guest],
     });
     expect(r.clips.map((c) => c.recorded_on ?? null)).toEqual(['2026-10-01', '2026-07-01', null]);
+  });
+
+  it('carries poster, blurb and measured duration onto the clip', () => {
+    const r = planDemoClips({
+      currentVideoUrl: null,
+      currentClips: [],
+      uploaded: [{ ...guest, poster: dated('guest-build').replace('.mp4', '.jpg'), blurb: 'A stranger builds one', durationSeconds: 28.8 }],
+    });
+    const c = r.clips[0];
+    expect(c.poster).toContain('.jpg');
+    expect(c.blurb).toBe('A stranger builds one');
+    expect(c.duration_seconds).toBe(28.8);
+  });
+
+  it('omits poster/duration keys entirely when not measured, rather than writing nulls', () => {
+    // A null duration would render as a "0:00" pill; an absent one renders no pill.
+    const r = planDemoClips({ currentVideoUrl: null, currentClips: [], uploaded: [guest] });
+    expect(Object.keys(r.clips[0])).not.toContain('poster');
+    expect(Object.keys(r.clips[0])).not.toContain('duration_seconds');
   });
 
   it('ignores malformed existing entries instead of rendering a dead player', () => {

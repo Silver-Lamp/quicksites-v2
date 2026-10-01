@@ -7,6 +7,12 @@
 export type UploadedClip = {
   /** Public URL of the uploaded file. */
   src: string;
+  /** One line on what the clip shows, for the card under the thumbnail. */
+  blurb?: string;
+  /** Public URL of the generated poster frame. */
+  poster?: string;
+  /** Measured with ffprobe — never estimated. */
+  durationSeconds?: number;
   /** Base name without the date, e.g. `editor-tour`. */
   name: string;
   /** YYYY-MM-DD, parsed from the filename, never from today's clock. */
@@ -16,7 +22,14 @@ export type UploadedClip = {
   primary?: boolean;
 };
 
-export type DemoClip = { src: string; label?: string; recorded_on?: string };
+export type DemoClip = {
+  src: string;
+  label?: string;
+  blurb?: string;
+  recorded_on?: string;
+  poster?: string;
+  duration_seconds?: number;
+};
 
 export type PlanResult = { videoUrl: string | null; clips: DemoClip[] };
 
@@ -51,10 +64,20 @@ export function planDemoClips(args: {
     if (u.primary && (!videoUrl || isOurUpload(videoUrl))) videoUrl = u.src;
   }
 
+  // ⚠️ EVERY uploaded clip joins the catalogue, including the one `video_url` points at.
+  // It used to be excluded, because the primary rendered as a big inline player ABOVE the
+  // others. They are now peer cards in one row, and a primary left out of the catalogue is the
+  // one card with no poster and no duration — the only blank box in the row.
   for (const u of args.uploaded) {
-    if (u.src === videoUrl) continue;
     // Keyed by URL, so a same-day re-record updates in place instead of appending a duplicate.
-    byUrl.set(u.src, { src: u.src, label: u.label, recorded_on: u.date });
+    byUrl.set(u.src, {
+      src: u.src,
+      label: u.label,
+      ...(u.blurb ? { blurb: u.blurb } : {}),
+      recorded_on: u.date,
+      ...(u.poster ? { poster: u.poster } : {}),
+      ...(typeof u.durationSeconds === 'number' ? { duration_seconds: u.durationSeconds } : {}),
+    });
   }
 
   // ⚠️ RULE 2 — an old take the player no longer shows is worth keeping, UNLESS it is the same

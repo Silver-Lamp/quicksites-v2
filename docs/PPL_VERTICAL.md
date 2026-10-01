@@ -697,3 +697,80 @@ handful of reviews — 5.0 from 71 is an outlier against the market's own shape.
 rewards exactly that combination, so if a high score with many reviews is less trustworthy in
 towing than elsewhere, the scorer selects for it. One data point is not a finding and nothing
 here should be built on it; noted so a second instance is recognised as the second.
+
+### 11f. The caller was never told who would answer — the first observed bait-and-switch (2026-10-01)
+
+**What happened, in order.** A member of the public dialled `+1 253 655-2016`, the tracking number
+printed on `southhilltowing.com`. She heard *"Thanks for calling. Please hold while I connect you."*
+We bridged her to `+1 253 442-5373` — **Too Cool Towing LLC**. They answered, told her she had not
+reached South Hill Towing, and she hung up. **15 seconds**, `dial-completed`, `handling='forward'`,
+`forwarded_to` recorded.
+
+**Every sentence spoken was true and the outcome was still a bait-and-switch.** The page says
+**"South Hill Towing" 42 times**, and there is no such business — the name is generated at
+`lib/outreach/geoCampaigns.ts#buildGeoPitchSite` as `` `${city} ${label}` ``. After a page naming a
+company, "please hold while I connect you" means *holding for that company*. Nothing told her
+otherwise, so the business answering honestly **contradicted** us.
+
+⚠️ **The rule already existed and was written for the path that is switched off.**
+`lib/ppl/cascade.ts` says never imply the caller has reached the company whose site they rang. The
+cascade is flag-gated OFF; the single forward has been live the whole time doing exactly what the
+comment forbids. A rule written for the new thing and never back-applied to the shipped one.
+
+⚠️ **The deception had no beneficiary, and that is the decisive fact.** She got no tow. Too Cool
+lost a job. We burned the third genuine inbound call in the product's history. There is no version
+of this where misleading the caller pays and honesty costs — the mismatch *destroyed* the lead,
+so the honest build is strictly the more profitable one.
+
+**The fix: name the destination before dialling it.**
+
+```
+Thanks for calling. Connecting you now with Too Cool Towing, a local towing company serving South Hill.
+```
+
+Now the business answering as itself **confirms** what the caller was told. Built as
+`lib/ppl/forwardAnnounce.ts#connectingAnnouncement` (pure, so the copy is testable) and read from
+`geo_industry_campaigns.forward_to_name` (migration `20260867`).
+
+- ⚠️ **`forward_to_name` is written in the SAME `UPDATE` as `forward_to`, and NULL when
+  unresolved.** A name surviving a re-point would have us announce one business and dial another —
+  strictly worse than announcing no name. `setCampaignForwardTo` is the single writer and does
+  both; a source guard asserts the one statement contains both columns. Same reasoning as
+  `call_logs.forwarded_to` (§11e): a field that can disagree with the number we dial is a record
+  of something that never happened.
+- ⚠️ **Resolve on the LAST TEN DIGITS.** `forward_to` is E.164 (`+12534425373`, 11 digits);
+  `outreach_prospects.phone` is however the directory gave it (`(253) 442-5373`, 10). Comparing
+  full digit strings returns **zero** matches — which reads exactly like *"we hold no names for
+  these businesses"*. The first version of the query said that about a table where **10 of 11
+  resolve**. `last10()` in `lib/outreach/resolveBusinessName.ts`; 10 campaigns backfilled.
+- The unresolved fallback is *"a local towing company serving Grafton"* — vague but true, and
+  **never** the site's invented identity, which would be the bug restored.
+- Resolution happens when an operator **picks** a destination, never on the call path: a scan of
+  1.2k rows is fine at re-point time and has no business adding latency or a failure mode to a
+  live phone call.
+- Pinned by `lib/ppl/__tests__/forwardAnnounce.test.ts` — 15 tests including source guards over
+  the route (its TwiML is a template literal no unit test imports) and **verified to fail with the
+  old sentence restored**, since a test that only passes after the fix proves nothing.
+
+#### Still open, and not a code question
+
+The page still asserts a company that does not exist. The announcement makes the *call* honest; it
+does not make the *page* honest. Two shapes are consistent with what this repo already does
+elsewhere:
+
+1. **A directory.** Our own dome-builder rule: *"a directory is not a business — no services,
+   phone or 'free quote' copy under a name nobody owns."* An unrented geo site is in exactly that
+   state, and `builders_directory` already exists.
+2. **Name the real renter.** Once a business pays, the site is legitimately theirs and the problem
+   disappears on its own.
+
+⚠️ **Note where the mismatch actually lives:** all **11** campaigns with a `forward_to` are
+`status='draft'` — nobody is paying. So we are forwarding free leads to businesses that never asked,
+under invented names, *and that unpaid demo state is the only state where the dishonesty exists.*
+It is not intrinsic to rank-and-rent; it is intrinsic to the free tier we invented for ourselves.
+
+**Re-derive, never remember:**
+```sql
+select domain, forward_to, forward_to_name, status
+  from geo_industry_campaigns where forward_to is not null order by domain;
+```

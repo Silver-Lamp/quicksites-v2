@@ -94,7 +94,11 @@ export async function POST(req: Request) {
     ? (await loadCampaignForwardHealth({ sinceDays: 90 })).rows.filter((r) => r.campaignId === campaignId)
     : [];
 
-  const { from, to } = await setCampaignForwardTo(campaignId, b.forwardTo);
+  // `name` is who the CALLER will now be told is answering (lib/ppl/forwardAnnounce.ts).
+  // Surfaced in the response so the operator sees it at the moment they choose the
+  // destination: a null here means every caller hears "a local towing company" instead of
+  // a name, which is honest but weaker, and is worth knowing before the postcards go out.
+  const { from, to, name } = await setCampaignForwardTo(campaignId, b.forwardTo);
 
   // Repointing TO a number previously written off is a deliberate second chance; record it as
   // one rather than leaving a stale row that would disqualify it from every future suggestion.
@@ -140,5 +144,15 @@ export async function POST(req: Request) {
     .neq('id', campaignId);
   const alsoForwardsFor = (shared ?? []).map((r) => (r as { domain: string }).domain);
 
-  return NextResponse.json({ ok: true, campaignId, from, to, previous, notice, alsoForwardsFor });
+  return NextResponse.json({
+    ok: true,
+    campaignId,
+    from,
+    to,
+    forwardToName: name,
+    announcesName: Boolean(name),
+    previous,
+    notice,
+    alsoForwardsFor,
+  });
 }

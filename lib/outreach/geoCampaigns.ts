@@ -12,6 +12,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { toE164 } from '@/lib/auth/claimVerify';
+import { resolveBusinessNameByPhone } from '@/lib/outreach/resolveBusinessName';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import { buildCityServicePage, insertPage } from '@/lib/seo/localPages';
 import { defaultOutreachOrgSlug, orgIdForSlug } from '@/lib/outreach/campaignBrand';
@@ -40,6 +41,10 @@ export type GeoCampaign = {
   tracking_number: string | null;
   tracking_number_sid: string | null;
   forward_to: string | null;
+  /** Registered name of the business `forward_to` dials, for the caller-facing
+   *  announcement. Written together with forward_to, NULL when unresolved — never
+   *  carried over from a previous destination (lib/ppl/forwardAnnounce.ts). */
+  forward_to_name: string | null;
   pricing_model: string | null;
   price_cents: number | null;
   locked_rate_cents: number | null;
@@ -65,7 +70,7 @@ export type GeoCampaign = {
 };
 
 const GEO_COLS =
-  'id, kind, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, payment_count, last_payment_at, last_payment_cents, last_invoice_id, claim_link_visits, recommendations, rank_trend, org_id, outreach_ready_at, outreach_reviewed_by, outreach_blockers';
+  'id, kind, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, forward_to_name, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, payment_count, last_payment_at, last_payment_cents, last_invoice_id, claim_link_visits, recommendations, rank_trend, org_id, outreach_ready_at, outreach_reviewed_by, outreach_blockers';
 
 export async function setCampaignPricing(
   id: string,
@@ -301,7 +306,10 @@ export async function setCampaignTracking(
  * `forward_notice_sent_to` is the field that answers it. `sendForwardNotice` compares the two,
  * so the new business is notified and the old send is not rewritten out of history.
  */
-export async function setCampaignForwardTo(id: string, phone: string): Promise<{ from: string | null; to: string }> {
+export async function setCampaignForwardTo(
+  id: string,
+  phone: string,
+): Promise<{ from: string | null; to: string; name: string | null }> {
   const { data: before, error: readErr } = await supabaseAdmin
     .from('geo_industry_campaigns')
     .select('forward_to')
@@ -312,12 +320,19 @@ export async function setCampaignForwardTo(id: string, phone: string): Promise<{
   // Same reasoning as setCampaignTracking: forward_to is dialled verbatim, so normalise at the
   // write and no future caller has to remember.
   const to = toE164(phone) ?? phone;
+
+  // Resolve who this number belongs to so the CALLER can be told before we bridge them
+  // (lib/ppl/forwardAnnounce.ts). ⚠️ Written in the SAME update as forward_to and set to NULL
+  // when unresolved — a name carried over from the previous destination would have us announce
+  // one business and dial another, which is worse than announcing no name at all.
+  const name = await resolveBusinessNameByPhone(to).catch(() => null);
+
   const { error } = await supabaseAdmin
     .from('geo_industry_campaigns')
-    .update({ forward_to: to, updated_at: new Date().toISOString() })
+    .update({ forward_to: to, forward_to_name: name, updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw new Error(`setCampaignForwardTo failed: ${error.message}`);
-  return { from: (before as { forward_to: string | null } | null)?.forward_to ?? null, to };
+  return { from: (before as { forward_to: string | null } | null)?.forward_to ?? null, to, name };
 }
 
 function uuid(): string {

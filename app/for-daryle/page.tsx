@@ -10,6 +10,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import NetworkScenarios from '@/components/commissions/network-scenarios';
+import RoleLadderTool from '@/components/admin/role-ladder-tool';
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE, QS_FEE_SHARE, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
 
 const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
@@ -228,6 +229,21 @@ export default function ForDarylePage() {
             tolerance is untested and it multiplies everything above. And no override has ever
             been paid to anyone: the mechanism is built and live, the ledger is empty.
           </p>
+        </section>
+
+        {/* The chain itself — who is in it, what each is called, what they earn */}
+        <section className="mx-auto max-w-3xl px-6 pt-6 pb-4">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+            Every rung, and what it takes home
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            The same numbers, laid out as the chain rather than as a total — what each level is
+            called, what they are responsible for, and what reaches them. Names in the example
+            are stand-ins. There is a copyable diagram at the bottom if you want it for a deck.
+          </p>
+          <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4">
+            <RoleLadderTool maxFeePercent={MAX_PLATFORM_FEE_PERCENT} audience="partner" />
+          </div>
         </section>
 
         {/* The Stripe question */}

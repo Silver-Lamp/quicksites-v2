@@ -30,7 +30,27 @@ const pctLabel = (n: number) => `${(n * 100).toFixed(1).replace(/\.0$/, '')}%`;
 
 type Preset = 'iso' | 'solo';
 
-export default function RoleLadderTool({ maxFeePercent }: { maxFeePercent: number }) {
+/**
+ * Who is reading.
+ *
+ * ⚠️ THE DIFFERENCE IS NOT TONE, IT IS WHICH TRUTHS ARE USEFUL. Internally the interesting fact
+ * is that three rung names are real and the rest are proposals, quoted with the column they come
+ * from — that is a note to whoever changes the vocabulary next. A partner reading
+ * `referral_codes.owner_type` learns nothing and may reasonably read it as unfinished.
+ *
+ * ⚠️ But the caveat itself is NOT dropped for partners, only reworded. Hiding it would let a
+ * name that exists in a diagram and nowhere else get quoted back to us as a commitment, which
+ * is the precise risk the marking exists for. Same fact, audience-appropriate words.
+ */
+export type LadderAudience = 'internal' | 'partner';
+
+export default function RoleLadderTool({
+  maxFeePercent,
+  audience = 'internal',
+}: {
+  maxFeePercent: number;
+  audience?: LadderAudience;
+}) {
   const [preset, setPreset] = React.useState<Preset>('iso');
   const [tier, setTier] = React.useState<SellerTier>('origination');
   const [volume, setVolume] = React.useState(1_000_000);
@@ -111,12 +131,18 @@ export default function RoleLadderTool({ maxFeePercent }: { maxFeePercent: numbe
                   <td className="px-3 py-2">
                     <span className="block font-medium">{r.persona ?? r.name}</span>
                     <span className="block text-xs text-muted-foreground">{r.name}</span>
-                    {/* ⚠️ The honest bit: three of these names are real, the rest are proposals. */}
+                    {/* ⚠️ The honest bit: three of these names are real, the rest are proposals.
+                        Reworded for a partner, never removed — a name that exists only in a
+                        diagram must not come back to us quoted as a commitment. */}
                     {r.established ? (
-                      <span className="mt-0.5 block text-[10px] text-emerald-400/80">{r.established}</span>
+                      audience === 'internal' ? (
+                        <span className="mt-0.5 block text-[10px] text-emerald-400/80">{r.established}</span>
+                      ) : null
                     ) : (
                       <span className="mt-0.5 block text-[10px] text-amber-300">
-                        no name for this rung exists in the system — proposed here only
+                        {audience === 'internal'
+                          ? 'no name for this rung exists in the system — proposed here only'
+                          : 'levels this deep are supported, but we have not settled a name or a rate for them — ask'}
                       </span>
                     )}
                   </td>
@@ -149,6 +175,10 @@ export default function RoleLadderTool({ maxFeePercent }: { maxFeePercent: numbe
                 </tr>
               );
             })}
+            {/* ⚠️ The house row stays on the partner view too. /for-amy's own voice settled
+                this: "a constraint you can see is easier to trust than one I assert." Hiding
+                what we keep would make the pool look like a number we chose rather than one
+                that has to cover running the platform. */}
             <tr className="border-t border-border bg-muted/30">
               <td className="px-3 py-2 font-medium">QuickSites</td>
               <td className="px-3 py-2 text-xs text-muted-foreground">

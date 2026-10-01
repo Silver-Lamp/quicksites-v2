@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       # No install step: tsx is run via npx and the checker imports one dependency-free module,
       # so this job stays a few seconds rather than waiting on the full dependency tree.
       - name: Check for a Claims block

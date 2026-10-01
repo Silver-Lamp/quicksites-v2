@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20 # matches engines (20.x) / .nvmrc — CI was on 18
+          node-version: 24 # matches engines (24.x) / .nvmrc. Vercel discontinued Node 20 on 2026-10-01
           cache: npm
 
       # `npm ci` (not `npm install`): installs the EXACT locked tree for reproducible

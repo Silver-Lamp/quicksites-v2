@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       # Only chromium, and only because the theme checks read computed styles in a real browser.
       # No screenshots are taken — pixel comparison is where the cost and the flakiness live.
       - run: npx --yes playwright@1 install --with-deps chromium

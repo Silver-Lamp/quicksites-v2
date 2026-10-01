@@ -31,14 +31,14 @@ The commercial thesis (see [`docs/MONETIZATION.md`](docs/MONETIZATION.md)): **ne
 | Observability | **Sentry** (errors). **PostHog** = product analytics (being added — see Revival Plan) |
 | Tests | Playwright (e2e/visual), Jest (unit), Storybook |
 
-Node **20.x**, npm **10.x** (see `.nvmrc` / `engines`). `@` path alias = repo root.
+Node **24.x**, npm **11.x** (see `.nvmrc` / `engines`). ⚠️ Vercel **discontinued Node 20 on 2026-10-01** and builds hard-fail, not warn — a deploy that errors in 12s with no app output is this. `@` path alias = repo root.
 
 ## 3. Run it locally
 
 > Full setup, env, and gotchas: **[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)**. Quick version:
 
 ```bash
-nvm use                       # Node 20
+nvm use                       # Node 24
 npm install
 cp .env.example .env.local    # minimum to boot: Supabase URL + anon + service-role keys
 npm run dev                   # http://localhost:3000

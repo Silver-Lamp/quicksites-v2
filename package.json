@@ -254,7 +254,7 @@
     "zustand": "^5.0.8"
   },
   "optionalDependencies": {
-    "canvas": "^2.11.2"
+    "canvas": "^3.2.3"
   },
   "author": "Silver Lamp Studio",
   "license": "MIT",
@@ -331,6 +331,9 @@
     "typescript-eslint": "^8.34.1"
   },
   "overrides": {
+    "jest-environment-jsdom": {
+      "canvas": "$canvas"
+    },
     "@types/react": "19.1.10",
     "@types/react-dom": "19.1.7",
     "@types/node": "24.3.0",

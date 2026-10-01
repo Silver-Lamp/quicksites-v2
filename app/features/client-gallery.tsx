@@ -86,6 +86,8 @@ type FeatureRow = {
   category: string;
   slug?: string | null;
   video_url?: string | null;
+  /** Extra recorded walkthroughs, newest first. NOT `gallery`, which is portfolio images. */
+  demo_clips?: { src: string; label?: string; recorded_on?: string }[] | null;
   doc_href?: string | null;
   demo_href?: string | null;
   badge?: string | null;
@@ -112,6 +114,12 @@ function FeatureCard({ f }: { f: FeatureRow }) {
 
   // Featured cards take two columns: they carry the mechanics list, so they need the room.
   const wide = !!f.featured && !!detail;
+  // Clips beyond the primary one. Deduped against video_url so the same cut never shows
+  // twice, and defensive about shape because demo_clips is free-form jsonb.
+  const extraClips = (Array.isArray(f.demo_clips) ? f.demo_clips : [])
+    .filter((c): c is { src: string; label?: string; recorded_on?: string } =>
+      !!c && typeof c.src === 'string' && c.src.length > 0)
+    .filter((c) => c.src !== f.video_url);
 
   const body = (
     <Card
@@ -144,6 +152,31 @@ function FeatureCard({ f }: { f: FeatureRow }) {
           <div className="aspect-video rounded-lg overflow-hidden border border-zinc-800/50">
             <LazyVideoEmbed url={f.video_url} title={f.title} className="h-full w-full" />
           </div>
+          {/* More than one take per feature, newest first. The label is what the clip SHOWS, and
+              the date is read from the row rather than parsed out of the storage path — a path
+              that stops being dated would otherwise silently invent a recording date. */}
+          {extraClips.length > 0 ? (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {extraClips.map((c) => (
+                <figure key={c.src} className="m-0">
+                  <div className="aspect-video overflow-hidden rounded-lg border border-zinc-800/50">
+                    <LazyVideoEmbed
+                      url={c.src}
+                      title={c.label || f.title}
+                      className="h-full w-full"
+                    />
+                  </div>
+                  {c.label || c.recorded_on ? (
+                    <figcaption className="mt-1 text-[11px] text-muted-foreground">
+                      {c.label}
+                      {c.label && c.recorded_on ? ' · ' : ''}
+                      {c.recorded_on}
+                    </figcaption>
+                  ) : null}
+                </figure>
+              ))}
+            </div>
+          ) : null}
         </CardContent>
       ) : wide ? (
         // The extra width earns its keep: show what the feature actually does rather than

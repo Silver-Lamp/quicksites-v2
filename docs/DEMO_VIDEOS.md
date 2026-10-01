@@ -51,11 +51,28 @@ broken rather than as video.
 filter picks the most visually *distinctive* frame. For `editor-tour` that was the colourful
 loading animation — a poster reading *"Building your site …"* on a card labelled *"Editing blocks,
 theme and publish"*. The filter worked; the result was wrong, and only looking at the frames
-showed it. Pick `posterAt` off a contact sheet:
+showed it.
+
+⚠️ **And do NOT compute the timestamp from a tile index.** Use a contact sheet to find roughly
+where the good moments are, then extract candidates at **explicit** timestamps and look at those:
 
 ```bash
+# 1. rough survey
 ffmpeg -i demo-videos/<clip>.mp4 -vf "fps=1/3,scale=320:-1,tile=3x3" -frames:v 1 /tmp/sheet.jpg
+# 2. the actual decision — exact seconds, labelled
+for t in 10 14 18 22; do
+  ffmpeg -y -ss $t -i demo-videos/<clip>.mp4 -frames:v 1 \
+    -vf "scale=400:-1,drawtext=text='${t}s':x=8:y=8:fontsize=22:fontcolor=yellow:box=1" /tmp/c-$t.jpg
+done
 ```
+
+A `fps=1/N` sheet samples *intervals*, so "tile 3 × 3.52s = 7.04s" is only approximate. Picking
+7s that way landed on an **"Opening your site …" loading screen** — and it was published before
+anyone looked at the result. The sheet tells you where to look; it does not tell you the time.
+
+⚠️ **Re-picking is mandatory after a re-record.** The three re-records on 2026-10-01 shifted every
+duration (28.8→32.2s, 32.1→31.6s, 21.2→19.6s), so every previously-chosen `posterAt` pointed at a
+different moment. A poster timestamp belongs to a recording, not to a clip name.
 
 **Duration is measured with ffprobe, never estimated**, and an unmeasured clip renders **no**
 duration pill — a `0:00` badge is a measurement nobody took, printed as fact.
@@ -81,9 +98,9 @@ Two of sixteen features have a clip. These are the ones where *seeing it* beats 
 | `white-label-reseller` | A partner's brand on the admin chrome | The reseller pitch, in four seconds. |
 | `revenue-dashboard` | GMV, fees and commissions reconciling | ⚠️ Use the green-path demo data, never a real merchant's numbers. |
 
-**⚠️ Re-record the three existing clips.** They were recorded 2026-10-01 *before* the fix that
-stops a new site opening behind the Pages tray (#1088), so `guest-build` and `editor-tour` both
-show a drawer covering the hero — footage of a bug we fixed the same day.
+✅ **The three existing clips were re-recorded 2026-10-01** after #1088, so none of them shows the
+Pages drawer covering a hero any more. (The first cut did — they were recorded hours before the
+fix. A demo is a dated artifact: re-record after any change to what it shows.)
 
 ## 4. Adding one
 

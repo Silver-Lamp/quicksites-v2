@@ -60,20 +60,23 @@ const CLIPS: Record<string, ClipSpec> = {
     feature: 'block-based-template-editor',
     label: 'Building a site from scratch, signed out',
     blurb: 'Describe a business, watch the site appear. No account.',
-    posterAt: 10,
+    // The form with the name being typed — distinct from editor-tour's poster (the editor).
+    posterAt: 16,
   },
   'editor-tour': {
     feature: 'block-based-template-editor',
     label: 'Editing blocks, theme and publish',
     blurb: 'Rearranging sections, switching the theme, going live.',
-    posterAt: 14,
+    // A block selected with its edit controls showing — the frame that means "editing".
+    posterAt: 10,
     primary: true,
   },
   'finished-site': {
     feature: 'seo-foundations-out-of-the-box',
     label: 'The published result',
     blurb: 'What a visitor gets: storefront, services, contact.',
-    posterAt: 7,
+    // The product grid with real prices and Add to Cart — the storefront, not just a hero.
+    posterAt: 4.3,
   },
 };
 

@@ -127,6 +127,30 @@ async function typeSlowly(p: Page, selector: string, text: string) {
   await p.type(selector, text, { delay: 85 });
 }
 
+
+/**
+ * Click the first control that matches any of these names, and say so when none match.
+ *
+ * ⚠️ Silence on a miss is the trap. The first version of the build step tried four labels and
+ * swallowed every failure, so a copy change would have produced a clean exit code and a video
+ * of nothing happening. A demo recorder that cannot find its button must SAY so — the warning
+ * is the difference between "re-record it" and "ship a video of a frozen page".
+ */
+async function clickAny(p: Page, names: RegExp[], what: string): Promise<boolean> {
+  await injectCursor(p);
+  for (const name of names) {
+    const b = p.getByRole('button', { name }).first();
+    if (!(await b.count().then((n) => n > 0).catch(() => false))) continue;
+    const box = await b.boundingBox().catch(() => null);
+    if (box) await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 20 });
+    await beat(p, 300);
+    await b.click().catch(() => {});
+    return true;
+  }
+  console.warn(`     ⚠️ no control matched for "${what}" — the recording will show nothing here`);
+  return false;
+}
+
 // ── scenarios ────────────────────────────────────────────────────────────────────────────────
 //
 // Data, not code paths: adding a walkthrough is one entry here. Each step carries the line a
@@ -193,6 +217,77 @@ const SCENARIOS: Scenario[] = [
           for (let i = 0; i < 5; i++) { await p.mouse.wheel(0, 420); await beat(p, 650); }
           await beat(p, READ);
         },
+      },
+    ],
+  },
+  {
+    name: 'editor-tour',
+    title: 'Editing a site — the parts people react to',
+    steps: (base) => [
+      {
+        say: 'Build a site first, so there is something to edit.',
+        timelapse: true,
+        run: async (p) => {
+          await p.goto(`${base}/build`, { waitUntil: 'networkidle' });
+          await showCursor(p);
+          await typeSlowly(p, 'input[type="text"]', 'Wildflower Candle Co.');
+          await clickAny(p, [/build my site/i, /start building/i, /create/i], 'build');
+          await p
+            .waitForURL(/\/admin\/templates\//, { timeout: 120_000 })
+            .catch(() => console.warn('     ⚠️ editor never opened'));
+          await p.waitForLoadState('networkidle').catch(() => {});
+          // ⚠️ The Pages panel opens by default and sits over the middle of the site, so the
+          // first recording showed the product through a floating panel for 30 seconds.
+          // Closing it is a real control a person would use, not a staged screenshot — but
+          // leaving it open would have made every later step harder to read.
+          await clickAny(p, [/^close$/i], 'close the Pages panel');
+          await beat(p, 1500);
+        },
+      },
+      {
+        say: 'Shuffle — a different look without touching a single setting.',
+        run: async (p) => {
+          for (let i = 0; i < 3; i++) {
+            await clickAny(p, [/shuffle/i], 'shuffle');
+            await beat(p, 1800);
+          }
+        },
+      },
+      {
+        say: 'Light and dark, switched live.',
+        run: async (p) => {
+          await clickAny(p, [/^light$/i], 'light mode');
+          await beat(p, READ);
+          await clickAny(p, [/^dark$/i], 'dark mode');
+          await beat(p, READ);
+        },
+      },
+      {
+        say: 'See it the way a customer on a phone would.',
+        run: async (p) => {
+          // ⚠️ Addressed by TITLE, not by position. The first version indexed into
+          // `footer button` and matched nothing — the warning fired and that step recorded a
+          // frozen page. These buttons are icon-only with `title="Mobile width"` etc
+          // (TemplateActionToolbar.tsx), which is a real accessible name and survives a
+          // restyle in a way `nth(1)` does not.
+          await injectCursor(p);
+          for (const title of ['Mobile width', 'Tablet width', 'Desktop width']) {
+            const b = p.getByTitle(title).first();
+            if (!(await b.isVisible().catch(() => false))) {
+              console.warn(`     ⚠️ "${title}" not found — that device view is missing from the video`);
+              continue;
+            }
+            const box = await b.boundingBox().catch(() => null);
+            if (box) await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 16 });
+            await beat(p, 280);
+            await b.click().catch(() => {});
+            await beat(p, 1800);
+          }
+        },
+      },
+      {
+        say: 'Everything saves as you go — it is yours when you sign up.',
+        run: async (p) => { await showCursor(p); await beat(p, READ * 2); },
       },
     ],
   },

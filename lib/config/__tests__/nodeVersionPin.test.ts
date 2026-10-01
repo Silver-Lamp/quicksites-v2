@@ -14,7 +14,7 @@
 //      doesn't match the installed patch printed a spurious mismatch warning telling you to run the
 //      `nvm use` that could not work.
 //
-// A major-only pin (`20`) resolves to whatever 20.x is installed, satisfies `engines: 20.x`, and
+// A major-only pin (the current major) resolves to whatever 20.x is installed, satisfies `engines: 20.x`, and
 // matches what CI already does literally (`node-version: 20`). Reproducibility is not lost where it
 // mattered: CI pins its own version and `engines` is the real constraint.
 //
@@ -28,7 +28,7 @@ const nvmrc = readFileSync(join(root, '.nvmrc'), 'utf8').trim();
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 
 describe('.nvmrc', () => {
-  it('is a major-only pin, so `nvm use` resolves to any installed 20.x', () => {
+  it('is a major-only pin, so `nvm use` resolves to any installed major', () => {
     // ⚠️ The failure this prevents: re-pinning an exact patch. It looks more rigorous and it rots
     // the moment that exact patch isn't installed — silently, with exit 3 and no output.
     expect(nvmrc).not.toMatch(/^\d+\.\d+\.\d+$/);

@@ -40,7 +40,19 @@ const OUT_DIR = path.resolve('demo-videos');
 /** 720p. Bigger looks better and takes longer to upload; this is the size people watch at. */
 const VIEWPORT = { width: 1280, height: 720 };
 
-type Step = { say: string; run: (p: Page) => Promise<void> };
+type Step = {
+  say: string;
+  run: (p: Page) => Promise<void>;
+  /**
+   * Speed this step up in post.
+   *
+   * ⚠️ Added because the guest build takes ~55 SECONDS on production, so 45s of an 80s
+   * recording was a loading spinner. That is honest footage and unwatchable as a demo. The
+   * wait is compressed rather than cut, so a viewer still sees that building takes real time —
+   * trimming it to a jump cut would imply it is instant.
+   */
+  timelapse?: boolean;
+};
 type Scenario = { name: string; title: string; steps: (base: string) => Step[] };
 
 // ── pacing ───────────────────────────────────────────────────────────────────────────────────
@@ -144,6 +156,7 @@ const SCENARIOS: Scenario[] = [
       },
       {
         say: 'Pick an industry and let it build.',
+        timelapse: true,
         run: async (p) => {
           // ⚠️ Several labels have shipped for this button. Try them in order rather than
           // pinning one, so a copy change degrades to "no click" instead of a crashed recording.
@@ -157,8 +170,17 @@ const SCENARIOS: Scenario[] = [
               break;
             }
           }
+          // ⚠️ WAIT FOR THE EDITOR, NEVER A FIXED TIMEOUT. The first run used `beat(p, 4000)`
+          // and the recording ended while the page still read "Building your site …" — so the
+          // narration promised "the editor opens on a working site" over footage that never
+          // showed it. A demo whose voiceover describes something off-camera is worse than no
+          // demo. The build does real work (scaffold + hero image, ~20s+), so this waits on the
+          // URL the editor actually lands at.
+          await p
+            .waitForURL(/\/admin\/templates\//, { timeout: 120_000 })
+            .catch(() => console.warn('     ⚠️ editor URL never appeared — build may have failed'));
           await p.waitForLoadState('networkidle').catch(() => {});
-          await beat(p, 4000);
+          await beat(p, 2000);
         },
       },
       {
@@ -219,8 +241,13 @@ async function record(scenario: Scenario, base: string, keepWebm: boolean) {
   const page = await context.newPage();
 
   const steps = scenario.steps(base);
+  // Wall-clock ranges relative to recording start, so post-processing knows which seconds of
+  // the finished file correspond to which step.
+  const t0 = Date.now();
+  const ranges: { from: number; to: number; timelapse: boolean }[] = [];
   console.log(`\n▶ ${scenario.name} — ${scenario.title}`);
   for (const [i, step] of steps.entries()) {
+    const from = (Date.now() - t0) / 1000;
     process.stdout.write(`   ${i + 1}/${steps.length} ${step.say}\n`);
     try {
       await step.run(page);
@@ -230,6 +257,7 @@ async function record(scenario: Scenario, base: string, keepWebm: boolean) {
       // footage leading up to it.
       console.warn(`     ⚠️ step failed, continuing: ${e?.message ?? e}`);
     }
+    ranges.push({ from, to: (Date.now() - t0) / 1000, timelapse: !!step.timelapse });
   }
 
   const videoPath = await page.video()?.path();
@@ -243,12 +271,47 @@ async function record(scenario: Scenario, base: string, keepWebm: boolean) {
   await fs.rename(videoPath, webm);
 
   // H.264 + faststart: plays inline in Slack, Keynote and every browser. A raw .webm does not.
-  await run('ffmpeg', [
-    '-y', '-i', webm,
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '22',
-    '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
-    mp4,
-  ]);
+  //
+  // ⚠️ Flagged steps are SPED UP, not cut. `setpts` over the whole file would make the reading
+  // beats unreadable; a jump cut over the build would imply it is instant. Segments are split
+  // on the recorded step boundaries, the flagged ones re-timed, and the pieces concatenated.
+  const SPEED = 8;
+  const needsTimelapse = ranges.some((r) => r.timelapse && r.to - r.from > 6);
+  if (!needsTimelapse) {
+    await run('ffmpeg', [
+      '-y', '-i', webm,
+      '-c:v', 'libx264', '-preset', 'slow', '-crf', '22',
+      '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+      mp4,
+    ]);
+  } else {
+    const parts: string[] = [];
+    for (const [i, r] of ranges.entries()) {
+      const seg = path.join(OUT_DIR, `.seg_${i}.mp4`);
+      const dur = Math.max(0.2, r.to - r.from);
+      const fast = r.timelapse && dur > 6;
+      await run('ffmpeg', [
+        '-y', '-ss', String(r.from), '-t', String(dur), '-i', webm,
+        '-vf', fast ? `setpts=PTS/${SPEED}` : 'setpts=PTS',
+        '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-pix_fmt', 'yuv420p',
+        seg,
+      ]);
+      parts.push(seg);
+    }
+    const listFile = path.join(OUT_DIR, '.concat.txt');
+    await fs.writeFile(listFile, parts.map((f) => `file '${path.basename(f)}'`).join('\n'));
+    await run('ffmpeg', [
+      '-y', '-f', 'concat', '-safe', '0', '-i', listFile,
+      '-c:v', 'libx264', '-preset', 'slow', '-crf', '22',
+      '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+      mp4,
+    ]);
+    await Promise.all([...parts, listFile].map((f) => fs.rm(f, { force: true })));
+    const slow = ranges.filter((r) => r.timelapse && r.to - r.from > 6);
+    for (const r of slow) {
+      console.log(`   ⏩ compressed ${(r.to - r.from).toFixed(0)}s of waiting to ~${((r.to - r.from) / SPEED).toFixed(0)}s`);
+    }
+  }
   if (!keepWebm) await fs.rm(webm, { force: true });
 
   const { size } = await fs.stat(mp4);

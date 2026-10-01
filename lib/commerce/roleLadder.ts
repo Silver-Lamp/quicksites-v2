@@ -90,6 +90,30 @@ export const ISO_PERSONAS = [CAST.merchant, CAST.rep, CAST.iso, CAST.hub, CAST.h
 export const SOLO_PERSONAS = [CAST.merchant, CAST.soloOperator, CAST.hub, CAST.head];
 
 /**
+ * The examples Amy gave on the 2026-09-30 call, in her own words:
+ * *"say, like, my candle company… let's say it's $25"* and *"someone signs up for a workshop
+ * for $45"*.
+ *
+ * ⚠️ USE HER NUMBERS, NOT ROUND ONES. A $25 candle makes the arithmetic uncomfortable in a way
+ * $10,000/month does not — the platform fee on it is $1.25, and after four people take a share
+ * there are cents left. That discomfort is the honest shape of the model at small order sizes
+ * and it is the thing a monthly-volume slider quietly hides. She asked about a candle; the page
+ * should answer about a candle.
+ */
+export const SALE_PRESETS = [
+  { label: 'A $25 candle', cents: 2500 },
+  { label: 'A $45 workshop seat', cents: 4500 },
+  { label: 'A $120 gift set', cents: 12000 },
+] as const;
+
+/** A month of the same shop, for the view where the residual starts to look like income. */
+export const MONTH_PRESETS = [
+  { label: 'A slow month — $1,200', cents: 120_000 },
+  { label: 'A good month — $6,000', cents: 600_000 },
+  { label: 'A busy shop — $20,000', cents: 2_000_000 },
+] as const;
+
+/**
  * The ladder, with no money on it yet.
  *
  * `uplineLevels` is how many rungs to draw above the seller. The hard ceiling is

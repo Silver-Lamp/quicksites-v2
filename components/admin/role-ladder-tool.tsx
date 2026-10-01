@@ -22,6 +22,8 @@ import {
   ISO_PERSONAS,
   SOLO_PERSONAS,
   MAX_UPLINE_DEPTH,
+  SALE_PRESETS,
+  MONTH_PRESETS,
   type SellerTier,
 } from '@/lib/commerce/roleLadder';
 
@@ -53,7 +55,11 @@ export default function RoleLadderTool({
 }) {
   const [preset, setPreset] = React.useState<Preset>('iso');
   const [tier, setTier] = React.useState<SellerTier>('origination');
-  const [volume, setVolume] = React.useState(1_000_000);
+  // ⚠️ One sale vs a month of them. Amy asked about a $25 candle; a monthly-volume slider
+  // answers a different question and hides the uncomfortable one — at $25 the whole platform
+  // fee is $1.25 and four people are dividing it.
+  const [basis, setBasis] = React.useState<'sale' | 'month'>('sale');
+  const [volume, setVolume] = React.useState(2500);
   const [feePercent, setFeePercent] = React.useState(0.05);
   const [shares, setShares] = React.useState<number[]>([0.1, 0.1, 0.1]);
   const [copied, setCopied] = React.useState(false);
@@ -64,7 +70,12 @@ export default function RoleLadderTool({
     () => applyLadderScenario({ monthlyVolumeCents: volume, feePercent, tier, uplineShares: shares, personas }),
     [volume, feePercent, tier, shares, personas],
   );
-  const mermaid = React.useMemo(() => ladderMermaid(result), [result]);
+  // ⚠️ The diagram carries the same basis as the table. A chart labelled "per month" showing
+  // per-sale cents is the kind of thing that gets pasted into a deck and believed.
+  const mermaid = React.useMemo(
+    () => ladderMermaid(result, { monthlyLabel: basis === 'sale' ? 'on this sale' : 'per month' }),
+    [result, basis],
+  );
 
   const applyPreset = (p: Preset) => {
     setPreset(p);
@@ -91,10 +102,45 @@ export default function RoleLadderTool({
             </button>
           ))}
         </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {(basis === 'sale' ? SALE_PRESETS : MONTH_PRESETS).map((x) => (
+            <button
+              key={x.label} type="button" onClick={() => setVolume(x.cents)}
+              className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
+                volume === x.cents
+                  ? 'border-sky-500/50 bg-sky-500/15 text-sky-200'
+                  : 'border-border text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              {x.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              const next = basis === 'sale' ? 'month' : 'sale';
+              setBasis(next);
+              setVolume(next === 'sale' ? SALE_PRESETS[0].cents : MONTH_PRESETS[1].cents);
+            }}
+            className="rounded-full border border-border px-2.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted"
+          >
+            {basis === 'sale' ? 'show a whole month →' : '← show one sale'}
+          </button>
+        </div>
+
         <label className="text-sm">
-          <span className="block text-xs text-muted-foreground">Merchant volume / month</span>
-          <input type="range" min={100000} max={5000000} step={100000} value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))} className="w-44" />
+          <span className="block text-xs text-muted-foreground">
+            {basis === 'sale' ? 'One sale' : 'A month of sales'}
+          </span>
+          <input
+            type="range"
+            min={basis === 'sale' ? 500 : 50_000}
+            max={basis === 'sale' ? 50_000 : 5_000_000}
+            step={basis === 'sale' ? 500 : 50_000}
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            className="w-44"
+          />
           <span className="ml-2 tabular-nums font-medium">{usd(volume)}</span>
         </label>
         <label className="text-sm">
@@ -120,7 +166,7 @@ export default function RoleLadderTool({
               <th className="px-3 py-2">Rung</th>
               <th className="px-3 py-2">What they do</th>
               <th className="px-3 py-2">Override</th>
-              <th className="px-3 py-2 text-right">Earns / month</th>
+              <th className="px-3 py-2 text-right">{basis === 'sale' ? 'Earns on this sale' : 'Earns / month'}</th>
             </tr>
           </thead>
           <tbody>
@@ -221,6 +267,24 @@ export default function RoleLadderTool({
           furthest up — usually whoever recruited the chain — who get zero, never a reduced rate.
         </p>
       ) : null}
+      {/* ⚠️ THE ANSWER TO THE QUESTION AMY ACTUALLY ASKED, and the one a monthly-volume slider
+          hides. On her own example — a $25 candle — the whole platform fee is $1.25 and each
+          upline earns about twelve cents. That is not a bug in the model; it is the model
+          telling you which merchants a multi-level chain can carry. Fires on the number rather
+          than being written into prose, so it cannot be true on a page that does not say it. */}
+      {basis === 'sale' && (result.rungs[result.rungs.length - 1]?.cents ?? 0) > 0 &&
+      (result.rungs[result.rungs.length - 1]?.cents ?? 0) < 25 ? (
+        <p className="rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-xs text-sky-100">
+          At this order size the chain pays the top rung{' '}
+          <strong>{usd(result.rungs[result.rungs.length - 1]?.cents ?? 0)}</strong> — cents, not
+          dollars. Nothing is broken: a {usd(volume)} sale only generates a{' '}
+          {usd(result.feeCents)} fee, and four people are dividing it. What it tells you is{' '}
+          <strong>which merchants a chain this deep can carry</strong>. Switch to a whole month,
+          or point the chain at merchants doing real volume — that is the business this model is
+          built for, and a craft shop selling a few candles is not it.
+        </p>
+      ) : null}
+
       {result.houseCents <= 0 ? (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
           QuickSites earns nothing on this order

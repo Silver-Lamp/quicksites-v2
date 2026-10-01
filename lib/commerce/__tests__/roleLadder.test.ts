@@ -12,6 +12,7 @@ import {
   CAST,
   ISO_PERSONAS,
   MAX_UPLINE_DEPTH,
+  SALE_PRESETS,
 } from '@/lib/commerce/roleLadder';
 import { PARTNER_FEE_SHARE, AFFILIATE_FEE_SHARE } from '@/lib/commerce/partner-terms';
 
@@ -163,5 +164,37 @@ describe('the partner-facing view hides jargon, never the caveat', () => {
     // `audience` may only ever decide the rung-name note. Two uses, both in that branch.
     const uses = src.match(/audience ===/g) ?? [];
     expect(uses).toHaveLength(2);
+  });
+});
+
+describe('the candle examples Amy actually gave', () => {
+  const chain = (cents: number) =>
+    applyLadderScenario({
+      monthlyVolumeCents: cents, feePercent: 0.05, tier: 'origination',
+      uplineShares: [0.1, 0.1, 0.1], personas: ISO_PERSONAS,
+    });
+
+  // ⚠️ THE NUMBER THE MONTHLY-VOLUME FRAMING HID. She asked about a $25 candle. The whole
+  // platform fee on it is $1.25 and each upline earns twelve cents. That is not a defect —
+  // it is the model saying which merchants a four-deep chain can carry, and it only becomes
+  // visible if the page can show ONE SALE rather than a month of them.
+  it('pays cents on a $25 candle, and the tool must be able to show that', () => {
+    const r = chain(2500);
+    expect(r.feeCents).toBe(125);
+    const top = r.rungs[r.rungs.length - 1];
+    expect(top.cents).toBeLessThan(25); // under a quarter
+    expect(top.cents).toBeGreaterThan(0); // but not shorted — the pool is fine, the order is small
+  });
+
+  it('becomes real money on a busy month, which is the point', () => {
+    const top = chain(2_000_000).rungs.slice(-1)[0];
+    expect(top.cents).toBeGreaterThan(5000); // > $50/mo per merchant
+  });
+
+  // Presets are the examples from the call, verbatim. If someone rounds them to $20/$50 the
+  // page stops answering the question she asked.
+  it('keeps her figures', () => {
+    expect(SALE_PRESETS.map((p) => p.cents)).toContain(2500);
+    expect(SALE_PRESETS.map((p) => p.cents)).toContain(4500);
   });
 });

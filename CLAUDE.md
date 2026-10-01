@@ -253,6 +253,35 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `forward_unresponsive.note`. ⚠️ `classifyDial` distrusts Twilio's `completed`
   (voicemail answers too): `answered` needs ≥15s, shorter is `brief`, and an **unknown** status is
   never a failure.
+  ⚠️ **THE CALLER MUST BE TOLD WHO IS ABOUT TO ANSWER, AND THE RULE FOR THIS WAS ALREADY WRITTEN
+  FOR THE WRONG PATH (2026-10-01).** `lib/ppl/cascade.ts` says never imply the caller reached the
+  company whose site they rang — but the cascade is **flag-gated OFF**, while the single forward
+  that has been live all along said only *"Thanks for calling. Please hold while I connect you."*
+  After a page headed **"South Hill Towing" (42 times; no such business exists — the name is
+  generated from city + trade at `buildGeoPitchSite`)**, that sentence means *holding for South
+  Hill Towing*. A real member of the public dialled it, was bridged to **Too Cool Towing**, was
+  honestly told she had not reached South Hill Towing, and hung up: **15 s, logged `connected`,
+  and not a delivered lead.** ⚠️ **Note the deception had NO beneficiary** — she got no tow, the
+  business lost a job, we burned the third genuine inbound call in the product's history. The
+  honest version is strictly more profitable, so there is no trade-off to weigh here.
+  Fixed by **naming the destination before dialling it** (`lib/ppl/forwardAnnounce.ts`
+  `connectingAnnouncement` → *"Connecting you now with Too Cool Towing, a local towing company
+  serving South Hill"*), so the business answering as itself **confirms** the announcement instead
+  of contradicting it. The name is `geo_industry_campaigns.forward_to_name` (`20260867`), resolved
+  from `outreach_prospects` by `setCampaignForwardTo` and written **in the same UPDATE as
+  `forward_to`**, NULL when unresolved — a name surviving a re-point would announce one business
+  and dial another, which is worse than announcing none (same reasoning as `call_logs.forwarded_to`).
+  Unresolved falls back to *"a local towing company serving Grafton"* — vague but true, and
+  **never** to the site's invented identity. ⚠️ **Resolve on the LAST TEN DIGITS** (`last10`):
+  `forward_to` is E.164 (11 digits) and a directory phone is 10, so comparing full digit strings
+  matches **zero** rows while reading exactly like *"we hold no names for these businesses"* — the
+  first query said that about a table where **10 of 11 resolve**. 10 campaigns backfilled.
+  Pinned by `lib/ppl/__tests__/forwardAnnounce.test.ts` (source guards over the route + the
+  single-UPDATE invariant; **verified to fail with the old sentence restored**). ⚠️ Still open and
+  **not** a code question: the page asserts a company that does not exist. The two honest shapes
+  are a **directory** (our own dome-cohort rule: *"a directory is not a business"*) or a site that
+  names its real renter — and the mismatch exists **only in the unpaid state**, since all 11
+  forwarding campaigns are `status='draft'` and nobody is paying.
 - **Dome builders — directory sites on `<state>domebuilders.com` with DomeSketch (2026-09-19)**:
   the first pay-per-call mass-deploy cohort (`docs/PPL_VERTICAL.md` §9). 13 state + 8 national
   exact-match domains bought after a Places sweep showed supply per state; a **directory** site

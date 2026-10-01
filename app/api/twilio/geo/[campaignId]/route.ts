@@ -17,6 +17,7 @@ import { bridgeTwiml, notConnectingTwiml } from '@/lib/ppl/ivr';
 import { cascadeGreetingTwiml } from '@/lib/ppl/cascade';
 import { voicemailFirstPromptTwiml, voicemailGreetingUrl } from '@/lib/ppl/voicemail';
 import { cascadeEnabled } from '@/lib/ppl/cascadeFlag';
+import { connectingAnnouncement } from '@/lib/ppl/forwardAnnounce';
 import { KEY_TO_LABEL } from '@/lib/industries';
 
 export const runtime = 'nodejs';
@@ -180,10 +181,21 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   // shared route answers everything with an empty <Response/>, which tells Twilio to HANG UP —
   // which is how a failed forward dropped callers in silence until 2026-09-30. after-dial takes
   // a message instead, and does the call_logs write this route used to rely on it for.
+  // ⚠️ NAME THE DESTINATION BEFORE DIALLING IT. This used to say only "Thanks for calling.
+  // Please hold while I connect you." — after a page headed "South Hill Towing", that means
+  // *holding for South Hill Towing*, and on 2026-10-01 a real caller was bridged to Too Cool
+  // Towing, told she had not reached South Hill Towing, and hung up. 15 seconds, logged
+  // `connected`, no lead delivered and no beneficiary. The business answering as itself must
+  // CONFIRM what the caller was told, not contradict it. See lib/ppl/forwardAnnounce.ts.
+  const announcement = connectingAnnouncement({
+    businessName: campaign?.forward_to_name ?? null,
+    trade: (KEY_TO_LABEL as Record<string, string>)[campaign?.industry_key ?? ''] ?? null,
+    city: campaign?.city ?? null,
+  });
   return xml(
     `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="Polly.Joanna">Thanks for calling. Please hold while I connect you.</Say>
+  <Say voice="Polly.Joanna">${esc(announcement)}</Say>
   <Dial answerOnBridge="true"${callerIdAttr} action="${base}/api/twilio/geo/${encodeURIComponent(campaignId)}/after-dial" method="POST">
     <Number url="${esc(whisperUrl)}">${esc(forwardTo)}</Number>
   </Dial>

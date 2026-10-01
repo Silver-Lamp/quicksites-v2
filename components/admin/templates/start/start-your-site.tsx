@@ -1,4 +1,5 @@
 'use client';
+import { newTemplateEditorUrl } from '@/lib/editor/newTemplateUrl';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -27,7 +28,7 @@ const INDUSTRY_OPTIONS: Array<{ key: IndustryKey; label: string }> = (() => {
 function toEditor(id: string) {
   // Hard-navigate so the create loader stays up until the editor paints — a soft
   // nav briefly re-exposes this page while the async /admin layout auth resolves.
-  window.location.assign(`/admin/templates/${id}/edit`);
+  window.location.assign(newTemplateEditorUrl(id, { edit: true }));
 }
 
 export default function StartYourSite() {

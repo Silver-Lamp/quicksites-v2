@@ -1,4 +1,5 @@
 'use client';
+import { consumeNewTemplateFlag } from '@/lib/editor/newTemplateUrl';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useIsGuest } from '@/hooks/useIsGuest';
@@ -271,8 +272,37 @@ useEffect(() => {
     if (typeof window === 'undefined') return true;
     try { return (localStorage.getItem('qs:toolbar:pageMgrOpen') ?? '1') !== '0'; } catch { return true; }
   });
+  // ⚠️ A JUST-CREATED SITE OPENS ON THE CANVAS, NOT THE PAGES TRAY. The tray defaults to open
+  // (the localStorage read above falls back to '1'), and it is a bottom drawer — so the very
+  // first thing someone saw after building a site was their hero covered by a file list of one
+  // item called "Home". Caught in a recorded walkthrough of the guest flow, which is the main
+  // acquisition funnel; it had been doing this to every new site.
+  //
+  // The flag comes from the creation redirect (lib/editor/newTemplateUrl.ts) and means exactly
+  // "a human just made this" — never a general first-run marker, and never inferred from
+  // `created_at`, which would reopen the question every time someone refreshed.
+  const autoClosedRef = useRef(false);
   useEffect(() => {
-    try { localStorage.setItem('qs:toolbar:pageMgrOpen', pageMgrOpen ? '1' : '0'); } catch {}
+    if (!consumeNewTemplateFlag()) return;
+    autoClosedRef.current = true;
+    setPageMgrOpen(false);
+  }, []);
+
+  useEffect(() => {
+    // ⚠️ The auto-close is a view decision, not the user's, so it must NOT be written to the
+    // saved preference — otherwise creating one site silently turns the tray off on every other
+    // site this browser opens. Opening it again (P, or the button) persists '1' as normal.
+    // ⚠️ Match the VALUE, not just the flag. A bare `if (autoClosedRef.current)` reads correctly
+    // and is wrong: on mount this effect runs while `pageMgrOpen` is still its initial `true`,
+    // so it consumed the flag on that pass and the real `true → false` transition then wrote
+    // '0' anyway. The saved preference was clobbered exactly as if no guard existed. Caught by
+    // reading localStorage in a real browser after a real guest build — the source guard
+    // asserting the flag EXISTS passed the whole time, because the shape was never the problem.
+    if (autoClosedRef.current && pageMgrOpen === false) {
+      autoClosedRef.current = false;
+    } else {
+      try { localStorage.setItem('qs:toolbar:pageMgrOpen', pageMgrOpen ? '1' : '0'); } catch {}
+    }
     window.dispatchEvent(new CustomEvent('qs:toolbar:page-manager:open', { detail: pageMgrOpen }));
   }, [pageMgrOpen]);
 

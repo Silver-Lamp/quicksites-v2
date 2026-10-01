@@ -1,4 +1,5 @@
 'use client';
+import { newTemplateEditorUrl } from '@/lib/editor/newTemplateUrl';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -177,7 +178,7 @@ export default function TemplatesCardGrid({
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.id) throw new Error(j?.error || 'Duplicate failed');
       toast.success('Template duplicated');
-      router.push(`/admin/templates/${j.id}/edit`);
+      router.push(newTemplateEditorUrl(j.id, { edit: true }));
     } catch (e: any) {
       toast.error(e?.message || 'Duplicate failed');
       setDupBusy(null);

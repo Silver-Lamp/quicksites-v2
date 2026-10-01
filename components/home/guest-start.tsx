@@ -1,5 +1,6 @@
 // components/home/guest-start.tsx
 'use client';
+import { newTemplateEditorUrl } from '@/lib/editor/newTemplateUrl';
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -156,7 +157,7 @@ export default function GuestStart({ initialIndustry }: { initialIndustry?: stri
       // while the async /admin layout auth resolves, before the editor's loading.tsx
       // (the same BrandLoader) shows. A full navigation keeps THIS loader up until the
       // editor paints, so there's no homepage flash between the two loaders.
-      window.location.assign(`/admin/templates/${json.id}`);
+      window.location.assign(newTemplateEditorUrl(json.id));
     } catch (err: any) {
       setError(err?.message || 'Something went wrong. Please try again.');
       setLoading(false);
@@ -199,7 +200,7 @@ export default function GuestStart({ initialIndustry }: { initialIndustry?: stri
       }
       // Hard-navigate so the loader stays up until the editor paints (no homepage
       // flash during the soft-nav layout auth). See the note in the fresh flow above.
-      window.location.assign(`/admin/templates/${json.id}`);
+      window.location.assign(newTemplateEditorUrl(json.id));
     } catch (err: any) {
       setError(err?.message || 'Something went wrong. Please try again.');
       setLoading(false);

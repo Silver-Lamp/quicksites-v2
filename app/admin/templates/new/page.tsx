@@ -1,5 +1,6 @@
 // app/admin/templates/new/page.tsx
 'use client';
+import { newTemplateEditorUrl } from '@/lib/editor/newTemplateUrl';
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -75,7 +76,7 @@ async function insertDraft(
   // 1) Try API route
   const apiId = await tryCreateViaApi(initial);
   if (apiId) {
-    router.replace(`/admin/templates/${apiId}/edit`);
+    router.replace(newTemplateEditorUrl(apiId, { edit: true }));
     router.refresh();
     return apiId;
   }
@@ -107,7 +108,7 @@ async function insertDraft(
     console.warn('[new template] MV refresh RPC failed (non-fatal):', (e as any)?.message || e);
   }
 
-  router.replace(`/admin/templates/${data.id}/edit`);
+  router.replace(newTemplateEditorUrl(data.id, { edit: true }));
   router.refresh();
   return data?.id ?? null;
 }

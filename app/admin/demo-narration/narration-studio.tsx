@@ -52,6 +52,16 @@ const PROVISION_HELP: Record<string, string> = {
   disabled: 'Partner audio provisioning is switched off in this environment.',
 };
 
+/** Every grant failure a re-paste can fix — these open the connection panel automatically. */
+const GRANT_FIXABLE = new Set([
+  'no_grant',
+  'invalid_or_revoked_grant',
+  'grant_scope',
+  'grant_embed_mismatch',
+]);
+
+const UUID_RX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 type Source = 'recorded' | 'tts';
 type StudioTake = NarrationTake & { source: Source; voiceBasis: 'self' | 'narrator' | null };
 
@@ -200,6 +210,78 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
   const [published, setPublished] = React.useState<string | null>(null);
   // Set when the failure is one a link can fix, so the operator is not left reading prose.
   const [needsGrant, setNeedsGrant] = React.useState(false);
+
+  // ── Connection panel ────────────────────────────────────────────────────────────────────
+  // ⚠️ A GRANT ERROR MUST BE FIXABLE WHERE IT IS READ. Every grant failure used to be a dead
+  // end here: a page refresh clears the message but not the cause, and the stored grant is
+  // unreachable from this screen — the operator is told what is wrong and given nowhere to do
+  // anything about it. Worse, the likeliest cause is a wrong embed id recorded ALONGSIDE a
+  // perfectly good token (the id is typed when the token is pasted, so the two can disagree
+  // from the start), which no amount of re-running fixes. So: show what is connected, let a
+  // token be re-pasted against the right embed, and let a wrong row be removed.
+  const [grants, setGrants] = React.useState<Array<{ id: string; hjEmbedId: string }> | null>(null);
+  const [showConnect, setShowConnect] = React.useState(false);
+  const [embedInput, setEmbedInput] = React.useState('');
+  const [tokenInput, setTokenInput] = React.useState('');
+
+  const loadGrants = React.useCallback(async () => {
+    try {
+      const j = await fetch('/api/partner/audio/connect').then((r) => r.json());
+      setGrants((j?.grants ?? []).map((g: any) => ({ id: String(g.id), hjEmbedId: String(g.hjEmbedId) })));
+    } catch {
+      setGrants([]);
+    }
+  }, []);
+
+  /** Store a freshly minted token against the embed it was actually minted for. */
+  async function connectGrant() {
+    const hjEmbedId = embedInput.trim();
+    const token = tokenInput.trim();
+    if (!UUID_RX.test(hjEmbedId)) return setStatus('That embed id is not a uuid.');
+    if (token.length < 8) return setStatus('Paste the token HiveJournal showed you.');
+    setBusy('Saving the connection…');
+    try {
+      // ⚠️ `attachToSite:false` — connecting here is about generating narration, not about
+      // putting a player on a customer's site. Attaching is a visible change to a live page.
+      const res = await fetch('/api/partner/audio/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hjEmbedId, token, attachToSite: false }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) {
+        setStatus(j?.error ?? 'Could not save that connection.');
+      } else {
+        // ⚠️ Saved is not working. We have stored a token; whether HJ accepts it against this
+        // embed is only known when something is synthesised, so do not say "connected".
+        setStatus(`Stored a grant for ${hjEmbedId}. Press “Synthesise all lines” to test it.`);
+        setTokenInput('');
+        setNeedsGrant(false);
+        await loadGrants();
+      }
+    } catch (e: any) {
+      setStatus(`Could not save that connection: ${e?.message ?? e}`);
+    }
+    setBusy(null);
+  }
+
+  /** Remove a stored grant — the escape hatch when the embed recorded with it is wrong. */
+  async function forgetGrant(hjEmbedId: string) {
+    setBusy('Removing…');
+    try {
+      await fetch(`/api/partner/audio/connect?hjEmbedId=${encodeURIComponent(hjEmbedId)}`, {
+        method: 'DELETE',
+      });
+      // ⚠️ Says what this did and did NOT do. Revoking our copy does not revoke the token at
+      // HiveJournal; a stale token left live there is still a bearer secret.
+      setStatus(`Removed our copy of the grant for ${hjEmbedId}. Revoke it in HiveJournal too.`);
+      setEmbedInput(hjEmbedId);
+      await loadGrants();
+    } catch (e: any) {
+      setStatus(`Could not remove it: ${e?.message ?? e}`);
+    }
+    setBusy(null);
+  }
 
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const recorderRef = React.useRef<MediaRecorder | null>(null);
@@ -437,6 +519,8 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
 
     if (ids.length === 0) {
       setNeedsGrant(true);
+      setShowConnect(true);
+      void loadGrants();
       setStatus(PROVISION_HELP.no_grant);
       return null;
     }
@@ -482,7 +566,16 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
         // ⚠️ Lead with the FAILURE when nothing was produced. A voice basis is meaningless
         // when no voice was produced, and printing one buries the actionable reason.
         const firstErr = (j.results ?? []).find((r: any) => !r.ok)?.error as string | undefined;
-        setNeedsGrant(firstErr === 'no_grant' || firstErr === 'invalid_or_revoked_grant');
+        // ⚠️ EVERY grant-class code, not just the two obvious ones. `grant_embed_mismatch`
+        // was missing, so the one failure most likely to need a re-paste was the one that
+        // offered no way to do it — the operator read "use the embed it belongs to" with
+        // nothing on screen that could change which embed we use.
+        const fixable = !!firstErr && GRANT_FIXABLE.has(firstErr);
+        setNeedsGrant(fixable);
+        if (fixable) {
+          setShowConnect(true);
+          void loadGrants();
+        }
         if (j.generated === 0) {
           setStatus(
             firstErr
@@ -691,13 +784,107 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
             </div>
 
             {busy ? <p className="mt-2 text-xs text-sky-300">{busy}</p> : null}
-            {status ? <p className="mt-2 text-xs text-amber-200">{status}</p> : null}
-            {needsGrant ? (
-              <p className="mt-1 text-xs">
-                <a href="/merchant/audio" className="text-sky-300 underline">
-                  Connect a HiveJournal grant →
-                </a>
+            {status ? (
+              <p className="mt-2 flex items-start gap-2 text-xs text-amber-200">
+                <span className="flex-1">{status}</span>
+                {/* A message you cannot dismiss reads as a live condition long after it is over. */}
+                <button
+                  type="button"
+                  onClick={() => setStatus(null)}
+                  aria-label="Dismiss this message"
+                  className="shrink-0 rounded px-1 text-muted-foreground hover:text-foreground"
+                >
+                  ✕
+                </button>
               </p>
+            ) : null}
+
+            <p className="mt-1 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConnect((v) => !v);
+                  if (!grants) void loadGrants();
+                }}
+                className="text-sky-300 underline"
+              >
+                {showConnect ? 'Hide connection settings' : 'HiveJournal connection…'}
+              </button>
+            </p>
+
+            {showConnect ? (
+              <div className="mt-2 rounded-lg border border-border bg-card p-3 text-xs text-card-foreground">
+                <p className="font-semibold">Connected embeds</p>
+                {grants === null ? (
+                  <p className="mt-1 text-muted-foreground">Checking…</p>
+                ) : grants.length === 0 ? (
+                  <p className="mt-1 text-muted-foreground">
+                    None. Generating audio needs a token, even though playback is public.
+                  </p>
+                ) : (
+                  <ul className="mt-1 space-y-1">
+                    {grants.map((g) => (
+                      <li key={g.id} className="flex items-center gap-2">
+                        <code className="flex-1 break-all text-muted-foreground">{g.hjEmbedId}</code>
+                        <button
+                          type="button"
+                          onClick={() => forgetGrant(g.hjEmbedId)}
+                          disabled={!!busy}
+                          className="shrink-0 text-rose-300 underline disabled:opacity-40"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* ⚠️ The embed id is asked for HERE, where the token is pasted, because the two
+                    belong together: a token minted on one embed and filed under another fails
+                    every time with no way to tell from this screen which half is wrong. */}
+                <p className="mt-3 font-semibold">Paste a grant</p>
+                <p className="mt-0.5 text-muted-foreground">
+                  In HiveJournal:{' '}
+                  <a
+                    href="https://www.hivejournal.com/dashboard/about-that"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sky-300 underline"
+                  >
+                    /dashboard/about-that
+                  </a>{' '}
+                  → the embed whose voice clone is yours → <em>Connect QuickSites</em> → Generate
+                  connection token. Copy the embed id from that same card — a token minted on one
+                  embed will not work on another.
+                </p>
+                <input
+                  value={embedInput}
+                  onChange={(e) => setEmbedInput(e.target.value)}
+                  placeholder="embed id (uuid, from the same card)"
+                  spellCheck={false}
+                  className="mt-2 w-full rounded border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
+                />
+                <input
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value)}
+                  placeholder="quicksites_…"
+                  spellCheck={false}
+                  className="mt-1 w-full rounded border border-border bg-background px-2 py-1 font-mono text-xs text-foreground"
+                />
+                <div className="mt-2 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={connectGrant}
+                    disabled={!!busy || !embedInput.trim() || !tokenInput.trim()}
+                    className="rounded-lg border border-sky-400/50 px-3 py-1.5 font-semibold text-sky-200 disabled:opacity-40"
+                  >
+                    Save grant
+                  </button>
+                  <a href="/merchant/audio" className="text-sky-300 underline">
+                    Full connection page →
+                  </a>
+                </div>
+              </div>
             ) : null}
             {published ? (
               <p className="mt-1 text-xs text-emerald-300">

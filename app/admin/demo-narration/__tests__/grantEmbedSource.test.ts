@@ -49,3 +49,52 @@ describe('demo narration picks its embed from the grants we hold', () => {
     expect(src.length).toBeGreaterThan(2000);
   });
 });
+
+// ⚠️ RESOLVING FROM THE STORED GRANT IS NOT ENOUGH, AND ASSUMING IT WAS IS THE SECOND BUG.
+// The embed id is typed by hand WHEN THE TOKEN IS PASTED, so our record can disagree with the
+// embed HJ actually minted it on. That is what happened: `partner_audio_grants` held one active
+// row for `4f90e68e…` carrying a token minted on `27eb5896…`, so reading the embed from our own
+// table returned the wrong answer with full confidence and failed identically every run. A
+// grant error therefore has to be FIXABLE from the screen that reports it — otherwise the only
+// remedy is a page the operator has no reason to think is involved.
+describe('a grant failure can be fixed where it is reported', () => {
+  const src = fs.readFileSync(STUDIO, 'utf8');
+
+  it('treats every grant-class code as fixable, not just the obvious two', () => {
+    for (const code of ['no_grant', 'invalid_or_revoked_grant', 'grant_scope', 'grant_embed_mismatch']) {
+      expect(src).toContain(`'${code}'`);
+    }
+    // The old code hard-coded two codes inline; a Set the panel reads is what makes
+    // grant_embed_mismatch — the likeliest one — open the panel rather than a dead end.
+    expect(src).toMatch(/GRANT_FIXABLE\.has\(firstErr\)/);
+  });
+
+  it('offers re-pasting a token and removing a wrong record', () => {
+    expect(src).toMatch(/async function connectGrant\(/);
+    expect(src).toMatch(/async function forgetGrant\(/);
+    expect(src).toMatch(/method: 'DELETE'/);
+  });
+
+  it('asks for the embed id beside the token, not somewhere else', () => {
+    // The two values must be entered together or they can disagree from the start.
+    expect(src).toMatch(/embed id \(uuid, from the same card\)/);
+  });
+
+  it('never claims a stored grant is working', () => {
+    // Storing a token proves nothing about whether HJ accepts it for that embed.
+    expect(src).toMatch(/Stored a grant for \$\{hjEmbedId\}/);
+    expect(src).not.toMatch(/Connected!|Successfully connected/);
+  });
+
+  it('says that removing our copy does not revoke it at HiveJournal', () => {
+    expect(src).toMatch(/Revoke it in HiveJournal too/);
+  });
+
+  it('lets the operator dismiss a stale message', () => {
+    expect(src).toMatch(/Dismiss this message/);
+  });
+
+  it('does not attach a player to a live site as a side effect of connecting', () => {
+    expect(src).toMatch(/attachToSite: false/);
+  });
+});

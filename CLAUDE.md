@@ -703,6 +703,22 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `app/admin/demo-narration/__tests__/grantEmbedSource.test.ts` — a **source guard**, because
   the defect is a UI offering a free-text field, not a wrong return value (verified to fail with
   the prompt restored).
+  ⚠️ **READING THE EMBED FROM OUR OWN TABLE WAS NOT ENOUGH, AND BELIEVING IT WAS IS THE SAME
+  BUG ONE LAYER DOWN.** `hj_embed_id` is **typed by hand when the token is pasted**, so our
+  record can disagree with the embed HJ minted it on — and did: `partner_audio_grants` held one
+  active row for `4f90e68e…` carrying a token minted on `27eb5896…`, so resolving "from the
+  grants we hold" returned the wrong id *with full confidence* and failed identically on every
+  run. **A stored value is only as good as the step that captured it.** So a grant error is now
+  **fixable where it is reported**: the studio shows the connected embeds, takes a re-pasted
+  token **beside** its embed id (the two are entered together or they can disagree from the
+  start), and removes a wrong row. `GRANT_FIXABLE` opens that panel for *every* grant-class code
+  — `grant_embed_mismatch` was missing from the old two-code check, i.e. the failure most likely
+  to need a re-paste was the one offering no way to do it, and a page refresh clears the message
+  but not the cause. ⚠️ It says **"Stored a grant"**, never "connected": storing a token proves
+  nothing about whether HJ accepts it for that embed. ⚠️ Removing a row **does not revoke the
+  token at HiveJournal** and the UI says so — a stale token left live there is still a bearer
+  secret. ⚠️ Connecting here passes `attachToSite: false`; putting a player on a customer's site
+  is a visible change to a live page, not a side effect of fixing narration.
 - **Inbound-call email alerts (2026-10-01)**: `/api/cron/call-alert` every 5 min emails
   `ADMIN_EMAILS` when a call lands in `call_logs`, so a real lead cannot sit unseen in a dashboard
   nobody opened (two did, on 2026-09-30). ⚠️ **Deliberately NOT in the Twilio webhook**: that

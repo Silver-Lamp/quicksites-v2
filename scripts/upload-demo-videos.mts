@@ -17,6 +17,16 @@
 // ⚠️ Writes `features.demo_clips`, NOT `features.gallery` — that one is the portfolio IMAGE
 // gallery and the admin UI counts it as images (see migration 20260868).
 
+// ⚠️ LOAD ENV FIRST, BEFORE ANY IMPORT THAT READS IT. This script needs Supabase credentials and
+// did not load them — it only ever worked because the session running it had already sourced
+// `.env.local` into its shell. The copy-the-command button on /admin/demo-narration handed the
+// bare command to someone with a clean shell and it died on `supabaseUrl is required` AFTER the
+// recording had completed, i.e. after the expensive, draft-creating half. Same idiom as
+// scripts/backfill-customers.ts.
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+dotenv.config();
+
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';

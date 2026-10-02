@@ -419,12 +419,49 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
     setBusy(null);
   }
 
+  /**
+   * The embed to synthesise with, taken from the grants we actually hold.
+   *
+   * ⚠️ NEVER ASK THE OPERATOR TO TYPE THIS. A grant is minted per embed and HJ rejects a
+   * mismatch (`grant_embed_mismatch`), so a free-text box offers a value that is wrong by
+   * default: the owner has several embeds, remembers the one he reads about most, and
+   * types that. It happened on the first real run — the grant was on "Cornerstone — in
+   * Sandon's voice" and the id typed was the homepage In Your Voice player. The set of
+   * valid answers is exactly `GET /api/partner/audio/connect`, so offer that and nothing
+   * else. Returns null when the operator should go and mint one.
+   */
+  async function resolveGrantEmbed(): Promise<string | null> {
+    const res = await fetch('/api/partner/audio/connect');
+    const j = await res.json().catch(() => ({}));
+    const ids: string[] = (j?.grants ?? []).map((g: any) => String(g.hjEmbedId)).filter(Boolean);
+
+    if (ids.length === 0) {
+      setNeedsGrant(true);
+      setStatus(PROVISION_HELP.no_grant);
+      return null;
+    }
+    if (ids.length === 1) return ids[0];
+
+    // Several connected embeds — the operator chooses, but only from ones that will work.
+    const picked = window.prompt(
+      `Which connected HiveJournal embed should read these lines?\n\n${ids.join('\n')}`,
+      ids[0],
+    );
+    const chosen = (picked ?? '').trim();
+    if (!chosen) return null;
+    if (!ids.includes(chosen)) {
+      setStatus(`No grant is connected for ${chosen}. Connected: ${ids.join(', ')}.`);
+      return null;
+    }
+    return chosen;
+  }
+
   /** Ask HiveJournal to read every line in the owner's consented clone. */
   async function generateTts() {
     if (!key || !selected?.manifestUrl) return;
-    const embedId = window.prompt(
-      'HiveJournal embed id to synthesise with (the one whose voice clone is yours):',
-    );
+    setBusy('Checking the connection…');
+    const embedId = await resolveGrantEmbed();
+    setBusy(null);
     if (!embedId) return;
     setBusy('Synthesising every line…');
     try {

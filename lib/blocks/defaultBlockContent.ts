@@ -382,6 +382,13 @@ export const DEFAULT_BLOCK_CONTENT = {
       },
     ],
   },
+  // ⚠️ Empty items, like gallery and reviews. A seeded example work would be a fabricated
+  // credit under a real person's name — the invented-testimonial rule applied to a CV.
+  selected_work: {
+    title: 'Selected work',
+    layout: 'list',
+    items: [],
+  },
   gallery: {
     title: 'Gallery',
     columns: 3,

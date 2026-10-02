@@ -448,6 +448,15 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   it carried one placeholder row at `rating: 0` against a schema requiring `min(1)`, invisible
   because the block was seeded nowhere; the same two-contradicting-decisions shape as the
   testimonial `.min(1)` bug (#1084), caught the same way by the scaffold sweep. Now `[]`.
+  **New block `selected_work` (2026-10-02)** — a NAMED index of work (title · meta · blurb ·
+  image · optional link), seeded for `personal`, `photography` and `author`. ⚠️ **It is not the
+  gallery and does not replace it**: a gallery answers "what does your work look like", this
+  answers "what have you done, and for whom" — the credit line a grid of untitled images cannot
+  carry (benchmarked on louver.framer.website, whose middle is seven titled entries). A row
+  without a TITLE is dropped: an image-only entry belongs in the gallery. ⚠️ Anchored above the
+  **marketing tail** (`services|faq|cta|contact_form`) — omitting `cta` from that list put it
+  after the call to action on `personal`, which has no services or faq: asking for the click
+  before showing the work.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
   `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser

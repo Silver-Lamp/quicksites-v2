@@ -701,6 +701,24 @@ export function buildIndustryStarter(opts: {
     blocks.splice(faqIdx >= 0 ? faqIdx : blocks.length, 0, createDefaultBlock('reviews') as any);
   }
 
+  // A named index of work, for the people whose credits ARE the pitch. Benchmarked against
+  // louver.framer.website: seven titled entries carry its whole middle.
+  //
+  // ⚠️ This is not the gallery and does not replace it. A gallery answers "what does your work
+  // look like"; this answers "what have you done, and for whom" — the credit line a grid of
+  // untitled images cannot carry. Photographers get both: wall first, credits after.
+  // Authors get it instead of a gallery, because a book is a title and a publisher, not a
+  // thumbnail. Seeded EMPTY — a sample credit would be a fabricated one under a real name.
+  const WORK_INDEX_INDUSTRIES = new Set<IndustryKey>(['personal', 'photography', 'author']);
+  if (WORK_INDEX_INDUSTRIES.has(industryKey)) {
+    // ⚠️ `cta` is in the anchor list, and that matters. Without it the `personal` scaffold —
+    // which has no services and no faq — fell through to contact_form and landed the work
+    // index AFTER the call to action: asking for the click before showing the work.
+    const TAIL = new Set(['services', 'faq', 'cta', 'contact_form']);
+    const anchorIdx = blocks.findIndex((b: any) => TAIL.has(b?.type));
+    blocks.splice(anchorIdx >= 0 ? anchorIdx : blocks.length, 0, createDefaultBlock('selected_work') as any);
+  }
+
   // Auto dealer: inventory up front — a browsable vehicle grid where each car has a
   // "hear the walkaround" audio slot (the salesperson talks through it, in their voice —
   // the real-estate audio-tour pattern applied to cars). QuickSites becomes the

@@ -1584,6 +1584,30 @@ export const blockContentSchemaMap = {
   // Photo gallery — a responsive image grid with click-to-enlarge lightbox. The block
   // nearly every visual business needs (photographers, restaurants, salons, real estate,
   // contractors' before/after). Emits ImageGallery JSON-LD.
+  selected_work: {
+    label: 'Selected Work',
+    icon: '🗂️',
+    schema: z.object({
+      title: z.string().optional().default('Selected work'),
+      /** 'list' reads like a CV; 'grid' like a portfolio wall. */
+      layout: z.enum(['list', 'grid']).optional().default('list'),
+      items: z
+        .array(
+          z.object({
+            title: z.string().optional().default(''),
+            /** Free text: a year, a range, a client, a publisher. Never parsed. */
+            meta: z.string().optional().default(''),
+            blurb: z.string().optional().default(''),
+            image: z.string().optional().default(''),
+            // ⚠️ An optional link must tolerate '' — RelativeOrAbsoluteUrl is `.min(1)`, so a
+            // freshly added empty row would fail validation and the block would be dropped.
+            href: z.string().optional().default(''),
+          })
+        )
+        .optional()
+        .default([]),
+    }),
+  },
   gallery: {
     label: 'Photo Gallery',
     icon: '🖼️',

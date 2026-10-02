@@ -12,6 +12,33 @@ const types = (k: string) =>
   (buildIndustryStarter({ businessName: 'Test Co', industryKey: k as any }) as any)
     .data.pages[0].blocks.map((b: any) => b.type);
 
+describe('selected work reaches the credit-driven verticals', () => {
+  const types = (k: string) =>
+    (buildIndustryStarter({ businessName: 'Test Co', industryKey: k as any }) as any)
+      .data.pages[0].blocks.map((b: any) => b.type);
+
+  it.each(['personal', 'photography', 'author'])('%s gets a work index', (k) => {
+    expect(types(k)).toContain('selected_work');
+  });
+
+  // ⚠️ Above the marketing tail. `personal` has no services and no faq, so an anchor list
+  // without `cta` put the work index AFTER the call to action — asking for the click before
+  // showing the work. Ordering, not an index: other blocks splice around it.
+  it.each(['personal', 'photography', 'author'])('%s shows the work before asking', (k) => {
+    const t = types(k);
+    const at = t.indexOf('selected_work');
+    expect(at).toBeGreaterThan(0);
+    for (const tail of ['cta', 'contact_form']) {
+      const ti = t.indexOf(tail);
+      if (ti >= 0) expect(at).toBeLessThan(ti);
+    }
+  });
+
+  it.each(['towing', 'restaurant'])('%s does not get one', (k) => {
+    expect(types(k)).not.toContain('selected_work');
+  });
+});
+
 describe('gallery reaches visual trades', () => {
   it.each(['photography','concrete','landscaping','painting','deck_builder','fencing','paving','epoxy_flooring','general_contractor'])(
     '%s gets a gallery', (k) => { expect(types(k)).toContain('gallery'); });

@@ -570,6 +570,20 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   *found* for the new one. ⚠️ **The recorder's date stamp is LOCAL, not `toISOString()`**: UTC
   rolls at 5pm Pacific, so an evening session stamped tomorrow, told viewers the wrong day, and —
   since the date is in the storage path — published a SECOND copy instead of replacing one.
+  **Narration plays on the PUBLIC page too (2026-10-01)**: the studio's **Publish to /features**
+  mixes the takes and uploads ONE public track (`POST /api/admin/demo-narration/publish` →
+  `demo_clips[].narration`), and `DemoClipRow` shows a speaker toggle. ⚠️ **The takes themselves
+  can never be served publicly** — they are unreleased recordings of a named person mid-sentence,
+  private bucket, signed URLs; only the deliberate MIX goes out. ⚠️ **Default OFF, user-initiated,
+  `preload="none"`** (audio-honesty standard, and ~1.5 MB nobody who ignores it should pay for).
+  ⚠️ **The track FOLLOWS the video** — `audio.currentTime = video.currentTime` on play/seek/pause;
+  starting both and hoping drifts within seconds and narrates the wrong thing. ⚠️ **A partial
+  reading says so** ("3 of 6 lines"), or the silences read as the product being quiet. ⚠️ **A
+  re-record DROPS the narration** — a same-day re-record reuses the same dated path, so carrying
+  it over would play a voice against footage it was never timed to; `planDemoClips` keeps it only
+  when `duration_seconds` is unchanged, the fingerprint that always moves on a re-record. ⚠️ **The
+  mix pulls its peak back to −1 dBFS only when it would clip** — the first real mix measured
+  `max_volume -0.0 dB`, which is distortion, not loudness; measured, so a quiet mix is untouched.
 - **Inbound-call email alerts (2026-10-01)**: `/api/cron/call-alert` every 5 min emails
   `ADMIN_EMAILS` when a call lands in `call_logs`, so a real lead cannot sit unseen in a dashboard
   nobody opened (two did, on 2026-09-30). ⚠️ **Deliberately NOT in the Twilio webhook**: that

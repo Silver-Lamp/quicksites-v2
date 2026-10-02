@@ -100,6 +100,55 @@ describe('<DemoClipRow>', () => {
   });
 });
 
+describe('narration toggle', () => {
+  const narrated = () =>
+    clip({ narration: 'https://x/narration.wav', narration_lines_recorded: 6, narration_lines_total: 6 });
+
+  it('shows no toggle for a clip without narration', () => {
+    render(<DemoClipRow clips={[clip()]} featureTitle="Editor" />);
+    fireEvent.click(screen.getByRole('listitem'));
+    expect(screen.queryByRole('button', { name: /narration/i })).toBeNull();
+  });
+
+  // ⚠️ DEFAULT OFF. Audio that starts by itself is what the audio-honesty standard forbids;
+  // `preload="none"` also means a visitor who never taps it pays nothing for ~1.5 MB.
+  it('is off until tapped, and does not preload the audio', () => {
+    render(<DemoClipRow clips={[narrated()]} featureTitle="Editor" />);
+    fireEvent.click(screen.getByRole('listitem'));
+    const toggle = screen.getByRole('button', { name: /narration/i });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    const audio = document.querySelector('audio');
+    expect(audio).toHaveAttribute('preload', 'none');
+    expect(audio).toHaveAttribute('src', 'https://x/narration.wav');
+    fireEvent.click(toggle);
+    expect(screen.getByRole('button', { name: /narration on/i })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  // ⚠️ A half-recorded track under a plain "Narration" label implies the silences are the
+  // product being quiet, rather than lines nobody has read yet.
+  it('says how much of the script was actually read, when it is partial', () => {
+    render(
+      <DemoClipRow
+        clips={[clip({ narration: 'https://x/n.wav', narration_lines_recorded: 3, narration_lines_total: 6 })]}
+        featureTitle="Editor"
+      />,
+    );
+    fireEvent.click(screen.getByRole('listitem'));
+    expect(screen.getByText('3 of 6 lines')).toBeInTheDocument();
+  });
+
+  it('says nothing about counts when the whole script was read', () => {
+    render(<DemoClipRow clips={[narrated()]} featureTitle="Editor" />);
+    fireEvent.click(screen.getByRole('listitem'));
+    expect(screen.queryByText(/of 6 lines/)).toBeNull();
+  });
+
+  it('marks a narrated card in the row so you can see which have audio', () => {
+    render(<DemoClipRow clips={[narrated()]} featureTitle="Editor" />);
+    expect(screen.getByTitle('Has narration')).toBeInTheDocument();
+  });
+});
+
 describe('the features page wires the row correctly (source)', () => {
   const src = stripComments(
     fs.readFileSync(path.resolve(__dirname, '../../../app/features/client-gallery.tsx'), 'utf8'),

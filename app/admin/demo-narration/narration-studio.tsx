@@ -152,6 +152,7 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
   const [busy, setBusy] = React.useState<string | null>(null);
   const [positionMs, setPositionMs] = React.useState(0);
   const [status, setStatus] = React.useState<string | null>(null);
+  const [published, setPublished] = React.useState<string | null>(null);
 
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const recorderRef = React.useRef<MediaRecorder | null>(null);
@@ -288,44 +289,107 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
     scheduledRef.current = [];
   }
 
-  /** Mix every take onto one silent track of the video's length and download it as WAV. */
+  /**
+   * Render the mix once; Download and Publish both use it.
+   *
+   * ⚠️ 24 kHz mono, not 48. A 48 kHz stereo WAV of a 33s clip is ~6 MB sitting in front of a
+   * visitor who tapped a speaker icon; 24 kHz mono is ~1.5 MB and speech is indistinguishable.
+   * The page loads it only on toggle, but "only on demand" is not a licence to ship 6 MB.
+   */
+  async function renderSoundtrack(): Promise<Blob | null> {
+    if (!plan || plan.placed.length === 0) return null;
+    const sampleRate = 24000;
+    const decode = new AudioContext();
+    const decoded = await Promise.all(
+      plan.placed.map(async (p) => ({
+        p,
+        buf: await decode.decodeAudioData(await (await fetch(p.url)).arrayBuffer()),
+      })),
+    );
+    await decode.close();
+
+    // ⚠️ Length comes from the PLAN, not from the takes: a track that stops after the last
+    // spoken word desyncs the instant anything plays it against the video.
+    const frames = Math.ceil((plan.totalMs / 1000) * sampleRate);
+    const offline = new OfflineAudioContext(1, frames, sampleRate);
+    for (const { p, buf } of decoded) {
+      const node = offline.createBufferSource();
+      node.buffer = buf;
+      node.connect(offline.destination);
+      node.start(p.startMs / 1000);
+    }
+    const rendered = await offline.startRendering();
+
+    // ⚠️ PULL THE PEAK BACK ONLY IF IT CLIPS. Summing takes can push samples to full scale —
+    // the first real mix measured max_volume -0.0 dB, which is distortion, not loudness. This
+    // is not a creative change to someone's voice: a sample above 1.0 is wrong, and scaling to
+    // a -1 dBFS ceiling is the difference between hearing the recording and hearing the clip.
+    // Measured, so a quiet mix is left exactly as recorded.
+    const ch = rendered.getChannelData(0);
+    let peak = 0;
+    for (let i = 0; i < ch.length; i++) {
+      const v = Math.abs(ch[i]);
+      if (v > peak) peak = v;
+    }
+    const CEILING = 0.891; // -1 dBFS
+    if (peak > CEILING) {
+      const g = CEILING / peak;
+      for (let i = 0; i < ch.length; i++) ch[i] *= g;
+    }
+
+    return toWav(rendered);
+  }
+
   async function buildSoundtrack() {
-    if (!plan || plan.placed.length === 0) return;
     setBusy('Mixing soundtrack…');
     try {
-      const sampleRate = 48000;
-      const decode = new AudioContext({ sampleRate });
-      const decoded = await Promise.all(
-        plan.placed.map(async (p) => ({
-          p,
-          buf: await decode.decodeAudioData(await (await fetch(p.url)).arrayBuffer()),
-        })),
-      );
-      await decode.close();
-
-      // ⚠️ Length comes from the PLAN, not from the takes: a track that stops after the last
-      // spoken word desyncs the instant anything muxes it against the video.
-      const frames = Math.ceil((plan.totalMs / 1000) * sampleRate);
-      const offline = new OfflineAudioContext(1, frames, sampleRate);
-      for (const { p, buf } of decoded) {
-        const node = offline.createBufferSource();
-        node.buffer = buf;
-        node.connect(offline.destination);
-        node.start(p.startMs / 1000);
-      }
-      const url = URL.createObjectURL(toWav(await offline.startRendering()));
+      const blob = await renderSoundtrack();
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `${clipName(selected!.src)}-${selected!.recordedOn}-narration.wav`;
       a.click();
       URL.revokeObjectURL(url);
       setStatus(
-        plan.complete
+        plan!.complete
           ? 'Soundtrack downloaded. Mux it with: ffmpeg -i clip.mp4 -i narration.wav -c:v copy -shortest out.mp4'
-          : `Soundtrack downloaded with ${plan.missing.length} line(s) left silent.`,
+          : `Soundtrack downloaded with ${plan!.missing.length} line(s) left silent.`,
       );
     } catch (e: any) {
       setStatus(`Mix failed: ${e?.message ?? e}`);
+    }
+    setBusy(null);
+  }
+
+  /** Publish the mix so visitors can toggle it on /features. */
+  async function publishSoundtrack() {
+    if (!plan || !key || !manifest || !selected) return;
+    setBusy('Mixing and publishing…');
+    try {
+      const blob = await renderSoundtrack();
+      if (!blob) return;
+      const body = new FormData();
+      body.set('clipKey', key);
+      body.set('clipSrc', selected.src);
+      body.set('durationMs', String(plan.totalMs));
+      body.set('linesRecorded', String(plan.placed.length));
+      body.set('linesTotal', String(manifest.lines.length));
+      body.set('audio', blob, 'narration.wav');
+      const res = await fetch('/api/admin/demo-narration/publish', { method: 'POST', body });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) {
+        setStatus(j?.error ?? 'Publish failed.');
+      } else {
+        setPublished(j.url);
+        setStatus(
+          plan.complete
+            ? 'Published. Visitors can now toggle narration on /features.'
+            : `Published with ${plan.missing.length} line(s) silent — /features says how many were read.`,
+        );
+      }
+    } catch (e: any) {
+      setStatus(`Publish failed: ${e?.message ?? e}`);
     }
     setBusy(null);
   }
@@ -410,16 +474,33 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
               </button>
               <button
                 type="button"
+                onClick={publishSoundtrack}
+                disabled={!plan || plan.placed.length === 0 || !!busy}
+                className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+              >
+                Publish to /features
+              </button>
+              <button
+                type="button"
                 onClick={buildSoundtrack}
                 disabled={!plan || plan.placed.length === 0 || !!busy}
                 className="rounded-lg border border-border px-3 py-2 text-sm text-foreground disabled:opacity-40"
               >
-                Download soundtrack (WAV)
+                Download WAV
               </button>
             </div>
 
             {busy ? <p className="mt-2 text-xs text-sky-300">{busy}</p> : null}
             {status ? <p className="mt-2 text-xs text-amber-200">{status}</p> : null}
+            {published ? (
+              <p className="mt-1 text-xs text-emerald-300">
+                Live:{' '}
+                <a href={published} target="_blank" rel="noreferrer" className="underline">
+                  narration track
+                </a>{' '}
+                — open /features and toggle the speaker on this clip.
+              </p>
+            ) : null}
           </div>
 
           <div>

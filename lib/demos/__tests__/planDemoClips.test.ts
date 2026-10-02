@@ -92,6 +92,48 @@ describe('rule 2 — an "earlier take" must really be earlier', () => {
   });
 });
 
+describe('narration across a re-publish', () => {
+  const narrated = {
+    src: dated('guest-build'),
+    label: 'x',
+    recorded_on: '2026-10-01',
+    duration_seconds: 32.76,
+    narration: 'https://x/narration.wav',
+    narration_lines_recorded: 6,
+    narration_lines_total: 6,
+  };
+
+  // ⚠️ The upload script rebuilds every clip entry, so without this a re-run silently strips a
+  // published narration track — symptom: a speaker icon quietly vanishing from /features.
+  it('keeps narration when the clip is unchanged', () => {
+    const r = planDemoClips({
+      currentVideoUrl: null,
+      currentClips: [narrated],
+      uploaded: [{ ...guest, durationSeconds: 32.76 }],
+    });
+    expect(r.clips[0].narration).toBe('https://x/narration.wav');
+    expect(r.clips[0].narration_lines_recorded).toBe(6);
+  });
+
+  // ⚠️ And drops it on a re-record. A same-day re-record reuses the same dated path, so keeping
+  // the track would play a voice over footage it was never timed against — worse than silence
+  // and much harder to notice. Duration is the fingerprint; re-records always move it.
+  it('drops narration when the duration changed (a different cut)', () => {
+    const r = planDemoClips({
+      currentVideoUrl: null,
+      currentClips: [narrated],
+      uploaded: [{ ...guest, durationSeconds: 31.02 }],
+    });
+    expect(r.clips[0].narration).toBeUndefined();
+    expect(r.clips[0].duration_seconds).toBe(31.02);
+  });
+
+  it('drops narration when the new upload reports no duration at all', () => {
+    const r = planDemoClips({ currentVideoUrl: null, currentClips: [narrated], uploaded: [guest] });
+    expect(r.clips[0].narration).toBeUndefined();
+  });
+});
+
 describe('idempotency and ordering', () => {
   it('re-running with the same uploads changes nothing', () => {
     const first = planDemoClips({ currentVideoUrl: null, currentClips: [], uploaded: [tour, guest] });

@@ -189,6 +189,7 @@ async function main() {
   const urls = new Map<string, string>();
   const posters = new Map<string, string>();
   const durations = new Map<string, number>();
+  const manifests = new Map<string, string>();
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'qs-posters-'));
 
   for (const p of planned) {
@@ -223,6 +224,31 @@ async function main() {
     }
     posters.set(p.file, supabaseAdmin.storage.from(BUCKET).getPublicUrl(posterPath).data.publicUrl);
     console.log(`  ✓ poster   ${posterPath}  (at ${p.posterAt}s)`);
+
+    // The narration manifest, if the recorder wrote one. ⚠️ It carries the per-line cues on the
+    // FINISHED timeline, which exist nowhere else — the recorder is the only thing that ever
+    // knows them. Without it /admin/demo-narration cannot place a line, and it says so rather
+    // than spacing them evenly (which looks plausible and is wrong after the first timelapse).
+    const manifestLocal = local.replace(/\.mp4$/, '.json');
+    if (fs.existsSync(manifestLocal)) {
+      const manifestPath = p.storagePath.replace(/\.mp4$/, '.json');
+      const { error: mErr } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .upload(manifestPath, fs.readFileSync(manifestLocal), {
+          contentType: 'application/json',
+          upsert: true,
+        });
+      if (mErr) console.warn(`  ⚠ manifest upload failed for ${p.name}: ${mErr.message}`);
+      else {
+        manifests.set(
+          p.file,
+          supabaseAdmin.storage.from(BUCKET).getPublicUrl(manifestPath).data.publicUrl,
+        );
+        console.log(`  ✓ manifest ${manifestPath}`);
+      }
+    } else {
+      console.warn(`  ⚠ no manifest for ${p.name} — re-record to enable narration cues`);
+    }
   }
 
   // One update per feature, so two clips on the same feature cannot clobber each other.
@@ -242,6 +268,7 @@ async function main() {
         label: p.label,
         blurb: p.blurb,
         poster: posters.get(p.file),
+        manifest: manifests.get(p.file),
         durationSeconds: durations.get(p.file),
         primary: p.primary,
       })),

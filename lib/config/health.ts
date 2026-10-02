@@ -82,6 +82,17 @@ export const CONFIG_GATES: ConfigGate[] = [
       'Set PAGE_PIN_AMY to the six digits she was given.',
   },
   {
+    key: 'call_alert',
+    label: 'Inbound-call email alerts (/api/cron/call-alert, every 5 min)',
+    requires: ['ADMIN_EMAILS', 'RESEND_API_KEY'],
+    degradeOnly: true,
+    breaks:
+      'A real inbound lead reaches no one until somebody happens to open /admin/call-logs. The ' +
+      'cron returns {skipped} with no recipients, which is a quiet no-op — on 2026-09-30 two real ' +
+      'leads rang out at 07:33 and 07:34 and were found only because the owner dialled his own ' +
+      'site. Set ADMIN_EMAILS (comma-separated) and RESEND_API_KEY.',
+  },
+  {
     // ⚠️ ADDED 2026-09-25 AFTER FINDING POSTHOG HAS NEVER BEEN SET IN PRODUCTION. `vercel env ls
     // production` returns zero PostHog entries, and `captureServer` returns early when the key is
     // absent — so all 33 server-side capture calls across 24 files have been writing to nothing for

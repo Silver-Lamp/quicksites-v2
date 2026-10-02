@@ -11,6 +11,8 @@ export type UploadedClip = {
   blurb?: string;
   /** Public URL of the generated poster frame. */
   poster?: string;
+  /** Public URL of the narration cue manifest, when the recorder wrote one. */
+  manifest?: string;
   /** Measured with ffprobe — never estimated. */
   durationSeconds?: number;
   /** Base name without the date, e.g. `editor-tour`. */
@@ -28,6 +30,7 @@ export type DemoClip = {
   blurb?: string;
   recorded_on?: string;
   poster?: string;
+  manifest?: string;
   duration_seconds?: number;
 };
 
@@ -76,6 +79,7 @@ export function planDemoClips(args: {
       ...(u.blurb ? { blurb: u.blurb } : {}),
       recorded_on: u.date,
       ...(u.poster ? { poster: u.poster } : {}),
+      ...(u.manifest ? { manifest: u.manifest } : {}),
       ...(typeof u.durationSeconds === 'number' ? { duration_seconds: u.durationSeconds } : {}),
     });
   }

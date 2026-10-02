@@ -553,6 +553,35 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `video_url` fallback** — `usableClips` keeps the first entry per src, and reversed, the
   poster-less stub beats the rich row and the primary renders as the one grey placeholder among
   real thumbnails (it shipped to a screenshot that way).
+- **Demo narration — read the script against the footage (2026-10-01)**: `/admin/demo-narration`
+  (admin-only, in the nav) records the owner's voice **one scripted line at a time**, plays each
+  take at its cue, and mixes them into one soundtrack. ⚠️ **The cues come from the recorder's
+  manifest and nowhere else** — `record-demo.mts` now writes `<clip>-<date>.json` with each line's
+  offset on the FINISHED timeline, measured from the encoded segments, because flagged steps are
+  sped up 8× and a raw wall-clock timestamp lands minutes late. Those numbers exist only inside
+  that process; a clip with no manifest has **no cues**, and the studio says so rather than
+  spacing lines evenly (plausible, and wrong after the first timelapse). ⚠️ **The mix runs in the
+  BROWSER** (`OfflineAudioContext` → WAV): ffmpeg lives only in `scripts/`, never in `app/`/`lib/`,
+  so there is none on Vercel. ⚠️ **An unrecorded line is SILENCE, never TTS** — the track is
+  presented as the owner's voice and a machine voice inside it is the mislabelling
+  `crosstalk/contracts/audio-honesty-standard.md` forbids; gaps are reported. ⚠️ **Takes are keyed
+  `<clip>@<recordedOn>`** (`demo_narration_takes`, `20260869`, deny-default, private bucket,
+  signed URLs) because re-recording shifts every cue — narration timed to the old cut must not be
+  *found* for the new one. ⚠️ **The recorder's date stamp is LOCAL, not `toISOString()`**: UTC
+  rolls at 5pm Pacific, so an evening session stamped tomorrow, told viewers the wrong day, and —
+  since the date is in the storage path — published a SECOND copy instead of replacing one.
+- **Inbound-call email alerts (2026-10-01)**: `/api/cron/call-alert` every 5 min emails
+  `ADMIN_EMAILS` when a call lands in `call_logs`, so a real lead cannot sit unseen in a dashboard
+  nobody opened (two did, on 2026-09-30). ⚠️ **Deliberately NOT in the Twilio webhook**: that
+  handler must return TwiML fast enough to connect a human, and it fires on `ringing` before any
+  outcome exists. ⚠️ **Three guards**: `alerted_at IS NULL` (dedupe lives in the row, `20260870`),
+  a **lookback window** (the column was not backfilled, so without it the first run emails all 48
+  historical calls), and a settle delay. ⚠️ **`alerted_at` is written only AFTER the send
+  resolves** — marking first turns one transient Resend failure into a lead nobody hears about.
+  ⚠️ **The email never says "answered"**: outcomes are `connected`/`brief`/`unanswered`, and a
+  **voicemail-first call shows NO outcome line at all** — it never dials, so its status stays
+  `ringing` and the classifier honestly reported "still in progress" on day-old calls,
+  contradicting the "Sent to voicemail" line beneath it. `/status` gate: `call_alert`.
 - **Guest build (unauthenticated draft sites)** — **LIVE in prod** (anonymous sign-ins enabled in Supabase; `NEXT_PUBLIC_GUEST_BUILD_ENABLED=1` set in Vercel production + preview). Env-gated by that flag (`lib/flags/guestBuild.ts`). Entry points: the homepage hero (`components/home/guest-start.tsx`) and `/build`. A logged-out visitor mints a Supabase **anonymous** session (`ensureGuestSession`), builds a draft template stamped `owner_id=<anon uid>` + `claim_source='guest_build'` (`app/api/templates/create|duplicate`) **seeded with a real industry starter** (hero / services / faq / contact + services + theme via `buildIndustryStarter` — the same scaffold as `/admin/templates/new`, so the editor opens a working site rather than empty/typeless placeholder blocks), and **auto-claims on sign-up** (the anon user upgrades in place, same uid → `owner_id` still matches). It **can't reach the homepage**: anon users are blocked from publishing (`app/api/templates/[id]/publish` → `needs_signup`), the showcase requires `published=true`, and `getShowcaseData` additionally drops any still-anon-owned row (`anonymous_user_ids` RPC). `middleware.ts` confines anon users to the template editor. **Abuse guards** (the load-bearing part): per-guest AI call cap (`enforceGuestAiLimit`, `GUEST_AI_CALL_LIMIT`) — on **every** AI route; per-IP guest-draft rate limit (`lib/rateLimit.ts` on `ratelimit_events`, `GUEST_DRAFT_HOURLY_LIMIT_PER_IP`); the dollar budget guard (`meterLLMCall`, keyed on `ai_usage_events.occurred_at`); and the `/api/cron/ai-cost-alert` watchdog (every 15 min) that emails `ADMIN_EMAILS` + raises a Sentry warning when rolling AI spend crosses `AI_ALERT_{HOURLY,DAILY}_USD` (with an anon breakdown via `ai_spend_report`). Note: image-gen routes (`/api/hero/generate-image`, `favicon`, `icon`) set `maxDuration = 60` — gpt-image-1 is slow (~20s at `quality:'medium'`) and would otherwise hit the default serverless timeout.
 - **Anonymous-token security hardening (2026-07, PRs #102–#122)**: shipping guest build (an anon token is a *real authenticated user*) prompted an audit of everything an anon/authenticated token could reach, and a staged remediation. Shared auth gates now live in `lib/auth/requireUser.ts`; dozens of mutating routes were gated (including an unauthenticated `spawn`-RCE dev route, unauth Stripe-refund execution, an org-domain hijack, and a critical unauthenticated arbitrary-file-read). A privilege-escalation via self-written `user_profiles.role` was closed. Every RLS-disabled anon-writable table from the audit was locked — **deny-default** for service-role-only/sensitive tables, **scoped policies** for browser-written ones (`domains` public-read, `remix_events` owner-insert, `user_action_logs` authed append-only, `dashboard_layouts` authed), and **`public.sites` gained an `owner_id` column + owner-scoped RLS**. Webhooks verify signatures (Twilio added; Stripe/Lulu already did); public email/claim endpoints are per-IP rate-limited. The residual **redesign** follow-ups were closed 2026-07-09 (PRs #268–#274): `send-contact-email` now derives the recipient from `site_slug` server-side (#268, closes an open relay); the Lulu webhook **fails closed** in prod when its secret is unset (#269); `templates/base-name` writes are **owner-scoped** (#270); the public claim endpoints were hardened so no unverified body-derived privileged writes happen — `claim-site` (which had no callers) performs none, `claim/lead` validates email + template existence (#271); and the **domain-claim** path gained a full **email proof-of-control** flow behind `DOMAIN_CLAIM_VERIFICATION_ENABLED` (#272–#274 — see the *Domain-claim email verification* bullet above). The SMS **outreach site-claim** path already had verification behind `CLAIM_VERIFICATION_ENABLED` (see [`docs/CLAIM_VERIFICATION_PLAN.md`](docs/CLAIM_VERIFICATION_PLAN.md)).
 

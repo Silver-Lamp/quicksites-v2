@@ -80,6 +80,8 @@ type AdminUserRow = {
   /** 'email' | 'google' | 'anonymous' | 'unknown'. */
   provider?: string | null;
   is_admin?: boolean;
+  /** Coarse first-touch origin. Absent for everyone who predates capture — see SignupGeoCell. */
+  signup_geo?: { country: string | null; region: string | null; city: string | null } | null;
   sites?: UserSitesSummary | null;
   is_chef?: boolean;
   chef?: AnyRec | null;
@@ -184,6 +186,27 @@ function SitesCell({ sites, capped }: { sites: UserSitesSummary | null; capped: 
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * Coarse origin of a user's first request.
+ *
+ * ⚠️ "—" MEANS WE NEVER LOOKED, NOT "UNKNOWN ORIGIN". Nothing captured geo before 2026-10-02
+ * and it cannot be backfilled — the only other IP trail is an abuse-control log that is not
+ * tied to a user id, and correlating it by timestamp would be an inference dressed as a record.
+ * Every existing user shows "—" and that is correct.
+ */
+function SignupGeoCell({ geo }: { geo?: { country: string | null; region: string | null; city: string | null } | null }) {
+  if (!geo || (!geo.country && !geo.region && !geo.city)) {
+    return <span className="text-muted-foreground" title="Not captured — this user predates geo capture">—</span>;
+  }
+  const place = [geo.city, geo.region].filter(Boolean).join(', ');
+  return (
+    <span className="whitespace-nowrap text-xs">
+      {geo.country ? <span className="mr-1 font-medium">{geo.country}</span> : null}
+      {place ? <span className="text-muted-foreground">{place}</span> : null}
+    </span>
   );
 }
 
@@ -635,6 +658,7 @@ export default function UsersPlansManager() {
                 <TableRow>
                   <SortHead label="User" k="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <TableHead>Flags</TableHead>
+                  <TableHead className="whitespace-nowrap">Signed up from</TableHead>
                   <SortHead label="Sites" k="sites" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortHead label="Plan" k="plan" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <SortHead label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
@@ -654,8 +678,13 @@ export default function UsersPlansManager() {
                   const trialExpired = isTrial && trialEndISO ? new Date(trialEndISO).getTime() < Date.now() : false;
 
                   return (
-                    <div key={u.id} className="border-b border-zinc-500/30">
-                    <TableRow className="align-top">
+                    // ⚠️ NO WRAPPER ELEMENT HERE. A <div> cannot be a child of <tbody>: the
+                    // HTML parser foster-parents it OUT of the table, which collapses the
+                    // column structure so the headers no longer line up with the cells. It
+                    // looked like a CSS problem and no CSS could have fixed it. If several
+                    // rows per user are ever needed, use a React fragment, never an element.
+                    <React.Fragment key={u.id}>
+                    <TableRow className="align-top border-b border-zinc-500/30">
                       <TableCell>
                         <div className="font-medium">
                           {u.name ?? <span className="text-muted-foreground">no name</span>}
@@ -701,6 +730,10 @@ export default function UsersPlansManager() {
                             </Badge>
                           )}
                         </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <SignupGeoCell geo={u.signup_geo} />
                       </TableCell>
 
                       <TableCell className="min-w-[16rem]">
@@ -798,7 +831,7 @@ export default function UsersPlansManager() {
                         </div>
                       </TableCell>
                     </TableRow>
-                    </div>
+                    </React.Fragment>
                   );
                 })}
               </TableBody>

@@ -5,6 +5,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, clientIp } from '@/lib/rateLimit';
 import { inferIndustry } from '@/lib/builder/inferIndustry';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
+import { recordSignupGeo } from '@/lib/analytics/signupGeo';
 import { autogenerateForTemplate } from '@/lib/builder/autogenerateForTemplate';
 import { pickPoolBackdrop } from '@/lib/theme/backdropPool';
 import { pickPoolHero, prefersPainterlyHero } from '@/lib/theme/heroPool';
@@ -192,6 +193,12 @@ export async function POST(req: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  // Where this person first reached us. ⚠️ Coarse geo only — Vercel's edge resolves the address
+  // and we take country/region/city, never the IP. Fire-and-forget BEFORE the slow autogen
+  // below, so a 45s generation cannot swallow it, and awaited so the write is not racing the
+  // response. First touch wins; see lib/analytics/signupGeo.ts.
+  if (ownerId) await recordSignupGeo(ownerId, req.headers);
 
   // Guest sites: generate AI copy + hero image NOW (server-side), so the editor
   // opens fully populated. This replaces the fragile editor-side re-sync — the

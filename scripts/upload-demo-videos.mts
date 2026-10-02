@@ -35,6 +35,8 @@ import { promisify } from 'node:util';
 import { planDemoClips } from '@/lib/demos/planDemoClips';
 import { isTransientUploadError } from '@/lib/demos/uploadRetry';
 
+import { installNodeWebSocket } from '@/lib/supabase/nodeWebSocketShim';
+
 const run = promisify(execFile);
 
 const BUCKET = 'videos';
@@ -179,6 +181,8 @@ async function uploadWithRetry(
 }
 
 async function main() {
+  // Node 20 shells need this before the client is constructed; a no-op on 22+.
+  await installNodeWebSocket();
   const { supabaseAdmin } = await import('@/lib/supabase/admin');
 
   const dir = path.resolve(process.cwd(), LOCAL_DIR);

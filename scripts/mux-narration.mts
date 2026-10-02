@@ -24,8 +24,15 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
+import { installNodeWebSocket } from '@/lib/supabase/nodeWebSocketShim';
+
 const run = promisify(execFile);
-const OUT_DIR = path.resolve('demo-videos');
+// ⚠️ A SUBDIRECTORY, not `demo-videos/` itself. The muxed file is DERIVED output, and
+// `upload-demo-videos.mts` treats everything in `demo-videos/` as an input it must be able to
+// date — `guest-build-2026-10-01-narrated.mp4` has no parseable date, so one muxed file made
+// every subsequent upload refuse to run. Correctly and loudly, which is how it was found.
+const IN_DIR = path.resolve('demo-videos');
+const OUT_DIR = path.join(IN_DIR, 'narrated');
 /** Clips are the same cut when their lengths agree to within a frame or so. */
 const TOLERANCE_SECONDS = 0.1;
 
@@ -43,6 +50,8 @@ async function main() {
     process.exit(1);
   }
 
+  // Node 20 shells need this before the client is constructed; a no-op on 22+.
+  await installNodeWebSocket();
   const { supabaseAdmin } = await import('@/lib/supabase/admin');
   const { data, error } = await supabaseAdmin
     .from('features')
@@ -66,7 +75,7 @@ async function main() {
   }
 
   // Prefer the local recording; fall back to the published copy so this works on a fresh clone.
-  const localVideo = path.join(OUT_DIR, `${clip}-${match.recorded_on}.mp4`);
+  const localVideo = path.join(IN_DIR, `${clip}-${match.recorded_on}.mp4`);
   const video = fs.existsSync(localVideo) ? localVideo : match.src;
   console.log(`video:     ${video === localVideo ? localVideo : `${match.src} (remote)`}`);
   console.log(`narration: ${match.narration}`);

@@ -144,8 +144,18 @@ that cannot play two files — email, Keynote, YouTube, a phone — burn them to
 
 ```bash
 npx tsx scripts/mux-narration.mts guest-build
-# → demo-videos/guest-build-<date>-narrated.mp4
+# → demo-videos/narrated/guest-build-<date>-narrated.mp4
 ```
+
+⚠️ **Output goes to `demo-videos/narrated/`, never `demo-videos/` itself** — the upload script
+treats everything in that folder as an input it must be able to date, so one muxed file there
+made every subsequent upload refuse to run.
+
+⚠️ **The scripts work on Node 20 as well as the pinned 24.** `supabase-js` throws "Node.js 20
+detected without native WebSocket support" while merely *constructing* the client, in a shell
+that has not run `nvm use`. `lib/supabase/nodeWebSocketShim.ts` installs `ws` first — which only
+works because the client is a **dynamic** `await import()`; a static import is hoisted above
+every statement and the shim would run too late.
 
 It finds the published track itself. ⚠️ **It refuses on a duration mismatch**: narration is timed
 to one specific cut, and muxing it against a different recording yields a file where the voice

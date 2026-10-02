@@ -301,6 +301,16 @@ export default function HeroRender({
   const textSecondary = isDark ? 'text-white' : 'text-neutral-800';
   const titleSize = isNarrow ? 'text-3xl' : 'text-4xl md:text-5xl';
   const subSize = isNarrow ? 'text-base' : 'text-lg md:text-2xl';
+
+  // ⚠️ THE CLASSES ABOVE STAY — they are the fallback, not dead code. A site with no font
+  // pairing never matches the `[data-qs-themed]` rule in globals.css and keeps rendering at
+  // exactly the size it always has. The display scale (lib/theme/typeScale.ts) only takes
+  // over where there is a pairing to take a mood from.
+  //
+  // ⚠️ NOT IN THE NARROW RENDERING. The scale is `vw`-based, and a preview pane's viewport is
+  // the window's, not the pane's — a 300px-wide thumbnail would be handed a 96px headline.
+  const displayAttr: Record<string, string> = isNarrow ? {} : { 'data-qs-display': '' };
+  const leadAttr: Record<string, string> = isNarrow ? {} : { 'data-qs-lead': '' };
   const ctaSize = isNarrow ? 'py-2 px-4 text-sm' : 'py-3 px-6';
 
   const CtaEl = canShowCTA ? (
@@ -365,10 +375,14 @@ export default function HeroRender({
       } text-center`}
     >
       {!hide_headline && headline && (
-        <h1 className={`${titleSize} font-bold mb-4 drop-shadow ${textPrimary}`}>{headline}</h1>
+        <h1 {...displayAttr} className={`${titleSize} font-bold mb-4 drop-shadow ${textPrimary}`}>
+          {headline}
+        </h1>
       )}
       {!hide_subheadline && subheadline && (
-        <p className={`${subSize} mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>
+        <p {...leadAttr} className={`${subSize} mb-6 drop-shadow ${textPrimary}`}>
+          {subheadline}
+        </p>
       )}
       {CtaEl}
       <PhoneLine />
@@ -494,6 +508,7 @@ export default function HeroRender({
         )}
         {!hide_headline && headline && (
           <h1
+            {...displayAttr}
             className={`${titleSize} font-bold mb-4 ${
               heroBackdrop ? 'text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]' : 'text-card-foreground'
             }`}
@@ -509,6 +524,7 @@ export default function HeroRender({
             there is not (rule 7: the no-backdrop path stays exactly as it was). */}
         {!hide_subheadline && subheadline && (
           <p
+            {...leadAttr}
             className={`${subSize} mb-6 ${
               heroBackdrop ? 'text-zinc-100 drop-shadow-[0_1px_8px_rgba(0,0,0,0.75)]' : 'text-muted-foreground'
             }`}

@@ -89,6 +89,9 @@ export function TemplateThemeWrapper({
       data-theme={colorMode}
       data-qs-themed={resolved ? '1' : undefined}
       data-qs-backdrop={backdropStyle ? backdrop?.style : undefined}
+      // Drawn surfaces (ink outlines + sticker shadows). Absent on flat/soft/glow, so those
+      // sites match no CSS rule and render exactly as they always have.
+      data-qs-surface={resolved?.surface}
     >
       {backdropStyle ? (
         <>

@@ -14,7 +14,8 @@ import type { IndustryKey } from '@/lib/industries';
 
 export type ThemeCategory = 'rugged' | 'warm' | 'professional' | 'playful' | 'neon' | 'editorial';
 export type NeutralTint = 'warm' | 'cool' | 'pure';
-export type SurfaceTreatment = 'flat' | 'soft' | 'glow';
+export type { SurfaceTreatment } from '@/lib/theme/surfaceTreatment';
+import type { SurfaceTreatment } from '@/lib/theme/surfaceTreatment';
 
 // Layout personality — how a theme structures a page (see LAYOUT_VARIATION_PLAN.md).
 // Tied to the theme so look + layout co-vary.
@@ -133,6 +134,22 @@ export const CURATED_THEMES: CuratedTheme[] = [
     industries: ['retail_boutique', 'pop_up_shop', 'retail_thrift', 'pet_boutique'],
     accentColor: 'fuchsia-500', accent2Color: 'cyan-600', neutral: 'pure',
     fontPair: 'poppins-inter', fontFamily: 'sans', borderRadius: 'xl', surface: 'soft', darkMode: 'light',
+  },
+
+  // --- toon: brush display + ink outlines + sticker shadows ---
+  // ⚠️ `surface: 'sticker'` is the first value of that field anything reads. It was declared
+  // on every theme since Phase B and consumed by nothing (lib/theme/surfaceTreatment.ts).
+  {
+    id: 'funhouse', name: 'Funhouse', category: 'playful',
+    industries: ['crafts', 'handmade', 'pop_up_shop', 'lemonade_stand', 'custom_apparel'],
+    accentColor: 'cyan-600', accent2Color: 'orange-500', neutral: 'pure',
+    fontPair: 'knewave-nunito', fontFamily: 'sans', borderRadius: 'xl', surface: 'sticker', darkMode: 'light',
+  },
+  {
+    id: 'saturday', name: 'Saturday Morning', category: 'playful',
+    industries: ['pet_boutique', 'art_supplies', 'gifts_stationery', 'farmers_market_vendor'],
+    accentColor: 'fuchsia-500', accent2Color: 'lime-500', neutral: 'pure',
+    fontPair: 'knewave-nunito', fontFamily: 'sans', borderRadius: 'xl', surface: 'sticker', darkMode: 'light',
   },
 
   // --- neon (leans on the neon-steampunk brand motif) ---

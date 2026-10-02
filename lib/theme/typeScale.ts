@@ -53,6 +53,9 @@ export const TYPE_SCALE: Record<FontMood, TypeScale> = {
   elegant: { display: 'clamp(2rem, 5vw, 4.25rem)', lead: 'clamp(1rem, 1.3vw, 1.25rem)', displayLeading: '1.1' },
   friendly: { display: 'clamp(1.875rem, 4.75vw, 4rem)', lead: 'clamp(1rem, 1.2vw, 1.1875rem)', displayLeading: '1.08' },
   modern: { display: 'clamp(1.875rem, 4.75vw, 4rem)', lead: 'clamp(1rem, 1.2vw, 1.1875rem)', displayLeading: '1.08' },
+  // A brush face is already loud; it does not also need to be the biggest. Sits with bold
+  // rather than above editorial, because Knewave at 96px stops reading as a word.
+  toon: { display: 'clamp(2rem, 5.5vw, 4.5rem)', lead: 'clamp(1.0625rem, 1.4vw, 1.3125rem)', displayLeading: '1.06' },
   // Competence is the pitch: HVAC, auto repair. Longest headlines, smallest ceiling.
   technical: { display: 'clamp(1.875rem, 4.25vw, 3.5rem)', lead: 'clamp(1rem, 1.2vw, 1.1875rem)', displayLeading: '1.12' },
 };

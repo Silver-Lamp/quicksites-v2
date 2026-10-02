@@ -21,7 +21,10 @@ export type FontRole = {
 export type FontPairing = {
   id: string;
   name: string;
-  mood: 'editorial' | 'modern' | 'friendly' | 'technical' | 'elegant' | 'bold';
+  /** ⚠️ Adding a mood REQUIRES a `TYPE_SCALE` entry — `typeScale.test.ts` derives the set of
+   *  moods from these pairings, so a new one with no scale fails the build rather than
+   *  silently resolving to no display size. */
+  mood: 'editorial' | 'modern' | 'friendly' | 'technical' | 'elegant' | 'bold' | 'toon';
   heading: FontRole;
   body: FontRole;
 };
@@ -32,7 +35,23 @@ const INTER: FontRole = {
   weights: [400, 500, 600],
 };
 
+const NUNITO: FontRole = {
+  family: 'Nunito',
+  stack: '"Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif',
+  weights: [400, 600, 800],
+};
+
 export const FONT_PAIRINGS: Record<string, FontPairing> = {
+  // ⚠️ Knewave ships ONE weight (400). Requesting 700 returns a 400 face and the heading
+  // silently renders light where the designer expected bold — a brush font has its weight
+  // drawn in, so there is nothing to synthesise. Body carries the weight range instead.
+  'knewave-nunito': {
+    id: 'knewave-nunito',
+    name: 'Knewave · Nunito',
+    mood: 'toon',
+    heading: { family: 'Knewave', stack: '"Knewave", "Comic Sans MS", cursive', weights: [400] },
+    body: NUNITO,
+  },
   'oswald-inter': {
     id: 'oswald-inter',
     name: 'Oswald · Inter',

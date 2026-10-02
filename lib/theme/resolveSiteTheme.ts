@@ -12,6 +12,7 @@ import { getIndustryPreset } from '@/lib/theme/industryPresets';
 import { accentToHsl, foregroundForHsl } from '@/lib/theme/accentHsl';
 import { getFontPairing, fontPairHref } from '@/lib/theme/fontPairings';
 import { typeScaleVars } from '@/lib/theme/typeScale';
+import { surfaceVars, surfaceAttr } from '@/lib/theme/surfaceTreatment';
 
 export type ResolvedSiteTheme = {
   /** CSS custom properties to scope onto the site wrapper. */
@@ -20,6 +21,8 @@ export type ResolvedSiteTheme = {
   fontFamily?: string;
   /** Google Fonts stylesheet URL to load in the site <head>, if a pairing is set. */
   fontHref?: string | null;
+  /** `data-qs-surface` value when the theme draws ink/shadows; undefined otherwise. */
+  surface?: string | undefined;
 };
 
 const FONT_STACKS: Record<string, string> = {
@@ -166,10 +169,14 @@ export function resolveSiteTheme(template: any): ResolvedSiteTheme | null {
     if (fontStack) vars['--font-body'] = fontStack;
   }
 
+  // Surface treatment (`sticker` draws ink outlines + hard offset shadows). Emits nothing
+  // for flat/soft/glow, so those sites are byte-identical to before it existed.
+  Object.assign(vars, surfaceVars(stamped?.surface));
+
   // Nothing themable at all → null, and the wrapper leaves every default untouched (the
   // rule-7 shape: a site with no identity renders plain, never broken). The check moved here
   // from the accent so that a typeface alone is enough to count as an identity.
   if (Object.keys(vars).length === 0 && !fontStack) return null;
 
-  return { vars, fontFamily: fontStack, fontHref };
+  return { vars, fontFamily: fontStack, fontHref, surface: surfaceAttr(stamped?.surface) };
 }

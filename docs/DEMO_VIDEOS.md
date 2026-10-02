@@ -102,6 +102,26 @@ Two of sixteen features have a clip. These are the ones where *seeing it* beats 
 Pages drawer covering a hero any more. (The first cut did — they were recorded hours before the
 fix. A demo is a dated artifact: re-record after any change to what it shows.)
 
+## 3b. Why re-recording is not a button
+
+⚠️ **It cannot run on Vercel**, and the reasons are structural rather than fiddly: there is no
+**ffmpeg** there (it exists in this repo only under `scripts/`), Playwright's `recordVideo` needs
+a full Chromium while Vercel has `@sparticuz/chromium` via `puppeteer-core`, and a guest build is
+~90s of real waiting.
+
+The **render-worker queue** (`docs/RENDER_WORKERS.md`) is the right rail for it — a job enqueued
+from the web, claimed by a machine the owner runs. It is not wired up for demos, and as of
+2026-10-01 the queue is dormant: `render_jobs.kind` allows only `catalog`/`verify`,
+**`render_workers` has zero rows**, exactly one job has ever run, and `RENDER_WORKERS_ENABLED` is
+not set in production. A button without a live worker is a button that silently does nothing.
+
+So `/admin/demo-narration` **hands you the command instead of pretending to run it**, with the two
+costs stated beside it: the poster timestamp must be re-picked afterwards, and `guest-build`
+leaves a real anonymous draft in the production funnel count. If a mini ever runs
+`npm run render:worker` persistently, the honest upgrade is a `demo` job kind whose row carries a
+**scenario name from a fixed allowlist** — never a command, which is the property that keeps a
+queue row from executing code on the machine.
+
 ## 4. Adding one
 
 1. Add a scenario to `SCENARIOS` in `scripts/record-demo.mts`.

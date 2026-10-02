@@ -351,10 +351,15 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
       a.download = `${clipName(selected!.src)}-${selected!.recordedOn}-narration.wav`;
       a.click();
       URL.revokeObjectURL(url);
+      // ⚠️ NO PLACEHOLDER FILENAMES. This used to print
+      // `ffmpeg -i clip.mp4 -i narration.wav …`; the owner pasted it verbatim and got
+      // "No such file or directory". A command shown to a person must name real files, or be a
+      // script that finds them — same mistake as the upload command that never loaded env.
+      const n = clipName(selected!.src);
       setStatus(
-        plan!.complete
-          ? 'Soundtrack downloaded. Mux it with: ffmpeg -i clip.mp4 -i narration.wav -c:v copy -shortest out.mp4'
-          : `Soundtrack downloaded with ${plan!.missing.length} line(s) left silent.`,
+        (plan!.complete ? 'Soundtrack downloaded.' : `Downloaded with ${plan!.missing.length} line(s) silent.`) +
+          ` To burn it into a copy of the video: npx tsx scripts/mux-narration.mts ${n}` +
+          ' (publish first — it reads the published track).',
       );
     } catch (e: any) {
       setStatus(`Mix failed: ${e?.message ?? e}`);

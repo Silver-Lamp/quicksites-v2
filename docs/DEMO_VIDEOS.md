@@ -137,6 +137,20 @@ leaves a real anonymous draft in the production funnel count. If a mini ever run
 **scenario name from a fixed allowlist** — never a command, which is the property that keeps a
 queue row from executing code on the machine.
 
+## 3c. A narrated copy of the video
+
+`/features` plays the narration alongside the clip, so no muxing is needed there. For anywhere
+that cannot play two files — email, Keynote, YouTube, a phone — burn them together:
+
+```bash
+npx tsx scripts/mux-narration.mts guest-build
+# → demo-videos/guest-build-<date>-narrated.mp4
+```
+
+It finds the published track itself. ⚠️ **It refuses on a duration mismatch**: narration is timed
+to one specific cut, and muxing it against a different recording yields a file where the voice
+describes the wrong thing — plausible-looking and wrong, the worst artifact to hand a prospect.
+
 ## 4. Adding one
 
 1. Add a scenario to `SCENARIOS` in `scripts/record-demo.mts`.

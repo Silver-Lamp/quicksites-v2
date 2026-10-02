@@ -140,3 +140,41 @@ describe('the scale actually reaches a rendered page', () => {
     expect(hero.length).toBeGreaterThan(5000);
   });
 });
+
+// ⚠️ THE REGRESSION THIS FILE EXISTS FOR, SECOND TIME. The first cut keyed the scale off the
+// pairing's mood, which is tidy and wrong: most sites did not choose their pairing —
+// `pickCuratedTheme` assigned one at creation and it knows nothing about mood. Measured on the
+// owner's own target verticals AFTER it shipped: starter-photography carried `space-inter`
+// (technical) and therefore got 56px, the ceiling meant for HVAC, on a photographer.
+describe('the trade decides how loudly it may speak, not the typeface', () => {
+  const px = (v: string) => parseFloat(v.match(/,\s*([\d.]+)rem\s*\)/)![1]) * 16;
+
+  it.each(['photography', 'author', 'personal'])(
+    '%s gets the editorial display even carrying a technical pairing',
+    (industry) => {
+      const scale = typeScaleFor('space-inter', industry)!; // space-inter is `technical`
+      expect(scale.display).toBe(TYPE_SCALE.editorial.display);
+    },
+  );
+
+  it('a trade keeps its own conservative ceiling', () => {
+    // The inverse must hold too, or "industry wins" would just mean "everything is huge".
+    const hvac = typeScaleFor('playfair-source', 'hvac')!; // playfair is `editorial`
+    expect(hvac.display).toBe(TYPE_SCALE.technical.display);
+    expect(px(hvac.display)).toBeLessThan(px(TYPE_SCALE.editorial.display));
+  });
+
+  it('falls back to the pairing when the site has no industry', () => {
+    expect(typeScaleFor('playfair-source', null)!.display).toBe(TYPE_SCALE.editorial.display);
+    expect(typeScaleFor('space-inter', '')!.display).toBe(TYPE_SCALE.technical.display);
+  });
+
+  it('an unmapped industry still resolves rather than losing the scale', () => {
+    expect(typeScaleFor('space-inter', 'something-we-never-added')).not.toBeNull();
+  });
+
+  it('resolveSiteTheme passes the industry through', () => {
+    const t = { data: { meta: { industry: 'photography', theme: { fontPair: 'space-inter' } } } };
+    expect(resolveSiteTheme(t)?.vars['--qs-display']).toBe(TYPE_SCALE.editorial.display);
+  });
+});

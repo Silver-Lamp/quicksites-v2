@@ -1,6 +1,11 @@
 // app/api/admin/theme/industry-font-pin/route.ts
 //
-// Pin the typeface you are looking at as the default for this industry.
+// Add the typeface you are looking at to this industry's POOL.
+//
+// ⚠️ A POOL, NOT A SINGLE FACE. One typeface per industry makes every towing site in a town
+// identical — the "obviously a template" tell we are trying to lose. An operator approves two
+// or three that suit the trade and new sites spread across them deterministically. A pool of
+// one behaves like a hard pin.
 //
 // ⚠️ IT CHANGES WHAT NEW SITES GET — IT DOES NOT RETHEME ANYTHING THAT EXISTS. Rewriting the
 // typeface of sites somebody already shipped is a visible change to a real business's page and
@@ -13,7 +18,7 @@ import { requireAdmin } from '@/lib/auth/requireUser';
 import { FONT_PAIRINGS } from '@/lib/theme/fontPairings';
 import {
   getIndustryFontPins,
-  setIndustryFontPin,
+  updateIndustryFontSet,
 } from '@/lib/theme/industryFontOverrides';
 import { fontPairForIndustry } from '@/lib/theme/industryFontMood';
 
@@ -22,8 +27,9 @@ export const dynamic = 'force-dynamic';
 
 const Body = z.object({
   industry: z.string().min(1).max(64),
-  /** null unpins and falls back to the mood table. */
   fontPair: z.string().min(1).max(64).nullable(),
+  /** 'clear' empties the pool and hands the industry back to the mood table. */
+  op: z.enum(['add', 'remove', 'clear']).default('add'),
 });
 
 export async function GET() {
@@ -40,26 +46,30 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid body', issues: parsed.error.issues }, { status: 400 });
   }
-  const { industry, fontPair } = parsed.data;
+  const { industry, fontPair, op } = parsed.data;
 
   // ⚠️ Checked here as well as in the store: an unknown id would resolve to NO font, which is
   // the system-stack bug this whole effort exists to fix.
-  if (fontPair !== null && !FONT_PAIRINGS[fontPair]) {
+  if (op !== 'clear' && fontPair !== null && !FONT_PAIRINGS[fontPair]) {
     return NextResponse.json({ error: `unknown pairing: ${fontPair}` }, { status: 400 });
   }
 
   try {
-    const pins = await setIndustryFontPin(industry, fontPair, gate.user?.id ?? null);
+    const pins = await updateIndustryFontSet(industry, fontPair, op, gate.user?.id ?? null);
     // What a NEW site in this industry would now get — the thing the operator actually wants
     // confirmed, rather than "saved".
     const resolved = fontPairForIndustry(industry, 'preview', pins);
+    const pool = pins[industry] ?? [];
     return NextResponse.json({
       ok: true,
       industry,
-      pinned: fontPair,
-      resolvesTo: resolved,
-      name: resolved ? FONT_PAIRINGS[resolved]?.name ?? null : null,
-      note: 'Applies to newly created sites. Existing sites keep the typeface they already have.',
+      pool,
+      poolNames: pool.map((id) => FONT_PAIRINGS[id]?.name ?? id),
+      // One example of what a new site would draw — the pool spreads, so this is illustrative.
+      exampleResolves: resolved,
+      note: pool.length
+        ? 'New sites in this industry draw from this pool. Existing sites are unchanged.'
+        : 'Pool cleared — this industry falls back to its default typeface. Existing sites are unchanged.',
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? 'pin failed' }, { status: 500 });

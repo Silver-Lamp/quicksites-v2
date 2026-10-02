@@ -18,55 +18,90 @@ function accentCss(token: string): string {
 }
 
 /**
- * Pin the typeface you are looking at as the default for this industry.
+ * Add the typeface you are looking at to this industry's pool.
  *
- * ⚠️ IT DOES NOT RETHEME EXISTING SITES, and the control says so. The whole point is that the
- * person with the taste is in the editor looking at a real site, not editing a TypeScript table
- * and waiting for a deploy — but "make this the default" reads like "apply this everywhere",
- * and it must not be mistaken for that.
+ * ⚠️ A POOL, NOT A SINGLE FACE. One typeface per industry makes every towing site in a town
+ * identical — the "obviously a template" tell. Approve two or three that suit the trade and new
+ * sites spread across them deterministically: varied to a visitor, repeatable for us.
+ *
+ * ⚠️ IT DOES NOT RETHEME EXISTING SITES, and the control says so. "Make this the default" reads
+ * like "apply this everywhere", and it must not be mistaken for that.
  */
-function PinIndustryFont({ industry, fontPair, pairName }: { industry: string; fontPair: string; pairName: string }) {
-  const [state, setState] = React.useState<'idle' | 'saving' | 'done' | 'error'>('idle');
+function IndustryFontPool({ industry, fontPair, pairName }: { industry: string; fontPair: string; pairName: string }) {
+  const [pool, setPool] = React.useState<string[] | null>(null);
+  const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState<string | null>(null);
 
-  async function pin() {
-    setState('saving');
+  // Load this industry's pool once the panel opens, so the button can say add vs remove.
+  React.useEffect(() => {
+    let off = false;
+    fetch('/api/admin/theme/industry-font-pin')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (!off && j?.ok) setPool(j.pins?.[industry] ?? []); })
+      .catch(() => { /* not an admin, or offline — the control stays quiet */ });
+    return () => { off = true; };
+  }, [industry]);
+
+  const inPool = !!pool?.includes(fontPair);
+
+  async function send(op: 'add' | 'remove') {
+    setBusy(true);
     try {
       const res = await fetch('/api/admin/theme/industry-font-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ industry, fontPair }),
+        body: JSON.stringify({ industry, fontPair, op }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) {
-        setState('error');
-        // ⚠️ A 403 here means not-an-admin, which is the expected answer for most users rather
-        // than a fault — say what happened instead of "failed".
-        setMsg(res.status === 403 ? 'Admins only.' : j?.error ?? 'Could not pin.');
+        // ⚠️ A 403 is "not an admin", the expected answer for most users — not a fault.
+        setMsg(res.status === 403 ? 'Admins only.' : j?.error ?? 'Could not save.');
         return;
       }
-      setState('done');
-      setMsg(`New ${industry} sites will use ${j.name ?? fontPair}.`);
+      setPool(j.pool ?? []);
+      setMsg(j.note ?? null);
     } catch (e: any) {
-      setState('error');
-      setMsg(e?.message ?? 'Could not pin.');
+      setMsg(e?.message ?? 'Could not save.');
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
     <div className="mt-2.5 border-t border-white/10 pt-2.5">
+      <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-500">
+        {industry} typeface pool
+      </div>
+
+      {pool?.length ? (
+        <div className="mb-1.5 flex flex-wrap gap-1">
+          {pool.map((id) => (
+            <span
+              key={id}
+              className={`rounded px-1.5 py-0.5 text-[10px] ${
+                id === fontPair ? 'bg-sky-500/20 text-sky-200' : 'bg-white/5 text-zinc-400'
+              }`}
+            >
+              {getFontPairing(id)?.name?.split(' · ')[0] ?? id}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
       <button
         type="button"
-        onClick={pin}
-        disabled={state === 'saving'}
+        onClick={() => send(inPool ? 'remove' : 'add')}
+        disabled={busy}
         className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 transition hover:border-white/35 disabled:opacity-50"
-        title={`Make ${pairName} the default typeface for ${industry} sites`}
+        title={`${inPool ? 'Remove' : 'Add'} ${pairName} ${inPool ? 'from' : 'to'} the ${industry} pool`}
       >
         <Pin className="h-3 w-3" />
-        {state === 'saving' ? 'Pinning…' : `Pin ${pairName.split(' · ')[0]} for ${industry}`}
+        {busy ? 'Saving…' : inPool
+          ? `Remove ${pairName.split(' · ')[0]} from pool`
+          : `Add ${pairName.split(' · ')[0]} to ${industry} pool`}
       </button>
-      <p className={`mt-1 text-[10px] ${state === 'error' ? 'text-amber-300' : 'text-zinc-500'}`}>
-        {msg ?? 'Sets the default for NEW sites in this industry. Nothing already built changes.'}
+      <p className="mt-1 text-[10px] text-zinc-500">
+        {msg ?? 'New sites in this industry draw from the pool. Nothing already built changes.'}
       </p>
     </div>
   );
@@ -137,7 +172,7 @@ export function ThemeShufflePanel({
       {/* ⚠️ Hidden without BOTH an industry and a resolved pairing: pinning "undefined" for ""
           would write a junk key that then has to be cleaned out of site_settings by hand. */}
       {industry && pinnable ? (
-        <PinIndustryFont industry={industry} fontPair={pinnable.id} pairName={pinnable.name} />
+        <IndustryFontPool industry={industry} fontPair={pinnable.id} pairName={pinnable.name} />
       ) : null}
     </div>
   );

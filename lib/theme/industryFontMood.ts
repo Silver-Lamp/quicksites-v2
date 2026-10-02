@@ -135,21 +135,28 @@ export function fontPairForIndustry(
    * function is pure and runs inside scripts, scaffolds and tests. Making it hit the database
    * would make every caller async and every test need a mock.
    */
-  pins?: Record<string, string>,
+  pins?: Record<string, string[] | string>,
 ): string | null {
   const key = String(industry ?? '').trim();
-  // ⚠️ A pin wins outright — no seed spreading. The point of pinning is "every site in this
-  // trade looks like THIS", so varying it would defeat the feature.
-  const pinned = pins?.[key];
-  if (pinned && FONT_PAIRINGS[pinned]) return pinned;
+  // ⚠️ An approved SET narrows the choice; it does not fix it. One face per industry makes
+  // every towing site in a town identical, which is the "obviously a template" tell. Sites
+  // spread across the approved faces by the same deterministic seed used below — varied to a
+  // visitor, repeatable for us. A set of one behaves exactly like a hard pin.
+  const raw = pins?.[key];
+  const approved = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter((p) => FONT_PAIRINGS[p]);
+  if (approved.length) return approved.length === 1 || !seed ? approved[0] : approved[hash(seed) % approved.length];
 
   const mood = INDUSTRY_FONT_MOOD[(industry ?? '') as IndustryKey] ?? DEFAULT_FONT_MOOD;
   const options = pairingsForMood(mood);
   if (!options.length) return null;
   if (options.length === 1 || !seed) return options[0].id;
 
-  // Cheap stable hash — the value only needs to be uniform and repeatable.
+  return options[hash(seed) % options.length].id;
+}
+
+/** Cheap stable hash — the value only needs to be uniform and repeatable. */
+function hash(seed: string): number {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return options[h % options.length].id;
+  return h;
 }

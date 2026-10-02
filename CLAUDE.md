@@ -492,7 +492,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   site's face comes from `pickCuratedTheme(...).fontPair` and nothing consulted the pins, so
   `buildIndustryStarter` gained a `fontPair` override and the create route passes it. (2) Passing
   `fontPairForIndustry()`'s answer unconditionally would override the CURATED THEME's pairing on
-  every new site — it answers for every industry, so only an explicit pin may override.
+  every new site — it answers for every industry, so only an explicit pool may override.
+  ⚠️ **A pin is a POOL, not one face** (owner, 2026-10-02): one typeface per industry makes every
+  towing site in a town identical — the "obviously a template" tell. The control reads *Add X to
+  <industry> pool*, shows the pool as chips, and flips to Remove; sites spread across it by the
+  same deterministic seed, so a visitor sees variety and we can reproduce any site's face. A pool
+  of one behaves like a hard pin. ⚠️ `sanitizePins` still accepts the **legacy single-string**
+  shape, because the 1:1 version shipped first and those rows would otherwise resolve to no font.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
   `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser

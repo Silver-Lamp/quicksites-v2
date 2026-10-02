@@ -305,6 +305,34 @@ html, body, #__next { width: 100%; max-width: 100%; }
   font-family: var(--font-heading, inherit);
 }
 
+/* ── Display scale (lib/theme/typeScale.ts) ──────────────────────────────────
+
+   The hero headline rendered at 48px on EVERY site in the fleet — `text-4xl
+   md:text-5xl`, hard-coded in the hero renderer, independent of industry, theme
+   or how much the headline had to say. Benchmarks run 72px and 220px. That one
+   constant is the biggest single reason our pages read as documents.
+
+   ⚠️ Applied through CSS, NOT an inline style, and that is deliberate. An inline
+   `font-size: var(--qs-display)` on a site with no pairing is invalid at
+   computed-value time, which resolves to `unset` — the h1 would INHERIT body
+   size rather than fall back to its Tailwind class. Silent, fleet-wide, and
+   exactly the kind of failure that looks like nothing happening. Scoping the
+   rule to `[data-qs-themed]` means an unthemed site never matches it and keeps
+   the classes it has always had.
+
+   ⚠️ The descendant selector also out-specifies a single utility class, so the
+   scale wins over `text-5xl` without `!important` — the SectionShell lesson
+   (#665): with equal specificity the winner is decided by Tailwind's compiled
+   order, not by what the markup says. */
+[data-qs-themed] [data-qs-display] {
+  font-size: var(--qs-display, inherit);
+  line-height: var(--qs-display-leading, 1.1);
+}
+
+[data-qs-themed] [data-qs-lead] {
+  font-size: var(--qs-lead, inherit);
+}
+
 /* ── Vertical space in proportion to content ─────────────────────────────────
 
    Every section used to be the same height regardless of what it held, so a

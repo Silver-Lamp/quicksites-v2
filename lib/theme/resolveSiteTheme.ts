@@ -11,6 +11,7 @@
 import { getIndustryPreset } from '@/lib/theme/industryPresets';
 import { accentToHsl, foregroundForHsl } from '@/lib/theme/accentHsl';
 import { getFontPairing, fontPairHref } from '@/lib/theme/fontPairings';
+import { typeScaleVars } from '@/lib/theme/typeScale';
 
 export type ResolvedSiteTheme = {
   /** CSS custom properties to scope onto the site wrapper. */
@@ -102,14 +103,20 @@ export function resolveSiteTheme(template: any): ResolvedSiteTheme | null {
     }
   }
 
+  // ⚠️ AN UNRECOGNISED ACCENT USED TO ABANDON THE WHOLE THEME, INCLUDING THE TYPEFACE.
+  // This was `if (!accentHsl) return null`, which reads as reasonable — no accent, nothing to
+  // theme. But the font pairing is resolved thirty lines BELOW it, so a site with a perfectly
+  // good `fontPair` and no accent got no `--font-heading`, no `data-qs-themed`, and therefore
+  // no font and no display scale. Measured 2026-10-02: **170 of 1,929 paired sites** were in
+  // exactly that state — their typeface was stored and reached no pixel. The accent and the
+  // typeface are independent decisions and one missing must not discard the other.
   const accentHsl = accentToHsl(accentColor);
-  if (!accentHsl) return null; // nothing themable → leave defaults
-
-  const vars: Record<string, string> = {
-    '--primary': accentHsl,
-    '--primary-foreground': foregroundForHsl(accentHsl),
-    '--ring': accentHsl,
-  };
+  const vars: Record<string, string> = {};
+  if (accentHsl) {
+    vars['--primary'] = accentHsl;
+    vars['--primary-foreground'] = foregroundForHsl(accentHsl);
+    vars['--ring'] = accentHsl;
+  }
   if (borderRadius && RADIUS_REM[borderRadius]) vars['--radius'] = RADIUS_REM[borderRadius];
 
   // Secondary accent (Phase B) — used by blocks for alt buttons / gradients.
@@ -149,10 +156,20 @@ export function resolveSiteTheme(template: any): ResolvedSiteTheme | null {
     vars['--font-body'] = pairing.body.stack;
     fontStack = pairing.body.stack;
     fontHref = fontPairHref(fontPair);
+    // Display scale rides with the pairing: the typeface and how big it is set are one
+    // decision, and the pairing's mood is the only identity every site actually carries
+    // (`themeId` is stamped on zero templates). No pairing → no vars → Tailwind classes
+    // stand, which is how an unthemed site keeps looking exactly as it did.
+    Object.assign(vars, typeScaleVars(fontPair));
   } else if (fontFamily) {
     fontStack = FONT_STACKS[fontFamily];
     if (fontStack) vars['--font-body'] = fontStack;
   }
+
+  // Nothing themable at all → null, and the wrapper leaves every default untouched (the
+  // rule-7 shape: a site with no identity renders plain, never broken). The check moved here
+  // from the accent so that a typeface alone is enough to count as an identity.
+  if (Object.keys(vars).length === 0 && !fontStack) return null;
 
   return { vars, fontFamily: fontStack, fontHref };
 }

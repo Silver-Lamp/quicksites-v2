@@ -24,6 +24,34 @@ import {
   type NarrationTake,
 } from '@/lib/demos/narration';
 
+/**
+ * HiveJournal's documented error codes, in words, with what to do about each.
+ *
+ * ⚠️ WRITTEN BECAUSE THE FIRST REAL ATTEMPT REPORTED NOTHING USEFUL. It said
+ * "Synthesised 0 line(s), 1 failed — voice unknown — HiveJournal did not report which voice
+ * spoke." The route already knew the answer was `no_grant`; the UI threw it away and led with a
+ * VOICE BASIS instead — which is nonsense when no voice was produced at all. The reason an
+ * operator needs HJ's own word (contract §"Error contract") is exactly this moment.
+ */
+const PROVISION_HELP: Record<string, string> = {
+  no_grant:
+    'No HiveJournal grant is connected. An embed id is not enough — playback is public, but ' +
+    'generating new audio needs a token. Mint one in HJ: Connect QuickSites on that embed → ' +
+    'copy the token (shown once) → paste it into /merchant/audio.',
+  invalid_or_revoked_grant:
+    'The stored grant was revoked or expired. Mint a fresh one in HJ and paste it into /merchant/audio.',
+  invalid_partner_key: 'Our partner key was rejected. PARTNER_QUICKSITES_SECRET must match HJ’s.',
+  grant_scope: 'That grant does not carry the about_that:provision scope. Re-mint it with that scope.',
+  grant_embed_mismatch: 'That grant was minted for a different embed. Use the embed it belongs to.',
+  voice_third_party:
+    'HJ refused: this would render a voice that is not yours. It fails closed rather than ' +
+    'quietly switching to the house narrator — which is the behaviour we want.',
+  quota_exceeded: 'HJ quota reached for now. Try again later.',
+  partner_quota_exceeded: 'Our partner quota is exhausted.',
+  audio_not_configured: 'Audio is not configured on HJ’s side for that embed.',
+  disabled: 'Partner audio provisioning is switched off in this environment.',
+};
+
 type Source = 'recorded' | 'tts';
 type StudioTake = NarrationTake & { source: Source; voiceBasis: 'self' | 'narrator' | null };
 
@@ -170,6 +198,8 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
   const [positionMs, setPositionMs] = React.useState(0);
   const [status, setStatus] = React.useState<string | null>(null);
   const [published, setPublished] = React.useState<string | null>(null);
+  // Set when the failure is one a link can fix, so the operator is not left reading prose.
+  const [needsGrant, setNeedsGrant] = React.useState(false);
 
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const recorderRef = React.useRef<MediaRecorder | null>(null);
@@ -405,17 +435,30 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) {
+        setNeedsGrant(false);
         setStatus(
           j?.code === 'not_configured'
-            ? 'Partner audio is not configured here.'
+            ? 'Partner audio is not configured in this environment.'
             : j?.error ?? 'Synthesis failed.',
         );
       } else {
-        setStatus(
-          `Synthesised ${j.generated} line(s)` +
-            (j.failed ? `, ${j.failed} failed` : '') +
-            ` — ${voiceLabel(j.voiceBasis)}.`,
-        );
+        // ⚠️ Lead with the FAILURE when nothing was produced. A voice basis is meaningless
+        // when no voice was produced, and printing one buries the actionable reason.
+        const firstErr = (j.results ?? []).find((r: any) => !r.ok)?.error as string | undefined;
+        setNeedsGrant(firstErr === 'no_grant' || firstErr === 'invalid_or_revoked_grant');
+        if (j.generated === 0) {
+          setStatus(
+            firstErr
+              ? `Nothing was synthesised — ${firstErr}. ${PROVISION_HELP[firstErr] ?? ''}`.trim()
+              : 'Nothing was synthesised, and HiveJournal gave no reason.',
+          );
+        } else {
+          setStatus(
+            `Synthesised ${j.generated} line(s)` +
+              (j.failed ? `, ${j.failed} failed${firstErr ? ` (${firstErr})` : ''}` : '') +
+              ` — ${voiceLabel(j.voiceBasis)}.`,
+          );
+        }
         const r = await fetch(`/api/admin/demo-narration?clipKey=${encodeURIComponent(key)}`);
         const g = await r.json().catch(() => ({}));
         if (g?.ok) setAllTakes(g.takes);
@@ -612,6 +655,13 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
 
             {busy ? <p className="mt-2 text-xs text-sky-300">{busy}</p> : null}
             {status ? <p className="mt-2 text-xs text-amber-200">{status}</p> : null}
+            {needsGrant ? (
+              <p className="mt-1 text-xs">
+                <a href="/merchant/audio" className="text-sky-300 underline">
+                  Connect a HiveJournal grant →
+                </a>
+              </p>
+            ) : null}
             {published ? (
               <p className="mt-1 text-xs text-emerald-300">
                 Live:{' '}

@@ -218,6 +218,26 @@ export async function GET(req: NextRequest) {
   }
 
   // 5) shape response
+  // ⚠️ Fetched for the users on THIS page only, by id — not a table scan. Most users have no
+  // row at all: nothing captured geo before 2026-10-02 and it cannot be backfilled, so an
+  // absent entry means "we never looked", which the UI must show as such rather than as unknown
+  // origin. See lib/analytics/signupGeo.ts.
+  const geoById = new Map<string, { country: string | null; region: string | null; city: string | null }>();
+  try {
+    const ids = users.map((u) => u.id).filter(Boolean);
+    if (ids.length) {
+      const { data: geos } = await admin
+        .from('user_signup_geo')
+        .select('user_id, country, region, city')
+        .in('user_id', ids);
+      for (const g of (geos ?? []) as any[]) {
+        geoById.set(g.user_id, { country: g.country, region: g.region, city: g.city });
+      }
+    }
+  } catch {
+    /* best-effort: a missing geo column must never break the user list */
+  }
+
   const shaped = prefiltered.map((u) => {
     const chef = chefByUser.get(u.id) ?? null;
     const merch = merchByUser.get(u.id) ?? null;
@@ -292,26 +312,6 @@ export async function GET(req: NextRequest) {
 
   // 6) deep filter on enriched fields (merchant/chef display names, plan labels, site names/slugs)
   const scoped = shaped.filter((r) => (!buildersOnly || r.sites.total > 0) && (!hideGuests || !r.is_anonymous));
-  // ⚠️ Fetched for the users on THIS page only, by id — not a table scan. Most users have no
-  // row at all: nothing captured geo before 2026-10-02 and it cannot be backfilled, so an
-  // absent entry means "we never looked", which the UI must show as such rather than as unknown
-  // origin. See lib/analytics/signupGeo.ts.
-  const geoById = new Map<string, { country: string | null; region: string | null; city: string | null }>();
-  try {
-    const ids = users.map((u) => u.id).filter(Boolean);
-    if (ids.length) {
-      const { data: geos } = await admin
-        .from('user_signup_geo')
-        .select('user_id, country, region, city')
-        .in('user_id', ids);
-      for (const g of (geos ?? []) as any[]) {
-        geoById.set(g.user_id, { country: g.country, region: g.region, city: g.city });
-      }
-    }
-  } catch {
-    /* best-effort: a missing geo column must never break the user list */
-  }
-
   const rows = q
     ? scoped.filter((r) => {
         const hay = [

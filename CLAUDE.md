@@ -687,7 +687,22 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   and we call it once per line; it bills per call, so the route caps at `MAX_LINES` and HJ were
   asked whether the usage is acceptable. ⚠️ **Blocked on a GRANT, not on env**: all three
   partner-audio vars have been set in production for 2+ months, but `partner_audio_grants` has
-  **zero rows** — the owner mints a token in HJ's dashboard and pastes it into `/merchant/audio`.
+  **zero rows** — the owner mints a token in HJ's dashboard (`/dashboard/about-that` → the
+  embed's card → `🔌 Connect QuickSites` → *Generate connection token*) and pastes it into
+  `/merchant/audio`.
+  ⚠️ **NEVER ASK WHICH EMBED — A GRANT IS MINTED PER EMBED AND THE SET OF RIGHT ANSWERS IS
+  ENUMERABLE (2026-10-02).** The studio used to `window.prompt` for an embed id, which offers a
+  value that is **wrong by default**: an owner has several embeds and types the one he has read
+  most recently. On the first real run the grant was on *"Cornerstone — in Sandon's voice"*
+  (`27eb5896…`) and the id typed was the homepage **In Your Voice** player (`4f90e68e…`, from
+  `components/home/in-your-voice.tsx`) — same owner, same consented clone, different embed, so
+  HJ returned `grant_embed_mismatch` and nothing synthesised. **`GET /api/partner/audio/connect`
+  already lists exactly the embeds we hold active grants for**, so the studio resolves from it:
+  none → say go mint one, one → use it silently, several → choose *from that list*. An id we
+  hold no grant for is refused locally rather than round-tripped to a certain failure. Pinned by
+  `app/admin/demo-narration/__tests__/grantEmbedSource.test.ts` — a **source guard**, because
+  the defect is a UI offering a free-text field, not a wrong return value (verified to fail with
+  the prompt restored).
 - **Inbound-call email alerts (2026-10-01)**: `/api/cron/call-alert` every 5 min emails
   `ADMIN_EMAILS` when a call lands in `call_logs`, so a real lead cannot sit unseen in a dashboard
   nobody opened (two did, on 2026-09-30). ⚠️ **Deliberately NOT in the Twilio webhook**: that

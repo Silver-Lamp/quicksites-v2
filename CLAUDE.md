@@ -479,6 +479,20 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   content, so `commit_template` is the wrong tool; the documented
   `set_config('app.bypass_template_guard','on', true)` inside a txn is the path (verified a
   direct UPDATE raises, and the bypass works, both in a rolled-back transaction).
+  **Pin a typeface to an industry from the editor (2026-10-02)**: the theme panel's footer lets
+  an admin make the pairing they are looking at the default for that industry
+  (`POST /api/admin/theme/industry-font-pin` → `site_settings.industry_font_pairs`,
+  `lib/theme/industryFontOverrides.ts`). Taste lives with the person looking at a real site, not
+  in a TypeScript table behind a deploy. ⚠️ **A pin beats the mood table outright with NO seed
+  spreading** — the point is that every site in the trade matches. ⚠️ **Pins are validated on
+  READ**: a pairing renamed in code leaves a pin naming nothing, and serving that resolves to no
+  font — the system-stack bug all of this exists to fix. ⚠️ **It changes NEW sites only**; the
+  control says so, because "make this the default" reads like "apply everywhere".
+  ⚠️ **Two bugs worth remembering from building it.** (1) The button would have LIED: a new
+  site's face comes from `pickCuratedTheme(...).fontPair` and nothing consulted the pins, so
+  `buildIndustryStarter` gained a `fontPair` override and the create route passes it. (2) Passing
+  `fontPairForIndustry()`'s answer unconditionally would override the CURATED THEME's pairing on
+  every new site — it answers for every industry, so only an explicit pin may override.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
   `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser

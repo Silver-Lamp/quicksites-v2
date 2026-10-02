@@ -6,7 +6,7 @@
 // editor's apply path. See docs/THEME_SYSTEM_PLAN.md (Phase C).
 
 import * as React from 'react';
-import { Shuffle, Check } from 'lucide-react';
+import { Shuffle, Check, Pin } from 'lucide-react';
 import { CURATED_THEMES, type CuratedTheme } from '@/lib/theme/curatedThemes';
 import { getFontPairing } from '@/lib/theme/fontPairings';
 import { ACCENT_HSL } from '@/lib/theme/accentHsl';
@@ -17,15 +17,77 @@ function accentCss(token: string): string {
   return `hsl(${h} ${s} ${l})`;
 }
 
+/**
+ * Pin the typeface you are looking at as the default for this industry.
+ *
+ * ⚠️ IT DOES NOT RETHEME EXISTING SITES, and the control says so. The whole point is that the
+ * person with the taste is in the editor looking at a real site, not editing a TypeScript table
+ * and waiting for a deploy — but "make this the default" reads like "apply this everywhere",
+ * and it must not be mistaken for that.
+ */
+function PinIndustryFont({ industry, fontPair, pairName }: { industry: string; fontPair: string; pairName: string }) {
+  const [state, setState] = React.useState<'idle' | 'saving' | 'done' | 'error'>('idle');
+  const [msg, setMsg] = React.useState<string | null>(null);
+
+  async function pin() {
+    setState('saving');
+    try {
+      const res = await fetch('/api/admin/theme/industry-font-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ industry, fontPair }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) {
+        setState('error');
+        // ⚠️ A 403 here means not-an-admin, which is the expected answer for most users rather
+        // than a fault — say what happened instead of "failed".
+        setMsg(res.status === 403 ? 'Admins only.' : j?.error ?? 'Could not pin.');
+        return;
+      }
+      setState('done');
+      setMsg(`New ${industry} sites will use ${j.name ?? fontPair}.`);
+    } catch (e: any) {
+      setState('error');
+      setMsg(e?.message ?? 'Could not pin.');
+    }
+  }
+
+  return (
+    <div className="mt-2.5 border-t border-white/10 pt-2.5">
+      <button
+        type="button"
+        onClick={pin}
+        disabled={state === 'saving'}
+        className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 transition hover:border-white/35 disabled:opacity-50"
+        title={`Make ${pairName} the default typeface for ${industry} sites`}
+      >
+        <Pin className="h-3 w-3" />
+        {state === 'saving' ? 'Pinning…' : `Pin ${pairName.split(' · ')[0]} for ${industry}`}
+      </button>
+      <p className={`mt-1 text-[10px] ${state === 'error' ? 'text-amber-300' : 'text-zinc-500'}`}>
+        {msg ?? 'Sets the default for NEW sites in this industry. Nothing already built changes.'}
+      </p>
+    </div>
+  );
+}
+
 export function ThemeShufflePanel({
   currentId,
   onApply,
   onShuffle,
+  industry,
+  currentFontPair,
 }: {
   currentId?: string | null;
   onApply: (t: CuratedTheme) => void;
   onShuffle: () => void;
+  /** This site's industry — the pin control is hidden without one. */
+  industry?: string | null;
+  /** The pairing currently applied, which is what gets pinned. */
+  currentFontPair?: string | null;
 }) {
+  const pinnable = getFontPairing(currentFontPair ?? '');
   return (
     <div className="w-[320px] rounded-lg border border-white/10 bg-zinc-900/95 p-3 text-white shadow-2xl backdrop-blur">
       <div className="mb-2.5 flex items-center justify-between">
@@ -71,6 +133,12 @@ export function ThemeShufflePanel({
           );
         })}
       </div>
+
+      {/* ⚠️ Hidden without BOTH an industry and a resolved pairing: pinning "undefined" for ""
+          would write a junk key that then has to be cleaned out of site_settings by hand. */}
+      {industry && pinnable ? (
+        <PinIndustryFont industry={industry} fontPair={pinnable.id} pairName={pinnable.name} />
+      ) : null}
     </div>
   );
 }

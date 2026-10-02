@@ -335,6 +335,11 @@ useEffect(() => {
   // ---- Theme gallery / shuffle (non-destructive restyle) ----
   const [themePanelOpen, setThemePanelOpen] = useState(false);
   const currentThemeId: string | null = (template as any)?.data?.meta?.theme?.id ?? null;
+  // For the "pin this typeface for this industry" control in the theme panel.
+  const currentIndustry: string | null =
+    (template as any)?.data?.meta?.industry ?? (template as any)?.industry ?? null;
+  const currentFontPair: string | null =
+    (template as any)?.data?.meta?.theme?.fontPair ?? null;
 
   const applyCuratedTheme = (theme: CuratedTheme) => {
     const cur: any = (tplRef.current ?? template) || {};
@@ -846,6 +851,8 @@ useEffect(() => {
                       currentId={currentThemeId}
                       onApply={applyCuratedTheme}
                       onShuffle={shuffleTheme}
+                      industry={currentIndustry}
+                      currentFontPair={currentFontPair}
                     />
                   </div>
                 </>

@@ -127,7 +127,22 @@ export function pairingsForMood(mood: FontMood): FontPairing[] {
  * Returns null only if a mood somehow has no pairings, so the caller can leave the field unset
  * rather than write a broken id.
  */
-export function fontPairForIndustry(industry: string | null | undefined, seed?: string): string | null {
+export function fontPairForIndustry(
+  industry: string | null | undefined,
+  seed?: string,
+  /**
+   * Superadmin pins, if the caller has loaded them. ⚠️ Passed IN rather than read here: this
+   * function is pure and runs inside scripts, scaffolds and tests. Making it hit the database
+   * would make every caller async and every test need a mock.
+   */
+  pins?: Record<string, string>,
+): string | null {
+  const key = String(industry ?? '').trim();
+  // ⚠️ A pin wins outright — no seed spreading. The point of pinning is "every site in this
+  // trade looks like THIS", so varying it would defeat the feature.
+  const pinned = pins?.[key];
+  if (pinned && FONT_PAIRINGS[pinned]) return pinned;
+
   const mood = INDUSTRY_FONT_MOOD[(industry ?? '') as IndustryKey] ?? DEFAULT_FONT_MOOD;
   const options = pairingsForMood(mood);
   if (!options.length) return null;

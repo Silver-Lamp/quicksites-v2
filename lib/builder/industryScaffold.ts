@@ -134,11 +134,26 @@ export function buildIndustryStarter(opts: {
   businessName: string;
   industryKey: IndustryKey;
   themeId?: string | null;
+  /**
+   * Superadmin-pinned typeface for this industry, if the (async) caller loaded one.
+   *
+   * ⚠️ PASSED IN, NOT READ HERE. This function is pure and runs in scripts, tests and the
+   * scaffold sweep; reading `site_settings` would make all of them async. ⚠️ And without this
+   * the pin control is a LIE: a new site's face comes from `pickCuratedTheme(...).fontPair`,
+   * so "new towing sites will use Archivo" was simply not true until the creation path started
+   * honouring it.
+   */
+  fontPair?: string | null;
 }) {
   const businessName = (opts.businessName || '').trim();
   const industryKey = opts.industryKey;
   const label = KEY_TO_LABEL[industryKey] ?? 'Other';
   const theme = themeForIndustry(industryKey, opts.themeId);
+  // The pin overrides only the typeface — the curated theme still chooses colour, radius,
+  // surface and layout, which is the part that keeps sites from looking identical.
+  if (opts.fontPair) {
+    theme.stamped = { ...theme.stamped, fontPair: opts.fontPair } as typeof theme.stamped;
+  }
 
   const base: any = createEmptyTemplate(businessName || label);
 

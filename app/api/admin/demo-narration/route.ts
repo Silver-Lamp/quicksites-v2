@@ -30,6 +30,8 @@ type TakeRow = {
   duration_ms: number;
   said: string | null;
   updated_at: string;
+  source: 'recorded' | 'tts';
+  voice_basis: 'self' | 'narrator' | null;
 };
 
 /** GET ?clipKey=finished-site@2026-10-01 → the takes we hold, with signed playback URLs. */
@@ -44,7 +46,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabaseAdmin
     .from('demo_narration_takes')
-    .select('line_index, storage_path, duration_ms, said, updated_at')
+    .select('line_index, storage_path, duration_ms, said, updated_at, source, voice_basis')
     .eq('clip_key', clipKey)
     .order('line_index');
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -61,6 +63,10 @@ export async function GET(req: Request) {
         durationMs: r.duration_ms,
         said: r.said,
         updatedAt: r.updated_at,
+        source: r.source,
+        // ⚠️ Passed through exactly as HJ reported it. NULL means unknown, and the UI must
+        // render that as unknown rather than assuming the owner's own voice.
+        voiceBasis: r.voice_basis,
       };
     }),
   );
@@ -123,13 +129,15 @@ export async function POST(req: Request) {
     {
       clip_key: clipKey,
       line_index: lineIndex,
+      // This endpoint only ever stores a human reading; synthesis goes through /tts.
+      source: 'recorded',
       storage_path: storagePath,
       duration_ms: durationMs,
       said: said ?? null,
       created_by: gate.user?.id ?? null,
       updated_at: new Date().toISOString(),
     },
-    { onConflict: 'clip_key,line_index' },
+    { onConflict: 'clip_key,line_index,source' },
   );
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
 
@@ -147,6 +155,9 @@ export async function DELETE(req: Request) {
   const url = new URL(req.url);
   const clipKey = url.searchParams.get('clipKey') ?? '';
   const lineIndex = Number(url.searchParams.get('lineIndex'));
+  // ⚠️ Scoped to ONE source. Without this, deleting a re-recorded line would also delete the
+  // synthesised version of it — two different artifacts behind one button.
+  const source = url.searchParams.get('source') === 'tts' ? 'tts' : 'recorded';
   if (!parseClipKey(clipKey) || !Number.isInteger(lineIndex) || lineIndex < 0) {
     return NextResponse.json({ error: 'clipKey and lineIndex are required' }, { status: 400 });
   }
@@ -156,6 +167,7 @@ export async function DELETE(req: Request) {
     .select('storage_path')
     .eq('clip_key', clipKey)
     .eq('line_index', lineIndex)
+    .eq('source', source)
     .maybeSingle();
 
   // Remove the row first: an orphaned object costs a few KB, while a row pointing at a deleted
@@ -164,7 +176,8 @@ export async function DELETE(req: Request) {
     .from('demo_narration_takes')
     .delete()
     .eq('clip_key', clipKey)
-    .eq('line_index', lineIndex);
+    .eq('line_index', lineIndex)
+    .eq('source', source);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const path = (row as { storage_path: string } | null)?.storage_path;

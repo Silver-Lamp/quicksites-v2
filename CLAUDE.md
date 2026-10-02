@@ -584,6 +584,20 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   when `duration_seconds` is unchanged, the fingerprint that always moves on a re-record. ⚠️ **The
   mix pulls its peak back to −1 dBFS only when it would clip** — the first real mix measured
   `max_volume -0.0 dB`, which is distortion, not loudness; measured, so a quiet mix is untouched.
+  **Two narration sources, owner picks (2026-10-01)**: each line can exist twice — `recorded`
+  (he read it) and `tts` (synthesised in his consented HJ voice clone via
+  `POST /api/admin/demo-narration/tts` → `generateWelcome`). `demo_narration_takes` is keyed
+  `(clip_key, line_index, source)` (`20260871`) so they coexist; the studio switches between
+  them and publishes whichever is selected. ⚠️ **ONLY `voice_basis === 'self'` MAY BE PUBLISHED
+  AS HIS VOICE** — `narrator` is the house voice and an absent basis is UNKNOWN, never
+  optimistically self. The publish route **refuses** (`voice_basis_not_self`, 409) before any
+  write, because the admin warning is a UI affordance and a direct POST bypasses it. ⚠️ HJ's
+  error codes are surfaced verbatim — `voice_third_party` is the consent bright line and an
+  operator needs that word, not "failed". ⚠️ **`welcome` is specified as a ONE-SHOT greeting**
+  and we call it once per line; it bills per call, so the route caps at `MAX_LINES` and HJ were
+  asked whether the usage is acceptable. ⚠️ **Blocked on a GRANT, not on env**: all three
+  partner-audio vars have been set in production for 2+ months, but `partner_audio_grants` has
+  **zero rows** — the owner mints a token in HJ's dashboard and pastes it into `/merchant/audio`.
 - **Inbound-call email alerts (2026-10-01)**: `/api/cron/call-alert` every 5 min emails
   `ADMIN_EMAILS` when a call lands in `call_logs`, so a real lead cannot sit unseen in a dashboard
   nobody opened (two did, on 2026-09-30). ⚠️ **Deliberately NOT in the Twilio webhook**: that

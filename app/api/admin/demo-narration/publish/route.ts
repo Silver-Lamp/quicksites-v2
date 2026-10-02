@@ -31,6 +31,9 @@ const Meta = z.object({
   /** How many scripted lines actually have a take — surfaced, never hidden. */
   linesRecorded: z.coerce.number().int().min(0),
   linesTotal: z.coerce.number().int().min(1),
+  /** Which version went live, and — for a synthesised one — whose voice HJ said it was. */
+  source: z.enum(['recorded', 'tts']).default('recorded'),
+  voiceBasis: z.enum(['self', 'narrator']).optional(),
 });
 
 export async function POST(req: Request) {
@@ -50,7 +53,25 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'invalid body', issues: parsed.error.issues }, { status: 400 });
   }
-  const { clipKey, clipSrc, durationMs, linesRecorded, linesTotal } = parsed.data;
+  const { clipKey, clipSrc, durationMs, linesRecorded, linesTotal, source, voiceBasis } = parsed.data;
+
+  // ⚠️ REFUSE TO PUBLISH A VOICE WE CANNOT ACCOUNT FOR. A synthesised mix may go out as the
+  // owner's voice only when HiveJournal reported `self`; `narrator` is the house voice and an
+  // absent basis is unknown. Publishing either as his own is the exact mislabelling the
+  // audio-honesty standard exists to prevent, and the admin UI warns — but a UI warning is not
+  // an enforcement point, so the refusal lives here.
+  if (source === 'tts' && voiceBasis !== 'self') {
+    return NextResponse.json(
+      {
+        error:
+          voiceBasis === 'narrator'
+            ? 'That synthesis came back as the house narrator, not your voice. Publishing it on a product page would present it as yours.'
+            : 'HiveJournal did not report which voice spoke, so this cannot be published as your voice.',
+        code: 'voice_basis_not_self',
+      },
+      { status: 409 },
+    );
+  }
   const key = parseClipKey(clipKey);
   if (!key) return NextResponse.json({ error: 'clipKey must be <clip>@<recordedOn>' }, { status: 400 });
 
@@ -96,6 +117,8 @@ export async function POST(req: Request) {
             // Stored so the page can say "3 of 6 lines" rather than implying a full reading.
             narration_lines_recorded: linesRecorded,
             narration_lines_total: linesTotal,
+            narration_source: source,
+            ...(voiceBasis ? { narration_voice_basis: voiceBasis } : {}),
           }
         : c,
     );

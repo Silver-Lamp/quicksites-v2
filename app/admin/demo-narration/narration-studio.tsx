@@ -24,6 +24,22 @@ import {
   type NarrationTake,
 } from '@/lib/demos/narration';
 
+type Source = 'recorded' | 'tts';
+type StudioTake = NarrationTake & { source: Source; voiceBasis: 'self' | 'narrator' | null };
+
+/**
+ * What we are allowed to call a synthesised set.
+ *
+ * ⚠️ ONLY `self` MAY BE CALLED THE OWNER'S VOICE. HJ reports which voice actually spoke; an
+ * absent basis is unknown, and unknown must never be rendered optimistically. This is the same
+ * rule as every other audio surface in the mesh (crosstalk/contracts/audio-honesty-standard.md).
+ */
+function voiceLabel(basis: 'self' | 'narrator' | null | undefined): string {
+  if (basis === 'self') return 'your consented voice clone';
+  if (basis === 'narrator') return 'the house narrator — NOT your voice';
+  return 'voice unknown — HiveJournal did not report which voice spoke';
+}
+
 export type StudioClip = {
   src: string;
   poster: string | null;
@@ -147,7 +163,8 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
   const [selected, setSelected] = React.useState<StudioClip | null>(clips[0] ?? null);
   const [manifest, setManifest] = React.useState<NarrationManifest | null>(null);
   const [manifestError, setManifestError] = React.useState<string | null>(null);
-  const [takes, setTakes] = React.useState<NarrationTake[]>([]);
+  const [allTakes, setAllTakes] = React.useState<StudioTake[]>([]);
+  const [source, setSource] = React.useState<Source>('recorded');
   const [recording, setRecording] = React.useState<number | null>(null);
   const [busy, setBusy] = React.useState<string | null>(null);
   const [positionMs, setPositionMs] = React.useState(0);
@@ -169,7 +186,7 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
   React.useEffect(() => {
     setManifest(null);
     setManifestError(null);
-    setTakes([]);
+    setAllTakes([]);
     if (!selected) return;
     if (!selected.manifestUrl) {
       setManifestError(
@@ -193,7 +210,7 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
       if (key) {
         const r = await fetch(`/api/admin/demo-narration?clipKey=${encodeURIComponent(key)}`);
         const j = await r.json().catch(() => ({}));
-        if (!cancelled && j?.ok) setTakes(j.takes);
+        if (!cancelled && j?.ok) setAllTakes(j.takes);
       }
     })();
     return () => {
@@ -201,6 +218,10 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
     };
   }, [selected, key]);
 
+  const takes = allTakes.filter((t) => t.source === source);
+  const otherCount = allTakes.filter((t) => t.source !== source).length;
+  const ttsBases = new Set(allTakes.filter((t) => t.source === 'tts').map((t) => t.voiceBasis));
+  const ttsBasis = ttsBases.size === 1 ? [...ttsBases][0] : null;
   const plan = manifest ? planNarration(manifest, takes) : null;
   const current = manifest ? lineAt(manifest, positionMs) : null;
 
@@ -248,9 +269,9 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
       setStatus(j?.error ?? 'Save failed.');
       return;
     }
-    setTakes((prev) => [
-      ...prev.filter((t) => t.lineIndex !== lineIndex),
-      { lineIndex, url: j.url, durationMs: j.durationMs },
+    setAllTakes((prev) => [
+      ...prev.filter((t) => !(t.lineIndex === lineIndex && t.source === 'recorded')),
+      { lineIndex, url: j.url, durationMs: j.durationMs, source: 'recorded', voiceBasis: null },
     ]);
     setStatus(null);
   }
@@ -258,10 +279,11 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
   async function deleteTake(lineIndex: number) {
     if (!key) return;
     setBusy(`Removing line ${lineIndex + 1}…`);
-    await fetch(`/api/admin/demo-narration?clipKey=${encodeURIComponent(key)}&lineIndex=${lineIndex}`, {
-      method: 'DELETE',
-    });
-    setTakes((prev) => prev.filter((t) => t.lineIndex !== lineIndex));
+    await fetch(
+      `/api/admin/demo-narration?clipKey=${encodeURIComponent(key)}&lineIndex=${lineIndex}&source=${source}`,
+      { method: 'DELETE' },
+    );
+    setAllTakes((prev) => prev.filter((t) => !(t.lineIndex === lineIndex && t.source === source)));
     setBusy(null);
   }
 
@@ -367,6 +389,44 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
     setBusy(null);
   }
 
+  /** Ask HiveJournal to read every line in the owner's consented clone. */
+  async function generateTts() {
+    if (!key || !selected?.manifestUrl) return;
+    const embedId = window.prompt(
+      'HiveJournal embed id to synthesise with (the one whose voice clone is yours):',
+    );
+    if (!embedId) return;
+    setBusy('Synthesising every line…');
+    try {
+      const res = await fetch('/api/admin/demo-narration/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clipKey: key, manifestUrl: selected.manifestUrl, embedId }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) {
+        setStatus(
+          j?.code === 'not_configured'
+            ? 'Partner audio is not configured here.'
+            : j?.error ?? 'Synthesis failed.',
+        );
+      } else {
+        setStatus(
+          `Synthesised ${j.generated} line(s)` +
+            (j.failed ? `, ${j.failed} failed` : '') +
+            ` — ${voiceLabel(j.voiceBasis)}.`,
+        );
+        const r = await fetch(`/api/admin/demo-narration?clipKey=${encodeURIComponent(key)}`);
+        const g = await r.json().catch(() => ({}));
+        if (g?.ok) setAllTakes(g.takes);
+        setSource('tts');
+      }
+    } catch (e: any) {
+      setStatus(`Synthesis failed: ${e?.message ?? e}`);
+    }
+    setBusy(null);
+  }
+
   /** Publish the mix so visitors can toggle it on /features. */
   async function publishSoundtrack() {
     if (!plan || !key || !manifest || !selected) return;
@@ -380,6 +440,8 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
       body.set('durationMs', String(plan.totalMs));
       body.set('linesRecorded', String(plan.placed.length));
       body.set('linesTotal', String(manifest.lines.length));
+      body.set('source', source);
+      if (source === 'tts' && ttsBasis) body.set('voiceBasis', ttsBasis);
       body.set('audio', blob, 'narration.wav');
       const res = await fetch('/api/admin/demo-narration/publish', { method: 'POST', body });
       const j = await res.json().catch(() => ({}));
@@ -467,6 +529,59 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
                 {current?.say ?? <span className="text-muted-foreground">—</span>}
               </p>
             </div>
+
+            {/* Which version is being previewed, mixed and published. */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="inline-flex overflow-hidden rounded-lg border border-border">
+                {(['recorded', 'tts'] as const).map((sv) => (
+                  <button
+                    key={sv}
+                    type="button"
+                    onClick={() => setSource(sv)}
+                    className={`px-3 py-1.5 text-xs font-medium transition ${
+                      source === sv
+                        ? 'bg-sky-600 text-white'
+                        : 'bg-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {sv === 'recorded' ? 'You, reading' : 'Cloned voice'}
+                    <span className="ml-1.5 opacity-70">
+                      {allTakes.filter((t) => t.source === sv).length}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={generateTts}
+                disabled={!manifest || !!busy}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs text-foreground disabled:opacity-40"
+              >
+                Synthesise all lines
+              </button>
+              {otherCount > 0 ? (
+                <span className="text-[11px] text-muted-foreground">
+                  {otherCount} take(s) in the other version
+                </span>
+              ) : null}
+            </div>
+
+            {/* ⚠️ The honesty line. Only `self` may be described as the owner's voice; an
+                unreported basis renders as unknown, never optimistically. */}
+            {source === 'tts' && allTakes.some((t) => t.source === 'tts') ? (
+              <p
+                className={`mt-2 rounded-lg border px-3 py-2 text-xs ${
+                  ttsBasis === 'self'
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100'
+                    : 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+                }`}
+              >
+                Synthesised — {voiceLabel(ttsBasis)}.
+                {ttsBasis !== 'self'
+                  ? ' Do not publish this as your own voice.'
+                  : ''}
+              </p>
+            ) : null}
 
             <div className="mt-3 flex flex-wrap gap-2">
               <button

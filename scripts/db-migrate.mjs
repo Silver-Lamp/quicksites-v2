@@ -151,7 +151,25 @@ function cmdUp() {
       fail(`Stopped at ${m.version}. Earlier migrations are applied + recorded; fix and re-run.`);
     }
   }
-  console.log('\n  All pending migrations applied.\n');
+  // ⚠️ TELL POSTGREST THE SCHEMA MOVED. Supabase's API layer caches the schema, and the JS
+  // client talks to that layer — not to Postgres. So a migration can apply perfectly and the
+  // very next `.upsert(..., { onConflict })` still fails with "there is no unique or exclusion
+  // constraint matching the ON CONFLICT specification", naming a constraint that demonstrably
+  // EXISTS in pg_indexes. That cost a real recording on 2026-10-01: the migration said `done`,
+  // the index was there, and saving a narration take failed anyway.
+  //
+  // Best-effort: a migration that applied is applied whether or not the cache reloads, so this
+  // must never turn a successful run into a failed one.
+  try {
+    execFileSync(PSQL, [CONN, '-v', 'ON_ERROR_STOP=1', '-c', "notify pgrst, 'reload schema'"], {
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
+    console.log('\n  All pending migrations applied. PostgREST schema cache reloaded.\n');
+  } catch {
+    console.log('\n  All pending migrations applied.');
+    console.log("  \x1b[33m⚠ Could not reload the PostgREST cache. If the API 400s on a new\x1b[0m");
+    console.log("  \x1b[33m  column or ON CONFLICT target, run: notify pgrst, 'reload schema'\x1b[0m\n");
+  }
 }
 
 function cmdBackfill() {

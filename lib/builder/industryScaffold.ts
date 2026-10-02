@@ -663,10 +663,24 @@ export function buildIndustryStarter(opts: {
     blocks.splice(at, 0, createDefaultBlock('service_transparency') as any);
   }
 
-  // Photographers lead with their work — a photo gallery right after the hero (the
-  // portfolio a photographer site is nothing without). The gallery block is addable on
-  // any visual site; this just seeds it where it's most load-bearing.
-  if (industryKey === 'photography') {
+  // A photo gallery right after the hero, for every trade whose work is the sales pitch.
+  //
+  // ⚠️ THIS WAS GATED ON `photography` ALONE, AND WE HAVE ZERO PHOTOGRAPHY SITES — so the
+  // gallery block appeared on 0 of ~2,800 templates despite having a schema, a renderer, an
+  // editor and this very scaffold line. It was built and unreachable. The reason our sites
+  // look plainer than a Framer template is not usually a missing block; it is a block nobody
+  // can get to.
+  //
+  // ⚠️ SEEDED EMPTY, AND THAT IS SAFE because the renderer shows NOTHING publicly until the
+  // owner adds images — and now shows a prompt in the editor so they know it is there. It
+  // invents no claim about the business, unlike a seeded pricing table or a process list.
+  const GALLERY_INDUSTRIES = new Set<IndustryKey>([
+    'photography',
+    // Trades whose finished work is the portfolio.
+    'concrete', 'epoxy_flooring', 'landscaping', 'painting', 'paving',
+    'deck_builder', 'fencing', 'general_contractor',
+  ]);
+  if (GALLERY_INDUSTRIES.has(industryKey)) {
     blocks.splice(1, 0, createDefaultBlock('gallery') as any);
   }
 

@@ -422,6 +422,21 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   session recommended consolidating, shipped a 301 and reverted it the same day. They stay
   excluded from fleet aggregates (`lib/gsc/fleetScope.ts`) because the traffic is an automated
   monitoring script, not demand — measurement hygiene, never suppression.
+- **⚠️ A BLOCK CAN EXIST AND BE UNREACHABLE — check usage before building a new one (2026-10-02).**
+  Asked to close the design gap against Framer-class templates, the first instinct was "we need a
+  gallery block". We already had one: schema, renderer, a dedicated editor, and a scaffold line —
+  and it appeared on **0 of ~2,800 templates**, because the scaffold gated it on
+  `industryKey === 'photography'` and the fleet has **zero** photography sites. Built, polished,
+  unreachable. ⚠️ **Then, once reachable, it was still invisible**: an empty gallery returned
+  `null` unconditionally, so a seeded one showed nothing in the BUILDER either and no owner would
+  ever discover it. The products_grid rule is two-sided — the hint belongs in the editor, and
+  there must *be* a hint (`isEditorContext`, `lib/editor/isEditorContext.ts`). Now seeded for
+  nine visual trades (`GALLERY_INDUSTRIES`), empty, inventing nothing; a pricing table or process
+  list seeded the same way WOULD invent claims, which is why those stay owner-added.
+  ⚠️ **Before adding a block, run the usage query** — `select b->>'type', count(*) from templates
+  t, jsonb_array_elements(t.data->'pages') pg, jsonb_array_elements(pg->'blocks') b group by 1` —
+  the fleet's real recipe is hero/contact/services/faq/cta and little else, so the plainness is
+  usually a reachability problem rather than a missing feature.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
   `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser

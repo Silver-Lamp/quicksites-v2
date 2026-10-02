@@ -333,6 +333,49 @@ html, body, #__next { width: 100%; max-width: 100%; }
   font-size: var(--qs-lead, inherit);
 }
 
+/* ── Sticker surfaces (lib/theme/surfaceTreatment.ts) ────────────────────────
+
+   The "toon" look, and only one quarter of it is the font. Three parts here:
+
+   1. HARD OFFSET SHADOW, ZERO BLUR. A blurred shadow reads as depth; an
+      un-blurred one reads as a sticker lying on the page. Cheapest part of the
+      look and the one most often got wrong.
+   2. BLACK INK OUTLINES. Ink, never a tint of the accent — tinted outlines are
+      what make a bright palette read muddy.
+   3. IRREGULAR, VARYING border-radius. A uniform radius always reads as
+      machine-drawn however round it is; four mismatched corners read as drawn
+      by a hand. ⚠️ And it must VARY BETWEEN ELEMENTS — one irregular radius
+      applied everywhere is just a different machine shape, and the eye locks
+      onto the repeat immediately. Five sets cycled with :nth-of-type, chosen
+      against typical grid widths (2/3/4) so the pattern never lines up into
+      columns. No JavaScript, correct at SSR.
+
+   Scoped to [data-qs-surface="sticker"], which only a theme declaring
+   `surface: 'sticker'` emits — every other site matches nothing. */
+[data-qs-surface='sticker'] :is(.bg-card, button, [role='button'], a[class*='bg-primary']) {
+  border: var(--qs-surface-ink, 2px) solid #000;
+  box-shadow: var(--qs-surface-shadow, 3px 3px 0 rgba(0, 0, 0, 0.85));
+}
+
+[data-qs-surface='sticker'] :is(.bg-card, button, [role='button'], a[class*='bg-primary']):nth-of-type(5n + 1) { border-radius: var(--qs-wobble-1); }
+[data-qs-surface='sticker'] :is(.bg-card, button, [role='button'], a[class*='bg-primary']):nth-of-type(5n + 2) { border-radius: var(--qs-wobble-2); }
+[data-qs-surface='sticker'] :is(.bg-card, button, [role='button'], a[class*='bg-primary']):nth-of-type(5n + 3) { border-radius: var(--qs-wobble-3); }
+[data-qs-surface='sticker'] :is(.bg-card, button, [role='button'], a[class*='bg-primary']):nth-of-type(5n + 4) { border-radius: var(--qs-wobble-4); }
+[data-qs-surface='sticker'] :is(.bg-card, button, [role='button'], a[class*='bg-primary']):nth-of-type(5n + 5) { border-radius: var(--qs-wobble-5); }
+
+/* ⚠️ A press that only moves is a press nobody on a trackpad feels. Shifting the
+   element INTO its own shadow is what sells a sticker being pushed down, so the
+   shadow shrinks by exactly the distance moved. Honours reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-qs-surface='sticker'] :is(button, [role='button'], a[class*='bg-primary']) {
+    transition: transform 90ms ease-out, box-shadow 90ms ease-out;
+  }
+  [data-qs-surface='sticker'] :is(button, [role='button'], a[class*='bg-primary']):active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+  }
+}
+
 /* ── Vertical space in proportion to content ─────────────────────────────────
 
    Every section used to be the same height regardless of what it held, so a

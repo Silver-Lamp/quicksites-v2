@@ -70,8 +70,11 @@ const CLIPS: Record<string, ClipSpec> = {
     feature: 'block-based-template-editor',
     label: 'Building a site from scratch, signed out',
     blurb: 'Describe a business, watch the site appear. No account.',
-    // The form with the name being typed — distinct from editor-tour's poster (the editor).
-    posterAt: 16,
+    // The first frame where the business name is FULLY typed ("Wildflower Candle Co."), just
+    // inside the 14.0–17.64s "Type the business name" step. 16s caught it mid-word ("Wildfl"):
+    // the right moment, but a thumbnail of a half-typed word reads as a glitch. Picked off
+    // frames extracted at explicit timestamps, never from a tile index.
+    posterAt: 17.3,
   },
   'editor-tour': {
     feature: 'block-based-template-editor',

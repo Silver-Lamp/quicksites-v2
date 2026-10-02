@@ -31,6 +31,13 @@ staging build is a demo of something nobody can sign up for. The cost: a guest-b
 leaves a real anonymous draft row behind, exactly like a visitor. Those rows land in the
 guest-build funnel counts, which somebody reads, so say so when you run it.
 
+⚠️ **Both scripts load `.env.local` themselves** — run them from any shell. They did not at
+first: `upload-demo-videos.mts` needed Supabase credentials and only ever worked because the
+session running it had already sourced `.env.local`. The copy-command button handed the bare
+command to a clean shell and it died on `supabaseUrl is required` **after** the recording had
+finished — i.e. after the slow half that creates a real guest draft. The command was verified as
+a *string*, never run from a clean environment.
+
 ## 2. The rules that are load-bearing
 
 **Dated storage paths.** `demos/<YYYY-MM-DD>/<name>.mp4`, with the date taken from the FILENAME,

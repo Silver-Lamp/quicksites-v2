@@ -32,6 +32,10 @@ export type DemoClip = {
   poster?: string;
   manifest?: string;
   duration_seconds?: number;
+  /** Published narration mix + how much of the script it covers. */
+  narration?: string;
+  narration_lines_recorded?: number;
+  narration_lines_total?: number;
 };
 
 export type PlanResult = { videoUrl: string | null; clips: DemoClip[] };
@@ -72,8 +76,29 @@ export function planDemoClips(args: {
   // others. They are now peer cards in one row, and a primary left out of the catalogue is the
   // one card with no poster and no duration — the only blank box in the row.
   for (const u of args.uploaded) {
+    // ⚠️ CARRY NARRATION ACROSS A RE-PUBLISH, BUT DROP IT ON A RE-RECORD. The upload script
+    // rebuilds each clip entry from scratch, so a plain overwrite silently strips a published
+    // narration track — the only symptom being a speaker icon vanishing from /features.
+    //
+    // But a SAME-DAY re-record reuses the same dated path, so blindly preserving would keep a
+    // track timed against footage that no longer exists: the voice would describe the wrong
+    // thing, which is worse than no narration and far harder to notice. The duration is the
+    // fingerprint — re-records shift it every time (31.64→31.32, 19.56→20.24, 28.8→32.2 on
+    // 2026-10-01), so an unchanged duration means the same cut and a changed one means a new
+    // recording whose narration has to be re-read.
+    const existing = byUrl.get(u.src);
+    const sameCut =
+      existing?.duration_seconds != null &&
+      u.durationSeconds != null &&
+      existing.duration_seconds === u.durationSeconds;
+    const prior = sameCut ? existing : undefined;
     // Keyed by URL, so a same-day re-record updates in place instead of appending a duplicate.
     byUrl.set(u.src, {
+      ...(prior?.narration ? {
+        narration: prior.narration,
+        narration_lines_recorded: prior.narration_lines_recorded,
+        narration_lines_total: prior.narration_lines_total,
+      } : {}),
       src: u.src,
       label: u.label,
       ...(u.blurb ? { blurb: u.blurb } : {}),

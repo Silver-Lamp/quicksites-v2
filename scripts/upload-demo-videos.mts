@@ -33,6 +33,9 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { planDemoClips } from '@/lib/demos/planDemoClips';
+import { isTransientUploadError } from '@/lib/demos/uploadRetry';
+
+import { installNodeWebSocket } from '@/lib/supabase/nodeWebSocketShim';
 
 const run = promisify(execFile);
 
@@ -130,7 +133,56 @@ function parseName(file: string): { name: string; date: string } | null {
   return m ? { name: m[1], date: m[2] } : null;
 }
 
+/**
+ * Retry a storage upload through a transient network failure.
+ *
+ * ⚠️ ONE `fetch failed` ABORTED A WHOLE RUN and left storage ahead of the database: the first
+ * clip's video, poster and manifest were uploaded, the second died mid-upload, and the attach
+ * step — which runs after ALL uploads — never happened. So a manifest existed in storage that
+ * no row pointed at, and the narration studio still said "no cues" for a clip that had them.
+ * Re-running fixed it, but nothing told the operator that re-running was the remedy.
+ *
+ * Only the transport is retried. A 413, a bad key or a rejected content type will fail the same
+ * way three times, so those surface immediately rather than after three waits.
+ */
+type Uploader = {
+  upload: (
+    path: string,
+    body: Buffer,
+    opts: { contentType: string; upsert: boolean },
+  ) => Promise<{ error: { message: string } | null }>;
+};
+
+async function uploadWithRetry(
+  bucket: Uploader,
+  storagePath: string,
+  body: Buffer,
+  contentType: string,
+): Promise<{ error: { message: string } | null }> {
+  const ATTEMPTS = 3;
+  let last: { message: string } | null = null;
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    try {
+      const { error } = await bucket.upload(storagePath, body, { contentType, upsert: true });
+      if (!error) return { error: null };
+      last = error;
+      // A rejection the server MEANT will not change on a retry.
+      if (!isTransientUploadError(error.message)) return { error };
+    } catch (e: any) {
+      last = { message: e?.message ?? String(e) };
+    }
+    if (attempt < ATTEMPTS) {
+      const waitMs = 1000 * attempt;
+      console.warn(`  … ${storagePath} failed (${last?.message}) — retrying in ${waitMs}ms`);
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+  return { error: last };
+}
+
 async function main() {
+  // Node 20 shells need this before the client is constructed; a no-op on 22+.
+  await installNodeWebSocket();
   const { supabaseAdmin } = await import('@/lib/supabase/admin');
 
   const dir = path.resolve(process.cwd(), LOCAL_DIR);
@@ -208,10 +260,15 @@ async function main() {
   for (const p of planned) {
     const local = path.join(dir, p.file);
     const body = fs.readFileSync(local);
-    const { error } = await supabaseAdmin.storage
-      .from(BUCKET)
-      .upload(p.storagePath, body, { contentType: 'video/mp4', upsert: true });
-    if (error) throw new Error(`upload ${p.storagePath} failed: ${error.message}`);
+    const { error } = await uploadWithRetry(
+      supabaseAdmin.storage.from(BUCKET), p.storagePath, body, 'video/mp4',
+    );
+    if (error) {
+      throw new Error(
+        `upload ${p.storagePath} failed after retries: ${error.message}\n` +
+        `  Nothing was attached. Re-run this command — it is idempotent and will resume.`,
+      );
+    }
     urls.set(p.file, supabaseAdmin.storage.from(BUCKET).getPublicUrl(p.storagePath).data.publicUrl);
     console.log(`  ✓ uploaded ${p.storagePath}`);
 
@@ -228,9 +285,9 @@ async function main() {
       continue;
     }
     const posterPath = p.storagePath.replace(/\.mp4$/, '.jpg');
-    const { error: pErr } = await supabaseAdmin.storage
-      .from(BUCKET)
-      .upload(posterPath, fs.readFileSync(posterLocal), { contentType: 'image/jpeg', upsert: true });
+    const { error: pErr } = await uploadWithRetry(
+      supabaseAdmin.storage.from(BUCKET), posterPath, fs.readFileSync(posterLocal), 'image/jpeg',
+    );
     if (pErr) {
       console.warn(`  ⚠ poster upload failed for ${p.name}: ${pErr.message}`);
       continue;
@@ -245,12 +302,10 @@ async function main() {
     const manifestLocal = local.replace(/\.mp4$/, '.json');
     if (fs.existsSync(manifestLocal)) {
       const manifestPath = p.storagePath.replace(/\.mp4$/, '.json');
-      const { error: mErr } = await supabaseAdmin.storage
-        .from(BUCKET)
-        .upload(manifestPath, fs.readFileSync(manifestLocal), {
-          contentType: 'application/json',
-          upsert: true,
-        });
+      const { error: mErr } = await uploadWithRetry(
+        supabaseAdmin.storage.from(BUCKET), manifestPath, fs.readFileSync(manifestLocal),
+        'application/json',
+      );
       if (mErr) console.warn(`  ⚠ manifest upload failed for ${p.name}: ${mErr.message}`);
       else {
         manifests.set(

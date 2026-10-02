@@ -109,6 +109,14 @@ Two of sixteen features have a clip. These are the ones where *seeing it* beats 
 Pages drawer covering a hero any more. (The first cut did — they were recorded hours before the
 fix. A demo is a dated artifact: re-record after any change to what it shows.)
 
+⚠️ **A failed upload is safe to re-run, and you should.** Uploads happen before any database
+write, so a mid-run network failure leaves storage ahead of the DB — files nobody references yet,
+which is the safe direction. But it also means a manifest can sit in storage while the studio
+still says "no cues". The script retries transient transport failures three times with backoff
+and, if it still fails, says plainly that nothing was attached and the command resumes. Real
+occurrence 2026-10-01: one `fetch failed` on the second clip aborted a run after the first had
+fully uploaded.
+
 ## 3b. Why re-recording is not a button
 
 ⚠️ **It cannot run on Vercel**, and the reasons are structural rather than fiddly: there is no
@@ -128,6 +136,30 @@ leaves a real anonymous draft in the production funnel count. If a mini ever run
 `npm run render:worker` persistently, the honest upgrade is a `demo` job kind whose row carries a
 **scenario name from a fixed allowlist** — never a command, which is the property that keeps a
 queue row from executing code on the machine.
+
+## 3c. A narrated copy of the video
+
+`/features` plays the narration alongside the clip, so no muxing is needed there. For anywhere
+that cannot play two files — email, Keynote, YouTube, a phone — burn them together:
+
+```bash
+npx tsx scripts/mux-narration.mts guest-build
+# → demo-videos/narrated/guest-build-<date>-narrated.mp4
+```
+
+⚠️ **Output goes to `demo-videos/narrated/`, never `demo-videos/` itself** — the upload script
+treats everything in that folder as an input it must be able to date, so one muxed file there
+made every subsequent upload refuse to run.
+
+⚠️ **The scripts work on Node 20 as well as the pinned 24.** `supabase-js` throws "Node.js 20
+detected without native WebSocket support" while merely *constructing* the client, in a shell
+that has not run `nvm use`. `lib/supabase/nodeWebSocketShim.ts` installs `ws` first — which only
+works because the client is a **dynamic** `await import()`; a static import is hoisted above
+every statement and the shim would run too late.
+
+It finds the published track itself. ⚠️ **It refuses on a duration mismatch**: narration is timed
+to one specific cut, and muxing it against a different recording yields a file where the voice
+describes the wrong thing — plausible-looking and wrong, the worst artifact to hand a prospect.
 
 ## 4. Adding one
 

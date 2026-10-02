@@ -21,6 +21,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   pnw_prestige: 'content',
   text: 'content',
   image: 'content',
+  selected_work: 'content',
   video: 'content',
   audio: 'content',
   quote: 'content',

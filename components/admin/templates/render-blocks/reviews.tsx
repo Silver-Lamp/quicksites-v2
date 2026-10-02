@@ -15,6 +15,7 @@
 
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
+import { isEditorContext } from '@/lib/editor/isEditorContext';
 
 type Props = { block?: Block; content?: Block['content']; previewOnly?: boolean };
 
@@ -30,7 +31,7 @@ function Stars({ value, className = '' }: { value: number; className?: string })
   );
 }
 
-export default function RenderReviews({ block, content }: Props) {
+export default function RenderReviews({ block, content, previewOnly }: Props) {
   const c: any = content ?? block?.content ?? {};
   const title: string = c.title || 'What customers say';
   const productName: string = typeof c.product_name === 'string' ? c.product_name.trim() : '';
@@ -45,7 +46,20 @@ export default function RenderReviews({ block, content }: Props) {
     }))
     .filter((r: Review) => r.author && r.text);
 
-  if (!reviews.length) return null;
+  // ⚠️ `previewOnly` was DECLARED in Props and never used — the block returned null in the
+  // editor too, so a seeded-empty reviews section was invisible to the owner and stayed empty
+  // forever. Exactly the state the gallery was in. Public still gets nothing: an empty "What
+  // customers say" tells a visitor the business has no customers.
+  if (!reviews.length) {
+    if (!isEditorContext(previewOnly)) return null;
+    return (
+      <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+        <div className="text-base">★</div>
+        Reviews — paste real ones in this block&apos;s panel. Nothing shows on your live site
+        until you do, and nothing here is generated for you.
+      </div>
+    );
+  }
 
   const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
 

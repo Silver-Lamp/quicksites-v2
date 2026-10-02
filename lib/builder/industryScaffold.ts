@@ -134,11 +134,26 @@ export function buildIndustryStarter(opts: {
   businessName: string;
   industryKey: IndustryKey;
   themeId?: string | null;
+  /**
+   * Superadmin-pinned typeface for this industry, if the (async) caller loaded one.
+   *
+   * ⚠️ PASSED IN, NOT READ HERE. This function is pure and runs in scripts, tests and the
+   * scaffold sweep; reading `site_settings` would make all of them async. ⚠️ And without this
+   * the pin control is a LIE: a new site's face comes from `pickCuratedTheme(...).fontPair`,
+   * so "new towing sites will use Archivo" was simply not true until the creation path started
+   * honouring it.
+   */
+  fontPair?: string | null;
 }) {
   const businessName = (opts.businessName || '').trim();
   const industryKey = opts.industryKey;
   const label = KEY_TO_LABEL[industryKey] ?? 'Other';
   const theme = themeForIndustry(industryKey, opts.themeId);
+  // The pin overrides only the typeface — the curated theme still chooses colour, radius,
+  // surface and layout, which is the part that keeps sites from looking identical.
+  if (opts.fontPair) {
+    theme.stamped = { ...theme.stamped, fontPair: opts.fontPair } as typeof theme.stamped;
+  }
 
   const base: any = createEmptyTemplate(businessName || label);
 
@@ -663,11 +678,60 @@ export function buildIndustryStarter(opts: {
     blocks.splice(at, 0, createDefaultBlock('service_transparency') as any);
   }
 
-  // Photographers lead with their work — a photo gallery right after the hero (the
-  // portfolio a photographer site is nothing without). The gallery block is addable on
-  // any visual site; this just seeds it where it's most load-bearing.
-  if (industryKey === 'photography') {
+  // A photo gallery right after the hero, for every trade whose work is the sales pitch.
+  //
+  // ⚠️ THIS WAS GATED ON `photography` ALONE, AND WE HAVE ZERO PHOTOGRAPHY SITES — so the
+  // gallery block appeared on 0 of ~2,800 templates despite having a schema, a renderer, an
+  // editor and this very scaffold line. It was built and unreachable. The reason our sites
+  // look plainer than a Framer template is not usually a missing block; it is a block nobody
+  // can get to.
+  //
+  // ⚠️ SEEDED EMPTY, AND THAT IS SAFE because the renderer shows NOTHING publicly until the
+  // owner adds images — and now shows a prompt in the editor so they know it is there. It
+  // invents no claim about the business, unlike a seeded pricing table or a process list.
+  const GALLERY_INDUSTRIES = new Set<IndustryKey>([
+    // ⚠️ `personal` is the CREATIVES scaffold and it had no way to show work at all —
+    // hero › story › voice_welcome › audio_faq › cta › contact_form. A portfolio site with no
+    // portfolio. For a photographer, designer or illustrator that is the entire product.
+    'photography', 'personal',
+    // Makers: the thing they made is the pitch.
+    'artisan_goods', 'crafts', 'handmade', 'custom_apparel',
+    // Trades whose finished work is the portfolio.
+    'concrete', 'epoxy_flooring', 'landscaping', 'painting', 'paving',
+    'deck_builder', 'fencing', 'general_contractor',
+  ]);
+  if (GALLERY_INDUSTRIES.has(industryKey)) {
     blocks.splice(1, 0, createDefaultBlock('gallery') as any);
+  }
+
+  // Authors sell on reviews and press, not on a photo grid — a book cover in a gallery is a
+  // thumbnail, while a quote from a reader is the pitch. The `reviews` block existed and was
+  // used on ZERO sites.
+  //
+  // ⚠️ SEEDED EMPTY AND NEVER GENERATED. A fabricated review is the invented-testimonial rule
+  // with a star rating attached, and it would emit Review JSON-LD — a structured-data lie to
+  // search engines about a real person's book. The editor hint says so in as many words.
+  if (industryKey === 'author') {
+    const faqIdx = blocks.findIndex((b: any) => b?.type === 'faq');
+    blocks.splice(faqIdx >= 0 ? faqIdx : blocks.length, 0, createDefaultBlock('reviews') as any);
+  }
+
+  // A named index of work, for the people whose credits ARE the pitch. Benchmarked against
+  // louver.framer.website: seven titled entries carry its whole middle.
+  //
+  // ⚠️ This is not the gallery and does not replace it. A gallery answers "what does your work
+  // look like"; this answers "what have you done, and for whom" — the credit line a grid of
+  // untitled images cannot carry. Photographers get both: wall first, credits after.
+  // Authors get it instead of a gallery, because a book is a title and a publisher, not a
+  // thumbnail. Seeded EMPTY — a sample credit would be a fabricated one under a real name.
+  const WORK_INDEX_INDUSTRIES = new Set<IndustryKey>(['personal', 'photography', 'author']);
+  if (WORK_INDEX_INDUSTRIES.has(industryKey)) {
+    // ⚠️ `cta` is in the anchor list, and that matters. Without it the `personal` scaffold —
+    // which has no services and no faq — fell through to contact_form and landed the work
+    // index AFTER the call to action: asking for the click before showing the work.
+    const TAIL = new Set(['services', 'faq', 'cta', 'contact_form']);
+    const anchorIdx = blocks.findIndex((b: any) => TAIL.has(b?.type));
+    blocks.splice(anchorIdx >= 0 ? anchorIdx : blocks.length, 0, createDefaultBlock('selected_work') as any);
   }
 
   // Auto dealer: inventory up front — a browsable vehicle grid where each car has a

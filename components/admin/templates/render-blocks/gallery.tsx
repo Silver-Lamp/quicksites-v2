@@ -8,12 +8,13 @@
 
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
+import { isEditorContext } from '@/lib/editor/isEditorContext';
 
 type Img = { url?: string; caption?: string; alt?: string };
-type Props = { block?: Block; content?: Block['content'] };
+type Props = { block?: Block; content?: Block['content']; previewOnly?: boolean };
 const s = (v: any) => (typeof v === 'string' ? v.trim() : '');
 
-export default function RenderGallery({ block, content }: Props) {
+export default function RenderGallery({ block, content, previewOnly }: Props) {
   const c: any = content ?? block?.content ?? {};
   const title = s(c.title) || 'Gallery';
   const columns = Math.min(4, Math.max(2, Number(c.columns) || 3));
@@ -34,7 +35,22 @@ export default function RenderGallery({ block, content }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, close, step]);
 
-  if (!images.length) return null;
+  // ⚠️ AN EMPTY GALLERY RENDERS NOTHING IN PUBLIC — AND SOMETHING IN THE EDITOR.
+  // It returned null unconditionally, which is right for a visitor and wrong for the owner:
+  // a seeded-empty gallery was invisible in the builder, so nobody ever discovered it or
+  // filled it. The block has a schema, a renderer, an editor and a scaffold line, and appears
+  // on ZERO of 2,800 sites — gated behind `industry === 'photography'`, of which we have none.
+  // Same asymmetry products_grid settled: the hint belongs in the editor, never on the page.
+  if (!images.length) {
+    if (!isEditorContext(previewOnly)) return null;
+    return (
+      <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+        <div className="text-base">🖼️</div>
+        Photo gallery — add images in this block&apos;s panel. Nothing shows on your live site
+        until you do.
+      </div>
+    );
+  }
 
   const colClass = columns === 2 ? 'sm:grid-cols-2' : columns === 4 ? 'sm:grid-cols-3 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3';
   const jsonLd = {

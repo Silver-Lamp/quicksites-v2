@@ -422,6 +422,83 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   session recommended consolidating, shipped a 301 and reverted it the same day. They stay
   excluded from fleet aggregates (`lib/gsc/fleetScope.ts`) because the traffic is an automated
   monitoring script, not demand — measurement hygiene, never suppression.
+- **⚠️ A BLOCK CAN EXIST AND BE UNREACHABLE — check usage before building a new one (2026-10-02).**
+  Asked to close the design gap against Framer-class templates, the first instinct was "we need a
+  gallery block". We already had one: schema, renderer, a dedicated editor, and a scaffold line —
+  and it appeared on **0 of ~2,800 templates**, because the scaffold gated it on
+  `industryKey === 'photography'` and the fleet has **zero** photography sites. Built, polished,
+  unreachable. ⚠️ **Then, once reachable, it was still invisible**: an empty gallery returned
+  `null` unconditionally, so a seeded one showed nothing in the BUILDER either and no owner would
+  ever discover it. The products_grid rule is two-sided — the hint belongs in the editor, and
+  there must *be* a hint (`isEditorContext`, `lib/editor/isEditorContext.ts`). Now seeded for
+  nine visual trades (`GALLERY_INDUSTRIES`), empty, inventing nothing; a pricing table or process
+  list seeded the same way WOULD invent claims, which is why those stay owner-added.
+  ⚠️ **Before adding a block, run the usage query** — `select b->>'type', count(*) from templates
+  t, jsonb_array_elements(t.data->'pages') pg, jsonb_array_elements(pg->'blocks') b group by 1` —
+  the fleet's real recipe is hero/contact/services/faq/cta and little else, so the plainness is
+  usually a reachability problem rather than a missing feature.
+  ⚠️ **32 of 67 block types are used on ZERO sites** (2026-10-02). Among them `video`, `image`,
+  `audio`, `reviews` and `gallery` — precisely what authors/photographers/creatives need.
+  ⚠️ **And four of those were unsafe to seed**: `video` rendered `<video controls><source>` with
+  no source, `image` an `<img>` with no src, `audio` an empty 80px `<iframe>` — broken furniture
+  on a live site for anyone who added one from the palette before filling it in. `gallery` and
+  `reviews` had the opposite fault, returning `null` even in the editor, which is why nobody
+  ever filled them. All five now follow the two-sided rule via `isEditorContext`, pinned by
+  `unconfiguredBlocksStaySilent.test.ts`. ⚠️ **`reviews`' default content had NEVER validated** —
+  it carried one placeholder row at `rating: 0` against a schema requiring `min(1)`, invisible
+  because the block was seeded nowhere; the same two-contradicting-decisions shape as the
+  testimonial `.min(1)` bug (#1084), caught the same way by the scaffold sweep. Now `[]`.
+  **New block `selected_work` (2026-10-02)** — a NAMED index of work (title · meta · blurb ·
+  image · optional link), seeded for `personal`, `photography` and `author`. ⚠️ **It is not the
+  gallery and does not replace it**: a gallery answers "what does your work look like", this
+  answers "what have you done, and for whom" — the credit line a grid of untitled images cannot
+  carry (benchmarked on louver.framer.website, whose middle is seven titled entries). A row
+  without a TITLE is dropped: an image-only entry belongs in the gallery. ⚠️ Anchored above the
+  **marketing tail** (`services|faq|cta|contact_form`) — omitting `cta` from that list put it
+  after the call to action on `personal`, which has no services or faq: asking for the click
+  before showing the work.
+  **Design parity is a PRESENTATION problem, not a block problem** —
+  [`docs/DESIGN_PARITY_PLAN.md`](docs/DESIGN_PARITY_PLAN.md), measured 2026-10-02 against four
+  Framer templates. ⚠️ **2,452 of 3,231 templates (76%) have no `fontPair`** and render in
+  `ui-sans-serif`: the pairing system (`lib/theme/fontPairings.ts`) exists and does not reach
+  them — the same reachability failure as the dead blocks, and the cheapest win available.
+  ⚠️ **Our h1 is 48px on every site measured**; theirs is 72–220px. ⚠️ **We animate nothing**;
+  they carry 200+ entry-animated elements. ⚠️ **But `jonas.framer.website` is 2k px with ONE
+  image and still reads premium — the same height as our sites** — so the variable is type,
+  space and motion, NOT page length or photo count. Do not pad pages to compete; it costs
+  performance and closes nothing.
+  ⚠️ **1,199 templates have ZERO pages** — duplicate/version artifacts (1,188 carry the builder's
+  `-xxxx` random suffix), owned by 4 operator accounts, **0 published, 0 real custom domains, 0
+  referenced** by `geo_industry_campaigns` or `published_sites`. `scripts/archive-empty-templates.mts`
+  flags them `archived` (the column exists and `/api/admin/templates/list` already filters it) —
+  **archive, never delete**: a flag survives discovering that some other query forgot to filter
+  `archived`, and 1,199 deleted rows do not. It re-checks every safety condition **per row at
+  write time**, because a survey is a snapshot and a bulk job that trusts its own earlier count
+  is how a live site gets archived. ⚠️ `custom_domain` was `''` on 368 of them — `is not null`
+  is not `is not empty`, and the first count read those as real domains. ⚠️ `archived` is NOT
+  content, so `commit_template` is the wrong tool; the documented
+  `set_config('app.bypass_template_guard','on', true)` inside a txn is the path (verified a
+  direct UPDATE raises, and the bypass works, both in a rolled-back transaction).
+  **Pin a typeface to an industry from the editor (2026-10-02)**: the theme panel's footer lets
+  an admin make the pairing they are looking at the default for that industry
+  (`POST /api/admin/theme/industry-font-pin` → `site_settings.industry_font_pairs`,
+  `lib/theme/industryFontOverrides.ts`). Taste lives with the person looking at a real site, not
+  in a TypeScript table behind a deploy. ⚠️ **A pin beats the mood table outright with NO seed
+  spreading** — the point is that every site in the trade matches. ⚠️ **Pins are validated on
+  READ**: a pairing renamed in code leaves a pin naming nothing, and serving that resolves to no
+  font — the system-stack bug all of this exists to fix. ⚠️ **It changes NEW sites only**; the
+  control says so, because "make this the default" reads like "apply everywhere".
+  ⚠️ **Two bugs worth remembering from building it.** (1) The button would have LIED: a new
+  site's face comes from `pickCuratedTheme(...).fontPair` and nothing consulted the pins, so
+  `buildIndustryStarter` gained a `fontPair` override and the create route passes it. (2) Passing
+  `fontPairForIndustry()`'s answer unconditionally would override the CURATED THEME's pairing on
+  every new site — it answers for every industry, so only an explicit pool may override.
+  ⚠️ **A pin is a POOL, not one face** (owner, 2026-10-02): one typeface per industry makes every
+  towing site in a town identical — the "obviously a template" tell. The control reads *Add X to
+  <industry> pool*, shows the pool as chips, and flips to Remove; sites spread across it by the
+  same deterministic seed, so a visitor sees variety and we can reproduce any site's face. A pool
+  of one behaves like a hard pin. ⚠️ `sanitizePins` still accepts the **legacy single-string**
+  shape, because the 1:1 version shipped first and those rows would otherwise resolve to no font.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
   `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser

@@ -5,6 +5,8 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, clientIp } from '@/lib/rateLimit';
 import { inferIndustry } from '@/lib/builder/inferIndustry';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
+import { getIndustryFontPins } from '@/lib/theme/industryFontOverrides';
+import { fontPairForIndustry } from '@/lib/theme/industryFontMood';
 import { recordSignupGeo } from '@/lib/analytics/signupGeo';
 import { autogenerateForTemplate } from '@/lib/builder/autogenerateForTemplate';
 import { pickPoolBackdrop } from '@/lib/theme/backdropPool';
@@ -101,7 +103,33 @@ export async function POST(req: Request) {
   if (isAnonymous && industryUnknown && businessName) {
     const inferred = await inferIndustry(businessName, ownerId);
     if (inferred) {
-      const rebuilt: any = buildIndustryStarter({ businessName, industryKey: inferred.key as IndustryKey });
+      // ⚠️ Honour a superadmin's pinned typeface for this industry. Without this the pin
+      // control in the editor claims "new <industry> sites will use X" and nothing makes it so:
+      // a new site's face comes from the curated theme. Best-effort — a settings read must
+      // never stop someone's site being created.
+      // ⚠️ ONLY a pin, never the mood-table fallback. `fontPairForIndustry` answers for every
+      // industry, so passing its result unconditionally would override the CURATED THEME's
+      // pairing on every new site — replacing a designed combination with a generic one, for
+      // industries nobody has expressed an opinion about. The pin is an override; the absence
+      // of a pin must leave the theme alone.
+      let pinnedPair: string | null = null;
+      try {
+        const pins = await getIndustryFontPins();
+        // Only when this industry has an approved pool; the resolver answers for EVERY
+        // industry, so calling it unconditionally would replace the curated theme's designed
+        // pairing with a generic one on every new site.
+        if (pins[inferred.key]?.length) {
+          // Seeded on the business name so the choice is stable for this site but spread
+          // across the pool for the trade.
+          pinnedPair = fontPairForIndustry(inferred.key, businessName || inferred.key, pins);
+        }
+      } catch { /* fall through to the curated theme's own pairing */ }
+
+      const rebuilt: any = buildIndustryStarter({
+        businessName,
+        industryKey: inferred.key as IndustryKey,
+        fontPair: pinnedPair,
+      });
       const rebuiltData = obj(rebuilt.data);
       rebuiltData.meta = {
         ...(rebuiltData.meta || {}),

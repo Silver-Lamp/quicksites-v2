@@ -382,6 +382,13 @@ export const DEFAULT_BLOCK_CONTENT = {
       },
     ],
   },
+  // ⚠️ Empty items, like gallery and reviews. A seeded example work would be a fabricated
+  // credit under a real person's name — the invented-testimonial rule applied to a CV.
+  selected_work: {
+    title: 'Selected work',
+    layout: 'list',
+    items: [],
+  },
   gallery: {
     title: 'Gallery',
     columns: 3,
@@ -427,17 +434,19 @@ export const DEFAULT_BLOCK_CONTENT = {
     title: 'What customers say',
     product_name: '',
     show_schema: true,
-    reviews: [
-      // ⚠️ This shipped `rating: 5` with `show_schema: true` — a fabricated five-star review
-      // emitted as structured data for search engines to ingest. A star is the part that gets
-      // aggregated and believed at a glance; it is the first thing to pull, not the last.
-      {
-        author: '',
-        rating: 0,
-        text: '',
-        date: '',
-      },
-    ],
+    // ⚠️ EMPTY, not one blank placeholder row.
+    //
+    // This shipped `rating: 5` with `show_schema: true` — a fabricated five-star review emitted
+    // as structured data for search engines to ingest. A star is the part that gets aggregated
+    // and believed at a glance, so it was the first thing pulled. But the fix set `rating: 0`,
+    // and the schema requires `min(1)`: the default content has NEVER validated. It went
+    // unnoticed because the block was seeded nowhere and used on zero of ~2,800 sites — the
+    // same two-documented-decisions-that-contradict shape as the testimonial `.min(1)` bug
+    // (#1084), found the same way, by a scaffold sweep running one against the other.
+    //
+    // An empty array is also the honest default: "no reviews yet" is a fact, a blank row with a
+    // zero rating is a malformed one.
+    reviews: [],
   },
   listings_grid: {
     title: 'Current Listings',

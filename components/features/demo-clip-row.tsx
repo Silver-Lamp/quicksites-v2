@@ -17,7 +17,7 @@
 // placeholder, never a bare white frame.
 
 import * as React from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Play } from 'lucide-react';
 
 export type DemoClipView = {
@@ -158,9 +158,11 @@ export default function DemoClipRow({
               className="w-full rounded-md bg-black"
             />
           ) : null}
-          {active?.blurb ? (
-            <p className="px-1 pb-1 text-xs text-zinc-400">{active.blurb}</p>
-          ) : null}
+          {/* Always rendered: Radix warns when DialogContent has no description, and a clip
+              with no blurb would otherwise ship an unlabelled dialog to a screen reader. */}
+          <DialogDescription className="px-1 pb-1 text-xs text-zinc-400">
+            {active?.blurb || `Recorded walkthrough: ${active?.label || featureTitle}`}
+          </DialogDescription>
         </DialogContent>
       </Dialog>
     </>

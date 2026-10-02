@@ -414,6 +414,13 @@ const NAV_ADMIN: NavItem[] = [
   },
   {
     type: 'item',
+    label: 'Demo narration',
+    href: '/admin/demo-narration',
+    icon: <Mic size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
     label: 'Platform Inbox',
     href: '/admin/inbox',
     icon: <Mail size={18} />,

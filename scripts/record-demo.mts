@@ -360,7 +360,13 @@ async function record(scenario: Scenario, base: string, keepWebm: boolean) {
   await browser.close();
   if (!videoPath) throw new Error('no video produced');
 
-  const stamp = new Date().toISOString().slice(0, 10);
+  // ⚠️ LOCAL date, not `toISOString()`. "Recorded on" is a fact about when a person sat down and
+  // recorded it, and UTC rolls over at 5pm Pacific — so an evening session stamped tomorrow's
+  // date, told viewers the wrong day on the card, filed the clip in the wrong dated folder, and
+  // (because the date is part of the storage path) published a SECOND copy of a clip that
+  // already existed rather than replacing it. Caught at 19:12 PDT, which `toISOString()` called
+  // the 2nd.
+  const stamp = new Date().toLocaleDateString('en-CA');
   const webm = path.join(OUT_DIR, `${scenario.name}-${stamp}.webm`);
   const mp4 = path.join(OUT_DIR, `${scenario.name}-${stamp}.mp4`);
   await fs.rename(videoPath, webm);
@@ -371,6 +377,12 @@ async function record(scenario: Scenario, base: string, keepWebm: boolean) {
   // beats unreadable; a jump cut over the build would imply it is instant. Segments are split
   // on the recorded step boundaries, the flagged ones re-timed, and the pieces concatenated.
   const SPEED = 8;
+  // Output-timeline duration of each step, in the FINISHED mp4. ⚠️ Not the same as the recorded
+  // range: flagged steps are sped up 8x, so a narration cue placed at a raw timestamp lands in
+  // the wrong place — usually minutes late. Measured from the encoded segments rather than
+  // computed from `to - from`, because re-encoding rounds to frame boundaries and the drift
+  // accumulates across every step before the one you care about.
+  const outDurations: number[] = [];
   const needsTimelapse = ranges.some((r) => r.timelapse && r.to - r.from > 6);
   if (!needsTimelapse) {
     await run('ffmpeg', [
@@ -379,6 +391,8 @@ async function record(scenario: Scenario, base: string, keepWebm: boolean) {
       '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
       mp4,
     ]);
+    // No re-timing happened, so each step occupies exactly the wall-clock it took.
+    for (const r of ranges) outDurations.push(Math.max(0.2, r.to - r.from));
   } else {
     const parts: string[] = [];
     for (const [i, r] of ranges.entries()) {
@@ -392,6 +406,10 @@ async function record(scenario: Scenario, base: string, keepWebm: boolean) {
         seg,
       ]);
       parts.push(seg);
+      const { stdout: segDur } = await run('ffprobe', [
+        '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', seg,
+      ]);
+      outDurations.push(Number(segDur.trim()) || (fast ? dur / SPEED : dur));
     }
     const listFile = path.join(OUT_DIR, '.concat.txt');
     await fs.writeFile(listFile, parts.map((f) => `file '${path.basename(f)}'`).join('\n'));
@@ -415,8 +433,29 @@ async function record(scenario: Scenario, base: string, keepWebm: boolean) {
   ]);
   console.log(`\n✅ ${mp4}`);
   console.log(`   ${(size / 1_048_576).toFixed(1)} MB · ${Number(stdout.trim()).toFixed(1)}s`);
-  console.log(`   narration script:`);
-  for (const s of steps) console.log(`     • ${s.say}`);
+  // ⚠️ THE MANIFEST IS THE POINT, not a by-product. Without per-line offsets on the FINAL
+  // timeline there is no way to place narration except by ear, and the recorder is the only
+  // thing that ever knows them — they are gone the moment the process exits.
+  let acc = 0;
+  const lines = steps.map((st, i) => {
+    const startMs = Math.round(acc * 1000);
+    acc += outDurations[i] ?? 0;
+    return { index: i, say: st.say, startMs, endMs: Math.round(acc * 1000) };
+  });
+  const manifest = {
+    clip: scenario.name,
+    recordedOn: stamp,
+    durationSeconds: Number(Number(stdout.trim()).toFixed(2)),
+    lines,
+  };
+  const manifestPath = path.join(OUT_DIR, `${scenario.name}-${stamp}.json`);
+  await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+
+  console.log(`   narration script (cues on the finished timeline):`);
+  for (const l of lines) {
+    console.log(`     ${(l.startMs / 1000).toFixed(1).padStart(5)}s  ${l.say}`);
+  }
+  console.log(`   manifest: ${manifestPath}`);
 }
 
 async function main() {

@@ -467,6 +467,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   image and still reads premium — the same height as our sites** — so the variable is type,
   space and motion, NOT page length or photo count. Do not pad pages to compete; it costs
   performance and closes nothing.
+  ⚠️ **1,199 templates have ZERO pages** — duplicate/version artifacts (1,188 carry the builder's
+  `-xxxx` random suffix), owned by 4 operator accounts, **0 published, 0 real custom domains, 0
+  referenced** by `geo_industry_campaigns` or `published_sites`. `scripts/archive-empty-templates.mts`
+  flags them `archived` (the column exists and `/api/admin/templates/list` already filters it) —
+  **archive, never delete**: a flag survives discovering that some other query forgot to filter
+  `archived`, and 1,199 deleted rows do not. It re-checks every safety condition **per row at
+  write time**, because a survey is a snapshot and a bulk job that trusts its own earlier count
+  is how a live site gets archived. ⚠️ `custom_domain` was `''` on 368 of them — `is not null`
+  is not `is not empty`, and the first count read those as real domains. ⚠️ `archived` is NOT
+  content, so `commit_template` is the wrong tool; the documented
+  `set_config('app.bypass_template_guard','on', true)` inside a txn is the path (verified a
+  direct UPDATE raises, and the bypass works, both in a rolled-back transaction).
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
   `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser

@@ -457,6 +457,16 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   **marketing tail** (`services|faq|cta|contact_form`) — omitting `cta` from that list put it
   after the call to action on `personal`, which has no services or faq: asking for the click
   before showing the work.
+  **Design parity is a PRESENTATION problem, not a block problem** —
+  [`docs/DESIGN_PARITY_PLAN.md`](docs/DESIGN_PARITY_PLAN.md), measured 2026-10-02 against four
+  Framer templates. ⚠️ **2,452 of 3,231 templates (76%) have no `fontPair`** and render in
+  `ui-sans-serif`: the pairing system (`lib/theme/fontPairings.ts`) exists and does not reach
+  them — the same reachability failure as the dead blocks, and the cheapest win available.
+  ⚠️ **Our h1 is 48px on every site measured**; theirs is 72–220px. ⚠️ **We animate nothing**;
+  they carry 200+ entry-animated elements. ⚠️ **But `jonas.framer.website` is 2k px with ONE
+  image and still reads premium — the same height as our sites** — so the variable is type,
+  space and motion, NOT page length or photo count. Do not pad pages to compete; it costs
+  performance and closes nothing.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
   `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser

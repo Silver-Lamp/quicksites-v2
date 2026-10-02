@@ -423,6 +423,19 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   excluded from fleet aggregates (`lib/gsc/fleetScope.ts`) because the traffic is an automated
   monitoring script, not demand — measurement hygiene, never suppression.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
+  ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
+  `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser
+  **foster-parents it out of the table** and the column structure collapses — it presents as a
+  CSS problem that no CSS can fix, and `tsc` cannot see it. Group rows with a fragment, never an
+  element. Pinned by `components/admin/users/__tests__/usersTableStructure.test.ts`, which also
+  asserts header-cell count == body-cell count so a column added to one and not the other fails.
+  **Signed up from** shows coarse first-touch geo (`user_signup_geo`, `20260872`): Vercel's edge
+  headers, country/region/city, **never the IP** — that would create a PII store needing
+  retention and deletion for a question nobody asked. ⚠️ **First touch wins** (`ignoreDuplicates`),
+  so it means "signed up from", not "currently in". ⚠️ **It is NOT backfillable and "—" means we
+  never looked** — nothing captured these headers before 2026-10-02, and the only other IP trail
+  (`ratelimit_events.key`) is an abuse-control log not tied to a user id; correlating it by
+  timestamp would be an inference presented as a record.
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).
 - **Secrets**: a leaked service-role key was removed + a gitleaks scan added (CI `.github/workflows/secret-scan.yml` + pre-commit). Rotated 2026-06-30 — see [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md).

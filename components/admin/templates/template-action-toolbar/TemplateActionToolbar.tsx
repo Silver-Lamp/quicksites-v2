@@ -341,6 +341,26 @@ useEffect(() => {
   const currentFontPair: string | null =
     (template as any)?.data?.meta?.theme?.fontPair ?? null;
 
+  // Where to put the portalled theme panel: measured off the button, because the panel can no
+  // longer be positioned relative to it (see the portal comment at the render site).
+  const themeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [themeAnchor, setThemeAnchor] = useState<{ left: number; bottom: number } | null>(null);
+  const toggleThemePanel = useCallback(() => {
+    setThemePanelOpen((open) => {
+      if (!open && themeBtnRef.current) {
+        const r = themeBtnRef.current.getBoundingClientRect();
+        const PANEL_W = 320; // matches ThemeShufflePanel's fixed width
+        setThemeAnchor({
+          // Clamped so the panel cannot open off the right edge on a narrow window — the
+          // toolbar scrolls horizontally, so the button itself can sit near the viewport edge.
+          left: Math.max(8, Math.min(r.left, window.innerWidth - PANEL_W - 8)),
+          bottom: window.innerHeight - r.top + 8,
+        });
+      }
+      return !open;
+    });
+  }, []);
+
   const applyCuratedTheme = (theme: CuratedTheme) => {
     const cur: any = (tplRef.current ?? template) || {};
     const stamped = toStampedTheme(theme);
@@ -831,32 +851,49 @@ useEffect(() => {
                   <span className="text-xs font-medium">Dark</span>
                 </Button>
                 <Button
+                  ref={themeBtnRef}
                   size="sm"
                   variant={themePanelOpen ? 'secondary' : 'ghost'}
                   className="h-7 gap-1.5 px-2"
                   title="Browse themes / shuffle"
                   aria-pressed={themePanelOpen}
-                  onClick={() => setThemePanelOpen((o) => !o)}
+                  onClick={toggleThemePanel}
                 >
                   <Palette className="w-4 h-4" />
                   <span className="text-xs font-medium">Theme</span>
                 </Button>
               </div>
 
-              {themePanelOpen ? (
-                <>
-                  <div className="fixed inset-0 z-[9999]" onClick={() => setThemePanelOpen(false)} />
-                  <div className="absolute bottom-full left-0 z-[10000] mb-2">
-                    <ThemeShufflePanel
-                      currentId={currentThemeId}
-                      onApply={applyCuratedTheme}
-                      onShuffle={shuffleTheme}
-                      industry={currentIndustry}
-                      currentFontPair={currentFontPair}
-                    />
-                  </div>
-                </>
-              ) : null}
+              {/* ⚠️ PORTALLED TO <body>, AND IT HAS TO BE. This used to be an
+                  `absolute bottom-full` sibling, which put it inside the toolbar row — a row
+                  carrying `overflow-x-auto` so the buttons can scroll on a narrow screen. Per
+                  the CSS spec a non-`visible` overflow on ONE axis forces the other to `auto`,
+                  so the panel was clipped to nothing on the vertical axis. It rendered, it was
+                  in the DOM, its state toggled, and the user saw NOTHING — and because the
+                  outside-click catcher is `fixed inset-0`, the next click landed on an
+                  invisible overlay and closed it again. "I click it and nothing happens" with
+                  no error anywhere, invisible to tsc and to any test that asserts the panel
+                  mounts. Anchored to the button's rect instead, in a layer nothing clips. */}
+              {themePanelOpen && themeAnchor
+                ? createPortal(
+                    <>
+                      <div className="fixed inset-0 z-[9999]" onClick={() => setThemePanelOpen(false)} />
+                      <div
+                        className="fixed z-[10000]"
+                        style={{ left: themeAnchor.left, bottom: themeAnchor.bottom }}
+                      >
+                        <ThemeShufflePanel
+                          currentId={currentThemeId}
+                          onApply={applyCuratedTheme}
+                          onShuffle={shuffleTheme}
+                          industry={currentIndustry}
+                          currentFontPair={currentFontPair}
+                        />
+                      </div>
+                    </>,
+                    document.body,
+                  )
+                : null}
             </div>
 
             {/* DEV cache buttons */}

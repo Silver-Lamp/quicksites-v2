@@ -437,6 +437,17 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   t, jsonb_array_elements(t.data->'pages') pg, jsonb_array_elements(pg->'blocks') b group by 1` —
   the fleet's real recipe is hero/contact/services/faq/cta and little else, so the plainness is
   usually a reachability problem rather than a missing feature.
+  ⚠️ **32 of 67 block types are used on ZERO sites** (2026-10-02). Among them `video`, `image`,
+  `audio`, `reviews` and `gallery` — precisely what authors/photographers/creatives need.
+  ⚠️ **And four of those were unsafe to seed**: `video` rendered `<video controls><source>` with
+  no source, `image` an `<img>` with no src, `audio` an empty 80px `<iframe>` — broken furniture
+  on a live site for anyone who added one from the palette before filling it in. `gallery` and
+  `reviews` had the opposite fault, returning `null` even in the editor, which is why nobody
+  ever filled them. All five now follow the two-sided rule via `isEditorContext`, pinned by
+  `unconfiguredBlocksStaySilent.test.ts`. ⚠️ **`reviews`' default content had NEVER validated** —
+  it carried one placeholder row at `rating: 0` against a schema requiring `min(1)`, invisible
+  because the block was seeded nowhere; the same two-contradicting-decisions shape as the
+  testimonial `.min(1)` bug (#1084), caught the same way by the scaffold sweep. Now `[]`.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
   `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser

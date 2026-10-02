@@ -675,13 +675,30 @@ export function buildIndustryStarter(opts: {
   // owner adds images — and now shows a prompt in the editor so they know it is there. It
   // invents no claim about the business, unlike a seeded pricing table or a process list.
   const GALLERY_INDUSTRIES = new Set<IndustryKey>([
-    'photography',
+    // ⚠️ `personal` is the CREATIVES scaffold and it had no way to show work at all —
+    // hero › story › voice_welcome › audio_faq › cta › contact_form. A portfolio site with no
+    // portfolio. For a photographer, designer or illustrator that is the entire product.
+    'photography', 'personal',
+    // Makers: the thing they made is the pitch.
+    'artisan_goods', 'crafts', 'handmade', 'custom_apparel',
     // Trades whose finished work is the portfolio.
     'concrete', 'epoxy_flooring', 'landscaping', 'painting', 'paving',
     'deck_builder', 'fencing', 'general_contractor',
   ]);
   if (GALLERY_INDUSTRIES.has(industryKey)) {
     blocks.splice(1, 0, createDefaultBlock('gallery') as any);
+  }
+
+  // Authors sell on reviews and press, not on a photo grid — a book cover in a gallery is a
+  // thumbnail, while a quote from a reader is the pitch. The `reviews` block existed and was
+  // used on ZERO sites.
+  //
+  // ⚠️ SEEDED EMPTY AND NEVER GENERATED. A fabricated review is the invented-testimonial rule
+  // with a star rating attached, and it would emit Review JSON-LD — a structured-data lie to
+  // search engines about a real person's book. The editor hint says so in as many words.
+  if (industryKey === 'author') {
+    const faqIdx = blocks.findIndex((b: any) => b?.type === 'faq');
+    blocks.splice(faqIdx >= 0 ? faqIdx : blocks.length, 0, createDefaultBlock('reviews') as any);
   }
 
   // Auto dealer: inventory up front — a browsable vehicle grid where each car has a

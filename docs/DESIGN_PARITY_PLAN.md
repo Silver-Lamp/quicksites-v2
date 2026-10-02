@@ -63,7 +63,23 @@ type, space and restraint.
 
 ## 2. Phases, in cost-to-value order
 
-### Phase 1 — give every site a typeface (backfill, no new code)
+### ✅ Phase 1 — DONE 2026-10-02. Every site has a typeface, and 170 of them nearly didn't.
+
+785 → **2,034 paired**, 0 real sites unpaired, then **38 published sites republished** so the
+change reached a visitor rather than a row.
+
+⚠️ **Two things only came out by looking at a page.** (1) `resolveSiteTheme` opened with
+`if (!accentHsl) return null`, thirty lines *above* where the pairing is read — so **170 paired
+sites** had a typeface stored that produced no `--font-heading` and no font. (2) A site is
+served from **two** snapshots: `published_sites → template_versions` for a platform slug, and
+the legacy `sites.published_snapshot_id → snapshots` for a **custom domain**. `republishTemplate`
+mints the second by **cloning the pinned snapshot and applying a transform**, so a no-op
+transform re-pins a fresh copy of the STALE content and still reports `+domain snapshot`.
+`graftontowing.com` was republished, reported ✓, and served no font.
+
+Script: `scripts/republish-font-backfill.mjs` (dry-run by default).
+
+### Phase 1 (original plan) — give every site a typeface (backfill, no new code)
 
 76% of the fleet is one column write away from having a real pairing. The machinery, the loader
 and eight curated pairings already exist and are in use on 779 sites.
@@ -76,7 +92,25 @@ and eight curated pairings already exist and are in use on 779 sites.
 - ⚠️ **Bulk write to 2,452 live sites.** Owner approval required, and it should go out in
   batches with a revert path.
 
-### Phase 2 — a type scale that is not one size
+### ✅ Phase 2 — DONE 2026-10-02. `lib/theme/typeScale.ts`.
+
+⚠️ **The plan below says to drive it off `ThemeCategory`. That field is stamped on ZERO of the
+1,929 live templates** — checked before writing a line. Following this paragraph literally would
+have shipped a scale that applied to nothing and looked finished, which is the exact failure the
+document was written about. It is driven by the **industry** instead (`INDUSTRY_FONT_MOOD`),
+falling back to the pairing's mood.
+
+⚠️ **And keying it off the PAIRING's mood — the obvious second choice — was also wrong, which
+only showed on a live page.** Most sites did not choose their pairing; `pickCuratedTheme`
+assigned one at creation and knows nothing about mood. Measured after shipping:
+`starter-photography` carried `space-inter` (**technical**) and got 56px — the ceiling meant for
+HVAC, on a photographer, in one of the three verticals the work exists for. The scale answers
+*how loudly may this business speak* (the trade); the pairing answers *in what typeface*.
+
+Ceilings, all above the old 48px: editorial 96 · bold 76 · elegant 68 · friendly/modern 64 ·
+technical 56. Minimums held at today's mobile size — the measured gap was a desktop gap.
+
+### Phase 2 (original plan) — a type scale that is not one size
 
 `h1: 48px` everywhere is the tell. Introduce a scale driven by the theme category that already
 exists (`rugged | warm | professional | playful | neon | editorial`).
@@ -119,9 +153,13 @@ honoured, and a median section gap in the 400–800px range.
 
 ## 4. Open questions for the owner
 
-- Which pairing per industry? This is taste, and taste is the owner's.
-- Is a bulk font backfill to 2,452 live sites acceptable, and in what batch size?
-- Do we want motion at all on trades sites, or only on the creative verticals?
+- ~~Which pairing per industry?~~ Answered: a per-industry **pool** an admin edits from the
+  editor (`/api/admin/theme/industry-font-pin`), because one face per industry makes every
+  towing site in a town identical.
+- ~~Is a bulk font backfill acceptable?~~ **Yes** (2026-10-02), and the republish with it.
+- ~~Motion on trades, or only creatives?~~ **"try trades"** (2026-10-02) — so the display scale
+  reaches every vertical, trades with the most conservative ceilings. Motion (Phase 3) is still
+  scoped creative-first, with the typewriter the owner liked as the minimal trade case.
 
 ## 5. What has NOT been verified
 

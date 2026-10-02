@@ -457,6 +457,39 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   **marketing tail** (`services|faq|cta|contact_form`) — omitting `cta` from that list put it
   after the call to action on `personal`, which has no services or faq: asking for the click
   before showing the work.
+  **A display scale, replacing 48px everywhere (2026-10-02, `lib/theme/typeScale.ts`)**: the
+  hero headline was `text-4xl md:text-5xl` **hard-coded for the whole fleet**, independent of
+  industry, theme or content, against benchmarks at 72–220px. Ceilings now: editorial 96 ·
+  bold 76 · elegant 68 · friendly/modern 64 · technical 56, all fluid, **minimums held at
+  today's mobile size** because the measured gap was a *desktop* gap and doubling a phone
+  headline turns one wrapped line into four. Trades included (owner).
+  ⚠️ **Driven by the INDUSTRY, and both of the obvious alternatives were wrong.** The plan said
+  `ThemeCategory` — stamped on **zero** of 1,929 templates, so it would have applied to nothing
+  and looked finished. The pairing's `mood` was the next guess and shipped: it put
+  `starter-photography` (carrying `space-inter`, **technical**) at 56px, the HVAC ceiling, on a
+  photographer — because `pickCuratedTheme` assigns a pairing at creation and knows nothing
+  about mood. The scale answers *how loudly may this business speak* (the trade); the pairing
+  answers *in what typeface*. Caught only by measuring a live page after merging.
+  ⚠️ **Applied in CSS scoped to `[data-qs-themed]`, NEVER as an inline style.** An inline
+  `font-size: var(--qs-display)` on an unthemed site is **invalid at computed-value time** and
+  resolves to `unset`, so the h1 would inherit BODY size instead of falling back to its
+  Tailwind class — silent and fleet-wide. The descendant selector also out-specifies a single
+  utility, so it wins without `!important` (the `SectionShell` lesson, #665).
+  ⚠️ **`resolveSiteTheme` used to abandon the whole theme on an unrecognised accent** —
+  `if (!accentHsl) return null`, thirty lines above where the pairing is read — so **170 paired
+  sites** had a typeface that produced no `--font-heading` and no font. Accent and typeface are
+  independent; one missing must not discard the other. It now returns null only when there is
+  no identity at all.
+  ⚠️ **A SITE IS SERVED FROM TWO SNAPSHOTS AND A REPUBLISH CAN FIX ONLY ONE.**
+  `published_sites → template_versions` serves a platform slug; the legacy
+  `sites.published_snapshot_id → snapshots` serves a **custom domain** (`app/host` reads
+  `snapshots.data`). `scripts/lib/republishTemplate.mjs` mints the second by **cloning the
+  pinned snapshot and applying the `transform` argument** — it does *not* copy the draft — so a
+  no-op transform re-pins a fresh copy of the STALE content and still reports `+domain
+  snapshot`. `graftontowing.com` was republished, logged ✓, and served no font.
+  `scripts/republish-font-backfill.mjs` checks **both** and copies the theme only (a draft can
+  hold unreviewed edits; shipping those under cover of a font change is a second, unasked-for
+  deploy). 38 published sites carried out 2026-10-02 with owner approval.
   **Design parity is a PRESENTATION problem, not a block problem** —
   [`docs/DESIGN_PARITY_PLAN.md`](docs/DESIGN_PARITY_PLAN.md), measured 2026-10-02 against four
   Framer templates. ⚠️ **2,452 of 3,231 templates (76%) have no `fontPair`** and render in

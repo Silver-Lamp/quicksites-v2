@@ -160,7 +160,7 @@ export function resolveSiteTheme(template: any): ResolvedSiteTheme | null {
     // decision, and the pairing's mood is the only identity every site actually carries
     // (`themeId` is stamped on zero templates). No pairing → no vars → Tailwind classes
     // stand, which is how an unthemed site keeps looking exactly as it did.
-    Object.assign(vars, typeScaleVars(fontPair));
+    Object.assign(vars, typeScaleVars(fontPair, meta?.industry ?? template?.industry));
   } else if (fontFamily) {
     fontStack = FONT_STACKS[fontFamily];
     if (fontStack) vars['--font-body'] = fontStack;

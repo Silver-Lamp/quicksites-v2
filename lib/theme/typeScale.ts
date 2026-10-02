@@ -24,7 +24,8 @@
 // doubles the mobile headline turns one wrapped line into four and calls it design.
 
 import { FONT_PAIRINGS } from '@/lib/theme/fontPairings';
-import type { FontMood } from '@/lib/theme/industryFontMood';
+import { INDUSTRY_FONT_MOOD, type FontMood } from '@/lib/theme/industryFontMood';
+import type { IndustryKey } from '@/lib/industries';
 
 export type TypeScale = {
   /** The hero headline. */
@@ -67,15 +68,39 @@ export const LEGACY_DISPLAY_MAX_PX = 48;
  * A site with no pairing keeps the Tailwind classes it has always had — the painterly-backdrop
  * rule 7 shape: a missing thing renders as the plain version, never as a broken one.
  */
-export function typeScaleFor(fontPair: string | null | undefined): TypeScale | null {
+export function typeScaleFor(
+  fontPair: string | null | undefined,
+  industry?: string | null,
+): TypeScale | null {
+  // ⚠️ THE INDUSTRY WINS OVER THE TYPEFACE, AND THE FIRST CUT HAD IT THE OTHER WAY ROUND.
+  // Keying the scale off the pairing's mood is tidy and wrong, because most sites did not
+  // choose their pairing — `pickCuratedTheme` assigned one at creation, and it knows nothing
+  // about mood. Measured on the owner's own three target verticals after shipping it:
+  //
+  //   starter-author       playfair-source  editorial   96px  ✓
+  //   starter-personal     sora-inter       modern      64px
+  //   starter-photography  space-inter      TECHNICAL   56px  ← the HVAC ceiling, on a photographer
+  //
+  // Two of the three verticals this work exists for got the conservative scale, one of them
+  // the smallest in the table. The scale expresses the TRADE ("how loudly may this business
+  // speak"); the pairing expresses the typeface. They are different questions and the site's
+  // industry answers the first one directly. The pairing stays as the fallback for a site
+  // with no industry, which is better than nothing.
+  const key = String(industry ?? '').trim();
+  const byIndustry = key ? INDUSTRY_FONT_MOOD[key as IndustryKey] : undefined;
+  if (byIndustry && TYPE_SCALE[byIndustry]) return TYPE_SCALE[byIndustry];
+
   const pairing = FONT_PAIRINGS[String(fontPair ?? '').trim()];
   if (!pairing) return null;
   return TYPE_SCALE[pairing.mood] ?? null;
 }
 
 /** The scale as CSS custom properties, to be merged into the theme wrapper's inline vars. */
-export function typeScaleVars(fontPair: string | null | undefined): Record<string, string> {
-  const scale = typeScaleFor(fontPair);
+export function typeScaleVars(
+  fontPair: string | null | undefined,
+  industry?: string | null,
+): Record<string, string> {
+  const scale = typeScaleFor(fontPair, industry);
   if (!scale) return {};
   return {
     '--qs-display': scale.display,

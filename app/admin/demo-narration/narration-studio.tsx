@@ -67,6 +67,82 @@ function toWav(buffer: AudioBuffer): Blob {
   return new Blob([view], { type: 'audio/wav' });
 }
 
+/**
+ * Record, then publish. ⚠️ BOTH halves, chained with `&&`: recording alone writes an mp4 and a
+ * manifest to `demo-videos/` and changes nothing anyone can see, so a command that stopped there
+ * would look like it had worked while the studio still said "no cue manifest".
+ */
+export function reRecordCommand(clip: string): string {
+  return `npx tsx scripts/record-demo.mts ${clip} && npx tsx scripts/upload-demo-videos.mts --apply`;
+}
+
+/**
+ * The exact commands to re-record a clip, copyable.
+ *
+ * ⚠️ IT TELLS YOU WHERE THE WORK HAPPENS RATHER THAN PRETENDING TO DO IT. Recording needs ffmpeg
+ * and a full Chromium with `recordVideo`; this app runs on Vercel, which has neither, and a
+ * guest build takes ~90s of real waiting. A button that enqueued a job would need a machine of
+ * the owner's actually running `npm run render:worker` — `render_workers` is empty and one job
+ * has ever run — so it would be a button that silently does nothing.
+ *
+ * ⚠️ The command is rendered as selectable text as well as copied, because `navigator.clipboard`
+ * is unavailable on an insecure origin and can be denied by permission policy. A copy button
+ * whose only failure mode is "nothing happened" is worse than no button.
+ */
+function ReRecordCommand({ clip }: { clip: string }) {
+  const [copied, setCopied] = React.useState(false);
+  const [failed, setFailed] = React.useState(false);
+  const cmd = reRecordCommand(clip);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(cmd);
+      setCopied(true);
+      setFailed(false);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setFailed(true);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-card p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+          Re-record on your machine
+        </span>
+        <button
+          type="button"
+          onClick={copy}
+          className="rounded border border-border px-2 py-1 text-xs text-foreground hover:border-sky-500/50"
+        >
+          {copied ? 'Copied' : 'Copy command'}
+        </button>
+      </div>
+      <code className="mt-2 block select-all whitespace-pre-wrap break-all rounded bg-muted px-2 py-1.5 font-mono text-[11px] leading-relaxed text-foreground">
+        {cmd}
+      </code>
+      {failed ? (
+        <p className="mt-1 text-[11px] text-amber-300">
+          Clipboard blocked by the browser — select the text above instead.
+        </p>
+      ) : null}
+      <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+        <li>
+          Re-recording changes the clip&rsquo;s length, so its poster timestamp has to be
+          re-picked — see <span className="font-mono">docs/DEMO_VIDEOS.md</span>.
+        </li>
+        {clip === 'guest-build' ? (
+          <li className="text-amber-300">
+            This one builds a real site on production and leaves an anonymous draft behind, which
+            counts in the guest-build funnel.
+          </li>
+        ) : null}
+      </ul>
+    </div>
+  );
+}
+
 export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
   const [selected, setSelected] = React.useState<StudioClip | null>(clips[0] ?? null);
   const [manifest, setManifest] = React.useState<NarrationManifest | null>(null);
@@ -96,8 +172,9 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
     if (!selected) return;
     if (!selected.manifestUrl) {
       setManifestError(
-        'No cue manifest for this recording. Re-record it (npx tsx scripts/record-demo.mts <clip>) — ' +
-          'the per-line timings exist only inside the recorder and cannot be recovered from the video.',
+        'No cue manifest for this recording. The per-line timings exist only inside the recorder ' +
+          'and cannot be recovered from the video, so this clip has to be re-recorded before its ' +
+          'narration can be placed.',
       );
       return;
     }
@@ -347,9 +424,12 @@ export default function NarrationStudio({ clips }: { clips: StudioClip[] }) {
 
           <div>
             {manifestError ? (
-              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100">
-                {manifestError}
-              </p>
+              <>
+                <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100">
+                  {manifestError}
+                </p>
+                <ReRecordCommand clip={clipName(selected.src)} />
+              </>
             ) : !manifest ? (
               <p className="text-xs text-muted-foreground">Loading cues…</p>
             ) : (

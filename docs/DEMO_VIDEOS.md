@@ -91,11 +91,12 @@ saved.)
 
 ## 3. Candidates, roughly in order of what they'd earn
 
-Two of sixteen features have a clip. These are the ones where *seeing it* beats reading it:
+Three of sixteen features have a clip (editor ×4, SEO ×1, e-commerce ×1 as of 2026-10-02). These
+are the ones where *seeing it* beats reading it:
 
 | Feature | What the clip shows | Why it earns its place |
 |---|---|---|
-| `ecommerce-storefront` | Add a product → it appears on the live site → buy it | The take-rate thesis. Nothing on the site shows money moving. |
+| ✅ `ecommerce-storefront` | `add-product` (2026-10-02): store set up in one click, two products quick-added, on the page with Add to Cart. **Still missing: the buy.** Nothing yet shows money moving. | The take-rate thesis. |
 | `customer-crm` | A paid order becoming a customer row with LTV and a timeline | "Fills itself" is the claim; the clip is the proof. |
 | `email-campaigns` | Pick a segment → send → the attributed order lands | Closes the CRM loop in one take. |
 | `hear-this-page` | Tap the button, hear the page | Audio cannot be screenshotted. ⚠️ Label the house narrator as such. |

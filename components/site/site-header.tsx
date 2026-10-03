@@ -349,7 +349,15 @@ export default function SiteHeader({
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-80 bg-black/95 border-l border-zinc-800/40">
+            {/* ⚠️ `overflow-y-auto` is load-bearing. The sheet is a fixed, full-height panel and
+                Radix locks the page behind it, so if the panel itself does not scroll, whatever
+                sits below the fold is simply unreachable — found on a real phone 2026-10-03 once
+                Sign up / Sign in and the full industry list made the menu taller than a screen.
+                `pb-safe`-style bottom padding keeps the last item above the iOS home bar. */}
+            <SheetContent
+              side="right"
+              className="w-80 overflow-y-auto overscroll-contain bg-black/95 border-l border-zinc-800/40 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            >
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
                   <Image src={logoSrc} alt={logoText} width={20} height={20} className="rounded" />

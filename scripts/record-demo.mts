@@ -233,6 +233,31 @@ async function clickBlockControl(p: Page, blockSelector: string, label: string):
 }
 
 /**
+ * Press the "+ Add block" affordance under the first block and wait for the picker.
+ *
+ * ⚠️ NOT a block control: it is a sibling BELOW the block wrapper, always visible, and at 720p it
+ * sits right under the floating editor toolbar. A forced click at its centre lands on the toolbar
+ * and nothing opens — two recordings showed the cursor parked on the toolbar and no picker. An
+ * unforced Playwright click scrolls it clear and checks it actually receives the event.
+ */
+async function clickAddBelow(p: Page): Promise<boolean> {
+  await injectCursor(p);
+  const btn = p.locator('button[aria-label="Add a block below"]').first();
+  if (!(await btn.count())) { console.warn('     ⚠️ no "Add a block below" button on the canvas'); return false; }
+  await btn.scrollIntoViewIfNeeded().catch(() => {});
+  await p.mouse.wheel(0, 160); // lift it above the floating toolbar
+  await beat(p, 400);
+  const box = await btn.boundingBox().catch(() => null);
+  if (box) await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 20 });
+  await beat(p, 300);
+  await btn.click({ timeout: 10_000 }).catch((e) => console.warn(`     ⚠️ add-below click failed: ${e?.message?.split('\n')[0]}`));
+  // The picker is a modal with quick picks; "Text" is always in it.
+  await p.getByRole('button', { name: /^Text\b/i }).first().waitFor({ state: 'visible', timeout: 10_000 })
+    .catch(() => console.warn('     ⚠️ the block picker did not open'));
+  return true;
+}
+
+/**
  * The shared opening of every signed-in scenario: sign in, create a site from the industry
  * chooser, land in the editor. One timelapsed step, so the clip starts on the thing it is about.
  *
@@ -485,14 +510,14 @@ const SCENARIOS: Scenario[] = [
       {
         say: 'Add a block below it.',
         run: async (p) => {
-          await clickBlockControl(p, FIRST_BLOCK, 'Add a block below');
+          await clickAddBelow(p);
           await beat(p, READ);
         },
       },
       {
         say: 'Pick what it should be — an FAQ.',
         run: async (p) => {
-          await clickAny(p, [/^FAQ/i, /faq/i], 'FAQ quick pick');
+          await clickAny(p, [/^FAQ\b/i], 'FAQ quick pick');
           await beat(p, READ);
         },
       },
@@ -576,9 +601,9 @@ const SCENARIOS: Scenario[] = [
       {
         say: 'Add a Products block below the hero.',
         run: async (p) => {
-          await clickBlockControl(p, FIRST_BLOCK, 'Add a block below');
+          await clickAddBelow(p);
           await beat(p, 1200);
-          await clickAny(p, [/^Products/i, /products/i], 'Products quick pick');
+          await clickAny(p, [/^Products\b/i], 'Products quick pick');
           await beat(p, READ);
         },
       },

@@ -156,6 +156,18 @@ export default function EditorContent({
     [searchParams, template]
   );
 
+  // ⚠️ Six block editors (products grid, service offer, sticky cart, comments, listing card, the
+  // e-commerce panel) read the current template from `window.__QS_TEMPLATE__` /
+  // `__QS_TPL_REF__`, and NOTHING set either — so in the live editor they all behaved as if no
+  // template were open ("Set up my store" showed its merchant-less fallback for every owner;
+  // found 2026-10-02 by the add-product demo). Publish it here, once, keyed to the template.
+  // The products editor now reads its prop first; this covers the rest.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    (window as any).__QS_TEMPLATE__ = template;
+    (window as any).__QS_TPL_REF__ = { current: template };
+  }, [template]);
+
   const [showSettings, setShowSettings] = useState(false);
   const [pageSettingsOpen, setPageSettingsOpen] = useState(false);
   const [editingHeader, setEditingHeader] = useState<Block | null>(null);

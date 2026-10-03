@@ -194,8 +194,12 @@ describe('⚠️ the guest Google path must LINK, never sign in afresh', () => {
   });
 
   it('is hidden unless the Supabase provider is actually configured', () => {
-    // A button that 400s is worse than no button — the flag exists for that, not for a rollout.
-    expect(BOX).toMatch(/googleAuthEnabled\(\)/);
+    // A button that 400s is worse than no button. Since 2026-10-03 the gate is the LIVE provider
+    // list (useAuthProviders → /api/auth/providers → Supabase settings), not a build-time flag
+    // that could be set with nothing behind it.
+    expect(BOX).toMatch(/useAuthProviders\(\)/);
+    expect(BOX).toMatch(/\{providers\.google && \(/);
+    expect(BOX).not.toMatch(/googleAuthEnabled/);
   });
 
   it('keeps the email+password path intact', () => {

@@ -24,7 +24,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { GUEST_SIGNUP_EVENT, editorPathFromPathname, guestSignupRedirectUrl, markGuestSignupSent, passwordProblem } from '@/lib/auth/guestSignup';
-import { googleAuthEnabled } from '@/lib/flags/googleAuth';
+import { useAuthProviders } from '@/lib/auth/useAuthProviders';
 import { trackGuestFunnel, isGuestFunnelSurface, type GuestFunnelSurface } from '@/lib/analytics/guestFunnel';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error' | 'exists';
@@ -45,6 +45,9 @@ export function GuestSignupForm({
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState<string | null>(null);
+  // Live from Supabase via /api/auth/providers — Google shows the moment the provider is enabled
+  // there, and never before (starts closed; a failed lookup stays closed).
+  const providers = useAuthProviders();
 
   const editorPath = () => (typeof window === 'undefined' ? null : editorPathFromPathname(window.location.pathname));
 
@@ -70,8 +73,10 @@ export function GuestSignupForm({
    * `linkIdentity` attaches the Google identity to the SAME uid, so the site stays theirs.
    *
    * ⚠️ It needs "Manual linking" enabled in Supabase as well as the Google provider. Both are
-   * dashboard actions; until they are done `googleAuthEnabled()` keeps this button off the page
-   * entirely, because a button that 400s is worse than no button.
+   * dashboard actions; until the provider is on, `providers.google` keeps this button off the
+   * page entirely, because a button that 400s is worse than no button. Manual linking is not
+   * visible in the public settings payload, so if it is off the error from Supabase is shown
+   * verbatim rather than guessed at.
    */
   const continueWithGoogle = async () => {
     if (status === 'sending') return;
@@ -155,8 +160,9 @@ export function GuestSignupForm({
           an invented password, and a trip to an inbox before the site they just built can go
           live. This asks for one tap. Putting it below the form would leave the heavy ask as the
           default and test nothing.
-          Renders only when the Supabase provider is actually configured — see googleAuth.ts. */}
-      {googleAuthEnabled() && (
+          Renders only when the Supabase provider is actually configured — see
+          lib/auth/authProviders.ts. */}
+      {providers.google && (
         <>
           <button
             type="button"

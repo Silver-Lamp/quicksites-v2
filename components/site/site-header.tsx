@@ -10,6 +10,14 @@ import { Menu, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GALLERY_HREF, INDUSTRY_NAV, moreIndustriesLabel } from '@/lib/site/industryNav';
 import {
+  DEFAULT_NEXT,
+  LABEL_SIGN_IN,
+  LABEL_SIGN_UP,
+  signInHref,
+  signUpHref,
+} from '@/lib/auth/authLinks';
+import { CurrentUserContext } from '@/components/admin/context/current-user-provider';
+import {
   Sheet,
   SheetTrigger,
   SheetContent,
@@ -81,6 +89,100 @@ const DEFAULT_LINKS: LinkItem[] = [
 
 function cn(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(' ');
+}
+
+/** Where "Sign out" goes: the existing page that signs out and lands on /login?logout=1. */
+const SIGN_OUT_HREF = '/logout';
+const LABEL_DASHBOARD = 'Dashboard';
+const LABEL_SIGN_OUT = 'Sign out';
+
+/**
+ * The account corner of the header: "Sign in" + "Sign up" for a visitor, "Dashboard" + "Sign out"
+ * for someone with an account (owner, 2026-10-03: "traditional signin/signup in the menus").
+ *
+ * ⚠️ Links come from lib/auth/authLinks — never a literal `/login`. Four spellings of the auth
+ * route were once in use across the app and only one existed; the helper is the one thing that
+ * knows the URL, and `authLinks.test.ts` greps every component for the dead ones.
+ *
+ * ⚠️ The server render shows the SIGNED-OUT pair and the client swaps after hydration. Session
+ * state lives in a cookie the server could read, but this header sits on cached marketing pages;
+ * rendering the common case (a visitor) keeps the two sign-in links in the served HTML for every
+ * crawler and every visitor, and a returning owner sees "Dashboard" a frame later.
+ *
+ * ⚠️ An ANONYMOUS session (a guest builder) is treated as signed out. A guest has a draft that
+ * belongs to their anon uid, and the in-editor sign-up box upgrades that uid in place; from a
+ * marketing page we cannot know which draft is theirs, so the honest offer is the same two doors a
+ * visitor gets, and the editor's banner does the upgrade. Showing "Dashboard" to a guest would
+ * route them to a list the middleware does not let them see.
+ */
+function useAccountState(): 'visitor' | 'member' {
+  const { user, ready } = React.useContext(CurrentUserContext);
+  if (!ready || !user) return 'visitor';
+  if ((user as { is_anonymous?: boolean | null }).is_anonymous) return 'visitor';
+  return 'member';
+}
+
+function AuthLinksDesktop({ pathname }: { pathname: string | null }) {
+  const state = useAccountState();
+  if (state === 'member') {
+    return (
+      <>
+        <Link
+          href={DEFAULT_NEXT}
+          className={cn(
+            'text-zinc-300 hover:text-white transition-colors',
+            pathname === DEFAULT_NEXT && 'text-white'
+          )}
+        >
+          {LABEL_DASHBOARD}
+        </Link>
+        <Link href={SIGN_OUT_HREF} className="inline-flex" aria-label={LABEL_SIGN_OUT}>
+          <Button size="sm" variant="ghost">{LABEL_SIGN_OUT}</Button>
+        </Link>
+      </>
+    );
+  }
+  return (
+    <>
+      <Link
+        href={signInHref()}
+        className="text-zinc-300 hover:text-white transition-colors"
+      >
+        {LABEL_SIGN_IN}
+      </Link>
+      <Link href={signUpHref()} className="inline-flex" aria-label={LABEL_SIGN_UP}>
+        <Button size="sm" variant="default">{LABEL_SIGN_UP}</Button>
+      </Link>
+    </>
+  );
+}
+
+/** The same two doors inside the mobile sheet, full width, above the page links. */
+function AuthLinksMobile() {
+  const state = useAccountState();
+  const pair =
+    state === 'member'
+      ? [
+          { label: LABEL_DASHBOARD, href: DEFAULT_NEXT, variant: 'default' as const },
+          { label: LABEL_SIGN_OUT, href: SIGN_OUT_HREF, variant: 'ghost' as const },
+        ]
+      : [
+          { label: LABEL_SIGN_UP, href: signUpHref(), variant: 'default' as const },
+          { label: LABEL_SIGN_IN, href: signInHref(), variant: 'ghost' as const },
+        ];
+  return (
+    <div className="mb-3 flex flex-col gap-2 border-b border-zinc-800/60 pb-3">
+      {pair.map((l) => (
+        <SheetClose asChild key={l.href}>
+          <Link href={l.href} className="inline-flex" aria-label={l.label}>
+            <Button className="w-full justify-center" variant={l.variant}>
+              {l.label}
+            </Button>
+          </Link>
+        </SheetClose>
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -231,8 +333,11 @@ export default function SiteHeader({
             )
           )}
 
-          {/* Divider + Cart (shows only if ecom enabled or cart has items) */}
+          {/* Divider + account: Sign in / Sign up, or Dashboard / Sign out. */}
           <span className="mx-1 h-5 w-px bg-zinc-800/50" />
+          <AuthLinksDesktop pathname={pathname} />
+
+          {/* Cart (shows only if ecom enabled or cart has items) */}
           <CartButton />
         </nav>
 
@@ -253,6 +358,7 @@ export default function SiteHeader({
               </SheetHeader>
 
               <nav className="mt-6 flex flex-col gap-2">
+                <AuthLinksMobile />
                 {links.map((l) => {
                   const active = pathname === l.href;
                   // ⚠️ A grouped item renders as a LABELLED LIST here, not a dropdown. The sheet is

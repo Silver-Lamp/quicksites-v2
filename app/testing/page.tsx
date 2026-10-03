@@ -271,7 +271,7 @@ export default function TestingPage() {
                 Where a rule arrives after the violations, we record the count and forbid growth,
                 rather than either failing the build or quietly excluding a directory. Our env-var
                 declaration test carries a frozen baseline of{' '}
-                <strong>107 known-undeclared keys</strong>, with a companion test asserting the
+                <strong>106 known-undeclared keys</strong>, with a companion test asserting the
                 baseline never grows — a baselined key that gets declared must be{' '}
                 <em>removed</em> from the list, or it rots into a permanent allowlist.
               </p>

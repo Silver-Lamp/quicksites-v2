@@ -50,6 +50,13 @@ describe('site header account links', () => {
     expect(code).toMatch(/'member'/);
   });
 
+  it('the mobile sheet scrolls — the menu is now taller than a phone screen', () => {
+    // Radix locks the page behind the sheet, so a panel without its own overflow leaves everything
+    // below the fold unreachable. Seen on a real iPhone the morning the auth pair shipped.
+    const sheet = code.slice(code.indexOf('<SheetContent'), code.indexOf('</SheetContent>'));
+    expect(sheet).toMatch(/overflow-y-auto/);
+  });
+
   it('reads session state from the app-wide provider rather than opening a second client', () => {
     expect(code).toMatch(/CurrentUserContext/);
     expect(code).not.toMatch(/createBrowserClient\(/);

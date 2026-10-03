@@ -65,7 +65,16 @@ export const CREATIVE_INDUSTRIES = new Set<string>([
 /** How many examples to show per industry before "+N more". */
 export const PER_INDUSTRY = 3;
 
-export async function getGalleryData(): Promise<GalleryData> {
+export type GalleryOptions = {
+  /** Show only this industry key (the `?industry=` filter); every example of it, not just PER_INDUSTRY. */
+  industry?: string | null;
+  /** Examples per industry on the unfiltered board. Defaults to PER_INDUSTRY. */
+  perIndustry?: number;
+};
+
+export async function getGalleryData(opts: GalleryOptions = {}): Promise<GalleryData> {
+  const only = (opts.industry ?? '').trim() || null;
+  const cap = only ? Number.MAX_SAFE_INTEGER : opts.perIndustry ?? PER_INDUSTRY;
   const supa = await getServerSupabase({ serviceRole: true });
 
   // ⚠️ Paged: PostgREST caps a response at 1000 rows whatever `.limit()` says, and a capped
@@ -110,6 +119,7 @@ export async function getGalleryData(): Promise<GalleryData> {
   let totalExamples = 0;
 
   for (const { key } of INDUSTRIES) {
+    if (only && key !== only) continue;
     const all = byIndustry.get(key) ?? [];
     if (all.length === 0) {
       // ⚠️ Reported rather than hidden. A gallery that silently omits what it cannot show
@@ -117,7 +127,7 @@ export async function getGalleryData(): Promise<GalleryData> {
       missing.push(KEY_TO_LABEL[key as IndustryKey] ?? key);
       continue;
     }
-    const examples = all.slice(0, PER_INDUSTRY);
+    const examples = all.slice(0, cap);
     totalExamples += examples.length;
     groups.push({
       key,

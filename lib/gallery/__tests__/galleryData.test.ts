@@ -91,7 +91,8 @@ describe('the page does not claim these are customers', () => {
   });
 
   it('gives every thumbnail real alt text', () => {
-    expect(prose).toMatch(/alt=\{`\$\{e\.name\} — \$\{g\.label\}/);
+    // The board flattens groups into cards that carry their industry label as `e.industry`.
+    expect(prose).toMatch(/alt=\{`\$\{e\.name\} — \$\{e\.industry\}/);
   });
 
   it('is reading files that exist and are non-trivial', () => {

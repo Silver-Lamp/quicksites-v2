@@ -100,6 +100,11 @@ describe('the nav puts one audience first', () => {
   });
 
   it('keeps every vertical reachable, grouped rather than deleted', () => {
+    // The dropdown's entries come from lib/site/industryNav.ts (the same list the homepage
+    // pills render), so the verticals are reachable iff the header renders that list AND the
+    // list still names each of them.
+    expect(HEADER).toMatch(/\.\.\.INDUSTRY_NAV\.map\(/);
+    const NAV_LIST = stripComments(read('lib/site/industryNav.ts'));
     for (const href of [
       '/restaurants',
       '/realtors',
@@ -108,7 +113,7 @@ describe('the nav puts one audience first', () => {
       '/lemonade-stands',
       '/supplements',
     ]) {
-      expect(HEADER).toContain(`'${href}'`);
+      expect(NAV_LIST).toContain(`'${href}'`);
     }
   });
 

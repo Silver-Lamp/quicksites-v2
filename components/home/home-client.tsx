@@ -20,28 +20,13 @@ import HomeColorLab from '@/components/home/home-color-lab';
 import SectionBackdrop from '@/components/home/section-backdrop';
 import InYourVoice from '@/components/home/in-your-voice';
 import { INDUSTRIES } from '@/lib/industries';
+import { GALLERY_HREF, INDUSTRY_NAV, moreIndustriesLabel } from '@/lib/site/industryNav';
 
 const isProd = process.env.NODE_ENV === 'production';
 
-// A sample of the industry starters, shown as pills. The COUNT is derived from
-// INDUSTRIES (never hard-coded) so adding an industry can't leave the homepage
-// claiming a stale number — the copy stays true by construction.
-const INDUSTRY_PILLS = [
-  'Restaurant',
-  'Plumbing',
-  'Real Estate',
-  'HVAC',
-  'Salon & Spa',
-  'Deck Builder',
-  'Roofing',
-  'Photography',
-  'Author',
-  'Auto Repair',
-  'Fitness',
-  'Landscaping',
-  'Lemonade Stand',
-] as const;
-
+// The industry pills are the SAME list the nav's Industries dropdown shows (lib/site/industryNav),
+// each one a link, ending in "+N more" → the gallery. The count is derived from INDUSTRIES so
+// adding an industry can't leave either surface claiming a stale number.
 // White-label-overridable brand shape (orgs can theme the homepage).
 type Branding = {
   name?: string;
@@ -216,16 +201,24 @@ export default function HomeClient({
             </p>
 
             <ul className="mt-6 flex flex-wrap gap-2">
-              {INDUSTRY_PILLS.map((label) => (
-                <li
-                  key={label}
-                  className="rounded-full border border-zinc-700 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300"
-                >
-                  {label}
+              {INDUSTRY_NAV.map((e) => (
+                <li key={e.href}>
+                  <Link
+                    href={e.href}
+                    className="inline-block rounded-full border border-zinc-700 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+                  >
+                    {e.label}
+                  </Link>
                 </li>
               ))}
-              <li className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs text-sky-300">
-                +{INDUSTRIES.length - INDUSTRY_PILLS.length} more
+              <li>
+                <Link
+                  href={GALLERY_HREF}
+                  className="inline-block rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs text-sky-300 transition hover:bg-sky-500/20"
+                  title="Every industry we build for, with live examples"
+                >
+                  {moreIndustriesLabel()}
+                </Link>
               </li>
             </ul>
 

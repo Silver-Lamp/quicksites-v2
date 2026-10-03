@@ -91,20 +91,26 @@ const CLIPS: Record<string, ClipSpec> = {
     feature: 'block-based-template-editor',
     label: 'Adding a block',
     blurb: 'Hover a section, add one below it, pick FAQ — placed and open for editing.',
-    // Provisional; re-pick off extracted frames after recording (docs/DEMO_VIDEOS.md §2).
-    posterAt: 12,
+    // The "Add a Block" picker fully open — Text / Contact / Hero / FAQ / Hours / Products /
+    // Scheduler — at 10.5s of the 29.6s cut (pick cue 9.2s). That grid IS the feature; the
+    // typed question (23.5s) and the placed section (28.5s) both read as "editing".
+    posterAt: 10.5,
   },
   'edit-block': {
     feature: 'block-based-template-editor',
     label: 'Editing a block',
     blurb: 'Open the hero, rewrite the headline, save — the page updates in place.',
-    posterAt: 14,
+    // The saved result on the canvas: "Hand-poured candles, made in Renton" over the old chrome,
+    // drawer closed. Picked off the frame at 25.5s of the 27.0s cut (save cue at 20.1s).
+    posterAt: 25.5,
   },
   'add-product': {
     feature: 'ecommerce-storefront',
     label: 'Adding products',
     blurb: 'Set up the store in one click, add two products, see them on the page with Add to Cart.',
-    posterAt: 22,
+    // The products grid on the page — two candles, prices, Add to Cart — at 33s of the 34.3s
+    // cut. The take-rate thesis in one frame; an earlier frame would show a form.
+    posterAt: 33,
     primary: true,
   },
   'finished-site': {

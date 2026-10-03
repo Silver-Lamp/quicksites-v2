@@ -233,6 +233,35 @@ async function clickBlockControl(p: Page, blockSelector: string, label: string):
 }
 
 /**
+ * The open drawer's own Save.
+ *
+ * ⚠️ Three "Save" buttons can be on screen at once — the page header's, the floating toolbar's
+ * (bottom edge), and the drawer's footer — and neither `.first()` nor `.last()` is reliably the
+ * drawer's: two recordings saved the page while the drawer stayed open to the end of the clip.
+ * The drawer footer is the LOWEST visible Save that is still above the floating toolbar, so pick
+ * by geometry rather than by DOM order.
+ */
+async function clickDrawerSave(p: Page): Promise<boolean> {
+  await injectCursor(p);
+  // Both the block drawer and the picker are `role="dialog"` (DrawerShell / ModalShell); the
+  // open one is the last. Scoping here is what excludes the page header's and the floating
+  // toolbar's Save buttons, which share the label.
+  const dialog = p.locator('[role="dialog"]').last();
+  const b = dialog.locator('button', { hasText: /^\s*Save\s*$/ }).locator('visible=true').last();
+  if (!(await b.count())) { console.warn('     ⚠️ no Save button in the open drawer'); return false; }
+  await b.scrollIntoViewIfNeeded().catch(() => {});
+  const box = await b.boundingBox().catch(() => null);
+  if (box) await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 20 });
+  await beat(p, 300);
+  // ⚠️ A DOM click, not a pointer click. Once a Q&A row is typed the drawer is tall enough that
+  // its footer sits under the fixed editor toolbar; Playwright's hit-test then refuses the click
+  // for 10s ("intercepts pointer events") while the cursor visibly rests on the button. The
+  // viewer sees the cursor arrive and the drawer close, which is the honest sequence.
+  await b.evaluate((el) => (el as HTMLButtonElement).click()).catch((e) => console.warn(`     ⚠️ drawer Save failed: ${e?.message?.split('\n')[0]}`));
+  return true;
+}
+
+/**
  * Press the "+ Add block" affordance under the first block and wait for the picker.
  *
  * ⚠️ NOT a block control: it is a sibling BELOW the block wrapper, always visible, and at 720p it
@@ -338,7 +367,12 @@ function openEditorOnNewSite(base: string, businessName: string): Step {
 async function clickAny(p: Page, names: RegExp[], what: string): Promise<boolean> {
   await injectCursor(p);
   for (const name of names) {
-    const b = p.getByRole('button', { name }).first();
+    // ⚠️ The VISIBLE match, not the first. The products editor renders "Set up my store" twice
+    // (one inside a collapsed details), `.first()` picked the hidden one, the click failed
+    // silently and the clip showed a cursor parked mid-screen beside an unpressed button.
+    const all = p.getByRole('button', { name });
+    const visible = all.locator('visible=true').first();
+    const b = (await visible.count().then((n) => n > 0).catch(() => false)) ? visible : all.first();
     if (!(await b.count().then((n) => n > 0).catch(() => false))) continue;
     const box = await b.boundingBox().catch(() => null);
     if (box) await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 20 });
@@ -522,11 +556,37 @@ const SCENARIOS: Scenario[] = [
         },
       },
       {
-        say: 'It is added and opened for editing — fill it in, or keep the starter questions.',
+        say: 'It is added and opened for editing — type the first question and answer.',
         run: async (p) => {
+          // A new FAQ is EMPTY (no starter questions), so the clip has to put one in or the
+          // section it shows afterwards is a heading over nothing.
+          await p.getByRole('button', { name: /add q&a/i }).first().waitFor({ state: 'visible', timeout: 20_000 })
+            .catch(() => console.warn('     ⚠️ FAQ editor did not open'));
           await beat(p, READ);
-          await clickAny(p, [/^save$/i, /^close$/i], 'save the new block');
-          await beat(p, 1200);
+          await clickAny(p, [/add q&a/i], 'add a Q&A row');
+          await beat(p, 600);
+          const q = p.getByLabel(/^Question 1/i).first();
+          const a = p.getByLabel(/^Answer 1/i).first();
+          if (await q.count()) {
+            // A new row is prefilled "New Question" / "New Answer" — select it or the typing
+            // appends ("New QuestionDo you ship?" went to a clip once).
+            const qb = await q.boundingBox().catch(() => null);
+            if (qb) await p.mouse.move(qb.x + qb.width / 2, qb.y + qb.height / 2, { steps: 16 });
+            await q.click();
+            await q.selectText().catch(() => {});
+            await p.keyboard.type('Do you ship?', { delay: 70 });
+            await beat(p, 500);
+            const ab = await a.boundingBox().catch(() => null);
+            if (ab) await p.mouse.move(ab.x + ab.width / 2, ab.y + ab.height / 2, { steps: 16 });
+            await a.click();
+            await a.selectText().catch(() => {});
+            await p.keyboard.type('Yes — anywhere in the US, usually within three days.', { delay: 60 });
+          } else {
+            console.warn('     ⚠️ Question 1 field not found');
+          }
+          await beat(p, READ);
+          await clickDrawerSave(p);
+          await beat(p, 1500);
         },
       },
       {
@@ -584,7 +644,7 @@ const SCENARIOS: Scenario[] = [
       {
         say: 'Save — the page updates in place.',
         run: async (p) => {
-          await clickLast(p, /^save$/i, 'save the block');
+          await clickDrawerSave(p);
           await beat(p, 1500);
           await injectCursor(p);
           await p.mouse.move(VIEWPORT.width / 2, VIEWPORT.height / 2, { steps: 12 });
@@ -610,7 +670,18 @@ const SCENARIOS: Scenario[] = [
       {
         say: 'The site has no store yet — one click sets it up.',
         run: async (p) => {
-          await clickAny(p, [/set up my store/i], 'set up my store');
+          // ⚠️ By FULL text, not by accessible-name substring. Four elements answer to
+          // "set up my store" — the canvas block's placeholder sentence mentions it, and that
+          // wrapper is 1000px wide, behind the drawer, and wins `.first()`; clicking it timed out
+          // while the real button sat unpressed. Anchoring the regex to the whole text leaves
+          // exactly the button.
+          await injectCursor(p);
+          const setup = p.locator('button', { hasText: /^\s*🏪?\s*Set up my store\s*$/ }).locator('visible=true').first();
+          await setup.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => console.warn('     ⚠️ Set up my store button not found'));
+          const sb = await setup.boundingBox().catch(() => null);
+          if (sb) await p.mouse.move(sb.x + sb.width / 2, sb.y + sb.height / 2, { steps: 20 });
+          await beat(p, 300);
+          await setup.click({ timeout: 10_000 }).catch((e) => console.warn(`     ⚠️ set-up click failed: ${e?.message?.split('\n')[0]}`));
           const qa = p.locator('#qa-title').first();
           await qa.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => console.warn('     ⚠️ quick-add form never appeared — is the recorder signed in?'));
           await beat(p, READ);
@@ -637,7 +708,7 @@ const SCENARIOS: Scenario[] = [
       {
         say: 'Save — they are on the page, with Add to Cart.',
         run: async (p) => {
-          await clickAny(p, [/^save$/i], 'save the products block');
+          await clickDrawerSave(p);
           await beat(p, 1500);
           await injectCursor(p);
           for (let i = 0; i < 3; i++) { await p.mouse.wheel(0, 360); await beat(p, 650); }

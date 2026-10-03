@@ -6,7 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-type Props = { block: Block; onSave?: (b: Block) => void; onClose?: () => void };
+// `template` is what DynamicBlockEditor passes every specialized editor. ⚠️ Until 2026-10-02 this
+// editor ignored it and read `window.__QS_TPL_REF__` / `__QS_TEMPLATE__` instead — globals that
+// NOTHING in the codebase ever set — so `templateId` was always '' in the live editor, and the
+// "🏪 Set up my store" one-click rendered its merchant-less fallback for every real owner. The
+// prop is the truth; the global is kept only as a fallback for the other legacy readers.
+type Props = { block: Block; onSave?: (b: Block) => void; onClose?: () => void; template?: { id?: string; data?: any } | null };
 
 type ProductLite = {
   id: string; title: string; price_cents: number;
@@ -46,7 +51,7 @@ function hydrateFromStorage() {
   }
 }
 
-export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
+export default function ProductsGridEditor({ block, onSave, onClose, template }: Props) {
   const isProductsGrid = block?.type === 'products-grid' || block?.type === 'products_grid';
 
   const content: any = block?.content ?? {};
@@ -56,7 +61,7 @@ export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
   });
 
   // Merchant source of truth (template meta → storage → events)
-  const init = readMerchantFromData(getTpl()?.data ?? {});
+  const init = readMerchantFromData(template?.data ?? getTpl()?.data ?? {});
   const [merchantEmail, setMerchantEmail] = React.useState<string>(init.email);
   const [merchantId, setMerchantId] = React.useState<string>(init.merchantId);
   const [merchantLabel, setMerchantLabel] = React.useState<string>('');
@@ -81,7 +86,7 @@ export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
   // One-click "Set up my store" (owner-gated server-side; stamps meta.ecom.merchant_id).
   const [settingUp, setSettingUp] = React.useState(false);
   const [setupMsg, setSetupMsg] = React.useState<string | null>(null);
-  const templateId: string = String(getTpl()?.id ?? '');
+  const templateId: string = String(template?.id ?? getTpl()?.id ?? '');
 
   const refresh = React.useCallback(async () => {
     const email = merchantEmail?.trim();

@@ -91,16 +91,25 @@ before the site they just built can go live. Google asks for one tap.
   `trigger_reason` as `surface:method:reason`. Without it the button would be unmeasurable, and
   shipping it unmeasured is how you end up believing it helped.
 
-⛔ **INERT until two Supabase dashboard actions.** Verified 2026-09-26: the authorize endpoint
-returns `{"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"}`.
-So the flag being off is correct, not an oversight — turning it on today renders a button that
-400s.
+⛔ **INERT until the Supabase dashboard actions below.** Verified 2026-09-26: the authorize endpoint
+returns `{"error_code":"validation_failed","msg":"Unsupported provider: provider is not enabled"}`;
+re-verified 2026-10-03 (`/auth/v1/settings` lists `external.email` and `anonymous_users` only).
+
+**Since 2026-10-03 the button is gated on the LIVE provider list, not a flag.**
+`lib/auth/authProviders.ts` reads Supabase's public settings (cached 5 min) and `/login` + the guest
+box read that; `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` is now only a kill switch (`0`). The old design
+needed the provider configured AND a Vercel flag set AND a redeploy — three independent steps, and in
+eleven weeks none happened. Now step 1 below is the whole rollout.
 
 **Owner actions, in order:**
-1. Supabase → Authentication → Providers → **Google**: client id + secret.
-2. Supabase → Authentication → **Manual linking: enabled** (required by `linkIdentity`).
-3. Supabase → URL Configuration → Redirect URLs: allowlist the app hosts.
-4. `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1` in Vercel, then **redeploy** — it is build-time inlined.
+1. Google Cloud Console → the OAuth client Search Console already uses (`GOOGLE_CLIENT_ID`) →
+   Authorized redirect URIs → add `https://<project-ref>.supabase.co/auth/v1/callback`.
+2. Supabase → Authentication → Providers → **Google**: enable; paste that client id + secret.
+3. Supabase → Authentication → **Manual linking: enabled** (required by `linkIdentity`).
+4. Supabase → URL Configuration → Site URL `https://www.quicksites.ai`; Redirect URLs
+   `https://quicksites.ai/**`, `https://www.quicksites.ai/**`, `https://*.quicksites.ai/**`,
+   `http://localhost:3000/**`, plus each white-label apex.
+5. Check: `curl -s https://www.quicksites.ai/api/auth/providers` → `{"google":true,…}`. No deploy.
 
 ⚠️ **Assumed, not measured:** that one-tap sign-up converts better here. It is a strong prior and
 it is not evidence; the `method` dimension exists precisely so the claim can be checked rather

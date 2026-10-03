@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient as createBrowserClient } from '@supabase/supabase-js';
-import { googleAuthEnabled } from '@/lib/flags/googleAuth';
+import type { AuthProviders } from '@/lib/auth/authProviders';
 import { finalizeBrowserSession } from '@/lib/auth/browserSession';
 
 type BuildInfo = { sha?: string; env?: string; deployId?: string };
@@ -26,7 +26,14 @@ const normalizeEmail = (raw: string) =>
 
 const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-export default function LoginForm({ build }: { build?: BuildInfo }) {
+export default function LoginForm({
+  build,
+  providers,
+}: {
+  build?: BuildInfo;
+  /** Live provider list from the server (lib/auth/authProviders). Absent ⇒ Google hidden. */
+  providers?: AuthProviders;
+}) {
   const sp = useSearchParams();
 
   const nextPath = useMemo(() => {
@@ -61,7 +68,9 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
   const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [branding, setBranding] = useState<OrgBranding | null>(null);
-  const showGoogle = googleAuthEnabled();
+  // Decided by the server from Supabase's live provider list — never a build-time flag, which
+  // could be set with no provider behind it (a button that 400s on every click).
+  const showGoogle = providers?.google === true;
 
   // Referral code: prefilled from ?ref=, or shown behind a toggle. On send, we validate it +
   // set the qs_ref cookie so attribution flows when they later create a store.

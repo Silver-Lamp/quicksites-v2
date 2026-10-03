@@ -1,28 +1,29 @@
 // lib/flags/googleAuth.ts
 //
-// Feature flag for "Continue with Google" on the login page.
+// KILL SWITCH for "Continue with Google" — not the thing that turns it on.
 //
-// Env-gated (default OFF) because the button is useless — and confusing — until the
-// Google provider is configured in the Supabase dashboard. Email + password does NOT
-// need this flag (Supabase enables the email/password provider by default); only the
-// Google OAuth button is gated.
+// Whether the button shows is decided by lib/auth/authProviders.ts, which reads the live provider
+// list from Supabase. Until 2026-10-03 this file was a build-time ON flag
+// (NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1) that had to be set in Vercel AFTER the provider was
+// configured in the Supabase dashboard — two independent steps, and in eleven weeks neither
+// happened. The flag could also be set with no provider behind it, giving a button that 400s on
+// every click. Runtime detection removes the second step entirely; this env var now only forces
+// the button OFF (`0` / `false`) if Google ever needs pulling without touching Supabase.
 //
-// PREREQUISITES to enable in an environment:
-//   1. In Supabase → Authentication → Providers → Google: set the Google OAuth client
-//      id + secret (from a Google Cloud OAuth consent screen / credentials).
-//   2. In Supabase → Authentication → URL Configuration → Redirect URLs: allowlist the
-//      app hosts, e.g. https://quicksites.ai/**, https://*.quicksites.ai/**, and (for
-//      dev) http://localhost:3000/**. Google's own "Authorized redirect URI" is the
-//      SUPABASE callback (https://<project>.supabase.co/auth/v1/callback), NOT our app —
-//      Supabase brokers the handshake and then redirects to our allowlisted redirectTo.
-//   3. Custom / white-label branded domains each need adding to the Supabase Redirect
-//      URLs allowlist (wildcards cover the platform hosts; branded apexes do not).
-//
-// To turn on: set NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=1 (build-time; inlined on the client).
-export const GOOGLE_AUTH_ENABLED =
-  process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === '1' ||
-  process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true';
+// ── To make Google live (owner; the Supabase dashboard cannot be driven headless) ────────────
+//   1. Google Cloud Console → the OAuth client already used for Search Console (GOOGLE_CLIENT_ID)
+//      → Authorized redirect URIs → add  https://<project-ref>.supabase.co/auth/v1/callback
+//      (Supabase brokers the handshake; our app is never Google's redirect target).
+//   2. Supabase → Authentication → Providers → Google: enable, paste that client id + secret.
+//   3. Supabase → Authentication → URL Configuration: Site URL https://www.quicksites.ai and
+//      Redirect URLs  https://quicksites.ai/**  https://www.quicksites.ai/**
+//      https://*.quicksites.ai/**  http://localhost:3000/**  (+ each white-label apex).
+//   4. Supabase → Authentication → Settings → "Allow manual linking" ON — the guest sign-up box
+//      upgrades an anonymous builder with linkIdentity, which 400s without it.
+//   5. Optional: leaked-password protection ON (password auth is a new attack surface).
+//   Then GET /api/auth/providers answers {"google":true} and the buttons appear. No deploy.
 
-export function googleAuthEnabled(): boolean {
-  return GOOGLE_AUTH_ENABLED;
+export function googleAuthKillSwitch(): boolean {
+  const raw = (process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED ?? '').trim().toLowerCase();
+  return raw === '0' || raw === 'false' || raw === 'off';
 }

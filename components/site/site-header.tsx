@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { GALLERY_HREF, INDUSTRY_NAV, moreIndustriesLabel } from '@/lib/site/industryNav';
 import {
   Sheet,
   SheetTrigger,
@@ -28,6 +29,8 @@ type LinkItem = {
   external?: boolean;
   /** Renders as a dropdown on desktop and an indented group in the mobile sheet. */
   children?: LinkItem[];
+  /** The "+N more" style entry: accent-coloured, reads as a door to the rest. */
+  accent?: boolean;
 };
 
 type Props = {
@@ -53,22 +56,18 @@ const DEFAULT_LINKS: LinkItem[] = [
   {
     label: 'Industries',
     href: '/features',
-    // Grouped, not deleted. Each of these was a top-level nav item and each still earns its page —
-    // the change is that a visitor opens the one that is theirs instead of reading all five.
+    // Grouped, not deleted. Each vertical with its own page still earns it — the change is that a
+    // visitor opens the one that is theirs instead of reading all of them.
+    //
+    // ⚠️ THE SAME LIST AS THE HOMEPAGE PILLS, from lib/site/industryNav.ts (owner, 2026-10-03). This
+    // dropdown used to hold six hand-typed verticals while the hero showed twelve pills and a
+    // "+47 more" the dropdown lacked — two lists of "our industries" on one page. Job Seekers stays
+    // in that list on purpose: Verbatim was once reachable from NOWHERE on this site, and its usage
+    // was being read as weak demand when it measured discovery. The closing "+N more" entry opens
+    // the gallery; N is derived from lib/industries, never typed.
     children: [
-      { label: 'Restaurants', href: '/restaurants' },
-      { label: 'Realtors', href: '/realtors' },
-      { label: 'Auto Shops', href: '/secondset' },
-      { label: 'Supplements', href: '/supplements' },
-      // ⚠️ Verbatim was reachable from NOWHERE on this site — zero links from the homepage or nav —
-      // while I was citing its usage (8 builds, one owner, one day) as evidence of weak demand. That
-      // number measured DISCOVERY, not demand: you cannot conclude nobody wants a feature that nobody
-      // can find. Adding the entry point is what turns it into a measurement. It keeps an entry
-      // point here for exactly that reason — one level down is still findable; absent is not.
-      { label: 'Job Seekers', href: '/verbatim' },
-      // The smallest merchant we serve, and the only one who is not the account holder: a kid runs
-      // the stand, a grown-up holds the Stripe account (Stripe requires 18+ and verifies identity).
-      { label: 'Lemonade Stands', href: '/lemonade-stands' },
+      ...INDUSTRY_NAV.map((e) => ({ label: e.label, href: e.href })),
+      { label: moreIndustriesLabel(), href: GALLERY_HREF, accent: true },
     ],
   },
   { label: 'Pricing', href: '/pricing' },
@@ -154,9 +153,11 @@ function NavDropdown({ item, pathname }: { item: LinkItem; pathname: string | nu
               role="menuitem"
               className={cn(
                 'block rounded-md px-3 py-2 text-sm transition-colors',
-                pathname === c.href
-                  ? 'bg-zinc-800 text-white'
-                  : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
+                c.accent
+                  ? 'mt-1 border-t border-zinc-800 pt-2 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200'
+                  : pathname === c.href
+                    ? 'bg-zinc-800 text-white'
+                    : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
               )}
             >
               {c.label}
@@ -269,9 +270,11 @@ export default function SiteHeader({
                               href={c.href}
                               className={cn(
                                 'block rounded-md px-3 py-2 text-sm transition-colors',
-                                pathname === c.href
-                                  ? 'bg-zinc-800 text-white'
-                                  : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
+                                c.accent
+                                  ? 'text-sky-300 hover:bg-sky-500/10 hover:text-sky-200'
+                                  : pathname === c.href
+                                    ? 'bg-zinc-800 text-white'
+                                    : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
                               )}
                               aria-current={pathname === c.href ? 'page' : undefined}
                             >

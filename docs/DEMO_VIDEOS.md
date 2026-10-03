@@ -161,6 +161,27 @@ It finds the published track itself. ⚠️ **It refuses on a duration mismatch*
 to one specific cut, and muxing it against a different recording yields a file where the voice
 describes the wrong thing — plausible-looking and wrong, the worst artifact to hand a prospect.
 
+## 3d. Signed-in scenarios (`--as <email>`)
+
+`add-block`, `edit-block` and `add-product` (2026-10-02) start by signing in and creating a site
+from the industry chooser, so the clip opens on the thing it is about rather than on a guest
+build. `--as <email>` mints a one-time magic link with the service role in `.env.local` (the
+same call as `/api/admin/merchants/impersonate`) and opens it — no password, no email sent.
+
+```bash
+npx tsx scripts/record-demo.mts add-product --as sandonjurowski+tester2@gmail.com
+```
+
+⚠️ **Use a test account you own.** Each run creates a real site under that account (and
+`add-product` a real merchant + two catalog items). Without `--as` the recorder falls back to
+the guest build and says so; the product clip then shows "This site doesn't have a store yet"
+and stops, because a guest cannot create a store — and should not, or every demo would leave a
+junk merchant row.
+
+⚠️ The block chrome is `hidden group-hover:flex`: the "Edit block" / "Add a block below" buttons
+exist only while the pointer is over the block. `clickBlockControl` hovers first, then clicks —
+reversed, the button is not in the DOM and the step records nothing.
+
 ## 4. Adding one
 
 1. Add a scenario to `SCENARIOS` in `scripts/record-demo.mts`.

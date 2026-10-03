@@ -18,7 +18,7 @@ export function FloatingAddBlockHere({ onAdd, template }: { onAdd: (type: Block[
           title="Add Block Here"
         >
           <PlusCircle className="w-5 h-5 mr-1" />
-          Add Blockzzz
+          Add block here
         </button>
       ) : (
         <div className="absolute z-50 mt-2 w-full max-w-md">

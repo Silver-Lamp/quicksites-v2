@@ -61,6 +61,19 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
       break;
     }
 
+    case 'quote': {
+      // ⚠️ `quote` sat in the block picker for months with NO default here, so the picker's
+      // preview tile called createDefaultBlock('quote') → empty content → the schema's
+      // `text: min(1)` failed → normalizeBlock threw "Invalid block: quote" during render → the
+      // WHOLE EDITOR crashed to "Application error" the moment anyone pressed "Add a block below".
+      // Found by the demo recorder on 2026-10-02, not by a bug report. The text is a visible
+      // prompt, not an invented customer — a quote block is the owner's to fill.
+      content = {
+        text: 'A line a customer actually said about you goes here.',
+        attribution: '',
+      };
+      break;
+    }
     case 'testimonial': {
       content = {
         ...content,

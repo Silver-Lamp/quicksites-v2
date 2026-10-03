@@ -5,6 +5,13 @@
 //   npx tsx scripts/record-demo.mts --list
 //   npx tsx scripts/record-demo.mts guest-build
 //   npx tsx scripts/record-demo.mts guest-build --local --keep-webm
+//   npx tsx scripts/record-demo.mts add-product --as sandonjurowski+tester2@gmail.com
+//
+// `--as <email>` signs the recorder in as that account first, through a magic link minted with
+// the service role (the same mechanism as /api/admin/merchants/impersonate) — no password, no
+// email sent. The signed-in scenarios (add-block / edit-block / add-product) need it: creating a
+// store and adding products are owner actions, and doing them as an anonymous guest would leave
+// junk merchant rows behind. ⚠️ Use a test account you own; the site it creates is a real row.
 //
 // Asked for twice on the 2026-09-30 call: *"when it actually moves and walks through like you
 // were just doing, so you can actually see."*
@@ -125,6 +132,173 @@ async function typeSlowly(p: Page, selector: string, text: string) {
   await moveTo(p, selector);
   await p.click(selector);
   await p.type(selector, text, { delay: 85 });
+}
+
+/**
+ * Replace a field's contents at human speed (select the old text first, so it visibly goes).
+ *
+ * ⚠️ `selectText()` rather than a select-all keystroke: the hero's headline is a contenteditable,
+ * and `Meta+A` / `Control+A` + Backspace left it untouched in headless Chromium — the first cut
+ * typed "Hand-poured candles, made in Renton" IN FRONT of "Wildflower Candle Co." and the clip
+ * showed the two run together. Typing over a selection replaces it in inputs and contenteditables
+ * alike.
+ */
+async function retypeSlowly(p: Page, selector: string, text: string) {
+  await moveTo(p, selector);
+  const field = p.locator(selector).first();
+  await field.click();
+  await field.selectText().catch(async () => {
+    await p.keyboard.press('Control+A').catch(() => {});
+  });
+  await beat(p, 300);
+  await p.keyboard.type(text, { delay: 70 });
+}
+
+/**
+ * The drawer's own Save — the LAST matching button, because the page header also has a "Save"
+ * and `getByRole(...).first()` pressed that one while the drawer stayed open for the rest of the
+ * clip. Drawers and modals are portalled to the end of the document.
+ */
+async function clickLast(p: Page, name: RegExp, what: string): Promise<boolean> {
+  await injectCursor(p);
+  const b = p.getByRole('button', { name }).last();
+  if (!(await b.count().then((n) => n > 0).catch(() => false))) {
+    console.warn(`     ⚠️ no control matched for "${what}" — the recording will show nothing here`);
+    return false;
+  }
+  const box = await b.boundingBox().catch(() => null);
+  if (box) await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 20 });
+  await beat(p, 300);
+  await b.click().catch(() => {});
+  return true;
+}
+
+// ── signed-in recordings ─────────────────────────────────────────────────────────────────────
+
+/** Set from `--as <email>`; null = record as an anonymous visitor. */
+let SIGN_IN_AS: string | null = null;
+
+/**
+ * Mint a one-time sign-in link for a test account, without sending an email.
+ *
+ * Same call as app/api/admin/merchants/impersonate: `generateLink({type:'magiclink'})` returns
+ * the action link Supabase would have emailed; opening it lands on /auth/callback signed in.
+ * Reads the service role from .env.local — this runs on the owner's machine only.
+ */
+async function mintSignInLink(base: string, email: string): Promise<string> {
+  const dotenv = await import('dotenv');
+  dotenv.config({ path: '.env.local' });
+  const { installNodeWebSocket } = await import('../lib/supabase/nodeWebSocketShim');
+  await installNodeWebSocket();
+  const { createClient } = await import('@supabase/supabase-js');
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+  if (!url || !key) throw new Error('--as needs NEXT_PUBLIC_SUPABASE_URL + a service-role key in .env.local');
+  const admin = createClient(url, key, { auth: { persistSession: false } });
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: 'magiclink',
+    email: email.toLowerCase(),
+    options: { redirectTo: `${base}/auth/callback?next=${encodeURIComponent('/admin/templates/new')}` },
+  });
+  if (error) throw new Error(`generateLink: ${error.message}`);
+  const link = (data as any)?.properties?.action_link ?? (data as any)?.action_link;
+  if (!link) throw new Error('generateLink returned no action link');
+  return link;
+}
+
+/** The first block on the canvas. The live preview marks each block as a hoverable group. */
+const FIRST_BLOCK = '.group.relative.cursor-pointer';
+
+/**
+ * Hover a block so its chrome appears, then press one of its controls by accessible name.
+ * The controls are `hidden group-hover:flex`, so they exist only while the pointer is over the
+ * block — hover first, then click, never the other way round.
+ */
+async function clickBlockControl(p: Page, blockSelector: string, label: string): Promise<boolean> {
+  await injectCursor(p);
+  const block = p.locator(blockSelector).first();
+  if (!(await block.count())) { console.warn(`     ⚠️ no block matched ${blockSelector}`); return false; }
+  await block.scrollIntoViewIfNeeded().catch(() => {});
+  const box = await block.boundingBox().catch(() => null);
+  if (box) await p.mouse.move(box.x + box.width / 2, box.y + Math.min(60, box.height / 2), { steps: 20 });
+  await block.hover().catch(() => {});
+  await beat(p, 500);
+  const btn = block.locator(`button[aria-label="${label}"]`).first();
+  if (!(await btn.count())) { console.warn(`     ⚠️ "${label}" not found on the hovered block`); return false; }
+  const bb = await btn.boundingBox().catch(() => null);
+  if (bb) await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2, { steps: 14 });
+  await beat(p, 300);
+  await btn.click({ force: true }).catch(() => {});
+  return true;
+}
+
+/**
+ * The shared opening of every signed-in scenario: sign in, create a site from the industry
+ * chooser, land in the editor. One timelapsed step, so the clip starts on the thing it is about.
+ *
+ * ⚠️ Falls back to the guest build when `--as` was not given — the add/edit-block clips still
+ * work that way, and the recorder SAYS it fell back, because a product clip recorded as a guest
+ * would show "This site doesn't have a store yet" and nothing else.
+ */
+function openEditorOnNewSite(base: string, businessName: string): Step {
+  return {
+    say: 'Sign in and start a new site, so there is something to work on.',
+    timelapse: true,
+    run: async (p) => {
+      if (SIGN_IN_AS) {
+        const link = await mintSignInLink(base, SIGN_IN_AS);
+        await p.goto(link, { waitUntil: 'networkidle' }).catch(() => {});
+        await p.waitForURL((u) => u.toString().startsWith(base), { timeout: 30_000 })
+          .catch(() => console.warn('     ⚠️ magic link did not land back on the site'));
+        await p.goto(`${base}/admin/templates/new`, { waitUntil: 'networkidle' });
+        await showCursor(p);
+        await clickAny(p, [/start from your industry/i], 'industry chooser');
+        await beat(p, 800);
+        const biz = p.locator('#biz, input[placeholder*="Towing"]').first();
+        await biz.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => console.warn('     ⚠️ business-name field not found'));
+        await typeSlowly(p, '#biz', businessName);
+        const search = p.locator('input[placeholder="Search industries"]').first();
+        if (await search.count()) {
+          // ⚠️ Must be a label that EXISTS. "Candle" matched nothing ("No industries match") and the
+          // first recording clicked Create with no industry — a red "Pick an industry" and no site.
+          await typeSlowly(p, 'input[placeholder="Search industries"]', 'Handmade');
+          await beat(p, 600);
+        }
+        // The industry list is a grid of buttons; take the first match (or the first option).
+        const option = p.locator('button:has(span.truncate)').first();
+        if (await option.count()) {
+          const box = await option.boundingBox().catch(() => null);
+          if (box) await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 16 });
+          await option.click().catch(() => {});
+        } else {
+          console.warn('     ⚠️ no industry option found');
+        }
+        await beat(p, 600);
+        await clickAny(p, [/create my site/i], 'create my site');
+      } else {
+        console.warn('     ⚠️ no --as <email>: recording as a guest instead (product steps will have no store)');
+        await p.goto(`${base}/build`, { waitUntil: 'networkidle' });
+        await showCursor(p);
+        await typeSlowly(p, 'input[type="text"]', businessName);
+        await clickAny(p, [/build my site/i, /start building/i, /create/i], 'build');
+      }
+      await p.waitForURL(/\/admin\/templates\//, { timeout: 120_000 })
+        .catch(() => console.warn('     ⚠️ editor never opened'));
+      await p.waitForLoadState('networkidle').catch(() => {});
+      // A site created from the chooser opens with the Pages tray already closed (#1088), so only
+      // reach for Close when it is actually there — otherwise the miss is noise, not a defect.
+      if (await p.getByRole('button', { name: /^close$/i }).first().isVisible().catch(() => false)) {
+        await clickAny(p, [/^close$/i], 'close the Pages panel');
+      }
+      // ⚠️ WAIT FOR THE CANVAS, NOT THE URL. The editor URL arrives before the blocks render (they
+      // load client-side), and the first two recordings hovered an empty canvas: "no block
+      // matched" while the frame extracted 20s later showed seven of them. A probe against the
+      // same page confirmed the selector; the wait was the bug.
+      await p.locator(FIRST_BLOCK).first().waitFor({ state: 'visible', timeout: 60_000 })
+        .catch(() => console.warn('     ⚠️ canvas blocks never rendered — every later step will miss'));
+      await beat(p, 1500);
+    },
+  };
 }
 
 
@@ -288,6 +462,162 @@ const SCENARIOS: Scenario[] = [
       {
         say: 'Everything saves as you go — it is yours when you sign up.',
         run: async (p) => { await showCursor(p); await beat(p, READ * 2); },
+      },
+    ],
+  },
+  {
+    name: 'add-block',
+    title: 'Adding a block — a new section in two clicks',
+    steps: (base) => [
+      openEditorOnNewSite(base, 'Wildflower Candle Co.'),
+      {
+        say: 'Hover any section — its controls appear.',
+        run: async (p) => {
+          const block = p.locator(FIRST_BLOCK).first();
+          await block.scrollIntoViewIfNeeded().catch(() => {});
+          const box = await block.boundingBox().catch(() => null);
+          await injectCursor(p);
+          if (box) await p.mouse.move(box.x + box.width / 2, box.y + 60, { steps: 24 });
+          await block.hover().catch(() => {});
+          await beat(p, READ);
+        },
+      },
+      {
+        say: 'Add a block below it.',
+        run: async (p) => {
+          await clickBlockControl(p, FIRST_BLOCK, 'Add a block below');
+          await beat(p, READ);
+        },
+      },
+      {
+        say: 'Pick what it should be — an FAQ.',
+        run: async (p) => {
+          await clickAny(p, [/^FAQ/i, /faq/i], 'FAQ quick pick');
+          await beat(p, READ);
+        },
+      },
+      {
+        say: 'It is added and opened for editing — fill it in, or keep the starter questions.',
+        run: async (p) => {
+          await beat(p, READ);
+          await clickAny(p, [/^save$/i, /^close$/i], 'save the new block');
+          await beat(p, 1200);
+        },
+      },
+      {
+        say: 'The new section sits exactly where you put it.',
+        run: async (p) => {
+          await injectCursor(p);
+          for (let i = 0; i < 3; i++) { await p.mouse.wheel(0, 360); await beat(p, 650); }
+          await beat(p, READ);
+        },
+      },
+    ],
+  },
+  {
+    name: 'edit-block',
+    title: 'Editing a block — change the words, see it live',
+    steps: (base) => [
+      openEditorOnNewSite(base, 'Wildflower Candle Co.'),
+      {
+        say: 'Hover the hero and open it for editing.',
+        run: async (p) => {
+          await clickBlockControl(p, FIRST_BLOCK, 'Edit block');
+          // The hero editor is lazy-loaded ("Loading editor for hero block…") and opens on a
+          // PREVIEW of the content; the text fields exist only after the Edit toggle. The first
+          // recording waited 45s for a Headline field that was never going to render.
+          await p.getByRole('button', { name: /suggest all/i }).first().waitFor({ state: 'visible', timeout: 30_000 })
+            .catch(() => console.warn('     ⚠️ hero editor did not finish loading'));
+          await beat(p, READ);
+          const editToggle = p.getByRole('button', { name: /^edit$/i }).last();
+          if (await editToggle.count()) {
+            const box = await editToggle.boundingBox().catch(() => null);
+            if (box) await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 16 });
+            await beat(p, 300);
+            await editToggle.click().catch(() => {});
+          }
+          await beat(p, 1000);
+        },
+      },
+      {
+        say: 'Rewrite the headline.',
+        run: async (p) => {
+          const field = p.locator('[aria-label="Headline"]').first();
+          await field.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => console.warn('     ⚠️ Headline field not found'));
+          await retypeSlowly(p, '[aria-label="Headline"]', 'Hand-poured candles, made in Renton');
+          await beat(p, 800);
+        },
+      },
+      {
+        say: 'And the line under it.',
+        run: async (p) => {
+          const field = p.locator('[aria-label="Subheadline"]').first();
+          if (await field.count()) await retypeSlowly(p, '[aria-label="Subheadline"]', 'Small batches. Clean soy wax. Scents you will actually want in your home.');
+          await beat(p, 800);
+        },
+      },
+      {
+        say: 'Save — the page updates in place.',
+        run: async (p) => {
+          await clickLast(p, /^save$/i, 'save the block');
+          await beat(p, 1500);
+          await injectCursor(p);
+          await p.mouse.move(VIEWPORT.width / 2, VIEWPORT.height / 2, { steps: 12 });
+          await beat(p, READ * 2);
+        },
+      },
+    ],
+  },
+  {
+    name: 'add-product',
+    title: 'Adding products — a store on the site in under a minute',
+    steps: (base) => [
+      openEditorOnNewSite(base, 'Wildflower Candle Co.'),
+      {
+        say: 'Add a Products block below the hero.',
+        run: async (p) => {
+          await clickBlockControl(p, FIRST_BLOCK, 'Add a block below');
+          await beat(p, 1200);
+          await clickAny(p, [/^Products/i, /products/i], 'Products quick pick');
+          await beat(p, READ);
+        },
+      },
+      {
+        say: 'The site has no store yet — one click sets it up.',
+        run: async (p) => {
+          await clickAny(p, [/set up my store/i], 'set up my store');
+          const qa = p.locator('#qa-title').first();
+          await qa.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => console.warn('     ⚠️ quick-add form never appeared — is the recorder signed in?'));
+          await beat(p, READ);
+        },
+      },
+      {
+        say: 'Add the first product: a name and a price.',
+        run: async (p) => {
+          await typeSlowly(p, '#qa-title', 'Lavender Soy Candle');
+          await retypeSlowly(p, '#qa-price', '24');
+          await clickAny(p, [/^\+ add$/i, /^add$/i], 'add product');
+          await beat(p, READ);
+        },
+      },
+      {
+        say: 'And a second one.',
+        run: async (p) => {
+          await typeSlowly(p, '#qa-title', 'Cedar & Smoke Candle');
+          await retypeSlowly(p, '#qa-price', '28');
+          await clickAny(p, [/^\+ add$/i, /^add$/i], 'add product');
+          await beat(p, READ);
+        },
+      },
+      {
+        say: 'Save — they are on the page, with Add to Cart.',
+        run: async (p) => {
+          await clickAny(p, [/^save$/i], 'save the products block');
+          await beat(p, 1500);
+          await injectCursor(p);
+          for (let i = 0; i < 3; i++) { await p.mouse.wheel(0, 360); await beat(p, 650); }
+          await beat(p, READ * 2);
+        },
       },
     ],
   },
@@ -463,14 +793,20 @@ async function main() {
   if (args.includes('--list') || args.length === 0) {
     console.log('Scenarios:');
     for (const s of SCENARIOS) console.log(`  ${s.name.padEnd(16)} ${s.title}`);
-    console.log('\n  npx tsx scripts/record-demo.mts <name> [--local] [--keep-webm]');
+    console.log('\n  npx tsx scripts/record-demo.mts <name> [--local] [--keep-webm] [--as <email>]');
     return;
+  }
+  const asIdx = args.indexOf('--as');
+  if (asIdx >= 0) {
+    SIGN_IN_AS = args[asIdx + 1] ?? null;
+    if (!SIGN_IN_AS || SIGN_IN_AS.startsWith('--')) throw new Error('--as needs an email');
+    args.splice(asIdx, 2);
   }
   const name = args.find((a) => !a.startsWith('--'));
   const scenario = SCENARIOS.find((s) => s.name === name);
   if (!scenario) throw new Error(`unknown scenario "${name}" — try --list`);
   const base = args.includes('--local') ? LOCAL : PROD;
-  console.log(`recording against ${base}`);
+  console.log(`recording against ${base}${SIGN_IN_AS ? ` as ${SIGN_IN_AS}` : ' as an anonymous visitor'}`);
   await record(scenario, base, args.includes('--keep-webm'));
 }
 

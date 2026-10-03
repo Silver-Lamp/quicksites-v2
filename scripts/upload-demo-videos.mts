@@ -87,6 +87,26 @@ const CLIPS: Record<string, ClipSpec> = {
     posterAt: 10,
     primary: true,
   },
+  'add-block': {
+    feature: 'block-based-template-editor',
+    label: 'Adding a block',
+    blurb: 'Hover a section, add one below it, pick FAQ — placed and open for editing.',
+    // Provisional; re-pick off extracted frames after recording (docs/DEMO_VIDEOS.md §2).
+    posterAt: 12,
+  },
+  'edit-block': {
+    feature: 'block-based-template-editor',
+    label: 'Editing a block',
+    blurb: 'Open the hero, rewrite the headline, save — the page updates in place.',
+    posterAt: 14,
+  },
+  'add-product': {
+    feature: 'ecommerce-storefront',
+    label: 'Adding products',
+    blurb: 'Set up the store in one click, add two products, see them on the page with Add to Cart.',
+    posterAt: 22,
+    primary: true,
+  },
   'finished-site': {
     feature: 'seo-foundations-out-of-the-box',
     label: 'The published result',

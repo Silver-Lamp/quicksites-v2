@@ -5,6 +5,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { blockMeta } from '@/admin/lib/zod/blockSchema';
 import type { Block } from '@/types/blocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
+import { PICKER_GROUPS, QUICK_PICKS as PICKER_QUICK_PICKS } from '@/lib/blocks/pickerTypes';
 import RenderBlockMini from '@/components/admin/templates/render-block-mini';
 import SafeTriggerButton from '@/components/ui/safe-trigger-button';
 import {
@@ -19,23 +20,40 @@ import {
 } from 'lucide-react';
 import type { Template } from '@/types/template';
 
-const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
-  callToAction: { label: 'Calls to Action', types: ['hero', 'contact_form'] },
-  services:     { label: 'Business Features', types: ['services', 'service_areas', 'hours', 'scheduler'] }, // ⬅️ add scheduler
-  // E-commerce
-  ecommerce:    { label: 'E-commerce', types: ['products_grid', 'service_offer'] },
-  content:      { label: 'Content Blocks', types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio'] },
-};
+// The lists live in lib/blocks/pickerTypes.ts (data, tested): every type offered here must have a
+// default that validates, or the preview tile throws during render and takes the editor down.
+const blockGroups = PICKER_GROUPS;
 
-const QUICK_PICKS: Array<{ type: Block['type']; label: string; Icon: any }> = [
-  { type: 'text',          label: 'Text',      Icon: TypeIcon },
-  { type: 'contact_form',  label: 'Contact',   Icon: Mail },
-  { type: 'hero',          label: 'Hero',      Icon: ImageIcon },
-  { type: 'faq',           label: 'FAQ',       Icon: HelpCircle },
-  { type: 'hours',         label: 'Hours',     Icon: Clock },
-  { type: 'products_grid', label: 'Products',  Icon: ShoppingCart },
-  { type: 'scheduler',     label: 'Scheduler', Icon: CalendarDays }, // ⬅️ NEW quick pick
-];
+const QUICK_PICK_ICONS: Record<string, any> = {
+  text: TypeIcon,
+  contact_form: Mail,
+  hero: ImageIcon,
+  faq: HelpCircle,
+  hours: Clock,
+  products_grid: ShoppingCart,
+  scheduler: CalendarDays,
+};
+const QUICK_PICKS: Array<{ type: Block['type']; label: string; Icon: any }> = PICKER_QUICK_PICKS.map((q) => ({
+  ...q,
+  Icon: QUICK_PICK_ICONS[q.type] ?? TypeIcon,
+}));
+
+/**
+ * A preview block for the picker tile, or null when the default does not validate.
+ *
+ * ⚠️ `createDefaultBlock` normalizes through the zod schema and THROWS on a bad default — and this
+ * runs inside render, so an uncaught throw here is not a broken tile, it is "Application error"
+ * over the whole editor (2026-10-02, `quote`). A tile with no preview is a cosmetic gap; a dead
+ * editor is a lost customer. The test over pickerTypes.ts is the primary guard; this is the net.
+ */
+function previewBlockFor(type: Block['type']): Block | null {
+  try {
+    return createDefaultBlock(type) as unknown as Block;
+  } catch (e) {
+    if (typeof console !== 'undefined') console.warn(`[block-adder] no valid default for "${type}":`, (e as Error)?.message);
+    return null;
+  }
+}
 
 const AI_ENABLED_TYPES = new Set<Block['type']>(
   ['text', 'hero', 'testimonial', 'faq', 'services', 'service_areas', 'hours'] as Block['type'][]
@@ -306,13 +324,22 @@ export default function BlockAdderGrouped({
                             )}
 
                             <div className="relative w-full border rounded overflow-hidden border-gray-300 dark:border-neutral-700">
-                              <RenderBlockMini
-                                block={createDefaultBlock(type) as any}
-                                className="w-full h-32"
-                                showDebug={false}
-                                colorMode={colorMode}
-                                template={template}
-                              />
+                              {(() => {
+                                const preview = previewBlockFor(type);
+                                return preview ? (
+                                  <RenderBlockMini
+                                    block={preview as any}
+                                    className="w-full h-32"
+                                    showDebug={false}
+                                    colorMode={colorMode}
+                                    template={template}
+                                  />
+                                ) : (
+                                  <div className="flex h-32 w-full items-center justify-center text-xs text-muted-foreground">
+                                    {blockMeta[type as keyof typeof blockMeta]?.label ?? String(type)}
+                                  </div>
+                                );
+                              })()}
                               {aiEnabled && (
                                 <span className="pointer-events-none absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-600 text-white shadow">
                                   ✨ AI

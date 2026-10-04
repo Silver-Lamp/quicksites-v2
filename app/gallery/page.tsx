@@ -20,6 +20,8 @@
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import SiteHeader from '@/components/site/site-header';
+import SiteFooter from '@/components/site/site-footer';
 import { getGalleryData } from '@/lib/gallery/getGalleryData';
 import { GALLERY_HREF, galleryHrefFor } from '@/lib/site/industryNav';
 import type { IndustryKey } from '@/lib/industries';
@@ -53,6 +55,11 @@ export default async function GalleryPage({
   const cards = groups.flatMap((g) => g.examples.map((e) => ({ ...e, industry: g.label, key: g.key })));
 
   return (
+    <>
+      {/* The same chrome as every other marketing page. The board shipped bare (owner,
+          2026-10-03: "needs menu/chrome to get back to the main page") — a visitor arriving from
+          a "+47 more" pill had no way back but the browser button. */}
+      <SiteHeader sticky />
     <main className="mx-auto max-w-7xl px-4 py-12 sm:py-16">
       <header className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -138,5 +145,7 @@ export default async function GalleryPage({
         </p>
       )}
     </main>
+      <SiteFooter />
+    </>
   );
 }

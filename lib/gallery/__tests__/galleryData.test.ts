@@ -90,6 +90,12 @@ describe('the page does not claim these are customers', () => {
     );
   });
 
+  it('mounts the site header and footer, so a visitor can get back', () => {
+    // The board shipped bare: no nav, no way to the homepage but the browser button.
+    expect(prose).toMatch(/<SiteHeader sticky \/>/);
+    expect(prose).toMatch(/<SiteFooter \/>/);
+  });
+
   it('gives every thumbnail real alt text', () => {
     // The board flattens groups into cards that carry their industry label as `e.industry`.
     expect(prose).toMatch(/alt=\{`\$\{e\.name\} — \$\{e\.industry\}/);

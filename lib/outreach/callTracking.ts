@@ -24,6 +24,36 @@ function client() {
   return twilio(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
 }
 
+/**
+ * The PARENT-call status callback for a tracking number, derived from its voice URL.
+ *
+ * ⚠️ Without this a caller who hangs up during the announcement or the ring is invisible: the
+ * Dial never completes, so `/after-dial` never fires, and the row written at ring time stays
+ * `ringing` forever — indistinguishable from a live call (2026-10-05: a five-second robocall read
+ * as "still in progress" an hour later). Twilio POSTs here when the inbound call ends, with
+ * `CallStatus` + `CallDuration`. Set on every number we buy or attach, and backfilled onto
+ * existing numbers by `syncNumberStatusCallback`.
+ */
+export function statusCallbackFor(voiceUrl: string): string {
+  return `${voiceUrl.replace(/\/+$/, '')}/status`;
+}
+
+/** Point an existing number's parent-call status callback at ours. Idempotent. */
+export async function syncNumberStatusCallback(opts: {
+  sid: string;
+  voiceUrl: string;
+}): Promise<{ sid: string; statusCallback: string; previous: string | null }> {
+  if (!twilioConfigured()) throw new Error('Twilio is not configured.');
+  const c = client();
+  const statusCallback = statusCallbackFor(opts.voiceUrl);
+  const current = await c.incomingPhoneNumbers(opts.sid).fetch();
+  const previous = current.statusCallback || null;
+  if (previous !== statusCallback) {
+    await c.incomingPhoneNumbers(opts.sid).update({ statusCallback, statusCallbackMethod: 'POST' });
+  }
+  return { sid: opts.sid, statusCallback, previous };
+}
+
 /** Extract a US area code from a loose/E.164 phone, else undefined. */
 export function areaCodeFromPhone(phone?: string | null): string | undefined {
   if (!phone) return undefined;
@@ -120,6 +150,8 @@ export async function provisionTrackingNumber(opts: {
     phoneNumber: candidate,
     voiceUrl: opts.voiceUrl,
     voiceMethod: 'GET',
+    statusCallback: statusCallbackFor(opts.voiceUrl),
+    statusCallbackMethod: 'POST',
     ...(opts.smsUrl ? { smsUrl: opts.smsUrl, smsMethod: 'POST' as const } : {}),
   });
   return { phoneNumber: bought.phoneNumber, sid: bought.sid, locality };
@@ -280,6 +312,8 @@ export async function attachTrackingNumber(opts: {
   await c.incomingPhoneNumbers(found.sid).update({
     voiceUrl: opts.voiceUrl,
     voiceMethod: 'GET',
+    statusCallback: statusCallbackFor(opts.voiceUrl),
+    statusCallbackMethod: 'POST',
     // A Studio flow is bound through voiceApplicationSid; clearing it is what actually moves
     // the number off the flow. The flow itself is left in place as a fallback.
     voiceApplicationSid: '',

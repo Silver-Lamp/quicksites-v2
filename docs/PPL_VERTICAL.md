@@ -725,8 +725,15 @@ so the honest build is strictly the more profitable one.
 **The fix: name the destination before dialling it.**
 
 ```
-Thanks for calling. Connecting you now with Too Cool Towing, a local towing company serving South Hill.
+Connecting you to Too Cool Towing, serving South Hill.
 ```
+
+(Shortened 2026-10-05 from *"Thanks for calling. Connecting you now with Too Cool Towing, a local
+towing company serving South Hill."* — six to seven seconds before any phone rang. The first real
+call after that version shipped, to `renton-electrical.com`, lasted **five seconds**: the caller hung
+up mid-sentence, the Dial never started, Madrona's phone never rang. Almost certainly an autodialer,
+which proves nothing about humans — but every human was paying the same wait. With a name, the name
+and the city are the whole message; the trade descriptor is spoken only when no name resolved.)
 
 Now the business answering as itself **confirms** what the caller was told. Built as
 `lib/ppl/forwardAnnounce.ts#connectingAnnouncement` (pure, so the copy is testable) and read from
@@ -751,6 +758,22 @@ Now the business answering as itself **confirms** what the caller was told. Buil
 - Pinned by `lib/ppl/__tests__/forwardAnnounce.test.ts` — 15 tests including source guards over
   the route (its TwiML is a template literal no unit test imports) and **verified to fail with the
   old sentence restored**, since a test that only passes after the fix proves nothing.
+
+⚠️ **A hang-up before the bridge was invisible until 2026-10-05.** Outcomes were written only by
+the `<Dial action>` (`/after-dial`), which Twilio requests only when a Dial *finishes*. A caller
+who hangs up during the announcement or the ring never reaches one, so the row written at ring
+time stayed `ringing` forever — indistinguishable from a live call, and the alert email said
+"still in progress" about a five-second robocall an hour later. Twilio knew it was over at
+11:18:34. Now every tracking number carries a **parent-call status callback**
+(`/api/twilio/geo/<id>/status`, set at purchase and attach by `statusCallbackFor()`, backfilled
+onto older numbers by the **"Sync status callbacks"** button on `/admin/ppl` — Twilio creds are
+write-only in Vercel, so it is a click, not a script). The decision is pure
+(`lib/ppl/parentCallEnd.ts#parentEndWrite`): a row with **no dial outcome** becomes `abandoned`
+(forward) or `ended` (voicemail-first) with the parent duration; **a dial outcome is never
+overwritten**, because the parent's `completed` lands a moment after `/after-dial` wrote the leg
+and would otherwise erase the destination-health signal on every connected call. `classifyDial`
+maps both to `abandoned`, which is **counted nowhere in destination health** — the business was
+never rung, so it is not evidence about the business. Tests: `lib/ppl/__tests__/parentCallEnd.test.ts`.
 
 #### Still open, and not a code question
 

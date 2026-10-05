@@ -295,7 +295,19 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   matches **zero** rows while reading exactly like *"we hold no names for these businesses"* — the
   first query said that about a table where **10 of 11 resolve**. 10 campaigns backfilled.
   Pinned by `lib/ppl/__tests__/forwardAnnounce.test.ts` (source guards over the route + the
-  single-UPDATE invariant; **verified to fail with the old sentence restored**). ⚠️ Still open and
+  single-UPDATE invariant; **verified to fail with the old sentence restored**).
+  ⚠️ **Shortened 2026-10-05** to *"Connecting you to Madrona Electric, serving Renton."* — the
+  first version ran 6–7 s before any phone rang and the first real call after it hung up at 5 s
+  (an autodialer, almost certainly; still, every human paid the same wait). ⚠️ **And that call
+  exposed a blind spot: a hang-up BEFORE the bridge was invisible.** Only `/after-dial` wrote
+  outcomes and Twilio requests it only when a Dial *finishes*, so the row stayed `ringing` for an
+  hour and the alert email said "still in progress". Every tracking number now carries a
+  parent-call status callback (`/api/twilio/geo/<id>/status`, set on purchase + attach, backfilled
+  by the **Sync status callbacks** button on `/admin/ppl`); the pure decision
+  `lib/ppl/parentCallEnd.ts` writes `abandoned`/`ended` **only over a row with no dial outcome** —
+  the parent's `completed` lands a moment after the leg's outcome and must never replace it — and
+  `classifyDial` counts `abandoned` **nowhere** in destination health (the business was never
+  rung). ⚠️ Still open and
   **not** a code question: the page asserts a company that does not exist. The two honest shapes
   are a **directory** (our own dome-cohort rule: *"a directory is not a business"*) or a site that
   names its real renter — and the mismatch exists **only in the unpaid state**, since all 11

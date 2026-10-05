@@ -21,6 +21,9 @@ const OUTCOME_CLASS: Record<DialOutcome, string> = {
   brief: 'text-amber-300',
   unanswered: 'text-rose-400',
   in_progress: 'text-zinc-400',
+  // Grey, not red: the caller left before the bridge, so the business was never reached and
+  // this says nothing about the destination.
+  abandoned: 'text-zinc-500',
 };
 
 const OUTCOME_LABEL: Record<DialOutcome, string> = {
@@ -31,6 +34,7 @@ const OUTCOME_LABEL: Record<DialOutcome, string> = {
   brief: 'too short to be a conversation — likely voicemail',
   unanswered: 'never picked up',
   in_progress: 'no final outcome recorded',
+  abandoned: 'caller hung up before the forward connected — the business was never rung',
 };
 
 export default async function CallLogsPage() {
@@ -52,7 +56,7 @@ export default async function CallLogsPage() {
       acc[classifyDial(l.call_status, l.call_duration)] += 1;
       return acc;
     },
-    { connected: 0, brief: 0, unanswered: 0, in_progress: 0 } as Record<DialOutcome, number>
+    { connected: 0, brief: 0, unanswered: 0, in_progress: 0, abandoned: 0 } as Record<DialOutcome, number>
   );
 
   return (

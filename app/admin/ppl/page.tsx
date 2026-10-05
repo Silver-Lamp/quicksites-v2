@@ -15,6 +15,7 @@ import PplUseSuggestion from '@/components/admin/ppl-use-suggestion';
 import PplBuyAndAttach from '@/components/admin/ppl-buy-and-attach';
 import PplRebuyNumber from '@/components/admin/ppl-rebuy-number';
 import PplRepointForward from '@/components/admin/ppl-repoint-forward';
+import PplSyncStatusCallbacks from '@/components/admin/ppl-sync-status-callbacks';
 import { loadCampaignForwardHealth, voicemailFirstRate } from '@/lib/ppl/forwardHealth';
 import PplDisputeActions from '@/components/admin/ppl-dispute-actions';
 import { listOpenDisputes, DISPUTE_CATEGORIES } from '@/lib/ppl/disputes';
@@ -761,6 +762,9 @@ export default async function PplOpsPage() {
             </table>
           </div>
         )}
+        <div className="mt-5">
+          <PplSyncStatusCallbacks />
+        </div>
         <h3 className="mt-5 text-base font-semibold">Attach a number to a campaign</h3>
         <PplAttachNumberForm
           campaigns={

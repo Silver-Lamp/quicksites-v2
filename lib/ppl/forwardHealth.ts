@@ -58,10 +58,21 @@ const UNANSWERED_STATUSES = new Set([
   'failed',
 ]);
 
-export type DialOutcome = 'connected' | 'brief' | 'unanswered' | 'in_progress';
+/**
+ * ⚠️ `abandoned` is NOT a destination outcome. It means the PARENT call ended before any dial
+ * finished — the caller hung up during the announcement or the ring — so the business was never
+ * reached and must not be scored on it. Written by the tracking number's status callback
+ * (`/api/twilio/geo/<id>/status`), which exists because on 2026-10-05 a five-second robocall sat
+ * at `ringing` for an hour and the alert email called it "still in progress".
+ */
+export type DialOutcome = 'connected' | 'brief' | 'unanswered' | 'in_progress' | 'abandoned';
+
+/** Statuses our own status callback writes when the parent call ends without a dial outcome. */
+export const PARENT_ENDED_STATUSES = new Set(['abandoned', 'ended']);
 
 export function classifyDial(status: string | null, durationSec: number | null): DialOutcome {
   const s = (status ?? '').trim().toLowerCase();
+  if (PARENT_ENDED_STATUSES.has(s)) return 'abandoned';
   if (UNANSWERED_STATUSES.has(s)) return 'unanswered';
   // ⚠️ These are TWILIO'S status strings and are not ours to rename. A bulk rename of the
   // outcome word turned `'answered'` — a value Twilio can actually send — into `'connected'`,
@@ -120,7 +131,9 @@ function tally(acc: { connected: number; brief: number; unanswered: number; inPr
   if (outcome === 'connected') acc.connected += 1;
   else if (outcome === 'brief') acc.brief += 1;
   else if (outcome === 'unanswered') acc.unanswered += 1;
-  else acc.inProgress += 1;
+  // `abandoned`: the destination was never dialled, so it is not evidence about the destination
+  // in either direction. Counted nowhere here; the call-logs page shows it as its own row.
+  else if (outcome !== 'abandoned') acc.inProgress += 1;
 
   const ts = row.timestamp;
   if (ts) {

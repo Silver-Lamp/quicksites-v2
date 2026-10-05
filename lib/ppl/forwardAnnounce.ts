@@ -52,24 +52,31 @@ export type AnnouncementArgs = {
 };
 
 /**
- * One sentence pair: who is about to answer, and that they are local to the city.
+ * One short sentence: who is about to answer, and that they are local to the city.
  *
- * Shape (name known):    "Thanks for calling. Connecting you now with Too Cool Towing, a local
- *                         towing company serving South Hill."
- * Shape (name unknown):  "Thanks for calling. Connecting you now with a local towing company
- *                         serving South Hill."
+ * Shape (name known):    "Connecting you to Too Cool Towing, serving South Hill."
+ * Shape (name unknown):  "Connecting you to a local towing company serving South Hill."
+ *
+ * ⚠️ SHORTENED 2026-10-05 (owner). The first version — "Thanks for calling. Connecting you now
+ * with Too Cool Towing, a local towing company serving South Hill." — ran six to seven seconds
+ * before any phone rang. The first real call after it shipped lasted FIVE seconds: the caller
+ * hung up mid-sentence, the Dial never started, Madrona's phone never rang. That call was almost
+ * certainly an autodialer, which drops on hearing a synthesized voice, so it proves nothing about
+ * humans — but every real caller was paying the same six seconds. The honesty rule is unchanged:
+ * NAME THE DESTINATION. With a name, the name plus the city is the whole message; the trade
+ * descriptor is only spoken when there is no name to speak.
  */
 export function connectingAnnouncement(args: AnnouncementArgs): string {
   const trade = (args.trade ?? '').trim().toLowerCase();
   const city = (args.city ?? '').trim();
   const name = args.businessName ? spokenBusinessName(args.businessName) : '';
 
+  if (name) {
+    return city ? `Connecting you to ${name}, serving ${city}.` : `Connecting you to ${name}.`;
+  }
   // "a local towing company" / "a local company" when we have no trade word.
   const descriptor = trade && trade !== 'local' ? `a local ${trade} company` : 'a local company';
-  const serving = city ? ` serving ${city}` : '';
-  const who = name ? `${name}, ${descriptor}${serving}` : `${descriptor}${serving}`;
-
-  return `Thanks for calling. Connecting you now with ${who}.`;
+  return city ? `Connecting you to ${descriptor} serving ${city}.` : `Connecting you to ${descriptor}.`;
 }
 
 /**

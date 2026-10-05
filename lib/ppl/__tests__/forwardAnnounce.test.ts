@@ -44,9 +44,17 @@ describe('connectingAnnouncement', () => {
       trade: 'Towing',
       city: 'South Hill',
     });
-    expect(said).toBe(
-      'Thanks for calling. Connecting you now with Too Cool Towing, a local towing company serving South Hill.',
-    );
+    expect(said).toBe('Connecting you to Too Cool Towing, serving South Hill.');
+  });
+
+  // ⚠️ Shortened 2026-10-05: the first version ran six to seven seconds before any phone rang,
+  // and the first real call after it shipped hung up at five. With a name, the name and the
+  // city are the whole message — a trade descriptor is only spoken when there is no name.
+  it('is short — one clause with the name, no preamble', () => {
+    const said = connectingAnnouncement({ businessName: 'Madrona Electric LLC', trade: 'Electrical', city: 'Renton' });
+    expect(said).toBe('Connecting you to Madrona Electric, serving Renton.');
+    expect(said.split(' ').length).toBeLessThanOrEqual(8);
+    expect(said).not.toMatch(/^Thanks for calling/);
   });
 
   // ⚠️ THE REGRESSION THAT MATTERS. The site says "South Hill Towing"; the business that answers
@@ -65,14 +73,14 @@ describe('connectingAnnouncement', () => {
 
   it('falls back to a true vague description, never to the site name, when unresolved', () => {
     const said = connectingAnnouncement({ businessName: null, trade: 'Towing', city: 'Grafton' });
-    expect(said).toBe('Thanks for calling. Connecting you now with a local towing company serving Grafton.');
+    expect(said).toBe('Connecting you to a local towing company serving Grafton.');
     expect(said).not.toContain('Grafton Towing');
   });
 
   it('degrades sanely with no trade and no city', () => {
-    expect(connectingAnnouncement({})).toBe('Thanks for calling. Connecting you now with a local company.');
+    expect(connectingAnnouncement({})).toBe('Connecting you to a local company.');
     expect(connectingAnnouncement({ businessName: 'Osborne\'s Towing' })).toBe(
-      "Thanks for calling. Connecting you now with Osborne's Towing, a local company.",
+      "Connecting you to Osborne's Towing.",
     );
   });
 

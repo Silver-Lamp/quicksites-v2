@@ -36,6 +36,8 @@ const OUTCOME_LABEL: Record<DialOutcome, string> = {
   // ⚠️ Twilio has not reported a final status yet. Not a failure — `classifyDial` deliberately
   // never reads an unknown status as one.
   in_progress: 'Still in progress when we looked',
+  // The caller hung up during the announcement or the ring; the business was never reached.
+  abandoned: 'Caller hung up before the forward connected',
 };
 
 /** `+12535550123` → `(253) 555-0123`; anything unexpected is returned unchanged. */

@@ -777,6 +777,25 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `ringing` and the classifier honestly reported "still in progress" on day-old calls,
   contradicting the "Sent to voicemail" line beneath it. `/status` gate: `call_alert`.
 - **Guest build (unauthenticated draft sites)** — **LIVE in prod** (anonymous sign-ins enabled in Supabase; `NEXT_PUBLIC_GUEST_BUILD_ENABLED=1` set in Vercel production + preview). Env-gated by that flag (`lib/flags/guestBuild.ts`). Entry points: the homepage hero (`components/home/guest-start.tsx`) and `/build`. A logged-out visitor mints a Supabase **anonymous** session (`ensureGuestSession`), builds a draft template stamped `owner_id=<anon uid>` + `claim_source='guest_build'` (`app/api/templates/create|duplicate`) **seeded with a real industry starter** (hero / services / faq / contact + services + theme via `buildIndustryStarter` — the same scaffold as `/admin/templates/new`, so the editor opens a working site rather than empty/typeless placeholder blocks), and **auto-claims on sign-up** (the anon user upgrades in place, same uid → `owner_id` still matches). It **can't reach the homepage**: anon users are blocked from publishing (`app/api/templates/[id]/publish` → `needs_signup`), the showcase requires `published=true`, and `getShowcaseData` additionally drops any still-anon-owned row (`anonymous_user_ids` RPC). `middleware.ts` confines anon users to the template editor. **Abuse guards** (the load-bearing part): per-guest AI call cap (`enforceGuestAiLimit`, `GUEST_AI_CALL_LIMIT`) — on **every** AI route; per-IP guest-draft rate limit (`lib/rateLimit.ts` on `ratelimit_events`, `GUEST_DRAFT_HOURLY_LIMIT_PER_IP`); the dollar budget guard (`meterLLMCall`, keyed on `ai_usage_events.occurred_at`); and the `/api/cron/ai-cost-alert` watchdog (every 15 min) that emails `ADMIN_EMAILS` + raises a Sentry warning when rolling AI spend crosses `AI_ALERT_{HOURLY,DAILY}_USD` (with an anon breakdown via `ai_spend_report`). Note: image-gen routes (`/api/hero/generate-image`, `favicon`, `icon`) set `maxDuration = 60` — gpt-image-1 is slow (~20s at `quality:'medium'`) and would otherwise hit the default serverless timeout.
+- **New-site email + "where they left off" (2026-10-05, owner)**: `/api/cron/site-created-alert`
+  (every 15 min) emails `ADMIN_EMAILS` about each site a PERSON created ~30 min earlier, with the
+  analysis from **one pure function, `lib/sites/siteProgress.ts#analyzeSiteProgress`**, which the
+  Sites column on `/admin/users` renders as the same sentence (`↳ Built with AI (5 calls), no
+  edits saved; saw the sign-up prompt, never opened it. Last activity 2 min after creation.`) —
+  the inbox and the page cannot disagree. ⚠️ **Two axes, not one ladder**: WORK (created →
+  generated → edited → published) and SIGN-UP (none → prompted → opened → submitted → email sent →
+  account); folding them hides that 21 of 21 builders edited nothing AND never typed an email —
+  two drop-offs, two fixes. ⚠️ **Counters, not observation**: `save_count` / `template_versions`
+  are the only edit evidence (the version `diff` column is NULL on every recent row); the copy says
+  "no edits saved", never "did nothing". ⚠️ **The owner is never emailed about himself**:
+  `testTrafficReason` marks the operator, `+alias` test accounts of any admin email (18 of the
+  last 18 signed-in creations were `sandonjurowski+tester2@`), and the demo recorder (by the name
+  it types, `lib/demos/recorderIdentity.ts`, shared with `record-demo.mts` and pinned) — recorded
+  in `site_creation_alerts` with a `skipped_reason`, shown as an amber chip on `/admin/users`.
+  Dedupe lives in that table (migration `20260873`; a column on `templates` is blocked by the
+  guard trigger and is not content anyway), marked AFTER the send. Machine sources
+  (`listing_import`, `demo_seed`, `directory`, `operator_draft`, `persona_build`) are never
+  candidates. `/status` gate `site_created_alert`. Tests: `lib/sites/__tests__/siteProgress.test.ts`.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

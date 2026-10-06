@@ -841,7 +841,8 @@ function NavItemButtonOrLink({
   isActive: boolean;
   isOpen: boolean;
   collapsed: boolean;
-  toggleMenu: () => void;
+  /** Receives the folder row element so the parent can keep it in view after opening. */
+  toggleMenu: (el?: HTMLElement) => void;
   onNavigateStart: (href: string) => void;
   inboxNewCount?: number | null;
   domId?: string; // NEW
@@ -911,7 +912,7 @@ function NavItemButtonOrLink({
             return;
           }
           e.preventDefault();
-          toggleMenu();
+          toggleMenu(e.currentTarget);
           return;
         }
         if (defaultHref && pathname !== defaultHref) onNavigateStart(defaultHref);
@@ -1135,30 +1136,17 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
     if (navLoading) setNavLoading(false);
   }, [pathname, navLoading]);
 
-  // Scroll the sidebar's scroll container back to the top (folder taps use this so an
-  // opened folder + its children land in view instead of below the fold).
-  const scrollSidebarToTop = () => {
-    const nav = navRef.current;
-    if (!nav) return;
-    let p: HTMLElement | null = nav.parentElement;
-    while (p) {
-      const oy = getComputedStyle(p).overflowY;
-      if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) {
-        p.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
-      p = p.parentElement;
-    }
-    nav.scrollIntoView({ block: 'start', behavior: 'smooth' });
-  };
-
-  const toggleMenu = (label: string) =>
+  // ⚠️ Opening a folder NEVER scrolls the sidebar to the top. It used to ("so an opened folder
+  // and its children land in view"), which for any folder below the first screen meant the one
+  // you just tapped vanished upward and you scrolled back down to find it (owner, 2026-10-05,
+  // "Platform Inbox"). The only scroll on open is the minimal one: keep the tapped row itself in
+  // view, which is a no-op when it already is.
+  const toggleMenu = (label: string, el?: HTMLElement) =>
     setOpenMenus((prev) => {
       const willOpen = !prev[label];
       const next = { ...prev, [label]: !prev[label] };
       safeLS.set(OPEN_MENUS_KEY, next);
-      // On open, reposition the sidebar to the top.
-      if (willOpen) requestAnimationFrame(() => scrollSidebarToTop());
+      if (willOpen && el) requestAnimationFrame(() => el.scrollIntoView({ block: 'nearest' }));
       return next;
     });
 
@@ -1417,7 +1405,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
                 isActive={!!isActive}
                 isOpen={!!isOpen}
                 collapsed={collapsed}
-                toggleMenu={() => item.children && toggleMenu(item.label)}
+                toggleMenu={(el) => item.children && toggleMenu(item.label, el)}
                 onNavigateStart={handleNavigateStart}
                 inboxNewCount={inboxNewCount ?? undefined}
                 domId={parentId} // NEW

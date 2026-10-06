@@ -31,6 +31,15 @@ describe('route-driven selection in the admin sidebar', () => {
     expect(pathEffect).toMatch(/scrollOnSelectRef\.current = false/);
   });
 
+  it('opening a folder never scrolls the sidebar to the top — only keeps the tapped row in view', () => {
+    // The second half of the same complaint: expanding "Platform Inbox" jumped to the top because
+    // toggleMenu called a scroll-to-top helper on open.
+    expect(code).not.toMatch(/scrollSidebarToTop/);
+    expect(code).not.toMatch(/scrollTo\(\{ top: 0/);
+    const toggle = code.slice(code.indexOf('const toggleMenu = '), code.indexOf('const handleNavigateStart'));
+    expect(toggle).toMatch(/el\.scrollIntoView\(\{ block: 'nearest' \}\)/);
+  });
+
   it('keeps the quick-find search pinned to the top of the scroll container', () => {
     const search = code.slice(code.indexOf('Find a feature…') - 1200, code.indexOf('Find a feature…'));
     expect(search).toMatch(/sticky top-0/);

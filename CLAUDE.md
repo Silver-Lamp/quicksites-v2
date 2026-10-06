@@ -550,7 +550,11 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   early row like the dashboard matches almost any admin path — then scrolled it into view, so
   clicking a Platform Inbox child reset `aside.scrollTop` 2426→0 on the same mounted element.
   Now the most specific href wins and only an arrow-key move scrolls; the quick-find search is
-  `sticky` inside the aside. Pinned by `components/admin/__tests__/sidebarScroll.test.ts`.
+  `sticky` inside the aside. ⚠️ A second, deliberate jump lived in `toggleMenu`: opening a folder
+  called a scroll-to-top helper "so the folder and its children land in view" — for any folder
+  below the first screen that is the folder you just tapped vanishing upward. Removed; opening
+  now only keeps the tapped row in view (`scrollIntoView nearest`, a no-op when visible). Pinned
+  by `components/admin/__tests__/sidebarScroll.test.ts`.
   ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
   `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser
   **foster-parents it out of the table** and the column structure collapses — it presents as a

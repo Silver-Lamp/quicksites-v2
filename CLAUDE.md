@@ -545,6 +545,12 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   of one behaves like a hard pin. ⚠️ `sanitizePins` still accepts the **legacy single-string**
   shape, because the 1:1 version shipped first and those rows would otherwise resolve to no font.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
+  ⚠️ **The sidebar used to jump to the top on every navigation (fixed 2026-10-05).** Route-driven
+  selection in `AdminNavSections` took the FIRST row whose href was a prefix of the path — a short
+  early row like the dashboard matches almost any admin path — then scrolled it into view, so
+  clicking a Platform Inbox child reset `aside.scrollTop` 2426→0 on the same mounted element.
+  Now the most specific href wins and only an arrow-key move scrolls; the quick-find search is
+  `sticky` inside the aside. Pinned by `components/admin/__tests__/sidebarScroll.test.ts`.
   ⚠️ **`/admin/users` columns were misaligned because a `<div>` wrapped each `<TableRow>` inside
   `<tbody>` (fixed 2026-10-02).** A div is not a permitted child of tbody, so the HTML parser
   **foster-parents it out of the table** and the column structure collapses — it presents as a

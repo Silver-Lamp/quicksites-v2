@@ -1238,16 +1238,37 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   }, [focusRows.length, selectedIdx]);
 
   // choose initial selection based on current path
+  //
+  // ⚠️ THE MOST SPECIFIC MATCH, AND NO SCROLL. This used to take the FIRST row whose href was a
+  // prefix of the path — so /admin/inbox/<anything> matched a short, early row like the dashboard,
+  // and the effect below then scrolled THAT row into view: every click on a Platform Inbox child
+  // threw the sidebar back to the top (owner, 2026-10-05; measured on production: scrollTop
+  // 2426 → 0 on the same mounted <aside>). Route-driven selection now picks the longest matching
+  // href and does not scroll at all; only an arrow-key move scrolls, because that is the one case
+  // where the selected row may genuinely be off screen.
+  const scrollOnSelectRef = useRef(false);
   useEffect(() => {
     if (!focusRows.length) return;
-    const current = focusRows.findIndex(
-      (r) => r.href && pathname?.startsWith(r.href.split('?')[0])
-    );
-    if (current >= 0) setSelectedIdx(current);
+    const path = pathname ?? '';
+    let best = -1;
+    let bestLen = -1;
+    focusRows.forEach((r, i) => {
+      const h = r.href?.split('?')[0];
+      if (h && path.startsWith(h) && h.length > bestLen) {
+        best = i;
+        bestLen = h.length;
+      }
+    });
+    if (best >= 0) {
+      scrollOnSelectRef.current = false;
+      setSelectedIdx(best);
+    }
   }, [pathname, focusRows]);
 
-  // scroll selected into view
+  // scroll selected into view — keyboard moves only (see above)
   useEffect(() => {
+    if (!scrollOnSelectRef.current) return;
+    scrollOnSelectRef.current = false;
     const id = focusRows[selectedIdx]?.id;
     if (!id) return;
     const el = document.getElementById(id);
@@ -1269,9 +1290,11 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
 
       if (k === 'ArrowDown') {
         e.preventDefault();
+        scrollOnSelectRef.current = true; // a keyboard move may land off screen — scroll for it
         if (focusRows.length) setSelectedIdx((i) => (i + 1) % focusRows.length);
       } else if (k === 'ArrowUp') {
         e.preventDefault();
+        scrollOnSelectRef.current = true;
         if (focusRows.length) setSelectedIdx((i) => (i - 1 + focusRows.length) % focusRows.length);
       } else if (k === 'Enter') {
         e.preventDefault();
@@ -1304,9 +1327,12 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
         isPlatformAdmin={isAdmin}
       />
 
-      {/* Quick-find filter — type to jump to any feature. */}
+      {/* Quick-find filter — type to jump to any feature.
+          ⚠️ Sticky to the top of the sidebar's scroll container (the <aside>), so it stays in
+          reach however far down the list you are (owner, 2026-10-05). Opaque-ish background so the
+          rows sliding under it stay legible. */}
       {!collapsed && (
-        <div className="px-2 pb-2 pt-1">
+        <div className="sticky top-0 z-20 -mx-1 bg-zinc-900/90 px-3 pb-2 pt-1 backdrop-blur">
           <div className="relative">
             <Search
               size={14}

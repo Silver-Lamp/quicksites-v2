@@ -93,6 +93,15 @@ export const CONFIG_GATES: ConfigGate[] = [
       'site. Set ADMIN_EMAILS (comma-separated) and RESEND_API_KEY.',
   },
   {
+    key: 'site_created_alert',
+    label: 'New-site email to the owner with where the builder left off (/api/cron/site-created-alert, every 15 min)',
+    requires: ['ADMIN_EMAILS', 'RESEND_API_KEY'],
+    degradeOnly: true,
+    breaks:
+      'A stranger builds a site and nobody hears about it until someone opens /admin/users. The ' +
+      'cron returns {skipped} with no recipients, which is a quiet no-op. Set ADMIN_EMAILS and RESEND_API_KEY.',
+  },
+  {
     // ⚠️ ADDED 2026-09-25 AFTER FINDING POSTHOG HAS NEVER BEEN SET IN PRODUCTION. `vercel env ls
     // production` returns zero PostHog entries, and `captureServer` returns early when the key is
     // absent — so all 33 server-side capture calls across 24 files have been writing to nothing for

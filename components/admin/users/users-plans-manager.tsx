@@ -47,6 +47,10 @@ type UserSiteBrief = {
   custom_domain: string | null;
   claim_source: string | null;
   industry: string | null;
+  /** Where the builder left off — the same sentence the owner's new-site email carries. */
+  left_off: string | null;
+  /** 'operator' | 'owner_test_account' | 'demo_recorder' when the site is our own traffic. */
+  test_traffic: string | null;
 };
 type UserSitesSummary = {
   total: number;
@@ -169,14 +173,20 @@ function SitesCell({ sites, capped }: { sites: UserSitesSummary | null; capped: 
       )}
       <ul className="space-y-0.5">
         {shown.map((s) => (
-          <li key={s.id} className="flex items-center gap-2 text-xs">
-            <span className={`inline-block h-1.5 w-1.5 rounded-full ${s.published ? 'bg-emerald-400' : 'bg-zinc-500'}`} title={s.published ? 'Published' : 'Draft'} />
-            <a href={`/admin/templates/${s.id}`} className="truncate max-w-[14rem] underline underline-offset-2 hover:text-foreground" title="Open in the editor">{s.name}</a>
-            {s.url && (
-              <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground" title={s.url}>↗</a>
-            )}
-            {origin(s) && <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">{origin(s)}</span>}
-            {s.updated_at && <span className="text-muted-foreground">{timeAgo(s.updated_at)}</span>}
+          <li key={s.id} className="text-xs">
+            <div className="flex items-center gap-2">
+              <span className={`inline-block h-1.5 w-1.5 rounded-full ${s.published ? 'bg-emerald-400' : 'bg-zinc-500'}`} title={s.published ? 'Published' : 'Draft'} />
+              <a href={`/admin/templates/${s.id}`} className="truncate max-w-[14rem] underline underline-offset-2 hover:text-foreground" title="Open in the editor">{s.name}</a>
+              {s.url && (
+                <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground" title={s.url}>↗</a>
+              )}
+              {origin(s) && <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">{origin(s)}</span>}
+              {s.test_traffic && <span className="rounded bg-amber-500/10 px-1 text-[10px] text-amber-300" title="Our own traffic — the owner is not emailed about this site">{s.test_traffic.replace(/_/g, ' ')}</span>}
+              {s.updated_at && <span className="text-muted-foreground">{timeAgo(s.updated_at)}</span>}
+            </div>
+            {/* Where they left off — the same sentence the owner's new-site email carries
+                (lib/sites/siteProgress.ts), so the page and the inbox cannot disagree. */}
+            {s.left_off && <div className="pl-3.5 text-[11px] leading-snug text-muted-foreground">↳ {s.left_off}</div>}
           </li>
         ))}
       </ul>
@@ -213,6 +223,13 @@ function SignupGeoCell({ geo }: { geo?: { country: string | null; region: string
 export default function UsersPlansManager() {
   const [q, setQ] = useState('');
   const dq = useDebounce(q);
+  // ?q= deep link — the owner's new-site email links straight to the builder's row.
+  useEffect(() => {
+    try {
+      const v = new URLSearchParams(window.location.search).get('q');
+      if (v) setQ(v);
+    } catch { /* no window */ }
+  }, []);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
   const [loading, setLoading] = useState(false);

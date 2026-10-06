@@ -5,6 +5,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { summarizeUserSites, authProvider, NO_SITES, type OwnedTemplateRow } from '@/lib/admin/userSites';
 import { resolveUserIdentity } from '@/lib/admin/userIdentity';
+import { analyzeSiteProgress, testTrafficReason } from '@/lib/sites/siteProgress';
+import { alertRecipients } from '@/lib/ppl/callAlert';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,7 +61,9 @@ export async function GET(req: NextRequest) {
   const prefiltered = q
     ? users.filter((u) =>
         (u.email ?? '').toLowerCase().includes(q) ||
-        String((u.user_metadata as any)?.name ?? '').toLowerCase().includes(q)
+        String((u.user_metadata as any)?.name ?? '').toLowerCase().includes(q) ||
+        // A guest has no email; the new-site email links their row by user id.
+        String(u.id ?? '').toLowerCase().includes(q)
       )
     : users;
 
@@ -156,14 +160,51 @@ export async function GET(req: NextRequest) {
   try {
     const { data, error: te } = await (admin as any)
       .from('templates')
-      .select('id, owner_id, slug, template_name, business_name, published, updated_at, created_at, custom_domain, claim_source, industry')
+      .select('id, owner_id, slug, template_name, business_name, published, updated_at, created_at, custom_domain, claim_source, industry, saved_at, save_count')
       .in('owner_id', userIds)
       .order('updated_at', { ascending: false })
       .limit(TEMPLATE_ROW_CAP);
     if (!te) templateRows = (data ?? []) as OwnedTemplateRow[];
   } catch { /* tolerate */ }
-  const sitesByUser = summarizeUserSites(templateRows);
   const sitesCapped = templateRows.length >= TEMPLATE_ROW_CAP;
+
+  // 2c) platform admins — so the list can tell an operator account from a customer, and so the
+  // "left off" line can mark the operator's own sites as ours.
+  const adminIds = new Set<string>();
+  try {
+    const { data: admins } = await (admin as any).from('admin_users').select('user_id').in('user_id', userIds);
+    (admins ?? []).forEach((a: any) => a?.user_id && adminIds.add(a.user_id));
+  } catch { /* tolerate */ }
+
+  // 2b'') where each builder left off — the SAME sentence the owner's new-site email carries
+  // (lib/sites/siteProgress.ts). Sign-up events are one grouped read for the page's users; AI
+  // calls are not loaded here (the operator alone has thousands), so the line says only what the
+  // template row and the funnel can show.
+  const funnelByUser = new Map<string, Array<{ event: string; created_at: string }>>();
+  try {
+    const { data: ev } = await (admin as any)
+      .from('guest_upgrade_events')
+      .select('guest_user_id, event, created_at')
+      .in('guest_user_id', userIds)
+      .limit(5000);
+    (ev ?? []).forEach((e: any) => {
+      const list = funnelByUser.get(e.guest_user_id) ?? [];
+      list.push({ event: e.event, created_at: e.created_at });
+      funnelByUser.set(e.guest_user_id, list);
+    });
+  } catch { /* tolerate */ }
+  const authById = new Map(prefiltered.map((u) => [u.id, u]));
+  const adminEmails = alertRecipients();
+  const sitesByUser = summarizeUserSites(templateRows, undefined, (t) => {
+    const owner = t.owner_id ? authById.get(t.owner_id) : null;
+    const user = owner ? { email: owner.email ?? null, is_anonymous: !!(owner as any).is_anonymous } : null;
+    if (!t.created_at) return null;
+    const progress = analyzeSiteProgress({ template: { ...t, created_at: t.created_at }, funnel: t.owner_id ? funnelByUser.get(t.owner_id) ?? [] : [], user });
+    return {
+      left_off: progress.summary,
+      test_traffic: testTrafficReason({ businessName: t.business_name, userEmail: user?.email, isAdminUser: !!t.owner_id && adminIds.has(t.owner_id), adminEmails }),
+    };
+  });
 
   // 2b') profiles — the name/email a user set on their profile page; most sign-ups never set
   // `user_metadata.name`, so without this the User column was a dash for nearly everyone.
@@ -171,13 +212,6 @@ export async function GET(req: NextRequest) {
   try {
     const { data: profs } = await (admin as any).from('user_profiles').select('user_id, name, email').in('user_id', userIds);
     (profs ?? []).forEach((p: any) => p?.user_id && profileByUser.set(p.user_id, { name: p.name ?? null, email: p.email ?? null }));
-  } catch { /* tolerate */ }
-
-  // 2c) platform admins — so the list can tell an operator account from a customer.
-  const adminIds = new Set<string>();
-  try {
-    const { data: admins } = await (admin as any).from('admin_users').select('user_id').in('user_id', userIds);
-    (admins ?? []).forEach((a: any) => a?.user_id && adminIds.add(a.user_id));
   } catch { /* tolerate */ }
 
   // 3) compliance profile
@@ -315,6 +349,7 @@ export async function GET(req: NextRequest) {
   const rows = q
     ? scoped.filter((r) => {
         const hay = [
+          r.id,
           r.email,
           r.name,
           r.provider,

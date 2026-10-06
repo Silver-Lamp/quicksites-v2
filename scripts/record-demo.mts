@@ -33,6 +33,9 @@
 // scenario leaves a real anonymous draft row behind, same as any visitor. `--local` points at
 // localhost:3000 instead.
 import { chromium, type Page } from 'playwright';
+// ⚠️ The business name typed into the guest flow is shared with the new-site alert, which must
+// recognise the recorder's builds as ours and never email the owner about them.
+import { DEMO_RECORDER_BUSINESS_NAMES } from '../lib/demos/recorderIdentity';
 import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -407,7 +410,7 @@ const SCENARIOS: Scenario[] = [
         run: async (p) => {
           const input = p.locator('input[type="text"]').first();
           await input.waitFor({ state: 'visible', timeout: 15_000 });
-          await typeSlowly(p, 'input[type="text"]', "Wildflower Candle Co.");
+          await typeSlowly(p, 'input[type="text"]', DEMO_RECORDER_BUSINESS_NAMES[0]);
           await beat(p);
         },
       },

@@ -17,6 +17,8 @@ export type OwnedTemplateRow = {
   custom_domain?: string | null;
   claim_source?: string | null;
   industry?: string | null;
+  saved_at?: string | null;
+  save_count?: number | null;
 };
 
 export type UserSiteBrief = {
@@ -30,6 +32,14 @@ export type UserSiteBrief = {
   /** How it came to exist: 'guest_build' | 'listing_import' | 'demo_seed' | null (the editor). */
   claim_source: string | null;
   industry: string | null;
+  /**
+   * Where the builder left off, one line (lib/sites/siteProgress.ts) — the same sentence the
+   * owner's new-site email carries, so the page and the inbox never disagree. Null when the
+   * list did not compute it.
+   */
+  left_off: string | null;
+  /** 'operator' | 'owner_test_account' | 'demo_recorder' when the site is our own traffic. */
+  test_traffic: string | null;
 };
 
 export type UserSitesSummary = {
@@ -49,7 +59,11 @@ export const LATEST_SITES_PER_USER = 5;
 const later = (a: string | null | undefined, b: string | null | undefined) => (!a ? b ?? null : !b ? a : a > b ? a : b);
 const earlier = (a: string | null | undefined, b: string | null | undefined) => (!a ? b ?? null : !b ? a : a < b ? a : b);
 
-function brief(t: OwnedTemplateRow): UserSiteBrief {
+/** Per-site extras the caller can compute with more context than a template row (progress). */
+export type SiteEnricher = (t: OwnedTemplateRow) => { left_off?: string | null; test_traffic?: string | null } | null | undefined;
+
+function brief(t: OwnedTemplateRow, enrich?: SiteEnricher): UserSiteBrief {
+  const extra = enrich?.(t) ?? null;
   return {
     id: t.id,
     name: (t.business_name || t.template_name || t.slug || 'Untitled').toString(),
@@ -60,11 +74,13 @@ function brief(t: OwnedTemplateRow): UserSiteBrief {
     custom_domain: t.custom_domain ?? null,
     claim_source: t.claim_source ?? null,
     industry: t.industry ?? null,
+    left_off: extra?.left_off ?? null,
+    test_traffic: extra?.test_traffic ?? null,
   };
 }
 
 /** Group a batch of template rows by owner and summarise each owner's sites. */
-export function summarizeUserSites(rows: OwnedTemplateRow[], limitLatest = LATEST_SITES_PER_USER): Map<string, UserSitesSummary> {
+export function summarizeUserSites(rows: OwnedTemplateRow[], limitLatest = LATEST_SITES_PER_USER, enrich?: SiteEnricher): Map<string, UserSitesSummary> {
   const byOwner = new Map<string, OwnedTemplateRow[]>();
   for (const r of rows) {
     if (!r.owner_id) continue;
@@ -92,7 +108,7 @@ export function summarizeUserSites(rows: OwnedTemplateRow[], limitLatest = LATES
       custom_domains: customDomains,
       last_edited_at: lastEdited,
       first_created_at: firstCreated,
-      latest: sorted.slice(0, limitLatest).map(brief),
+      latest: sorted.slice(0, limitLatest).map((t) => brief(t, enrich)),
     });
   }
   return out;

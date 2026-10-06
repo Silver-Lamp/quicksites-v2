@@ -70,6 +70,7 @@ export async function collectSiteProgress(templateId: string): Promise<SiteProgr
     user,
     geo: geo?.data ?? null,
     progress: analyzeSiteProgress(input),
-    testTraffic: testTrafficReason({ businessName: t.business_name, userEmail: user?.email, isAdminUser: !!adminRow?.data, adminEmails: alertRecipients() }),
+    // business_name OR template_name: a guest build stores the typed name in template_name.
+    testTraffic: testTrafficReason({ businessName: t.business_name || t.template_name, userEmail: user?.email, isAdminUser: !!adminRow?.data, adminEmails: alertRecipients() }),
   };
 }

@@ -202,7 +202,8 @@ export async function GET(req: NextRequest) {
     const progress = analyzeSiteProgress({ template: { ...t, created_at: t.created_at }, funnel: t.owner_id ? funnelByUser.get(t.owner_id) ?? [] : [], user });
     return {
       left_off: progress.summary,
-      test_traffic: testTrafficReason({ businessName: t.business_name, userEmail: user?.email, isAdminUser: !!t.owner_id && adminIds.has(t.owner_id), adminEmails }),
+      // business_name OR template_name: a guest build stores the typed name in template_name.
+      test_traffic: testTrafficReason({ businessName: t.business_name || t.template_name, userEmail: user?.email, isAdminUser: !!t.owner_id && adminIds.has(t.owner_id), adminEmails }),
     };
   });
 

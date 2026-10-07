@@ -388,6 +388,7 @@ const NAV_ADMIN: NavItem[] = [
     children: [
       { label: 'Stats', href: '/admin/templates/gsc-bulk-stats' },
       { label: 'Sites', href: '/admin/gsc/sites' },
+      { label: 'Indexing', href: '/admin/seo/indexing' },
       { label: '(re)Connect', href: '/api/gsc/auth-url' },
     ],
   },

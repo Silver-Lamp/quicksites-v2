@@ -396,8 +396,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   from every admin list while serving on their domains — unarchived via the documented bypass. A
   flag on a live site is still a flag; the served HTML is the fact.
   ⚠️ **Do not parse the Search Console emails** — they carry only the property and a reason
-  label. The URLs and Google's chosen canonical come from the URL Inspection API (see the
-  indexing sweep below).
+  label. **The indexing sweep** (`/api/cron/gsc-url-inspect`, 05:20, read-only at Google, no
+  flag; knobs `GSC_INSPECT_MAX` / `GSC_INSPECT_FRESH_DAYS`) asks the URL Inspection API about
+  every page of every published site on a connected property, stores the latest answer per URL in
+  `gsc_url_inspections` (migration `20260874`) with OUR triage from the pure
+  `lib/gsc/indexingTriage.ts` — **fixable by us** (canonical mismatch, 404, robots, 5xx) ·
+  **needs a person** (Google's quality verdicts: crawled/discovered-not-indexed, soft 404 —
+  "not a setting") · **expected** (our own redirects and proper canonicals, and a duplicate whose
+  Google canonical is the one we now nominate) · indexed · unknown (never silently "expected").
+  `/admin/seo/indexing` groups by that meaning, not Google's label; the sweep opens one
+  `admin_tasks` row per (property, reason) for the two actionable buckets and emails ONE digest
+  only when something new appeared. The URLs inspected are the site's pages on its NOMINATED
+  origin, never the platform copy. Tests: `lib/gsc/__tests__/indexingTriage.test.ts`.
 - **Niche discovery — "can an organic result win this page at all?" (2026-09-22)**: two
   measurements behind **[`docs/NICHE_DISCOVERY.md`](docs/NICHE_DISCOVERY.md)**. (1) The **GSC
   query harvest** — every GSC call here asked for `dimensions: ['page']` or none, so we stored

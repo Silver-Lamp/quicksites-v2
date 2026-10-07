@@ -26,6 +26,9 @@ export type CallRow = {
   handling: string | null;
   custom_domain: string | null;
   created_at: string;
+  /** From the voicemail transcription (lib/ppl/voicemailSpeech.ts); absent on older rows. */
+  voicemail_speech?: string | null;
+  voicemail_transcript?: string | null;
 };
 
 /** Human label per outcome. No word here may mean "a person picked up" — see the header. */
@@ -80,8 +83,15 @@ export function handlingLabel(row: CallRow): string {
   switch (row.handling) {
     case 'forward':
       return `Forwarded to ${prettyPhone(row.forwarded_to)}`;
-    case 'voicemail_first':
-      return 'Sent to voicemail (voicemail-first is on for this number)';
+    case 'voicemail_first': {
+      // What the message contained, when we know. A fax tone and a real caller used to read
+      // identically here (2026-10-07).
+      const base = 'Sent to voicemail (voicemail-first is on for this number)';
+      if (row.voicemail_speech === 'no_speech') return `${base} · no speech on the recording — likely fax or robocall`;
+      const t = (row.voicemail_transcript ?? '').trim();
+      if (row.voicemail_speech === 'speech' && t) return `${base} · they said: "${t.length > 160 ? `${t.slice(0, 157)}…` : t}"`;
+      return base;
+    }
     case 'cascade':
       return 'Offered to the cascade pool';
     default:

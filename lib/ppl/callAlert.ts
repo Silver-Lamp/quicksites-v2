@@ -29,6 +29,9 @@ export type CallRow = {
   /** From the voicemail transcription (lib/ppl/voicemailSpeech.ts); absent on older rows. */
   voicemail_speech?: string | null;
   voicemail_transcript?: string | null;
+  /** From the missed-call text (lib/ppl/missedCallNotice.ts); absent on older rows. */
+  missed_call_notified_at?: string | null;
+  missed_call_notify_result?: Record<string, unknown> | null;
 };
 
 /** Human label per outcome. No word here may mean "a person picked up" — see the header. */
@@ -82,7 +85,7 @@ export function outcomeLine(row: CallRow): string | null {
 export function handlingLabel(row: CallRow): string {
   switch (row.handling) {
     case 'forward':
-      return `Forwarded to ${prettyPhone(row.forwarded_to)}`;
+      return `Forwarded to ${prettyPhone(row.forwarded_to)}${missedCallSuffix(row)}`;
     case 'voicemail_first': {
       // What the message contained, when we know. A fax tone and a real caller used to read
       // identically here (2026-10-07).
@@ -97,6 +100,22 @@ export function handlingLabel(row: CallRow): string {
     default:
       return row.forwarded_to ? `Forwarded to ${prettyPhone(row.forwarded_to)}` : 'Handling not recorded';
   }
+}
+
+/**
+ * Whether the business was told about a forward that rang out with no message.
+ *
+ * ⚠️ Reads the RESULT, not the claim timestamp: `missed_call_notified_at` is stamped before the
+ * send and only says we tried. "Texted them" is asserted only on `business_sms: true`; a claim
+ * with no result or a failed one reads as "tried to text", so the operator knows to relay it
+ * by hand rather than assuming the business has the number.
+ */
+export function missedCallSuffix(row: CallRow): string {
+  if (!row.missed_call_notified_at) return '';
+  const r = row.missed_call_notify_result ?? null;
+  if (r?.business_sms === true) return ' · texted them the caller’s number';
+  if (r?.skipped === 'opted_out') return ' · not texted (they opted out)';
+  return ' · tried to text them the caller’s number — not confirmed';
 }
 
 export type AlertEmail = { subject: string; html: string; text: string };

@@ -55,7 +55,7 @@ async function handle(req: NextRequest) {
     const { data, error } = await db
       .from('call_logs')
       .select(
-        'id, call_sid, from_number, to_number, forwarded_to, call_status, call_duration, handling, custom_domain, created_at, voicemail_speech, voicemail_transcript',
+        'id, call_sid, from_number, to_number, forwarded_to, call_status, call_duration, handling, custom_domain, created_at, voicemail_speech, voicemail_transcript, missed_call_notified_at, missed_call_notify_result',
       )
       .is('alerted_at', null)
       .lt('created_at', settledBefore)

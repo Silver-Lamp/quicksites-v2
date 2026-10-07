@@ -408,6 +408,21 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `admin_tasks` row per (property, reason) for the two actionable buckets and emails ONE digest
   only when something new appeared. The URLs inspected are the site's pages on its NOMINATED
   origin, never the platform copy. Tests: `lib/gsc/__tests__/indexingTriage.test.ts`.
+  ⚠️ **What the first two sweeps found, and what each taught (2026-10-07).** (1) Where BOTH apex
+  and www answer 200 with no redirect between them, Google picks www; the nominate script's
+  redirect chain ended on the apex, so it now follows the Google canonical the sweep recorded
+  when that host serves the same page (6 sites re-set). (2) Google's coverage state is from its
+  LAST crawl: a "Not found (404)" two months old on a page serving 200 today is **awaiting
+  recrawl**, so the cron HEADs any reported fetch failure live first. (3) **Eleven towing sites
+  had a page slug `auto-wrecking-&-flatbed` that 404'd from its own nav** — the segment reaches
+  the resolver percent-encoded (`%26`) and the raw compare failed. `lib/sites/redirects.ts#pageUrlKey`
+  is the one URL-safe spelling: the resolver matches on it and 308s every other spelling to it,
+  `sitePagePath` emits it (sitemap + canonical), the editor seeds nav hrefs with it. (4) A site
+  whose nominated host changes leaves its old URL's row behind forever "fixable" — the sweep
+  prunes rows for URLs a site no longer lists, and **auto-closes** its own `admin_tasks` when a
+  (property, reason) no longer appears in an actionable bucket, which is the question the emails
+  could never answer: did it clear? (5) Stop on a TIME budget (230 s), not a count: the first
+  run was gateway-504'd mid-loop.
 - **Niche discovery — "can an organic result win this page at all?" (2026-09-22)**: two
   measurements behind **[`docs/NICHE_DISCOVERY.md`](docs/NICHE_DISCOVERY.md)**. (1) The **GSC
   query harvest** — every GSC call here asked for `dimensions: ['page']` or none, so we stored

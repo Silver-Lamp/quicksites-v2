@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui';
 import { BlocksEditor } from './blocks-editor';
 import { createDefaultPage } from '@/lib/pageDefaults';
+import { pageUrlKey } from '@/lib/sites/redirects';
 import { Template, TemplateData, Page } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
@@ -47,9 +48,11 @@ export default function TemplatePageEditor({
     // seed a default header block if none present
     const seeded = createDefaultBlock('header') as Block;
 
-    // Optionally seed nav items from pages
+    // Optionally seed nav items from pages.
+    // ⚠️ The URL-safe key, not the raw slug: `/${p.slug}` wrote `/auto-wrecking-&-flatbed` into
+    // eleven sites' headers and every one of those links 404'd (lib/sites/redirects.ts#pageUrlKey).
     const navItems =
-      pages?.slice(0, 5)?.map((p) => ({ label: p.title || p.slug, href: `/${p.slug}` })) ?? [];
+      pages?.slice(0, 5)?.map((p) => ({ label: p.title || p.slug, href: `/${pageUrlKey(p.slug)}` })) ?? [];
     (seeded as any).content = {
       ...(seeded as any).content,
       navItems: (seeded as any).content?.navItems?.length

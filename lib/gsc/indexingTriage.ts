@@ -65,10 +65,28 @@ export function sameUrl(a: string | null | undefined, b: string | null | undefin
   return !!na && na === norm(b);
 }
 
-export function triageInspection(f: InspectionFacts, opts: { declaredCanonical?: string | null } = {}): Triage {
+export function triageInspection(
+  f: InspectionFacts,
+  opts: {
+    declaredCanonical?: string | null;
+    /**
+     * HTTP status of the URL fetched by US, right now. Google's coverage state describes its LAST
+     * crawl, which can be months old: murfreesboro-towing.com read "Not found (404)" from a crawl
+     * two months earlier while serving 200 today. A fetch failure Google reports that we cannot
+     * reproduce is "awaiting recrawl", not a bug to fix.
+     */
+    liveStatus?: number | null;
+  } = {},
+): Triage {
   const cov = (f.coverageState ?? '').toLowerCase();
   const verdict = (f.verdict ?? '').toUpperCase();
   const declared = opts.declaredCanonical ?? null;
+  const liveOk = opts.liveStatus === 200;
+  const stale = (what: string): Triage => ({
+    bucket: 'expected',
+    reason: `${what} at Google's last crawl${f.lastCrawlTime ? ` (${f.lastCrawlTime.slice(0, 10)})` : ''} — serves 200 now, awaiting recrawl`,
+    remedy: null,
+  });
 
   if (verdict === 'PASS' || /submitted and indexed|^indexed/.test(cov)) {
     return { bucket: 'indexed', reason: f.coverageState ?? 'Indexed', remedy: null };
@@ -122,6 +140,7 @@ export function triageInspection(f: InspectionFacts, opts: { declaredCanonical?:
   }
 
   if (cov.includes('not found') || (f.pageFetchState ?? '').toUpperCase().includes('NOT_FOUND')) {
+    if (liveOk) return stale('Not found (404)');
     return { bucket: 'auto_fixable', reason: 'Not found (404)', remedy: 'A URL we list that we do not serve — fix the page path or drop it from the sitemap.' };
   }
 
@@ -130,10 +149,12 @@ export function triageInspection(f: InspectionFacts, opts: { declaredCanonical?:
   }
 
   if (cov.includes('server error') || (f.pageFetchState ?? '').toUpperCase().includes('SERVER_ERROR')) {
+    if (liveOk) return stale('Server error (5xx)');
     return { bucket: 'auto_fixable', reason: 'Server error (5xx)', remedy: 'The page failed to render for Googlebot; reproduce with curl -A Googlebot and fix the render.' };
   }
 
   if (cov.includes('access forbidden') || (f.pageFetchState ?? '').toUpperCase().includes('ACCESS_DENIED')) {
+    if (liveOk) return stale('Access forbidden (403)');
     return { bucket: 'auto_fixable', reason: 'Blocked due to access forbidden (403)', remedy: 'Something between Googlebot and the page answers 403; check host-level protection on this domain.' };
   }
 

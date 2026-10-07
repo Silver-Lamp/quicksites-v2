@@ -29,6 +29,13 @@ export const maxDuration = 300;
 
 const MAX_PER_RUN = Number(process.env.GSC_INSPECT_MAX ?? '300') || 300;
 const FRESH_DAYS = Number(process.env.GSC_INSPECT_FRESH_DAYS ?? '7') || 7;
+/**
+ * ⚠️ Stop on TIME, not only on count. Each inspection is a few seconds and the route's
+ * maxDuration is 300 s; the first production run (2026-10-07) was gateway-504'd mid-loop after
+ * 35 URLs with the count cap nowhere in sight. Whatever is not reached rolls to the next run —
+ * the freshness filter makes every run pick up where the last stopped.
+ */
+const TIME_BUDGET_MS = 230_000;
 const TASK_BUCKETS = new Set<TriageBucket>(['auto_fixable', 'needs_person']);
 
 function admin() {
@@ -90,14 +97,24 @@ async function handle(req: NextRequest) {
     const batch = queue.slice(0, MAX_PER_RUN);
 
     let inspected = 0;
+    let outOfTime = 0;
     const failed: string[] = [];
     const byBucket: Record<string, number> = {};
     const newTasks: string[] = [];
+    const started = Date.now();
     for (const { target, url: u } of batch) {
+      if (Date.now() - started > TIME_BUDGET_MS) { outOfTime += 1; continue; }
       try {
         const raw = await inspectUrl(target.property, u);
         const facts = parseInspection(u, raw);
-        const triage = triageInspection(facts, { declaredCanonical: `${target.origin}/` });
+        // Google's state is from its LAST crawl. When it reports a fetch failure, ask the URL
+        // ourselves right now: a 200 today means "awaiting recrawl", not a bug.
+        const fetchProblem = /not found|server error|forbidden/i.test(facts.coverageState ?? '') || /NOT_FOUND|SERVER_ERROR|ACCESS_DENIED/.test((facts.pageFetchState ?? '').toUpperCase());
+        let liveStatus: number | null = null;
+        if (fetchProblem) {
+          try { liveStatus = (await fetch(u, { method: 'HEAD', redirect: 'follow', headers: { 'user-agent': 'quicksites-indexing-sweep' } })).status; } catch { liveStatus = null; }
+        }
+        const triage = triageInspection(facts, { declaredCanonical: `${target.origin}/`, liveStatus });
         byBucket[triage.bucket] = (byBucket[triage.bucket] ?? 0) + 1;
         const { error } = await db.from('gsc_url_inspections').upsert(
           {
@@ -161,7 +178,9 @@ async function handle(req: NextRequest) {
       queued: queue.length,
       inspected,
       skippedFresh: targets.reduce((n, t) => n + t.urls.length, 0) - queue.length,
-      remaining: Math.max(0, queue.length - batch.length),
+      remaining: Math.max(0, queue.length - batch.length) + outOfTime,
+      outOfTime,
+      seconds: Math.round((Date.now() - started) / 1000),
       byBucket,
       newTasks,
       failed: failed.slice(0, 20),

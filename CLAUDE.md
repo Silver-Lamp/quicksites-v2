@@ -379,6 +379,25 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   old behaviour on purpose. Admin: `GET/PUT /api/admin/templates/[id]/redirects` (commits via the
   RPC; **republish** for the map to reach the served snapshot). Migration recipe in
   [`docs/CUSTOM_SITES.md`](docs/CUSTOM_SITES.md) §9.
+- **⚠️ EVERY CUSTOM-DOMAIN SITE WAS THREE SELF-CANONICAL ORIGINALS (fixed 2026-10-07).** Search
+  Console mailed *"Duplicate, Google chose different canonical than user"* for bremerton-towing.com.
+  The site answers at `www.<domain>`, `<slug>.quicksites.ai` and `/sites/<slug>`, and the renderer
+  is self-referencing by design unless `data.meta.canonical_origin` nominates a host — which 54 of
+  55 published campaign sites had never done. Google saw three originals and picked one.
+  `scripts/nominate-custom-domain-canonicals.mjs` (dry-run default, `--apply`) nominates the
+  domain for every published custom-domain site **after a per-row preflight at write time**: the
+  domain must answer 200 (following its own apex→www / http→https hops, same registrable domain)
+  with the same `<title>` as the platform copy; the nominated origin is the chain's FINAL host.
+  63 of 63 set and read back from the served copy. ⚠️ Two things it refused, both real: (1)
+  `arlington-hvac.com` serves **someone else's** site (DNS → GitHub Pages, Lakeville Heating &
+  Cooling; RDAP: Spaceship registrar, Cloudflare NS, registered 2026-07-15 — not a Vercel
+  registration, so not ours) while our campaign row still says `attached` (owner task). (2) Seven
+  live, published, 7-page towing sites carried `archived = true` (set 2026-10-02) and were hidden
+  from every admin list while serving on their domains — unarchived via the documented bypass. A
+  flag on a live site is still a flag; the served HTML is the fact.
+  ⚠️ **Do not parse the Search Console emails** — they carry only the property and a reason
+  label. The URLs and Google's chosen canonical come from the URL Inspection API (see the
+  indexing sweep below).
 - **Niche discovery — "can an organic result win this page at all?" (2026-09-22)**: two
   measurements behind **[`docs/NICHE_DISCOVERY.md`](docs/NICHE_DISCOVERY.md)**. (1) The **GSC
   query harvest** — every GSC call here asked for `dimensions: ['page']` or none, so we stored

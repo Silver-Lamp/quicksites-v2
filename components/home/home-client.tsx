@@ -252,6 +252,11 @@ export default function HomeClient({
           </div>
         </section>
 
+        {/* ───────── Showcase (real published sites) — SSR'd via server page ─────────
+            Above the builder pitch, not at the foot of the page (owner, 2026-10-06): a visitor
+            deciding "is this for me?" should see what we actually ship before reading how. */}
+        {showcase}
+
         {/* ───────── Build ───────── */}
         <section className="relative z-10 w-full border-t border-zinc-800/70 bg-zinc-950/60">
           <SectionBackdrop image="meadow" />
@@ -326,9 +331,6 @@ export default function HomeClient({
 
         {/* ───────── In Your Voice (owner-voice narration moat) — default brand only ───────── */}
         {showCharacter && <InYourVoice />}
-
-        {/* ───────── Showcase (real published sites) — SSR'd via server page ───────── */}
-        {showcase}
 
         {/* ⚠️ THREE SECTIONS WERE DELETED HERE ON 2026-09-25, AND DELETED RATHER THAN HIDDEN.
             "White-label it. Resell it. Earn the slice." · "Grow the network. Earn on all of it."

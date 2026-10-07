@@ -53,6 +53,13 @@ describe('triageInspection', () => {
     expect(t.bucket).toBe('expected');
   });
 
+  it("…and when Google's chosen canonical now REDIRECTS to ours, nothing is left to fix", () => {
+    // cullmantow.com: Google chose the apex on 2026-09-24; the apex has since 307'd to www.
+    const f = facts({ coverageState: 'Duplicate, Google chose different canonical than user', userCanonical: 'https://www.cullmantow.com/', googleCanonical: 'https://cullmantow.com/' });
+    expect(triageInspection(f, { declaredCanonical: 'https://www.cullmantow.com/', googleCanonicalRedirectsToDeclared: true }).bucket).toBe('expected');
+    expect(triageInspection(f, { declaredCanonical: 'https://www.cullmantow.com/', googleCanonicalRedirectsToDeclared: false }).bucket).toBe('auto_fixable');
+  });
+
   it('our own redirects and proper canonicals are expected, not findings', () => {
     expect(triageInspection(facts({ coverageState: 'Page with redirect' })).bucket).toBe('expected');
     expect(triageInspection(facts({ coverageState: 'Alternate page with proper canonical tag', googleCanonical: 'https://www.x.com/' }), { declaredCanonical: 'https://www.x.com/' }).bucket).toBe('expected');
@@ -133,7 +140,8 @@ describe('the sweep', () => {
   const cron = strip(read('app/api/cron/gsc-url-inspect/route.ts'));
   it('upserts latest-per-URL, triages with the nominated canonical, and dedupes tasks on the exact title', () => {
     expect(cron).toMatch(/onConflict: 'property,url'/);
-    expect(cron).toMatch(/declaredCanonical: `\$\{target\.origin\}\/`/);
+    expect(cron).toMatch(/const declared = `\$\{target\.origin\}\/`/);
+    expect(cron).toMatch(/declaredCanonical: declared/);
     expect(cron).toMatch(/\.eq\('title', title\)/);
   });
   it('emails only when something NEW needs attention', () => {
@@ -143,7 +151,9 @@ describe('the sweep', () => {
     expect(cron).toMatch(/TIME_BUDGET_MS = 230_000/);
     expect(cron).toMatch(/Date\.now\(\) - started > TIME_BUDGET_MS/);
     expect(cron).toMatch(/method: 'HEAD'/);
-    expect(cron).toMatch(/liveStatus \}\)/);
+    expect(cron).toMatch(/liveStatus, googleCanonicalRedirectsToDeclared \}\)/);
+    // The second HEAD: Google's chosen canonical, followed manually so a redirect is visible.
+    expect(cron).toMatch(/redirect: 'manual'/);
   });
   it('is scheduled, reachable from the nav, and the knobs are declared', () => {
     const v = JSON.parse(read('vercel.json'));

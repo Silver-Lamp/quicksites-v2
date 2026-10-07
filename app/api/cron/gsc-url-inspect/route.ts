@@ -20,7 +20,7 @@ import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { sendEmail } from '@/lib/email';
 import { alertRecipients } from '@/lib/ppl/callAlert';
 import { inspectUrl, targetsFor } from '@/lib/gsc/urlInspection';
-import { parseInspection, triageInspection, BUCKET_LABEL, type TriageBucket } from '@/lib/gsc/indexingTriage';
+import { parseInspection, triageInspection, sameUrl, BUCKET_LABEL, type TriageBucket } from '@/lib/gsc/indexingTriage';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 
 export const runtime = 'nodejs';
@@ -122,7 +122,18 @@ async function handle(req: NextRequest) {
         if (fetchProblem) {
           try { liveStatus = (await fetch(u, { method: 'HEAD', redirect: 'follow', headers: { 'user-agent': 'quicksites-indexing-sweep' } })).status; } catch { liveStatus = null; }
         }
-        const triage = triageInspection(facts, { declaredCanonical: `${target.origin}/`, liveStatus });
+        // A duplicate verdict where Google's chosen canonical is a different host of ours: if that
+        // host now redirects to the canonical we declare, there is nothing left to fix.
+        let googleCanonicalRedirectsToDeclared = false;
+        const declared = `${target.origin}/`;
+        if (/duplicate/i.test(facts.coverageState ?? '') && facts.googleCanonical && !sameUrl(facts.googleCanonical, declared)) {
+          try {
+            const r = await fetch(facts.googleCanonical, { method: 'HEAD', redirect: 'manual', headers: { 'user-agent': 'quicksites-indexing-sweep' } });
+            const loc = r.headers.get('location');
+            googleCanonicalRedirectsToDeclared = r.status >= 300 && r.status < 400 && !!loc && sameUrl(new URL(loc, facts.googleCanonical).toString(), declared);
+          } catch { /* unknown stays false */ }
+        }
+        const triage = triageInspection(facts, { declaredCanonical: declared, liveStatus, googleCanonicalRedirectsToDeclared });
         byBucket[triage.bucket] = (byBucket[triage.bucket] ?? 0) + 1;
         const { error } = await db.from('gsc_url_inspections').upsert(
           {

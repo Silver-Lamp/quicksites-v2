@@ -76,6 +76,12 @@ export function triageInspection(
      * reproduce is "awaiting recrawl", not a bug to fix.
      */
     liveStatus?: number | null;
+    /**
+     * True when the canonical Google chose now REDIRECTS to the one we declare (checked live by
+     * the cron). cullmantow.com: Google chose the apex from a 2026-09-24 crawl; the apex has since
+     * 307'd to www, which self-canonicalises. Nothing left to fix — Google has to recrawl.
+     */
+    googleCanonicalRedirectsToDeclared?: boolean;
   } = {},
 ): Triage {
   const cov = (f.coverageState ?? '').toLowerCase();
@@ -113,6 +119,9 @@ export function triageInspection(
       if (declared && sameUrl(f.googleCanonical, declared)) {
         // We now nominate exactly what Google chose; this clears on the next crawl.
         return { bucket: 'expected', reason: 'Duplicate — Google already uses the canonical we now nominate (awaiting recrawl)', remedy: null };
+      }
+      if (opts.googleCanonicalRedirectsToDeclared) {
+        return { bucket: 'expected', reason: "Duplicate — Google's chosen canonical now redirects to ours (awaiting recrawl)", remedy: null };
       }
       return {
         bucket: 'auto_fixable',

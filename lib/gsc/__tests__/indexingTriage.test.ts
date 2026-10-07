@@ -73,6 +73,17 @@ describe('triageInspection', () => {
     expect(triageInspection(facts({ coverageState: 'Server error (5xx)' })).bucket).toBe('auto_fixable');
   });
 
+  it("…unless the URL serves 200 right now: then Google's state is a stale crawl, awaiting recrawl", () => {
+    // murfreesboro-towing.com: "Not found (404)" from a crawl two months earlier, 200 today.
+    const t = triageInspection(facts({ coverageState: 'Not found (404)', lastCrawlTime: '2026-08-05T10:00:00Z' }), { liveStatus: 200 });
+    expect(t.bucket).toBe('expected');
+    expect(t.reason).toMatch(/2026-08-05/);
+    expect(t.reason).toMatch(/awaiting recrawl/);
+    // A live 404 is still ours to fix; an unknown live status does not excuse it.
+    expect(triageInspection(facts({ coverageState: 'Not found (404)' }), { liveStatus: 404 }).bucket).toBe('auto_fixable');
+    expect(triageInspection(facts({ coverageState: 'Not found (404)' }), { liveStatus: null }).bucket).toBe('auto_fixable');
+  });
+
   it('an unrecognised state is unknown, never silently expected', () => {
     expect(triageInspection(facts({ coverageState: 'Some new wording from Google' })).bucket).toBe('unknown');
     expect(triageInspection(facts({})).bucket).toBe('unknown');
@@ -127,6 +138,12 @@ describe('the sweep', () => {
   });
   it('emails only when something NEW needs attention', () => {
     expect(cron).toMatch(/if \(newTasks\.length && to\.length\)/);
+  });
+  it('stops on a time budget (the first run was gateway-504d mid-loop) and checks fetch failures live', () => {
+    expect(cron).toMatch(/TIME_BUDGET_MS = 230_000/);
+    expect(cron).toMatch(/Date\.now\(\) - started > TIME_BUDGET_MS/);
+    expect(cron).toMatch(/method: 'HEAD'/);
+    expect(cron).toMatch(/liveStatus \}\)/);
   });
   it('is scheduled, reachable from the nav, and the knobs are declared', () => {
     const v = JSON.parse(read('vercel.json'));

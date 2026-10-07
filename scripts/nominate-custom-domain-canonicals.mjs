@@ -89,13 +89,27 @@ for (const tpl of templates) {
   if (ONLY && domain !== ONLY) continue;
   if (!tpl.published || tpl.archived) { rows.push([domain, tpl.slug, 'skip', 'not published']); continue; }
   const current = tpl.data?.meta?.canonical_origin ?? null;
-  const fin = await resolveFinal(domain);
+  let fin = await resolveFinal(domain);
   if (!fin.ok) { rows.push([domain, tpl.slug, 'refuse', fin.reason]); continue; }
+  // ⚠️ FOLLOW GOOGLE'S PICK WHEN BOTH HOSTS SERVE. On the first run three sites answered 200 on
+  // BOTH apex and www (no redirect between them), the chain ended on the apex, and the URL
+  // Inspection sweep then showed Google had chosen www every time. Nominating the host Google
+  // did not choose leaves the duplicate in place. So if the sweep has recorded a Google canonical
+  // for this site on a different host of the same domain, and that host serves this page too,
+  // nominate THAT one — it is the only choice that ends the disagreement.
+  const seen = await rest(`gsc_url_inspections?select=google_canonical&template_id=eq.${tpl.id}&google_canonical=not.is.null&order=inspected_at.desc&limit=1`).catch(() => []);
+  const googleHost = seen?.[0]?.google_canonical ? new URL(seen[0].google_canonical).host.toLowerCase() : null;
+  if (googleHost && googleHost !== new URL(fin.origin).host && registrable(googleHost) === domain) {
+    const alt = await fetchPage(`https://${googleHost}/`);
+    if (alt.status === 200 && alt.title && alt.title === fin.title) {
+      fin = { ...fin, origin: `https://${googleHost}`, title: alt.title, note: 'Google-chosen host' };
+    }
+  }
   const ownPage = await fetchPage(`https://${tpl.slug}.${PLATFORM}/`);
   if (ownPage.status !== 200) { rows.push([domain, tpl.slug, 'refuse', `platform host answers ${ownPage.status}`]); continue; }
   if (!fin.title || fin.title !== ownPage.title) { rows.push([domain, tpl.slug, 'refuse', `titles differ: "${fin.title}" vs "${ownPage.title}"`]); continue; }
   if (current === fin.origin) { rows.push([domain, tpl.slug, 'ok', `already ${fin.origin}`]); continue; }
-  if (!APPLY) { rows.push([domain, tpl.slug, 'would set', `${current ?? '(unset)'} → ${fin.origin}`]); continue; }
+  if (!APPLY) { rows.push([domain, tpl.slug, 'would set', `${current ?? '(unset)'} → ${fin.origin}${fin.note ? ` (${fin.note})` : ''}`]); continue; }
   if (written >= LIMIT) { rows.push([domain, tpl.slug, 'deferred', 'limit reached']); continue; }
   const data = structuredClone(tpl.data ?? {});
   data.meta = { ...(data.meta ?? {}), canonical_origin: fin.origin };

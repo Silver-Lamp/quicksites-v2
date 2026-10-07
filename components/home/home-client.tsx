@@ -49,8 +49,11 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 export default function HomeClient({
   showcase,
+  heroLayer,
 }: {
   showcase?: React.ReactNode;
+  /** Decorative layer behind the hero — the showcase fly-through (SSR'd by app/page.tsx). */
+  heroLayer?: React.ReactNode;
   /** ⚠️ `resellerSlot` was removed 2026-09-25 with the three partner sections. The reseller
    *  diagram now renders on /partners, where the audience for it is. Re-adding a slot here means
    *  re-adding the pitch — see docs/AUDIENCE_SPLIT_PLAN.md before you do. */
@@ -131,6 +134,10 @@ export default function HomeClient({
               <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-zinc-950/20 to-zinc-950" />
             </div>
           )}
+          {/* Real sites flying out of the background toward the viewer (default brand only;
+              decorative, aria-hidden, pointer-events-none — see site-fly-through.tsx). Rendered
+              AFTER the motif background so it paints above the scrim and below the headline. */}
+          {showCharacter && heroLayer}
 
           <div className="flex items-center gap-3">
             <Image src={logoSrc} width={40} height={40} alt={`${productName} logo`} className="rounded-full" />

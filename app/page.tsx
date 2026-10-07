@@ -5,8 +5,10 @@
 
 import { Suspense } from 'react';
 import { organizationSchemaJson } from '@/lib/seo/organizationSchema';
+import { cache } from 'react';
 import HomeClient from '@/components/home/home-client';
 import SiteShowcase from '@/components/home/site-showcase';
+import SiteFlyThrough, { FLY_COUNT } from '@/components/home/site-fly-through';
 import { getShowcaseData } from '@/lib/home/getShowcaseData';
 import { marketingOg } from '@/lib/marketingOg';
 
@@ -28,10 +30,25 @@ export const metadata = marketingOg({
 // immediately instead of blocking on ~5 sequential DB round-trips. The fallback is
 // the client SiteShowcase (paints from localStorage cache + /api/public/showcase),
 // so returning visitors see the row instantly and it upgrades to SSR data when ready.
+// ⚠️ One DB read per request for both consumers below. React's cache() memoises the call across
+// server components in the same render, so the fly-through does not add a second ~5-query trip.
+const showcaseOnce = cache(getShowcaseData);
+
+/** The first five visible showcase sites, flying behind the hero (see site-fly-through.tsx). */
+async function FlyThroughSSR() {
+  try {
+    const data = await showcaseOnce();
+    const five = data.sites.filter((s) => !s.hidden).slice(0, FLY_COUNT);
+    return <SiteFlyThrough sites={five.map((s) => ({ slug: s.slug, name: s.name, industry: s.industry }))} />;
+  } catch {
+    return null;
+  }
+}
+
 async function ShowcaseSSR() {
   let initial;
   try {
-    const data = await getShowcaseData();
+    const data = await showcaseOnce();
     const visible = data.sites.filter((s) => !s.hidden);
     initial = visible.length > 0 ? { ...data, sites: visible } : undefined;
   } catch {
@@ -56,6 +73,11 @@ export default function Page() {
         dangerouslySetInnerHTML={{ __html: organizationSchemaJson() }}
       />
     <HomeClient
+      heroLayer={
+        <Suspense fallback={null}>
+          <FlyThroughSSR />
+        </Suspense>
+      }
       showcase={
         <Suspense fallback={<SiteShowcase initialData={undefined} />}>
           <ShowcaseSSR />

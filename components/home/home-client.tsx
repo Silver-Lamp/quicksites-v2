@@ -139,6 +139,16 @@ export default function HomeClient({
               AFTER the motif background so it paints above the scrim and below the headline. */}
           {showCharacter && heroLayer}
 
+          {/* ⚠️ Soft shading behind the text, ABOVE the fly-through and BELOW the words (owner,
+              2026-10-06: the sites coming in made the headline hard to read). `isolate` opens a
+              stacking context so the -z-10 scrim stays inside this block and above the hero's
+              own -z-10 layers; a radial gradient rather than a blur, so it costs nothing. */}
+          <div className="relative isolate flex flex-col items-center" data-qs-hero-scrim>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-x-16 -inset-y-10 -z-10 rounded-[3rem] bg-[radial-gradient(ellipse_at_center,rgba(9,9,11,0.88)_0%,rgba(9,9,11,0.7)_45%,rgba(9,9,11,0.35)_68%,transparent_85%)]"
+          />
+
           <div className="flex items-center gap-3">
             <Image src={logoSrc} width={40} height={40} alt={`${productName} logo`} className="rounded-full" />
             <span className="text-2xl font-bold tracking-tight">{productName}</span>
@@ -165,6 +175,7 @@ export default function HomeClient({
               ? 'Describe your business and watch a real site appear — edit it live, publish when you sign up.'
               : heroSubhead}
           </p>
+          </div>
 
           {showGuestStart ? (
             <GuestStart />

@@ -78,6 +78,23 @@ describe('the wiring', () => {
     expect(page).not.toMatch(/await getShowcaseData\(\)/); // both consumers go through the cache
   });
 
+  it('the headline and subhead sit on a scrim above the fly-through', () => {
+    // Owner, 2026-10-06: the sites coming in made the text hard to read. The text block isolates
+    // its own stacking context and carries a radial shade behind the words.
+    const home = strip(read('components/home/home-client.tsx'));
+    const scrimAt = home.indexOf('data-qs-hero-scrim');
+    const h1At = home.indexOf('<motion.h1', scrimAt);
+    const subheadEnd = home.indexOf('heroSubhead}', scrimAt);
+    const closeAt = home.indexOf('</div>', subheadEnd);
+    expect(scrimAt).toBeGreaterThan(0);
+    expect(h1At).toBeGreaterThan(scrimAt);
+    const block = home.slice(scrimAt - 80, scrimAt + 400);
+    expect(block).toMatch(/relative isolate/);
+    expect(block).toMatch(/radial-gradient/);
+    expect(block).toMatch(/-z-10/);
+    expect(closeAt).toBeGreaterThan(subheadEnd); // the wrapper closes after the subhead
+  });
+
   it('the hero renders the layer behind the headline, default brand only', () => {
     const home = strip(read('components/home/home-client.tsx'));
     const main = home.indexOf('<main id="start"');

@@ -89,6 +89,10 @@
       "schedule": "40 7 * * *"
     },
     {
+      "path": "/api/cron/gsc-url-inspect",
+      "schedule": "20 5 * * *"
+    },
+    {
       "path": "/api/cron/serp-recheck",
       "schedule": "0 9 3 * *"
     },

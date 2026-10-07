@@ -8,7 +8,10 @@ import { organizationSchemaJson } from '@/lib/seo/organizationSchema';
 import { cache } from 'react';
 import HomeClient from '@/components/home/home-client';
 import SiteShowcase from '@/components/home/site-showcase';
-import SiteFlyThrough, { FLY_COUNT } from '@/components/home/site-fly-through';
+import SiteFlyThrough from '@/components/home/site-fly-through';
+// ⚠️ From the plain lib module, never from the 'use client' component: a value imported across
+// the server→client boundary is a client-reference proxy, and slice(0, proxy) is slice(0, NaN).
+import { FLY_COUNT } from '@/lib/home/flyThrough';
 import { getShowcaseData } from '@/lib/home/getShowcaseData';
 import { marketingOg } from '@/lib/marketingOg';
 

@@ -20,18 +20,10 @@
 // ⚠️ Thumbnails are the showcase's generated thumbs (/api/public/showcase/<slug>/thumb) — the same
 // image the row uses, so a site with no hero still shows something rather than a broken <img>.
 
-export const FLY_COUNT = 5;
-
-export type FlySite = { slug: string; name: string; industry: string | null };
-
-/** Where each card starts (near the vanishing point) and drifts to, as % of the layer. */
-export const FLY_LANES: ReadonlyArray<{ x0: number; y0: number; x1: number; y1: number; seconds: number }> = [
-  { x0: -4, y0: -6, x1: -34, y1: -26, seconds: 18 },
-  { x0: 6, y0: -2, x1: 36, y1: -18, seconds: 21 },
-  { x0: -8, y0: 6, x1: -30, y1: 28, seconds: 19 },
-  { x0: 9, y0: 5, x1: 32, y1: 26, seconds: 22 },
-  { x0: 0, y0: 1, x1: 2, y1: 8, seconds: 24 },
-];
+// ⚠️ Constants live in lib/home/flyThrough.ts, NOT here: this is a 'use client' module, and a
+// server component importing a value from it receives a client-reference proxy, not the value.
+// That is exactly how the first deploy rendered nothing (see the lib module's header).
+import { FLY_COUNT, FLY_LANES, type FlySite } from '@/lib/home/flyThrough';
 
 const CSS = `
 @keyframes qs-fly {

@@ -225,11 +225,23 @@ export async function notifyOperatorOfVoicemail(opts: {
   callerPhone: string | null;
   link: string;
   hasRecording: boolean;
+  /**
+   * From lib/ppl/voicemailSpeech.ts. ⚠️ `no_speech` changes the ask: nobody is told to relay a
+   * fax tone. `unknown` (transcription failed) keeps the original "listen" wording — it must
+   * never read as "nothing there".
+   */
+  speech?: 'speech' | 'no_speech' | 'unknown';
+  transcript?: string | null;
 }): Promise<{ email: boolean; sms: boolean }> {
   const caller = opts.callerPhone ? formatUsPhone(opts.callerPhone) : 'unknown number';
-  const body = opts.hasRecording
-    ? `New lead on ${opts.domain} from ${caller}. Listen: ${opts.link}`
-    : `Call on ${opts.domain} from ${caller} — reached the prompt but left no message.`;
+  const speech = opts.speech ?? 'unknown';
+  const noSpeech = opts.hasRecording && speech === 'no_speech';
+  const excerpt = (opts.transcript ?? '').trim();
+  const body = !opts.hasRecording
+    ? `Call on ${opts.domain} from ${caller} — reached the prompt but left no message.`
+    : noSpeech
+      ? `Voicemail on ${opts.domain} from ${caller} contains no speech — likely a fax machine or robocall. Listen if you want: ${opts.link}`
+      : `New lead on ${opts.domain} from ${caller}.${excerpt ? ` They said: "${excerpt.length > 280 ? `${excerpt.slice(0, 277)}…` : excerpt}"` : ''} Listen: ${opts.link}`;
 
   let email = false;
   let sms = false;
@@ -240,12 +252,15 @@ export async function notifyOperatorOfVoicemail(opts: {
       .filter(Boolean);
     if (admins.length) {
       const { sendEmail } = await import('@/lib/email');
+      const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       await sendEmail({
         to: admins,
-        subject: `[QuickSites] ${opts.hasRecording ? 'Lead' : 'Hang-up'} — ${opts.domain}`,
+        subject: `[QuickSites] ${!opts.hasRecording ? 'Hang-up' : noSpeech ? 'Voicemail, no speech (likely fax or robocall)' : 'Lead'} — ${opts.domain}`,
         html:
-          `<p>${body}</p>` +
-          `<p>Relay it to a local business, then note who took it.</p>`,
+          `<p>${esc(body)}</p>` +
+          (noSpeech
+            ? `<p>Nothing to relay. Twenty seconds of transcription found no words; if that is wrong, the recording is at the link.</p>`
+            : `<p>Relay it to a local business, then note who took it.</p>`),
       });
       email = true;
     }

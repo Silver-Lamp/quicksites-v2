@@ -818,6 +818,20 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   token at HiveJournal** and the UI says so — a stale token left live there is still a bearer
   secret. ⚠️ Connecting here passes `attachToSite: false`; putting a player on a customer's site
   is a visible change to a live page, not a side effect of fixing narration.
+- **⚠️ A VOICEMAIL IS TRANSCRIBED BEFORE ANYONE IS TOLD TO RELAY IT (2026-10-07).** A fax
+  machine dialled covingtontow.com at 04:29, got the greeting, and left 21 s of CNG tone (0.5 s
+  beep / 3 s silence × 6); the operator email said *"New lead … Relay it to a local business"*.
+  `lib/ppl/voicemailSpeech.ts` runs the recording through Whisper via the meter (pricing row
+  `openai:whisper:audio_stt`, ~$0.002 per voicemail) and the pure `classifyVoicemailSpeech`
+  says `speech` / `no_speech` / `unknown` — pinned on the fax (music glyphs) and on Whisper's
+  other no-speech tell (a leading prompt echoed back N times; so **no prompt is passed**).
+  Result on `call_logs.voicemail_speech/_transcript` (`20260875`). ⚠️ **The route answers Twilio
+  FIRST**: the claim is synchronous, transcription + notification run in Next's `after()`, so
+  the caller is never left in silence waiting on a model. `no_speech` → the operator email says
+  so and drops the "relay it" ask, the business is **not** texted "someone called"; `speech` →
+  the email and the call-alert digest quote what they said; `unknown` keeps the "listen"
+  wording — a failed transcription must never read as "nothing there". ⚠️ The parent-call status
+  callback (above) proved itself on that same call: `ended`, 35 s, not `ringing`.
 - **Inbound-call email alerts (2026-10-01)**: `/api/cron/call-alert` every 5 min emails
   `ADMIN_EMAILS` when a call lands in `call_logs`, so a real lead cannot sit unseen in a dashboard
   nobody opened (two did, on 2026-09-30). ⚠️ **Deliberately NOT in the Twilio webhook**: that

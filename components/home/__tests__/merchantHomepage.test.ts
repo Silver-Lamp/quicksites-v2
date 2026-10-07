@@ -92,6 +92,19 @@ describe('the homepage does not sell the channel', () => {
   });
 });
 
+describe('the showcase sits above the builder pitch', () => {
+  // Owner, 2026-10-06: a visitor deciding "is this for me?" should see what we actually ship
+  // before reading how. The row used to close the page, after In Your Voice.
+  it('renders {showcase} before "A builder that gets out of your way"', () => {
+    const showcaseAt = HOME.indexOf('{showcase}');
+    const builderAt = HOME.indexOf('A builder that gets out of your way');
+    expect(showcaseAt).toBeGreaterThan(0);
+    expect(builderAt).toBeGreaterThan(0);
+    expect(showcaseAt).toBeLessThan(builderAt);
+    expect(HOME.match(/\{showcase\}/g)?.length).toBe(1);
+  });
+});
+
 describe('the nav puts one audience first', () => {
   it('has no top-level Partners link', () => {
     // It belongs in the footers. A channel partner who is looking will find it; a merchant on

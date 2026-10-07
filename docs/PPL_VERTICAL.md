@@ -389,6 +389,46 @@ once rated from September). Undeduped it shows the operator one business twice *
 Every recommendation carries `requiresNotice: true` — `forwardNotice.ts` is part of attaching, not
 a later courtesy.
 
+### 11g. A rang-out call with no message reached nobody (2026-10-07)
+
+**What happened.** `+1 206 710-2328` rang `renton-electrical.com` on 10-05 (hung up at 5 s, before
+the bridge) and again on 10-07 12:42 PT. The second time the caller sat through the announcement
+and the whole ring, Madrona Electric did not pick up (`dial-no-answer`), the caller reached our
+voicemail prompt and hung up without recording. **The business was told nothing about either
+call.** The only text we ever sent a destination fired from the voicemail webhook, which Twilio
+requests only when a recording exists — so the exact case where the business most needs the
+number (they missed it, and the caller did not wait) was the one case that produced no text.
+
+**The fix: the parent-call status callback texts the business the caller's number.**
+`lib/ppl/missedCallNotice.ts#missedCallDecision` (pure) decides; the status route runs it in
+`after()` so Twilio's response goes out first. Reuses `missedCallSmsText` with `hasRecording:
+false` ("…it rang out. Call them back on (206) 710-2328. They didn't leave a message. Reply
+STOP…"), so the copy is the one already tested against `FORBIDDEN_IVR_PHRASES`.
+
+- ⚠️ **Decided at the END of the call, not at `/after-dial`.** The Dial action runs while the
+  caller is still on the line and about to be offered voicemail, so "did they leave a message" is
+  unknowable there. The parent `completed` arrives once the call is over. Deciding there means one
+  text per call — never "rang out" followed by "left a message".
+- ⚠️ **It settles 8 s and RE-READS the row before deciding.** The parent `completed` and the
+  `<Record action>` callback can arrive within the same second when a caller hangs up
+  mid-recording; reading immediately would see no recording and text the wrong thing.
+- ⚠️ **Only `unanswered`.** `abandoned` means the business was never rung (nothing to return);
+  `brief`/`connected` mean something picked up — a person or their own voicemail — and telling them
+  about a call they took is noise.
+- Idempotent on `call_logs.missed_call_notified_at` (claimed before the send; Twilio retries a
+  callback it does not get a clean answer from) with the outcome in `missed_call_notify_result`
+  (migration `20260876`) — the §11e split: a timestamp only says we tried. The operator email
+  appends *"texted them the caller's number"* **only on `business_sms: true`**; a claim with no
+  confirmed send reads *"tried to text — not confirmed"*, so the operator relays it by hand.
+  `/admin/call-logs` shows a *texted* marker on the same condition.
+- STOP still outranks the dial (`isOptedOut` before the send).
+
+**And Madrona was re-pointed the same day.** The operator dialled (425) 902-9422 from an ordinary
+phone and reached voicemail, which is the §11e test that separates *"screens our number"* from
+*"answers nobody"*. The recommender (22 rated candidates, `usable`) put Seattle Electrical
+Services first by 28 points; the campaign now forwards there and Madrona is on
+`forward_unresponsive` with the evidence in the note.
+
 ## 12. One tracking number, one campaign (2026-09-27)
 
 ⚠️ **`attach-number` guarded only one direction.** It refused to give a campaign a *second*

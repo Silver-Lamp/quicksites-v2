@@ -307,7 +307,16 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `lib/ppl/parentCallEnd.ts` writes `abandoned`/`ended` **only over a row with no dial outcome** —
   the parent's `completed` lands a moment after the leg's outcome and must never replace it — and
   `classifyDial` counts `abandoned` **nowhere** in destination health (the business was never
-  rung). ⚠️ Still open and
+  rung). ⚠️ **A rang-out call with NO message reached nobody (2026-10-07, §11g)**: the only text
+  a destination ever got fired from the voicemail webhook, which Twilio requests only when a
+  recording exists — so the business that missed the call and whose caller would not wait was
+  told nothing, twice. Now the **status callback** texts the caller's number
+  (`lib/ppl/missedCallNotice.ts`, pure decision; runs in `after()`, settles 8 s and **re-reads
+  the row** so a message left mid-hang-up wins; only `unanswered`, never `abandoned`/`brief`;
+  claimed on `missed_call_notified_at`, outcome in `missed_call_notify_result`, `20260876`).
+  The email says *"texted them"* only on a confirmed send. Madrona Electric was re-pointed the
+  same day: the owner dialled it from an ordinary phone and got voicemail, so the §11e test was
+  passed before writing it off. ⚠️ Still open and
   **not** a code question: the page asserts a company that does not exist. The two honest shapes
   are a **directory** (our own dome-cohort rule: *"a directory is not a business"*) or a site that
   names its real renter — and the mismatch exists **only in the unpaid state**, since all 11

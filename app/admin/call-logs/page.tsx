@@ -98,7 +98,15 @@ export default async function CallLogsPage() {
                     <td className="px-4 py-2 font-mono text-zinc-100">{log.to_number}</td>
                     <td className="px-4 py-2 font-mono text-zinc-300">
                       {log.forwarded_to ? (
-                        formatUsPhone(log.forwarded_to)
+                        <>
+                          {formatUsPhone(log.forwarded_to)}
+                          {/* The business was told about a rang-out call with no message (lib/ppl/missedCallNotice.ts). Shown only on a confirmed send, never on the claim alone. */}
+                          {log.missed_call_notify_result?.business_sms === true ? (
+                            <span className="ml-2 font-sans text-xs text-sky-300" title="Texted the caller's number to this business after the call rang out with no message">
+                              texted
+                            </span>
+                          ) : null}
+                        </>
                       ) : (
                         <span className="font-sans text-xs italic text-zinc-500">not recorded</span>
                       )}

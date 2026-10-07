@@ -8,6 +8,7 @@
 
 import {
   normalizePath,
+  pageUrlKey,
   parseSiteRedirects,
   matchRedirect,
   resolvePublicPath,
@@ -173,5 +174,26 @@ describe('section anchors addressed as pages (the /contact → /#contact fallbac
     expect(sectionAnchorOnHome(site.pages, 'contact')).toBe('contact');
     expect(sectionAnchorOnHome(site.pages, 'contact_form')).toBeNull();
     expect(sectionAnchorOnHome(site.pages, 'hero')).toBe('hero');
+  });
+});
+
+describe('page slugs with URL-unsafe characters (the auto-wrecking-&-flatbed 404 on eleven sites)', () => {
+  const towing = { pages: [{ slug: 'home' }, { slug: 'towing-service' }, { slug: 'auto-wrecking-&-flatbed' }] };
+  it('resolves the clean spelling', () => {
+    expect(resolvePublicPath(towing, ['auto-wrecking-flatbed'])).toEqual({ kind: 'page', slug: 'auto-wrecking-&-flatbed' });
+  });
+  it('308s the raw and the percent-encoded spellings to the clean one', () => {
+    expect(resolvePublicPath(towing, ['auto-wrecking-&-flatbed'])).toEqual({ kind: 'redirect', to: '/auto-wrecking-flatbed', permanent: true });
+    expect(resolvePublicPath(towing, ['auto-wrecking-%26-flatbed'])).toEqual({ kind: 'redirect', to: '/auto-wrecking-flatbed', permanent: true });
+    expect(resolvePublicPath(towing, ['Auto-Wrecking-%26-Flatbed', 'x'])).toEqual({ kind: 'redirect', to: '/auto-wrecking-flatbed/x', permanent: true });
+  });
+  it('a clean slug is unaffected', () => {
+    expect(resolvePublicPath(towing, ['towing-service'])).toEqual({ kind: 'page', slug: 'towing-service' });
+  });
+  it('pageUrlKey', () => {
+    expect(pageUrlKey('Auto-Wrecking-&-Flatbed')).toBe('auto-wrecking-flatbed');
+    expect(pageUrlKey('auto-wrecking-%26-flatbed')).toBe('auto-wrecking-flatbed');
+    expect(pageUrlKey('  practice areas / dui ')).toBe('practice-areas-/-dui'.replace('-/-', '/'));
+    expect(pageUrlKey('')).toBe('');
   });
 });

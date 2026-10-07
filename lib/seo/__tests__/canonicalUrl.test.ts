@@ -100,3 +100,12 @@ describe('sitePagePath', () => {
     expect(sitePagePath('/services/')).toBe('/services');
   });
 });
+
+describe('sitePagePath emits the URL-safe key', () => {
+  // The slug `auto-wrecking-&-flatbed` went into sitemaps and canonicals verbatim and 404'd on
+  // eleven sites; the resolver now matches on the key and 308s other spellings to it.
+  it('maps an ampersand slug to the clean path the resolver serves', () => {
+    expect(sitePagePath('auto-wrecking-&-flatbed')).toBe('/auto-wrecking-flatbed');
+    expect(sitePagePath('Towing Service')).toBe('/towing-service');
+  });
+});

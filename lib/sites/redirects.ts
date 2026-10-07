@@ -55,6 +55,26 @@ export const RESERVED_FIRST_SEGMENTS = new Set([
   '_next',
 ]);
 
+/**
+ * The one URL-safe spelling of a page slug: `Auto-Wrecking-&-Flatbed`, `auto-wrecking-%26-flatbed`
+ * and `auto-wrecking-flatbed` are all `auto-wrecking-flatbed`. Lower-case, anything that is not
+ * a letter, digit or slash becomes a dash, runs collapse, ends trimmed.
+ */
+export function pageUrlKey(slug: string | null | undefined): string {
+  let s = String(slug ?? '').trim();
+  try {
+    s = decodeURIComponent(s);
+  } catch {
+    /* keep raw */
+  }
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9/]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/-*\/-*/g, '/')
+    .replace(/^-+|-+$/g, '');
+}
+
 /** "/Practice-Areas/DUI/?x=1" → "/practice-areas/dui". Root stays "/". */
 export function normalizePath(input: string): string {
   let p = String(input || '').trim();
@@ -177,11 +197,25 @@ export function resolvePublicPath(
   }
   if (RESERVED_FIRST_SEGMENTS.has(first)) return { kind: 'reserved', segment: first };
 
+  // ⚠️ Compare URL-SAFE KEYS, not raw slugs. Eleven towing sites carry a page whose slug is
+  // literally `auto-wrecking-&-flatbed`; the nav linked it as `/auto-wrecking-&-flatbed`, the
+  // segment reached this function percent-encoded (`%26`), the raw compare failed, and every one
+  // of those pages 404'd from its own menu — found by the Search Console sweep (2026-10-07), not by
+  // anyone clicking. `pageUrlKey` makes `&`, `%26` and `-` all the same page, and the clean form
+  // is the one address: any other spelling 308s to it so the site has one URL per page.
+  const key = pageUrlKey(first);
   const page = pages.find(
-    (p) =>
-      String(p?.slug ?? '').toLowerCase() === first || String(p?.id ?? '').toLowerCase() === first
+    (p) => pageUrlKey(String(p?.slug ?? '')) === key || String(p?.id ?? '').toLowerCase() === first
   );
-  if (page) return { kind: 'page', slug: String(page.slug ?? page.id) };
+  if (page) {
+    const slug = String(page.slug ?? page.id);
+    const clean = pageUrlKey(slug);
+    if (clean && first !== clean && String(page.id ?? '').toLowerCase() !== first) {
+      const tail = segments.slice(1).join('/');
+      return { kind: 'redirect', to: `/${clean}${tail ? `/${tail}` : ''}`, permanent: true };
+    }
+    return { kind: 'page', slug };
+  }
 
   // A section of the home page, addressed as if it were a page ("/contact" → "/#contact").
   // Temporary redirect on purpose: the section's address is the home page, and a permanent

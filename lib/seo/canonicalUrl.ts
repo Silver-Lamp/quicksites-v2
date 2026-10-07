@@ -23,6 +23,8 @@
 // replaces. Self-referencing is true on whichever host you are on. Cross-host consolidation is a
 // separate decision with a real prerequisite; see the note in the PR.
 
+import { pageUrlKey } from '@/lib/sites/redirects';
+
 /** Request header carrying the path the visitor actually requested, set by `middleware.ts`. */
 export const PUBLIC_PATH_HEADER = 'x-qsites-public-path';
 
@@ -131,7 +133,11 @@ export function sitePagePath(
   pageSlug: string | null | undefined,
   opts: { isFirstPage?: boolean } = {},
 ): string {
-  const s = (pageSlug ?? '').trim().replace(/^\/+|\/+$/g, '').toLowerCase();
+  // ⚠️ The URL-SAFE key, not the raw slug (lib/sites/redirects.ts#pageUrlKey). A slug of
+  // `auto-wrecking-&-flatbed` was emitted here verbatim into sitemaps and canonicals and 404'd
+  // on eleven sites once the segment arrived percent-encoded; the resolver now matches on the
+  // key and 308s every other spelling to it, so this must emit the same key.
+  const s = pageUrlKey((pageSlug ?? '').trim().replace(/^\/+|\/+$/g, ''));
   // ⚠️ `home` is not the only name a front page has. Sandon's site calls its only page `index`,
   // so a `home`-only rule put `https://sandon.quicksites.ai/index` in his sitemap — one page
   // advertised at two addresses, which is the duplicate this module exists to prevent. The

@@ -85,6 +85,14 @@ async function handle(req: NextRequest) {
     let targets = targetsFor(properties, live, campaignDomainByTemplate);
     if (onlyProperty) targets = targets.filter((t) => t.property === onlyProperty);
 
+    // ⚠️ Prune rows for URLs a site no longer lists. When a site's nominated host changes
+    // (apex → www after Google's pick), the old URL's row would otherwise keep reporting the
+    // duplicate it was, forever "fixable" — the four re-nominated sites did exactly that on
+    // 2026-10-07. The table is "the latest truth for the URLs we list", nothing older.
+    for (const t of targets) {
+      await db.from('gsc_url_inspections').delete().eq('template_id', t.templateId).not('url', 'in', `(${t.urls.map((u) => `"${u}"`).join(',')})`);
+    }
+
     // Skip URLs inspected recently, unless forced.
     const freshCutoff = new Date(Date.now() - FRESH_DAYS * 86_400_000).toISOString();
     const { data: recent } = force
@@ -163,6 +171,21 @@ async function handle(req: NextRequest) {
       }
     }
 
+    // ⚠️ Close the loop: a task whose (property, reason) no longer appears in an actionable bucket
+    // is done — the fix took, or Google recrawled. Without this the task list only ever grows,
+    // and "did it clear?" is the one question the emails could never answer.
+    const closed: string[] = [];
+    try {
+      const { data: live } = await db.from('gsc_url_inspections').select('property, reason').in('bucket', [...TASK_BUCKETS]);
+      const liveKeys = new Set((live ?? []).map((r: any) => `Indexing · ${String(r.property).replace(/^sc-domain:/, '')} · ${r.reason}`));
+      const { data: open } = await db.from('admin_tasks').select('id, title').eq('source', 'gsc-url-inspect').in('status', ['open', 'in_progress']);
+      for (const t of open ?? []) {
+        if (liveKeys.has(t.title)) continue;
+        await db.from('admin_tasks').update({ status: 'done', completed_at: new Date().toISOString() }).eq('id', t.id);
+        closed.push(t.title);
+      }
+    } catch { /* best-effort; the rows are the record */ }
+
     // One digest, only when something new needs attention — never a nightly "all fine".
     const to = alertRecipients();
     if (newTasks.length && to.length) {
@@ -183,6 +206,7 @@ async function handle(req: NextRequest) {
       seconds: Math.round((Date.now() - started) / 1000),
       byBucket,
       newTasks,
+      closedTasks: closed,
       failed: failed.slice(0, 20),
     });
   });

@@ -7,7 +7,7 @@
 // fade out as they get large. Guards pin the properties that keep it cheap, honest and harmless.
 import fs from 'node:fs';
 import path from 'node:path';
-import { FLY_COUNT, FLY_LANES } from '@/components/home/site-fly-through';
+import { FLY_COUNT, FLY_LANES } from '@/lib/home/flyThrough';
 
 const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), 'utf8');
 const strip = (s: string) => s.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
@@ -54,6 +54,23 @@ describe('the component', () => {
 });
 
 describe('the wiring', () => {
+  // ⚠️ THE BUG THAT SHIPPED FIRST. app/page.tsx (server) imported FLY_COUNT from the 'use client'
+  // component; across that boundary a value export is a client-reference proxy, so
+  // slice(0, FLY_COUNT) was slice(0, NaN) → [] → the layer rendered nothing in production while
+  // every test passed. Values shared by both sides live in a plain module.
+  it('the server page never imports a VALUE from the client component', () => {
+    const page = strip(read('app/page.tsx'));
+    expect(page).not.toMatch(/import\s+\w+\s*,\s*\{[^}]*\}\s*from\s*'@\/components\/home\/site-fly-through'/);
+    expect(page).not.toMatch(/import\s*\{[^}]*\}\s*from\s*'@\/components\/home\/site-fly-through'/);
+    expect(page).toMatch(/import \{ FLY_COUNT \} from '@\/lib\/home\/flyThrough'/);
+    // Comments stripped first: the lib's own header explains the 'use client' trap, and a
+    // mentions-it check would fail on the explanation (the ROUTER_STRATEGY lesson, CLAUDE.md §4).
+    const lib = strip(read('lib/home/flyThrough.ts'));
+    expect(lib).not.toMatch(/['"]use client['"]/);
+    const comp = strip(read('components/home/site-fly-through.tsx'));
+    expect(comp).not.toMatch(/export const FLY_COUNT/);
+  });
+
   it('the page memoises the showcase read and passes the first five visible sites', () => {
     const page = strip(read('app/page.tsx'));
     expect(page).toMatch(/const showcaseOnce = cache\(getShowcaseData\)/);

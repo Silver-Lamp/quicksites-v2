@@ -911,6 +911,20 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   guard trigger and is not content anyway), marked AFTER the send. Machine sources
   (`listing_import`, `demo_seed`, `directory`, `operator_draft`, `persona_build`) are never
   candidates. `/status` gate `site_created_alert`. Tests: `lib/sites/__tests__/siteProgress.test.ts`.
+- **Rep pages, the starter kit, and the rep's one-click build (2026-10-08, built for Abdou on
+  Vashon)**: a rep gets an unlisted `/for-<name>` page (pattern: `/for-angela`) whose
+  no-website table is LIVE from `outreach_prospects` and carries **"Build their site"** per row
+  (`components/for-rep/no-site-table.tsx` → `POST /api/rep/build-draft`), plus a printable
+  **starter kit** at `/starter-kit/<code>` (`lib/starterKit/starterKit.ts`: cards 10-up, flyer,
+  one "your website is ready" sheet per built draft in the city). ⚠️ **The build route is
+  public but SIGNED, not admin-gated**: the rep usually has no account, so the page mints a
+  30-day HMAC grant naming the code (`lib/rep/repActionToken.ts`); the route verifies it,
+  requires the code to be active, throttles the IP, caps the code at `REP_BUILDS_PER_DAY`, and
+  builds **only a parked prospect by id** with the prospect's own industry (never a name or
+  URL the rep typed). ⚠️ **Every link it hands back carries `?ref=<code>`** (`lib/rep/repBuild.ts`)
+  — middleware sets `qs_ref` from `ref` on any path, so attribution survives the preview and
+  the `/go/` claim link; without it the rep does the work and is never paid. The prefilled SMS
+  and every printed sentence are held to the claim-postcard forbidden list by test.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

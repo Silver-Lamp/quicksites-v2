@@ -28,6 +28,8 @@ export async function GET(req: NextRequest) {
     region: dir.region,
     domain: dir.domain,
     hasWinner: dir.hasWinner,
+    // The city's other eateries with their own sites — outbound links, nothing more.
+    others: dir.others.map((o) => ({ name: o.name, website: o.website, rating: o.rating, review_count: o.reviewCount })),
     entries: dir.entries.map((e) => ({
       template_id: e.templateId,
       slug: e.slug,

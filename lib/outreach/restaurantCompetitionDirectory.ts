@@ -12,6 +12,7 @@ import { menuSiteUrl } from '@/lib/menu/deliveredMenu';
 import { RESTAURANT_COMPETITION_KIND } from '@/lib/outreach/restaurantCompetition';
 import { isBuffetLike } from '@/lib/prospects/orderingFit';
 import { getHiddenTemplateIds, getExtraTemplateIds } from '@/lib/outreach/directoryCuration';
+import { loadOtherRestaurants, type OtherRestaurant } from '@/lib/outreach/otherRestaurants';
 
 export type CompetitionDirectoryEntry = {
   templateId: string;
@@ -30,6 +31,8 @@ export type CompetitionDirectory = {
   domain: string;
   hasWinner: boolean;
   entries: CompetitionDirectoryEntry[];
+  /** The city's other eateries, with their own websites — listed below the cohort as links. */
+  others: OtherRestaurant[];
 };
 
 function safeParse(x: any): any {
@@ -86,19 +89,26 @@ async function assembleDirectory(campaign: {
   domain: string;
   claimed_by_prospect_id: string | null;
 }): Promise<CompetitionDirectory> {
+  const { data: prospects } = await supabaseAdmin
+    .from('outreach_prospects')
+    .select('id, template_id, business_name')
+    .eq('geo_campaign_id', campaign.id)
+    .not('template_id', 'is', null);
+
+  const others = await loadOtherRestaurants({
+    city: campaign.city,
+    region: campaign.region,
+    excludeProspectIds: (prospects ?? []).map((p: any) => String(p.id)),
+  }).catch(() => [] as OtherRestaurant[]);
+
   const base: Omit<CompetitionDirectory, 'entries'> = {
     campaignId: campaign.id,
     city: campaign.city,
     region: campaign.region,
     domain: campaign.domain,
     hasWinner: !!campaign.claimed_by_prospect_id,
+    others,
   };
-
-  const { data: prospects } = await supabaseAdmin
-    .from('outreach_prospects')
-    .select('id, template_id, business_name')
-    .eq('geo_campaign_id', campaign.id)
-    .not('template_id', 'is', null);
 
   // Operator curation (lib/outreach/directoryCuration.ts). `extra` are restaurants pulled in
   // that aren't cohort members — they appear on the list without being enrolled in the

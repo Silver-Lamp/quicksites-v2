@@ -20,6 +20,17 @@ type Entry = {
   is_winner?: boolean;
 };
 
+type Other = { name: string; website: string; rating?: number | null; review_count?: number | null };
+
+/** A hostname a diner can read: "https://www.thsrestaurant.com/" → "thsrestaurant.com". */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
 function pickContent(block: any, content?: any): any {
   return content ?? block?.content ?? block?.props ?? {};
 }
@@ -81,6 +92,10 @@ export default function RestaurantsDirectoryBlock({
   const snapshot: Entry[] = Array.isArray(c?.entries) ? c.entries : [];
 
   const [live, setLive] = React.useState<Entry[] | null>(null);
+  // The city's other eateries (their own websites) — below the cohort, as links. Live only:
+  // it changes with every sweep and has no business in a snapshot.
+  const [others, setOthers] = React.useState<Other[]>([]);
+  const [city, setCity] = React.useState<string>('');
 
   // Hydrate live cohort data (winner/published state changes without a republish).
   React.useEffect(() => {
@@ -89,7 +104,10 @@ export default function RestaurantsDirectoryBlock({
     fetch(`/api/public/restaurant-directory?campaign=${encodeURIComponent(campaignId)}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
-        if (alive && Array.isArray(j?.entries)) setLive(j.entries as Entry[]);
+        if (!alive) return;
+        if (Array.isArray(j?.entries)) setLive(j.entries as Entry[]);
+        if (Array.isArray(j?.others)) setOthers((j.others as Other[]).filter((o) => o?.name && o?.website));
+        if (typeof j?.city === 'string') setCity(j.city);
       })
       .catch(() => {});
     return () => {
@@ -129,6 +147,29 @@ export default function RestaurantsDirectoryBlock({
           <Card key={e.template_id} entry={e} />
         ))}
       </div>
+      {others.length > 0 && (
+        <div className="mt-12">
+          <h3 className="text-lg font-semibold text-card-foreground">
+            More places to eat and drink{city ? ` in ${city}` : ''}
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Everyone else with their own website — these links leave this site.
+          </p>
+          <ul className="mt-4 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
+            {others.map((o) => (
+              <li key={o.website} className="flex items-baseline justify-between gap-3 border-b border-border/60 py-1.5 text-sm">
+                <a href={o.website} target="_blank" rel="noopener noreferrer" className="font-medium text-card-foreground hover:text-amber-300 hover:underline">
+                  {o.name}
+                </a>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {typeof o.rating === 'number' && o.rating > 0 ? `${o.rating}★ · ` : ''}
+                  {hostOf(o.website)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="mt-10 border-t border-border pt-4 text-center text-xs text-muted-foreground">
         Order online, direct from the kitchen · powered by {brand}
       </div>

@@ -33,19 +33,27 @@ async function loadDrafts(city: string, region: string) {
   if (!city) return [];
   let q = supabaseAdmin
     .from('outreach_prospects')
-    .select('id, business_name, template_id, templates:template_id ( slug, data )')
+    .select('id, business_name, template_id')
     .eq('city', city)
     .eq('status', 'draft_built')
     .not('template_id', 'is', null)
     .limit(40);
   if (region) q = q.eq('region', region);
   const { data } = await q;
+  // Two plain queries, never an embed: `templates:template_id (…)` is not a declared FK and
+  // PostgREST fails the whole select — the kit printed no draft sheets on its first deploy.
+  const prospects = ((data ?? []) as any[]).filter((p) => p.template_id && p.business_name);
+  const { data: tpls } = prospects.length
+    ? await supabaseAdmin.from('templates').select('id, slug, data').in('id', prospects.map((p) => p.template_id))
+    : { data: [] as any[] };
+  const tplById = new Map<string, any>(((tpls ?? []) as any[]).map((t) => [t.id, t]));
   const base = (process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || '').trim();
-  return ((data ?? []) as any[])
-    .filter((p) => p.templates?.slug && p.business_name)
+  return prospects
+    .filter((p) => tplById.get(p.template_id)?.slug)
     .map((p) => {
-      const slug: string = p.templates.slug;
-      const blocks: any[] = p.templates?.data?.pages?.[0]?.blocks ?? [];
+      const tpl = tplById.get(p.template_id);
+      const slug: string = tpl.slug;
+      const blocks: any[] = tpl?.data?.pages?.[0]?.blocks ?? [];
       const menu = blocks.find((b) => b?.type === 'menu');
       const items = (menu?.content?.sections ?? []).reduce((n: number, s: any) => n + (s?.items?.length ?? 0), 0);
       return {

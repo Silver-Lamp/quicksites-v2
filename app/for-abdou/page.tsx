@@ -48,14 +48,25 @@ type NoSiteRow = {
 async function loadIslandNoSite(): Promise<{ rows: NoSiteRow[]; sweptOn: string | null }> {
   const { data } = await supabaseAdmin
     .from('outreach_prospects')
-    .select('id, business_name, phone, address, industry_key, rating, review_count, last_seen_at, template_id, templates:template_id ( slug )')
+    .select('id, business_name, phone, address, industry_key, rating, review_count, last_seen_at, template_id')
     .eq('city', 'Vashon')
     .eq('region', 'WA')
     .not('phone', 'is', null)
     .or('website.is.null,website.eq.,website.eq.no site')
     .limit(200);
-  const rows = ((data ?? []) as unknown as NoSiteRow[])
-    .filter((r) => (r.business_name ?? '').trim())
+  // ⚠️ A SECOND QUERY, NOT AN EMBED. `templates:template_id ( slug )` is not a declared foreign
+  // key, so PostgREST answers the whole select with an error and the page rendered an EMPTY
+  // table on production (2026-10-08) while reading as "no businesses". Two plain queries cannot
+  // fail that way.
+  const base = ((data ?? []) as unknown as Omit<NoSiteRow, 'templates'>[]).filter((r) => (r.business_name ?? '').trim());
+  const templateIds = base.map((r) => r.template_id).filter((id): id is string => !!id);
+  const slugById = new Map<string, string>();
+  if (templateIds.length) {
+    const { data: tpls } = await supabaseAdmin.from('templates').select('id, slug').in('id', templateIds);
+    for (const t of (tpls ?? []) as Array<{ id: string; slug: string | null }>) if (t.slug) slugById.set(t.id, t.slug);
+  }
+  const rows: NoSiteRow[] = base
+    .map((r) => ({ ...r, templates: r.template_id && slugById.has(r.template_id) ? { slug: slugById.get(r.template_id)! } : null }))
     .sort((a, b) => tradeLabel(a.industry_key).localeCompare(tradeLabel(b.industry_key)) || (b.review_count ?? 0) - (a.review_count ?? 0));
   const sweptOn = rows.reduce<string | null>((m, r) => (r.last_seen_at && (!m || r.last_seen_at > m) ? r.last_seen_at : m), null);
   return { rows, sweptOn };

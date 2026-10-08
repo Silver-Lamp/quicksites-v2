@@ -83,9 +83,10 @@ export default function ForAmberPage() {
         <section className="mx-auto max-w-3xl px-6 pb-4">
           <Card title="Read this part first: nothing here is agreed, and no money exists yet" tag="plain words" tone="rose">
             <p>
-              Nobody has spoken to the Eagles. Nobody knows whether their kitchen can legally host paying tenants, what
-              King County would charge, or what cooking out of it would cost per hour. PorchHearth, the ordering side of
-              this, has never completed a real order for anyone. There is no customer waiting.
+              Sandon has emailed the Eagles with two questions and has not heard back. Nobody knows yet whether their
+              kitchen can legally host paying tenants, what King County would charge, or what cooking out of it would
+              cost per hour. PorchHearth, the ordering side of this, has never completed a real order for anyone. There
+              is no customer waiting.
             </p>
             <p>
               So this page can tell you what the project is and how it would be shaped. It cannot tell you what you would
@@ -150,8 +151,9 @@ export default function ForAmberPage() {
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Card title="The introducer" tag="opens the door" tone="sky">
               <p>
-                You know people at the Eagles; we don't. The introducer gets the first conversation started — who to ask,
-                how to ask, and being in the room so it's a neighbour asking rather than a company.
+                You know people at the Eagles; we mostly don't. Sandon has sent the first email, but an email is not a
+                relationship. The introducer keeps the conversation going as a neighbour — who to actually talk to, how
+                the hall makes decisions, being in the room — so it stays a neighbour asking rather than a company.
               </p>
               <p>
                 If a kitchen arrangement ever came out of that door, the introducer would be owed a share of what
@@ -177,16 +179,17 @@ export default function ForAmberPage() {
         {/* First step */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
           <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">The first step, which is not a commitment</h2>
-          <Card title="One phone call, or one email" tone="zinc">
+          <Card title="Already taken: one email, two questions" tone="zinc">
             <p>
-              Ask the Eagles whether their kitchen is permitted for outside users and whether they'd ever consider renting
-              hours to a licensed cook. That's it. {EAGLES.phone}, or {EAGLES.email}. No pitch, no numbers, no
-              promises on our side either — a question from a neighbour.
+              Sandon emailed the Eagles asking whether their kitchen is permitted for outside users and whether they'd
+              ever consider renting hours to a licensed cook, at a rate they'd set. No pitch, no numbers, no promises
+              — a question from a neighbour who has been to their STEM nights. ({EAGLES.phone}, {EAGLES.email}, if you
+              ever want to follow up in person.)
             </p>
             <p>
-              The answer is the whole next step. A no ends it cleanly. A maybe means King County's commissary office is
-              the next call, and we'd do that part. A yes is the point where something could be put in writing, and
-              that writing would come before any money moved, not after.
+              Their answer is the whole next step. A no ends it cleanly. A maybe means King County's commissary office
+              is the next call, and Sandon offered to do that part. A yes is the point where something could be put in
+              writing, and that writing would come before any money moved, not after.
             </p>
           </Card>
         </section>

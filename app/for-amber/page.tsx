@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/** Her referral code (referral_codes, minted 2026-10-08 on the island terms). The rate is deliberately NOT on this page. */
+const REF_CODE = 'amber';
+
 /** The one building. Public facts from its own site and listing; nothing inferred. */
 const EAGLES = {
   name: 'Fraternal Order of Eagles Aerie 3144',
@@ -192,6 +195,61 @@ export default function ForAmberPage() {
               writing, and that writing would come before any money moved, not after.
             </p>
           </Card>
+        </section>
+
+        {/* The other thing — separate from the kitchen on purpose */}
+        <section className="mx-auto max-w-3xl px-6 pb-4 pt-10">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">A separate thing, because you know half the island</h2>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            This part has nothing to do with the kitchen, and it is real today. Sandon's company, QuickSites, gives a
+            local business a proper website for free — a restaurant gets online ordering, a shop gets a store, a
+            service business gets a page people can find — and earns only a small cut when an order actually goes
+            through it. A business that never sells anything through it pays nothing.
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            A good number of Vashon businesses still have no website at all: auto shops, salons, a few trades, a couple
+            of places to eat. You know many of the people who own them. That is the whole job here: when one of them
+            mentions they need a website, you point them at it. You never sell anything.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Card title="Your code is already live" tag="amber" tone="sky">
+              <p>
+                Anyone who signs up with the code <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-sm font-semibold text-sky-200">{REF_CODE}</code>{' '}
+                — or through <span className="font-mono text-zinc-200">www.quicksites.ai/?ref={REF_CODE}</span> — is tied
+                to you from then on.
+              </p>
+              <p>
+                You would be owed a share of the fee on every order that business ever takes through its site, for as
+                long as it keeps selling — the same terms every island referrer gets. The exact share is written on your
+                own dashboard the moment you claim the code, not here, because this page is about a different question.
+              </p>
+            </Card>
+            <Card title="What has and hasn't happened" tag="honest" tone="rose">
+              <p>
+                The product works and takes real money. The referral program is new, and nobody has been paid a referral
+                commission yet — no referred business has taken a paid order. You would be early, which is why the
+                terms are what they are.
+              </p>
+              <p>
+                Nothing to buy, no quota, and you can stop any time. Mentioning it to someone who already wanted a
+                website is the entire effort.
+              </p>
+            </Card>
+          </div>
+          <div className="mt-3">
+            <Card title="And one for your own stand" tag="honey &amp; crafts" tone="amber">
+              <p>
+                Sandon mentioned you sell honey and other things you make. The same free site works for a maker: your
+                products with photos and prices you set, checkout, pickup at the market or shipping off-island, all under
+                your own name. It costs nothing to have, and the same small cut applies only when something sells.
+              </p>
+              <p>
+                If you'd like one, say so and it gets built with you, from your own words and your own photos. Nothing
+                gets set up in your name without you — that rule holds for every business on the island, and it holds for
+                you first.
+              </p>
+            </Card>
+          </div>
         </section>
 
         {/* What is real */}

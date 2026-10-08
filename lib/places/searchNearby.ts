@@ -132,6 +132,14 @@ async function searchOneType(
   }
   if (!res.ok) {
     const msg = json?.error?.message || `Places request failed (${res.status}).`;
+    // ⚠️ A type Google does not accept is THAT category's problem, not the sweep's. Before
+    // 2026-10-08 this threw, and because `searchNearby` runs one request per type in series,
+    // one bad entry in SWEEP_CATEGORIES (`general_contractor`) discarded every other
+    // category's results and failed the whole sweep. Skip it, say so, keep going.
+    if (res.status === 400 && /unsupported types|invalid included_type/i.test(msg)) {
+      console.warn(`[places] skipping unsupported type "${args.includedType}": ${msg}`);
+      return [];
+    }
     // A disabled/unauthorized API surfaces as 403 — treat as not_configured so the
     // route can tell the operator to enable the New Places API.
     throw new PlacesError(res.status === 403 ? 'not_configured' : 'fetch_failed', msg);

@@ -92,3 +92,36 @@ describe('searchNearby', () => {
     ).rejects.toBeInstanceOf(PlacesError);
   });
 });
+
+describe('a type Google rejects does not take the sweep down with it (2026-10-08)', () => {
+  // `general_contractor` sat in SWEEP_CATEGORIES as a Nearby type; Google answers 400
+  // "Unsupported types" and, because types are fetched in series, every other category's
+  // results were thrown away and the whole sweep failed — the first Vashon sweep.
+  it('skips the unsupported type and keeps the others', async () => {
+    const fetchImpl = (async (_url: string, init: any) => {
+      const body = JSON.parse(init.body);
+      if (body.includedTypes[0] === 'general_contractor') {
+        return jsonResponse({ error: { code: 400, message: 'Unsupported types: general_contractor.', status: 'INVALID_ARGUMENT' } }, false, 400);
+      }
+      return jsonResponse({ places: [PLACE({ id: `p_${body.includedTypes[0]}` })] });
+    }) as unknown as typeof fetch;
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const out = await searchNearby({ lat: 47.4, lon: -122.4, radiusMeters: 3000, includedTypes: ['plumber', 'general_contractor', 'electrician'] }, fetchImpl);
+    expect(out.map((b) => b.placeId)).toEqual(['p_plumber', 'p_electrician']);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it('still throws on a 403 — that is the key or billing, not a category', async () => {
+    const fetchImpl = (async () => jsonResponse({ error: { code: 403, message: 'The caller does not have permission' } }, false, 403)) as unknown as typeof fetch;
+    await expect(searchNearby({ lat: 47.4, lon: -122.4, radiusMeters: 3000, includedTypes: ['plumber'] }, fetchImpl)).rejects.toMatchObject({ code: 'not_configured' });
+  });
+
+  it('the Contractor category is a text query, never a Nearby type', async () => {
+    const { SWEEP_CATEGORIES } = await import('@/lib/prospects/sweepCategories');
+    const contractor = SWEEP_CATEGORIES.find((c) => c.label === 'Contractor');
+    expect(contractor?.types).toBeUndefined();
+    expect(contractor?.textQuery).toBe('general contractor');
+    for (const c of SWEEP_CATEGORIES) expect(c.types ?? []).not.toContain('general_contractor');
+  });
+});

@@ -19,7 +19,12 @@ export const SWEEP_CATEGORIES: SweepCategory[] = [
   { label: 'HVAC', textQuery: 'HVAC contractor', industry: 'hvac' },
   { label: 'Painting', types: ['painter'], industry: 'painting' },
   { label: 'Roofing', types: ['roofing_contractor'], industry: 'roofing' },
-  { label: 'Contractor', types: ['general_contractor'], industry: 'general_contractor' },
+  // ⚠️ A TEXT query, not a type. `general_contractor` is in Google's type table but Nearby
+  // Search (New) answers "Unsupported types: general_contractor" (400) and Text Search rejects
+  // it as an includedType — and until 2026-10-08 one rejected type threw out of `searchNearby`
+  // and killed the ENTIRE sweep, every category, reading on /admin/growth as a 501 that looks
+  // like a missing key. Found on the first Vashon sweep.
+  { label: 'Contractor', textQuery: 'general contractor', industry: 'general_contractor' },
   // Two industries we own campaign domains for (11 + 5 of 100) had no sweepable category at all.
   { label: 'Roof cleaning', textQuery: 'roof cleaning service', industry: 'roof_cleaning' },
   { label: 'Windshield repair', textQuery: 'windshield repair', industry: 'windshield_repair' },

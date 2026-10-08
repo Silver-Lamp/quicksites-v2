@@ -53,6 +53,13 @@ describe('/for-amber promises nothing', () => {
     expect(withoutLodgeFacts).not.toMatch(/amber@|\(\d{3}\) \d{3}-\d{4}|\b[\w.]+@[\w.]+\.\w+\b/);
   });
 
+  it('the QuickSites section is separate, carries her live code, and states the zero-paid fact without a rate', () => {
+    expect(page).toMatch(/const REF_CODE = 'amber'/);
+    expect(page).toMatch(/nothing to do with the kitchen/);
+    expect(page).toMatch(/nobody has been paid a referral\s+commission yet/);
+    expect(page).toMatch(/exact share is written on your\s+own dashboard/);
+  });
+
   it('keeps the two roles apart and names the first step as a question, not a commitment', () => {
     expect(page).toMatch(/The introducer/);
     expect(page).toMatch(/The operator/);

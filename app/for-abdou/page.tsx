@@ -15,6 +15,56 @@ import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import { MAX_PLATFORM_FEE_PERCENT } from '@/lib/commerce/partner-terms';
 import { SPLIT } from '@/lib/commerce/rentalSplits';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { KEY_TO_LABEL } from '@/lib/industries';
+
+// The island list is read live: a re-sweep changes it, and a date on the section says how
+// fresh it is. Never a hand-typed table — that is a count that rots.
+export const dynamic = 'force-dynamic';
+
+type NoSiteRow = {
+  business_name: string | null;
+  phone: string | null;
+  address: string | null;
+  industry_key: string | null;
+  rating: number | null;
+  review_count: number | null;
+  last_seen_at: string | null;
+};
+
+/**
+ * Island businesses Google lists with no website, from the parked sweep rows.
+ *
+ * ⚠️ Only rows with a phone: a listing with no phone and no rating is often not a business at
+ * all (a person's name, a closed venue), and a list someone will walk is not the place for a
+ * guess. Only what Google itself shows — name, trade, phone, street, rating. Nothing is added.
+ */
+async function loadIslandNoSite(): Promise<{ rows: NoSiteRow[]; sweptOn: string | null }> {
+  const { data } = await supabaseAdmin
+    .from('outreach_prospects')
+    .select('business_name, phone, address, industry_key, rating, review_count, last_seen_at')
+    .eq('city', 'Vashon')
+    .eq('region', 'WA')
+    .not('phone', 'is', null)
+    .or('website.is.null,website.eq.,website.eq.no site')
+    .limit(200);
+  const rows = ((data ?? []) as NoSiteRow[])
+    .filter((r) => (r.business_name ?? '').trim())
+    .sort((a, b) => tradeLabel(a.industry_key).localeCompare(tradeLabel(b.industry_key)) || (b.review_count ?? 0) - (a.review_count ?? 0));
+  const sweptOn = rows.reduce<string | null>((m, r) => (r.last_seen_at && (!m || r.last_seen_at > m) ? r.last_seen_at : m), null);
+  return { rows, sweptOn };
+}
+
+function tradeLabel(key: string | null): string {
+  if (!key) return 'Other';
+  return (KEY_TO_LABEL as Record<string, string>)[key] ?? key.replace(/_/g, ' ');
+}
+
+/** "17601 Vashon Hwy SW, Vashon, WA 98070, USA" → "17601 Vashon Hwy SW" */
+function street(address: string | null): string {
+  const first = (address ?? '').split(',')[0]?.trim() ?? '';
+  return /vashon, wa/i.test(first) || !first ? '' : first;
+}
 
 /** The vanity code's plan (referral_codes.plan.rate). Minted 2026-10-08 on the same terms as angela/ryan. */
 const CODE = 'abdou';
@@ -98,7 +148,11 @@ function Card({
 
 const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export default function ForAbdouPage() {
+export default async function ForAbdouPage() {
+  const island = await loadIslandNoSite();
+  const sweptLabel = island.sweptOn
+    ? new Date(island.sweptOn).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' })
+    : null;
   return (
     <>
       <SiteHeader sticky />
@@ -258,6 +312,59 @@ export default function ForAbdouPage() {
               </p>
             </div>
           </div>
+        </section>
+
+        {/* The list */}
+        <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+            Island businesses with no website{island.rows.length ? ` — ${island.rows.length} of them` : ''}
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            {sweptLabel ? (
+              <>
+                Pulled from Google's own listings on {sweptLabel}: every business on Vashon and Maury that
+                Google shows with a phone number and no website. Nothing here is a judgement about them —
+                it is just the doors.{' '}
+              </>
+            ) : (
+              <>The island hasn't been swept yet; this fills in automatically when it is. </>
+            )}
+            <span className="text-zinc-200">Start with the ones you'd walk past anyway.</span>
+          </p>
+          {island.rows.length > 0 && (
+            <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800">
+              <table className="w-full min-w-[520px] text-left text-sm">
+                <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
+                  <tr>
+                    <th className="px-3 py-2">Trade</th>
+                    <th className="px-3 py-2">Business</th>
+                    <th className="px-3 py-2">Phone</th>
+                    <th className="px-3 py-2">Street</th>
+                    <th className="px-3 py-2 text-right">Google</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {island.rows.map((r, i) => (
+                    <tr key={`${r.business_name}-${i}`} className="border-t border-zinc-800/80">
+                      <td className="whitespace-nowrap px-3 py-2 text-zinc-400">{tradeLabel(r.industry_key)}</td>
+                      <td className="px-3 py-2 font-medium text-zinc-100">{r.business_name}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-zinc-300">
+                        <a href={`tel:${(r.phone ?? '').replace(/[^0-9+]/g, '')}`} className="hover:underline">{r.phone}</a>
+                      </td>
+                      <td className="px-3 py-2 text-zinc-400">{street(r.address)}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-right text-zinc-400">
+                        {typeof r.rating === 'number' && r.rating > 0 ? `${r.rating}★ · ${r.review_count ?? 0}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="mt-3 text-xs text-zinc-500">
+            A listing here means Google shows no website for them today. Check before you walk in — some
+            will have a Facebook page or a site Google hasn't linked.
+          </p>
         </section>
 
         {/* The money */}

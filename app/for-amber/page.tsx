@@ -24,8 +24,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Her referral code (referral_codes, minted 2026-10-08 on the island terms). The rate is deliberately NOT on this page. */
+/** Her referral code (referral_codes, minted 2026-10-08 on the island terms: plan.rate 0.35, lifetime). */
 const REF_CODE = 'amber';
+/** Shown ONLY in the QuickSites section — the kitchen half of this page stays figure-free by test (owner, 2026-10-08). */
+const REF_RATE = 0.35;
+const refPct = Math.round(REF_RATE * 100);
 
 /** The one building. Public facts from its own site and listing; nothing inferred. */
 const EAGLES = {
@@ -212,16 +215,16 @@ export default function ForAmberPage() {
             mentions they need a website, you point them at it. You never sell anything.
           </p>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Card title="Your code is already live" tag="amber" tone="sky">
+            <Card title="Your code is already live" tag={`${refPct}% of the fee, for life`} tone="sky">
               <p>
                 Anyone who signs up with the code <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-sm font-semibold text-sky-200">{REF_CODE}</code>{' '}
                 — or through <span className="font-mono text-zinc-200">www.quicksites.ai/?ref={REF_CODE}</span> — is tied
                 to you from then on.
               </p>
               <p>
-                You would be owed a share of the fee on every order that business ever takes through its site, for as
-                long as it keeps selling — the same terms every island referrer gets. The exact share is written on your
-                own dashboard the moment you claim the code, not here, because this page is about a different question.
+                {refPct}% of the platform fee on every order that business ever takes through its site is yours, for as
+                long as it keeps selling — the same terms every island referrer gets, credited automatically when the
+                payment lands. Not a number about the kitchen above; a number about this, which exists.
               </p>
             </Card>
             <Card title="What has and hasn't happened" tag="honest" tone="rose">

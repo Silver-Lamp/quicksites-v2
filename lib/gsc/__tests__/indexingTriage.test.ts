@@ -16,7 +16,7 @@ const strip = (s: string) => s.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\
 
 const facts = (over: Partial<ReturnType<typeof parseInspection>>) => ({
   url: 'https://www.bremerton-towing.com/', verdict: null, coverageState: null, indexingState: null, robotsTxtState: null,
-  pageFetchState: null, userCanonical: null, googleCanonical: null, lastCrawlTime: null, crawledAs: null, ...over,
+  pageFetchState: null, userCanonical: null, googleCanonical: null, lastCrawlTime: null, crawledAs: null, richResultErrors: [], ...over,
 });
 
 describe('parseInspection', () => {
@@ -140,7 +140,8 @@ describe('the sweep', () => {
   const cron = strip(read('app/api/cron/gsc-url-inspect/route.ts'));
   it('upserts latest-per-URL, triages with the nominated canonical, and dedupes tasks on the exact title', () => {
     expect(cron).toMatch(/onConflict: 'property,url'/);
-    expect(cron).toMatch(/const declared = `\$\{target\.origin\}\/`/);
+    expect(cron).toMatch(/const declared = target\.origin\.includes\('\/sites\/'\) \? target\.origin : `\$\{target\.origin\}\/`/);
+    expect(cron).toMatch(/declared_canonical: declared/);
     expect(cron).toMatch(/declaredCanonical: declared/);
     expect(cron).toMatch(/\.eq\('title', title\)/);
   });
@@ -151,7 +152,7 @@ describe('the sweep', () => {
     expect(cron).toMatch(/TIME_BUDGET_MS = 230_000/);
     expect(cron).toMatch(/Date\.now\(\) - started > TIME_BUDGET_MS/);
     expect(cron).toMatch(/method: 'HEAD'/);
-    expect(cron).toMatch(/liveStatus, googleCanonicalRedirectsToDeclared \}\)/);
+    expect(cron).toMatch(/liveStatus, googleCanonicalRedirectsToDeclared, liveMerchantListingGaps \}\)/);
     // The second HEAD: Google's chosen canonical, followed manually so a redirect is visible.
     expect(cron).toMatch(/redirect: 'manual'/);
   });

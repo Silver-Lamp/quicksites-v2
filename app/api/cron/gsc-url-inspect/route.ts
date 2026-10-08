@@ -19,8 +19,9 @@ import { isCronAuthorized } from '@/lib/cron/auth';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { sendEmail } from '@/lib/email';
 import { alertRecipients } from '@/lib/ppl/callAlert';
-import { inspectUrl, targetsFor } from '@/lib/gsc/urlInspection';
+import { inspectUrl, targetsFor, platformTargetsFor } from '@/lib/gsc/urlInspection';
 import { parseInspection, triageInspection, sameUrl, BUCKET_LABEL, type TriageBucket } from '@/lib/gsc/indexingTriage';
+import { merchantListingGaps } from '@/lib/seo/merchantListingGaps';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 
 export const runtime = 'nodejs';
@@ -83,6 +84,17 @@ async function handle(req: NextRequest) {
 
     const live = templates.filter((t) => t.published && !t.archived);
     let targets = targetsFor(properties, live, campaignDomainByTemplate);
+
+    // Sites that exist only on the platform (starters, showcase, demos) — the property the
+    // "Merchant listings" email came from, and the one the domain matcher cannot reach.
+    const { data: platformOnly } = await db
+      .from('templates')
+      .select('id, slug, data, custom_domain, published, archived')
+      .eq('published', true)
+      .or('custom_domain.is.null,custom_domain.eq.')
+      .not('slug', 'is', null);
+    targets.push(...platformTargetsFor(properties, (platformOnly ?? []) as any[], new Set(campaignDomainByTemplate.keys()), publicBaseUrl()));
+
     if (onlyProperty) targets = targets.filter((t) => t.property === onlyProperty);
 
     // ⚠️ Prune rows for URLs a site no longer lists. When a site's nominated host changes
@@ -125,7 +137,8 @@ async function handle(req: NextRequest) {
         // A duplicate verdict where Google's chosen canonical is a different host of ours: if that
         // host now redirects to the canonical we declare, there is nothing left to fix.
         let googleCanonicalRedirectsToDeclared = false;
-        const declared = `${target.origin}/`;
+        // Platform-only sites canonicalise WITHOUT a trailing slash (/sites/<slug>); domains with one.
+    const declared = target.origin.includes('/sites/') ? target.origin : `${target.origin}/`;
         if (/duplicate/i.test(facts.coverageState ?? '') && facts.googleCanonical && !sameUrl(facts.googleCanonical, declared)) {
           try {
             const r = await fetch(facts.googleCanonical, { method: 'HEAD', redirect: 'manual', headers: { 'user-agent': 'quicksites-indexing-sweep' } });
@@ -133,7 +146,17 @@ async function handle(req: NextRequest) {
             googleCanonicalRedirectsToDeclared = r.status >= 300 && r.status < 400 && !!loc && sameUrl(new URL(loc, facts.googleCanonical).toString(), declared);
           } catch { /* unknown stays false */ }
         }
-        const triage = triageInspection(facts, { declaredCanonical: declared, liveStatus, googleCanonicalRedirectsToDeclared });
+        // A rich-result error is also from Google's last crawl. Read the page's structured data
+        // ourselves: no merchant listing without an image today means the emitter is already
+        // fixed and the verdict is awaiting recrawl.
+        let liveMerchantListingGaps: number | null = null;
+        if (facts.richResultErrors.length) {
+          try {
+            const r = await fetch(u, { redirect: 'follow', headers: { 'user-agent': 'quicksites-indexing-sweep' } });
+            if (r.ok) liveMerchantListingGaps = merchantListingGaps(await r.text()).length;
+          } catch { liveMerchantListingGaps = null; }
+        }
+        const triage = triageInspection(facts, { declaredCanonical: declared, liveStatus, googleCanonicalRedirectsToDeclared, liveMerchantListingGaps });
         byBucket[triage.bucket] = (byBucket[triage.bucket] ?? 0) + 1;
         const { error } = await db.from('gsc_url_inspections').upsert(
           {
@@ -148,7 +171,7 @@ async function handle(req: NextRequest) {
             page_fetch_state: facts.pageFetchState,
             user_canonical: facts.userCanonical,
             google_canonical: facts.googleCanonical,
-            declared_canonical: `${target.origin}/`,
+            declared_canonical: declared,
             last_crawl_time: facts.lastCrawlTime,
             crawled_as: facts.crawledAs,
             bucket: triage.bucket,

@@ -6,11 +6,14 @@
 // year/make/model/trim/price/mileage/photo + an inquiry CTA, and — the differentiator —
 // a "🎧 Hear the walkaround" toggle that plays THIS car's About That audio (the
 // salesperson talking through the vehicle, in their voice). Emits a Vehicle ItemList
-// JSON-LD. Display fields are freeform strings on purpose ("$18,995", "42,150 mi").
+// JSON-LD — built by lib/seo/vehicleJsonLd.ts, where the rule "no photo, no offer" lives
+// (Search Console's "Merchant listings: missing field image", 2026-10-08). Display fields are
+// freeform strings on purpose ("$18,995", "42,150 mi").
 
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
 import { AboutThatEmbed, isValidEmbedId } from './about-that';
+import { vehicleItemListJsonLd, vehicleTitle } from '@/lib/seo/vehicleJsonLd';
 
 type Vehicle = {
   year?: string; make?: string; model?: string; trim?: string; price?: string;
@@ -19,8 +22,7 @@ type Vehicle = {
 type Props = { block?: Block; content?: Block['content'] };
 
 const s = (v: any) => (typeof v === 'string' ? v.trim() : typeof v === 'number' ? String(v) : '');
-const priceDigits = (p: string) => { const n = Number(p.replace(/[^0-9.]/g, '')); return Number.isFinite(n) && n > 0 ? n : null; };
-const titleOf = (v: Vehicle) => [s(v.year), s(v.make), s(v.model), s(v.trim)].filter(Boolean).join(' ');
+const titleOf = (v: Vehicle) => vehicleTitle(v);
 
 function Card({ v }: { v: Vehicle }) {
   const [tour, setTour] = React.useState(false);
@@ -65,23 +67,7 @@ export default function RenderVehiclesGrid({ block, content }: Props) {
   const vehicles: Vehicle[] = (Array.isArray(c.vehicles) ? c.vehicles : []).filter((v: Vehicle) => titleOf(v) || s(v.price));
   if (!vehicles.length) return null;
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    itemListElement: vehicles.map((v, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      item: {
-        '@type': 'Vehicle',
-        name: titleOf(v) || 'Vehicle',
-        ...(s(v.make) ? { brand: s(v.make) } : {}),
-        ...(s(v.model) ? { model: s(v.model) } : {}),
-        ...(s(v.year) ? { vehicleModelDate: s(v.year) } : {}),
-        ...(s(v.image_url) ? { image: s(v.image_url) } : {}),
-        ...(priceDigits(s(v.price)) != null ? { offers: { '@type': 'Offer', price: priceDigits(s(v.price)), priceCurrency: 'USD' } } : {}),
-      },
-    })),
-  };
+  const jsonLd = vehicleItemListJsonLd(vehicles);
 
   const colClass = columns === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3';
 

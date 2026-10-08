@@ -27,9 +27,38 @@ export type InspectionFacts = {
   googleCanonical: string | null;
   lastCrawlTime: string | null;
   crawledAs: string | null;
+  /**
+   * `richResultsResult` ERROR-severity issues, as "<rich result type>: <message>".
+   *
+   * ⚠️ The other half of every inspection, ignored until 2026-10-08. Search Console's
+   * "Merchant listings structured data issues" emails come from here, not from coverage — a
+   * page can be perfectly indexed and still carry structured data Google rejects. Warnings are
+   * deliberately not collected: a warning is advice, an error is a listing Google drops.
+   */
+  richResultErrors: string[];
 };
 
 export type Triage = { bucket: TriageBucket; reason: string; remedy: string | null };
+
+type RichResultsRaw = {
+  detectedItems?: Array<{ richResultType?: unknown; items?: Array<{ name?: unknown; issues?: Array<{ issueMessage?: unknown; severity?: unknown }> }> }>;
+};
+
+export function parseRichResultErrors(raw: unknown): string[] {
+  const rr = (raw as { inspectionResult?: { richResultsResult?: RichResultsRaw } } | null)?.inspectionResult?.richResultsResult;
+  const out = new Set<string>();
+  for (const d of rr?.detectedItems ?? []) {
+    const type = typeof d.richResultType === 'string' ? d.richResultType : 'Rich result';
+    for (const it of d.items ?? []) {
+      for (const iss of it.issues ?? []) {
+        if (String(iss.severity ?? '').toUpperCase() !== 'ERROR') continue;
+        const msg = typeof iss.issueMessage === 'string' ? iss.issueMessage.trim() : '';
+        if (msg) out.add(`${type}: ${msg}`);
+      }
+    }
+  }
+  return [...out];
+}
 
 /** Pull the fields we keep out of Google's `inspectionResult.indexStatusResult`. Never guesses. */
 export function parseInspection(url: string, raw: unknown): InspectionFacts {
@@ -46,6 +75,7 @@ export function parseInspection(url: string, raw: unknown): InspectionFacts {
     googleCanonical: s('googleCanonical'),
     lastCrawlTime: s('lastCrawlTime'),
     crawledAs: s('crawledAs'),
+    richResultErrors: parseRichResultErrors(raw),
   };
 }
 
@@ -82,6 +112,14 @@ export function triageInspection(
      * 307'd to www, which self-canonicalises. Nothing left to fix — Google has to recrawl.
      */
     googleCanonicalRedirectsToDeclared?: boolean;
+    /**
+     * What the page's structured data looks like RIGHT NOW, when Google reported a rich-result
+     * error: the merchant listings on it that still lack an image (lib/seo/merchantListingGaps.ts),
+     * or null when the cron did not fetch. Google's rich-result verdict is from its last crawl,
+     * exactly like its coverage state; a page whose emitter has been fixed keeps "failing" until
+     * recrawl, and that is awaiting-recrawl, not a bug.
+     */
+    liveMerchantListingGaps?: number | null;
   } = {},
 ): Triage {
   const cov = (f.coverageState ?? '').toLowerCase();
@@ -95,6 +133,20 @@ export function triageInspection(
   });
 
   if (verdict === 'PASS' || /submitted and indexed|^indexed/.test(cov)) {
+    // Indexed, but is the structured data Google read accepted? A rejected rich result is OUR
+    // emitter's bug — the only kind of finding on an indexed page this sweep can act on.
+    if (f.richResultErrors.length) {
+      const first = f.richResultErrors[0];
+      const merchant = /missing field "?image"?/i.test(first) || /merchant/i.test(first);
+      if (merchant && opts.liveMerchantListingGaps === 0) {
+        return stale(`Rich result error (${first})`);
+      }
+      return {
+        bucket: 'auto_fixable',
+        reason: `Rich result error — ${first}`,
+        remedy: 'Structured data emitted by a block renderer fails Google’s validation. Fix the emitter (lib/seo/*JsonLd.ts) so the field is present or the object is not a listing; the page itself is indexed.',
+      };
+    }
     return { bucket: 'indexed', reason: f.coverageState ?? 'Indexed', remedy: null };
   }
 

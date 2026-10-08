@@ -55,6 +55,42 @@ export function targetsFor(
   return out;
 }
 
+/**
+ * The sites that live ONLY on the platform (no custom domain, no campaign), inspected under the
+ * platform's own property at `<platformOrigin>/sites/<slug>`.
+ *
+ * ⚠️ Added 2026-10-08 because the first "Merchant listings" email named
+ * `https://www.quicksites.ai/sites/starter-auto-dealer` — a published starter with no domain,
+ * which `targetsFor` could never reach: it matches properties to CUSTOM domains, so the one
+ * property with the most pages on it was the one the sweep never asked about. ~100 published
+ * platform-only sites, ~110 pages; well inside the quota.
+ *
+ * ⚠️ The home URL has NO trailing slash. Next redirects `/sites/x/` → `/sites/x` (308) and the
+ * page self-canonicalises without the slash; inspecting the slashed form would file every
+ * platform site as "Page with redirect".
+ */
+export function platformTargetsFor(
+  properties: string[],
+  templates: Array<TemplateRow & { published?: boolean | null; archived?: boolean | null }>,
+  campaignTemplateIds: Set<string>,
+  platformOrigin: string,
+): InspectTarget[] {
+  const origin = platformOrigin.replace(/\/+$/, '');
+  const key = normalizeGscDomain(origin);
+  const property = properties.find((p) => normalizeGscDomain(p) === key) ?? null;
+  if (!property) return [];
+  const out: InspectTarget[] = [];
+  for (const t of templates) {
+    if (!t.slug || !t.published || t.archived) continue;
+    if ((t.custom_domain ?? '').trim()) continue;
+    if (campaignTemplateIds.has(t.id)) continue;
+    const siteOrigin = `${origin}/sites/${encodeURIComponent(t.slug)}`;
+    const urls = siteUrls(siteOrigin, t.data).map((u, i) => (i === 0 ? u.replace(/\/+$/, '') : u));
+    out.push({ property, templateId: t.id, slug: t.slug, origin: siteOrigin, urls });
+  }
+  return out;
+}
+
 /** One URL Inspection call. Throws on API failure; the cron records the failure per URL. */
 export async function inspectUrl(property: string, url: string): Promise<unknown> {
   const auth = await getValidOAuthClient(property);

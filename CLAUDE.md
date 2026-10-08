@@ -432,6 +432,19 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   (property, reason) no longer appears in an actionable bucket, which is the question the emails
   could never answer: did it clear? (5) Stop on a TIME budget (230 s), not a count: the first
   run was gateway-504'd mid-loop.
+  ⚠️ **"Merchant listings: missing field image" (2026-10-08) was the OTHER half of an inspection,
+  on the ONE property the sweep never asked about.** `/sites/starter-auto-dealer` is indexed
+  fine; its `vehicles_grid` emitted a `Vehicle` (a `Product`) with an `Offer` and
+  `image_url: ''` on all three placeholder cars, and an offer makes Google validate the object
+  as a merchant listing, which **requires** `image`. Rule now in `lib/seo/vehicleJsonLd.ts`:
+  **no photo, no offer** — the card still shows the price, only the machine-readable listing
+  waits for an absolute image URL. The sweep (1) reads `richResultsResult` ERROR issues into
+  `facts.richResultErrors` and files an indexed-but-rejected page as *fixable by us*, (2)
+  fetches the page and runs the pure `lib/seo/merchantListingGaps.ts` so a fixed emitter reads
+  *awaiting recrawl* instead of a task that never clears, and (3) **inspects published
+  platform-only sites** (`platformTargetsFor`, ~100 sites, home URL **without** a trailing slash
+  or every one files as "Page with redirect") under `https://www.quicksites.ai/` — the domain
+  matcher could never reach the property with the most pages on it.
 - **Niche discovery — "can an organic result win this page at all?" (2026-09-22)**: two
   measurements behind **[`docs/NICHE_DISCOVERY.md`](docs/NICHE_DISCOVERY.md)**. (1) The **GSC
   query harvest** — every GSC call here asked for `dimensions: ['page']` or none, so we stored

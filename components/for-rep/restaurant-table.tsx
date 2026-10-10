@@ -24,7 +24,7 @@ export type RestaurantTableRow = {
   claimUrl: string | null;
 };
 
-type Built = { previewUrl: string; claimUrl: string; menuItems?: number; menuSource?: string; alreadyBuilt?: boolean };
+type Built = { previewUrl: string; claimUrl: string; menuItems?: number; menuSource?: string; droppedItems?: number; droppedPrices?: number; alreadyBuilt?: boolean };
 
 const GROUP_TAG: Record<RestaurantTableRow['group'], { text: string; cls: string }> = {
   call: { text: 'call first', cls: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' },
@@ -58,7 +58,7 @@ export default function RestaurantTable({ rows, token, repName }: { rows: Restau
         setErrors((e) => ({ ...e, [r.prospectId]: why }));
         return;
       }
-      setBuilt((b) => ({ ...b, [r.prospectId]: { previewUrl: j.previewUrl, claimUrl: j.claimUrl, menuItems: j.menuItems, menuSource: j.menuSource, alreadyBuilt: !!j.alreadyBuilt } }));
+      setBuilt((b) => ({ ...b, [r.prospectId]: { previewUrl: j.previewUrl, claimUrl: j.claimUrl, menuItems: j.menuItems, menuSource: j.menuSource, droppedItems: j.droppedItems, droppedPrices: j.droppedPrices, alreadyBuilt: !!j.alreadyBuilt } }));
     } catch {
       setErrors((e) => ({ ...e, [r.prospectId]: 'Network hiccup — try again.' }));
     } finally {
@@ -140,7 +140,14 @@ export default function RestaurantTable({ rows, token, repName }: { rows: Restau
                             {copied === r.prospectId ? 'Copied' : 'Copy claim link'}
                           </button>
                           {sms && r.phone && <a href={sms} className="text-zinc-200 hover:underline">Text them</a>}
-                          {b.menuSource === 'site' && <span className="text-emerald-300/90">Menu read from their own site{typeof b.menuItems === 'number' ? ` — ${b.menuItems} items` : ''}. Check the prices with them.</span>}
+                          {b.menuSource === 'site' && (
+                            <span className="text-emerald-300/90">
+                              Menu read from their own site{typeof b.menuItems === 'number' ? ` — ${b.menuItems} items` : ''}.
+                              {b.droppedItems ? ` ${b.droppedItems} the site didn't confirm were left out.` : ''}
+                              {b.droppedPrices ? ` ${b.droppedPrices} kept without a price.` : ''}
+                              {' '}Check the prices with them.
+                            </span>
+                          )}
                           {b.menuSource === 'none' && <span className="text-amber-300/90">Their site showed no readable menu — add it with them.</span>}
                         </div>
                       ) : null}

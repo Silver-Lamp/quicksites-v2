@@ -162,6 +162,17 @@ these says **"your website stays as it is"** first (`repOrderingSmsDraft`) — t
 page to link from the site they paid for, never a replacement. Drafts for a restaurant that
 has a site must stay `noindex` (a copy of their menu under our domain would compete with their
 own page in search).
+⚠️ **THE FIRST REAL FROM-SITE BUILD INVENTED A DISH.** Rock Island Pizza's draft carried
+"Lasagna $16.65" and "Spaghetti $14.65"; lasagna is nowhere on pizzarockisland.com and neither
+price is. The prompt already says *no prices unless the source says so verbatim* — a prompt is
+a request. `lib/rebuild/menuEvidence.ts` is the check: an item survives only if its normalised
+NAME is in the scraped corpus (homepage body + headings + nav + menu subpages), a confirmed dish
+with an unconfirmed PRICE keeps the dish and loses the price, an emptied section is dropped;
+applied in `buildDraftFromSite` **before** assembly (source-guarded), recorded on
+`meta.menu_evidence`, and the rep's row says "N the site didn't confirm were left out". The
+corpus is truncated (6000 chars a page), so a real dish past the cut is dropped too — the right
+direction of error. That draft was deleted and the prospect reset the same hour. Verify a built
+menu against the live site, not against the model's output: `grep -i lasagna` on their pages.
 
 ## 7d. City menu search, and measuring it honestly (2026-07-29)
 

@@ -17,6 +17,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { scrapeSite, scrapeMenuPages, ScrapeError } from '@/lib/rebuild/scrapeSite';
 import { inferSiteSpec } from '@/lib/rebuild/inferSiteSpec';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
+import { filterMenuToEvidence, evidenceCorpus } from '@/lib/rebuild/menuEvidence';
 
 function uuid(): string {
   return globalThis.crypto?.randomUUID?.() ?? `id_${Math.random().toString(36).slice(2)}${Date.now()}`;
@@ -34,7 +35,17 @@ export type BuildFromSiteInput = {
 export type BuildFromSiteResult = {
   id: string;
   slug: string;
-  summary: { businessName: string; phone: string | null; menuItems: number; menuSections: string[]; sourceUrl: string };
+  summary: {
+    businessName: string;
+    phone: string | null;
+    menuItems: number;
+    menuSections: string[];
+    sourceUrl: string;
+    /** Dishes the model proposed that the site never mentions — left out, named here. */
+    droppedItems: string[];
+    /** Confirmed dishes whose price was not on the site — kept, price removed. */
+    droppedPrices: string[];
+  };
 };
 
 export class BuildFromSiteError extends Error {
@@ -65,6 +76,12 @@ export async function buildDraftFromSite(input: BuildFromSiteInput): Promise<Bui
   if (!spec.businessName?.trim() && input.fallbackName) spec.businessName = input.fallbackName;
   if (!spec.contact?.phone && input.fallbackPhone) spec.contact = { ...(spec.contact ?? {}), phone: input.fallbackPhone };
 
+  // ⚠️ A dish survives only if the site says it exists (lib/rebuild/menuEvidence.ts). The first
+  // real build put "Lasagna $16.65" on Rock Island Pizza, which sells no lasagna. Applied BEFORE
+  // assembly so the invented item never reaches the template data.
+  const evidence = filterMenuToEvidence(spec.menu, evidenceCorpus(scraped, menuPages));
+  spec.menu = evidence.menu;
+
   const tpl = buildRebuildTemplate({
     spec,
     heroImage: scraped.heroImage,
@@ -76,6 +93,8 @@ export async function buildDraftFromSite(input: BuildFromSiteInput): Promise<Bui
     ...(tpl.data.meta ?? {}),
     ordering_companion: true,
     source_site: scraped.finalUrl,
+    // What the evidence guard did, on the record — so a reviewer can see why a dish is missing.
+    menu_evidence: { kept: evidence.kept, dropped_items: evidence.droppedItems, dropped_prices: evidence.droppedPrices },
   };
 
   let insertedId: string | null = null;
@@ -119,6 +138,8 @@ export async function buildDraftFromSite(input: BuildFromSiteInput): Promise<Bui
       menuItems: sections.reduce((n: number, s: any) => n + (s.items?.length ?? 0), 0),
       menuSections: sections.map((s: any) => `${s.name} (${s.items?.length ?? 0})`),
       sourceUrl: scraped.finalUrl,
+      droppedItems: evidence.droppedItems,
+      droppedPrices: evidence.droppedPrices,
     },
   };
 }

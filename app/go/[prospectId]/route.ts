@@ -18,8 +18,15 @@ import { EVENTS } from '@/lib/analytics/events';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, ctx: { params: Promise<{ prospectId: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ prospectId: string }> }) {
   const { prospectId } = await ctx.params;
+  // ?to=evolve (the Evolve postcard's QR): still counted here — the ONE response counter — but
+  // lands on the Evolve page (their site beside the ordering draft, preview ordering, the claim
+  // button) instead of straight on the claim page. ?ref=<code> is carried so the rep is credited.
+  const sp = new URL(req.url).searchParams;
+  const toEvolve = sp.get('to') === 'evolve';
+  const ref = sp.get('ref');
+  const refQs = ref && /^[a-z0-9-]{2,40}$/i.test(ref) ? `?ref=${encodeURIComponent(ref)}` : '';
   // Same host rule as the card: a branded org lands on its own host, the default on www.quicksites.ai.
   const base = defaultOutreachOrgSlug() ? (await resolveCampaignBrand(null)).baseUrl.replace(/\/+$/, '') : tradeSiteBaseUrl();
 
@@ -48,6 +55,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ prospectId: st
     .eq('id', p.template_id)
     .maybeSingle();
   if (!t) return NextResponse.redirect(base, 302);
+
+  // The Evolve landing only makes sense for an unclaimed restaurant draft; once claimed, fall
+  // through to the live site like any other card.
+  if (toEvolve && (t as any).claim_source === 'listing_import') {
+    return NextResponse.redirect(`${base}/evolve/${prospectId}${refQs}`, 302);
+  }
 
   if ((t as any).claim_source === 'listing_import') {
     return NextResponse.redirect(`${base}/claim-site/${t.id}?token=${encodeURIComponent(mintSiteClaimToken(t.id))}`, 302);

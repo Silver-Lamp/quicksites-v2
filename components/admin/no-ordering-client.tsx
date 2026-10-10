@@ -137,6 +137,60 @@ export default function NoOrderingClient({ cities, initialCity, initialRegion }:
     }
   }
 
+  // ── Evolve postcards: count, preview, test-mail, mail ─────────────────────────────────────
+  const [cards, setCards] = React.useState<{ mailable: { prospectId: string; businessName: string }[]; blocked: Record<string, number>; lobConfigured: boolean; mailEnabled: boolean; senderReady: boolean } | null>(null);
+  const [cardNote, setCardNote] = React.useState('');
+  const loadCards = React.useCallback(async (c = city, r = region) => {
+    if (!c.trim()) return;
+    const res = await fetch(`/api/admin/prospects/mail-evolve-postcards?city=${encodeURIComponent(c.trim())}&region=${encodeURIComponent(r.trim())}`);
+    const j = await res.json().catch(() => null);
+    if (res.ok && j?.ok) setCards(j);
+  }, [city, region]);
+  React.useEffect(() => {
+    if (loaded) void loadCards();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+
+  async function previewCards() {
+    setBusy('cards');
+    try {
+      const res = await fetch('/api/admin/prospects/mail-evolve-postcards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ city: city.trim(), region: region.trim(), preview: true }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.cards?.length) {
+        setCardNote(`Nothing to preview (${j?.error ?? 'no mailable card in this city'}).`);
+        return;
+      }
+      for (const card of j.cards) {
+        for (const side of ['frontHtml', 'backHtml'] as const) {
+          const blob = new Blob([card[side]], { type: 'text/html' });
+          window.open(URL.createObjectURL(blob), '_blank', 'noopener');
+        }
+      }
+      setCardNote(`Opened ${j.cards.length} card${j.cards.length === 1 ? '' : 's'} (front + back). ${j.blocked?.length ? `${j.blocked.length} blocked: ${j.blocked.map((b: any) => `${b.businessName} (${b.reason})`).join(', ')}.` : ''}`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function mailCards(test: boolean) {
+    if (!test && !window.confirm(`Mail Evolve postcards to ${cards?.mailable.length ?? 0} restaurants in ${city}? This spends postage.`)) return;
+    setBusy('cards');
+    setCardNote(test ? 'Mailing one test card to the configured test address…' : 'Mailing…');
+    try {
+      const res = await fetch('/api/admin/prospects/mail-evolve-postcards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ city: city.trim(), region: region.trim(), test }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCardNote(`Mail failed (${j?.code ?? j?.error ?? res.status}).`);
+        return;
+      }
+      setCardNote(`${test ? 'Test card' : 'Cards'}: ${j.mailed} mailed, ${j.failed} failed, ${j.blocked} blocked.${j.results?.filter((r: any) => !r.ok).map((r: any) => ` ${r.businessName}: ${r.error ?? r.skipped}`).join('') ?? ''}`);
+      await loadCards();
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const checkedLabel = loaded?.checkedOn ? new Date(loaded.checkedOn).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : null;
 
   return (
@@ -187,6 +241,29 @@ export default function NoOrderingClient({ cities, initialCity, initialRegion }:
           </div>
         )}
       </div>
+
+      {loaded && cards && (
+        <div className="rounded-xl border border-violet-500/30 bg-violet-500/[0.05] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Evolve postcards</h2>
+              <p className="mt-1 text-xs text-zinc-400">
+                One card per built restaurant draft WITH a menu: &ldquo;your menu, orderable from a phone, your site stays&rdquo;, a QR to the Evolve page.
+                {' '}{cards.mailable.length} ready{Object.keys(cards.blocked).length ? ` · blocked: ${Object.entries(cards.blocked).map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`).join(', ')}` : ''}.
+                {!cards.lobConfigured ? ' Lob is not configured.' : !cards.mailEnabled ? ' Postcard mail is OFF (POSTCARD_MAIL_ENABLED).' : !cards.senderReady ? ' Sender profile needs a name + email.' : ''}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={busy !== null || !cards.mailable.length} onClick={previewCards} className="rounded-md border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 disabled:opacity-50">Preview cards</button>
+              <button type="button" disabled={busy !== null || !cards.mailable.length || !cards.lobConfigured || !cards.mailEnabled} onClick={() => mailCards(true)} className="rounded-md border border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-sm text-violet-200 hover:bg-violet-500/20 disabled:opacity-50">Mail one test card</button>
+              <button type="button" disabled={busy !== null || !cards.mailable.length || !cards.lobConfigured || !cards.mailEnabled || !cards.senderReady} onClick={() => mailCards(false)} className="rounded-md bg-violet-500 px-3 py-1.5 text-sm font-semibold text-zinc-950 hover:bg-violet-400 disabled:opacity-50">
+                {busy === 'cards' ? 'Working…' : `Mail ${cards.mailable.length} card${cards.mailable.length === 1 ? '' : 's'}`}
+              </button>
+            </div>
+          </div>
+          {cardNote && <p className="mt-2 text-xs text-zinc-400">{cardNote}</p>}
+        </div>
+      )}
 
       {loaded && (
         <div className="space-y-4">
@@ -243,6 +320,7 @@ export default function NoOrderingClient({ cities, initialCity, initialRegion }:
                                     <span className="space-x-2">
                                       <a href={`/admin/templates/${r.template_id}`} className="text-sky-300 hover:underline">{r.status === 'claimed' ? 'claimed' : 'built'} →</a>
                                       <a href={`/evolve/${r.id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-300 hover:underline">Evolve page →</a>
+                                      <a href={`/api/admin/prospects/evolve-postcard/${r.id}?side=front`} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:underline">card ↗</a>
                                     </span>
                                   ) : (
                                     <span className="text-zinc-600">—</span>

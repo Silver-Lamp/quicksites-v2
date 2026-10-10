@@ -210,6 +210,21 @@ iframe as the editor; it now requires a same-origin `/admin/` parent, and the He
 launcher stays out of frames. Copy: the h1 is the offer ("Your menu, orderable from a phone. Your
 site stays as it is."), the fee is in the third paragraph and the matrix, no "Stripe"/"call-ahead"/
 "claim" jargon, the paying box is retitled when it has no figure, no marketing nav on the page.
+**The Evolve postcard (same day, `lib/outreach/evolvePostcard.ts` + `evolvePostcardSend.ts`):** the
+claim-card pipeline (Lob, sender profile, preflight, idempotent per prospect, `postcard_sent_at`)
+with this segment's copy — front: *"Your menu, orderable from a phone. Your site stays as it is."*,
+their host, three bullets true of every from-site draft, a QR; back: what it is, the cost in words
+(*"a share of each online order … the exact share is on the page"* — never a printed figure), the
+link, the exit, the sign-off. ⚠️ **The QR is the tracked link with a destination**:
+`/go/<prospectId>?to=evolve` counts the scan on the ONE response counter and then lands on
+`/evolve/<id>` instead of the claim page (`?ref` carried). **Never open a `/go/` link to test it.**
+Eligible = restaurant · website · `ordering_platform` in none / shop / app-only · built draft
+**with a menu** (`draftHasMenu`; the card says "built from your own menu") · no operational claim
+· an address · unmailed; the selector names the block reason. Admin:
+`/admin/restaurants/no-ordering` → *Evolve postcards* (count, preview front+back, one test card,
+mail), per-row *card ↗* (`GET /api/admin/prospects/evolve-postcard/<id>?side=front|back` — the
+printer's HTML, also what a rep prints to hand-deliver). Forbidden-promise test over the rendered
+HTML: `lib/outreach/__tests__/evolvePostcard.test.ts`.
 **Preview ordering in the exhibit (same day):** the framed draft's menu rows with no catalog id
 get a preview *Add to order* (`serverData.menu.previewOrdering`, exhibit only) feeding
 `components/sites/preview-order-drawer.tsx` — lines, quantities, a subtotal from the menu's own

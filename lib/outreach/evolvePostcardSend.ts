@@ -34,7 +34,7 @@ export type EvolveMailable = {
 
 export const EVOLVE_ELIGIBLE_PLATFORMS: ReadonlySet<string> = new Set(['none', ...SHOP, ...THIRD_PARTY]);
 
-export async function selectEvolveMailable(opts: { city?: string | null; region?: string | null; limit?: number } = {}): Promise<EvolveMailable[]> {
+export async function selectEvolveMailable(opts: { city?: string | null; region?: string | null; limit?: number; ids?: string[] } = {}): Promise<EvolveMailable[]> {
   let q = supabaseAdmin
     .from('outreach_prospects')
     .select('id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id, rating, review_count, postcard_sent_at, ordering_platform')
@@ -48,6 +48,7 @@ export async function selectEvolveMailable(opts: { city?: string | null; region?
     .limit(opts.limit ?? 100);
   if (opts.city) q = q.ilike('city', opts.city);
   if (opts.region) q = q.ilike('region', opts.region);
+  if (opts.ids?.length) q = q.in('id', opts.ids);
   const { data, error } = await q;
   if (error) throw new Error(`selectEvolveMailable: ${error.message}`);
   const rows = ((data ?? []) as EvolveMailable['prospect'][]).filter((p) => EVOLVE_ELIGIBLE_PLATFORMS.has(p.ordering_platform ?? ''));
@@ -70,7 +71,7 @@ export async function selectEvolveMailable(opts: { city?: string | null; region?
   return out;
 }
 
-export async function renderEvolvePostcardFor(d: EvolveMailable) {
+export async function renderEvolvePostcardFor(d: EvolveMailable, refCode?: string | null) {
   const senderProfile = await getSenderProfile();
   const brand = await resolveCampaignBrand(null);
   const orgSlug = defaultOutreachOrgSlug();
@@ -80,6 +81,7 @@ export async function renderEvolvePostcardFor(d: EvolveMailable) {
     brandName: orgSlug ? brand.name : null,
     supportEmail: brand.supportEmail,
     baseUrl: orgSlug ? brand.baseUrl : tradeSiteBaseUrl(),
+    refCode: refCode ?? null,
   });
   return { model, frontHtml: renderEvolvePostcardFront(model), backHtml: renderEvolvePostcardBack(model) };
 }

@@ -141,6 +141,15 @@ export default function RestaurantTable({ rows, token, repName }: { rows: Restau
                           {b.evolveUrl && (
                             <a href={b.evolveUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-300 hover:underline">Evolve page (show this) →</a>
                           )}
+                          {/* The printable postcard, QR carrying this rep's code. 6×9 landscape; print at 100%. */}
+                          {b.evolveUrl && (
+                            <span className="text-zinc-300">
+                              Postcard:{' '}
+                              <a href={`/api/rep/evolve-card/${r.prospectId}?token=${encodeURIComponent(token)}&side=front`} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:underline">front</a>
+                              {' · '}
+                              <a href={`/api/rep/evolve-card/${r.prospectId}?token=${encodeURIComponent(token)}&side=back`} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:underline">back</a>
+                            </span>
+                          )}
                           <button type="button" onClick={() => copy(r.prospectId, b.claimUrl)} className="text-zinc-200 hover:underline">
                             {copied === r.prospectId ? 'Copied' : 'Copy claim link'}
                           </button>

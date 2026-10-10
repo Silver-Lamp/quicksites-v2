@@ -42,9 +42,13 @@ export type EvolvePostcardModel = {
   contactEmail: string | null;
 };
 
-/** The tracked link printed on the card — /go/<id>?to=evolve counts the visit and lands on /evolve/<id>. */
-export function trackedEvolveUrl(prospectId: string, base: string): string {
-  return `${base.replace(/\/+$/, '')}/go/${prospectId}?to=evolve`;
+/**
+ * The tracked link printed on the card — /go/<id>?to=evolve counts the visit and lands on
+ * /evolve/<id>. A rep's card carries their code so the scan is credited to them.
+ */
+export function trackedEvolveUrl(prospectId: string, base: string, refCode?: string | null): string {
+  const ref = refCode && /^[a-z0-9-]{2,40}$/i.test(refCode) ? `&ref=${encodeURIComponent(refCode)}` : '';
+  return `${base.replace(/\/+$/, '')}/go/${prospectId}?to=evolve${ref}`;
 }
 
 export async function buildEvolvePostcardModel(input: {
@@ -53,8 +57,10 @@ export async function buildEvolvePostcardModel(input: {
   brandName?: string | null;
   supportEmail?: string | null;
   baseUrl: string;
+  /** The rep's code, when the card is theirs to hand over. */
+  refCode?: string | null;
 }): Promise<EvolvePostcardModel> {
-  const evolveLinkUrl = trackedEvolveUrl(input.prospect.id, input.baseUrl);
+  const evolveLinkUrl = trackedEvolveUrl(input.prospect.id, input.baseUrl, input.refCode);
   const sender = senderFromProfile(input.senderProfile, input.brandName ?? null);
   const localLine = resolveLocalityLine({
     senderCity: input.senderProfile.city,

@@ -520,7 +520,9 @@ export default async function ForAbdouPage() {
           )}
           <p className="mt-3 text-xs text-zinc-500">
             The ordering page is built from their own site and is theirs to claim; the text message says their
-            website stays as it is. "Not checked" means nobody has read that site yet, not that it takes no
+            website stays as it is. A built row also has a <span className="text-zinc-300">postcard</span> — front and
+            back, 6×9, print at full size — with a QR that opens the Evolve page and credits you; leave it on the
+            counter if the owner is not in. "Not checked" means nobody has read that site yet, not that it takes no
             orders.{restaurants.unchecked.length ? ` ${restaurants.unchecked.length} still to check.` : ''}
           </p>
         </section>

@@ -69,6 +69,19 @@ describe('the link and the QR', () => {
     expect(renderEvolvePostcardBack(MODEL)).toContain(MODEL.evolveLinkUrl);
     expect(renderEvolvePostcardFront(MODEL)).toContain(MODEL.qrDataUrl);
   });
+  it("a rep's card carries their code on the tracked link; a bad code is dropped, never passed through", () => {
+    expect(trackedEvolveUrl('x', 'https://www.quicksites.ai', 'abdou')).toBe('https://www.quicksites.ai/go/x?to=evolve&ref=abdou');
+    expect(trackedEvolveUrl('x', 'https://www.quicksites.ai', 'not a code!')).toBe('https://www.quicksites.ai/go/x?to=evolve');
+  });
+  it("the rep's card route verifies the signed grant, takes only a prospect id, and answers a blocked draft in words", () => {
+    const src = read('app/api/rep/evolve-card/[prospectId]/route.ts');
+    expect(src).toMatch(/verifyRepActionToken\(url\.searchParams\.get\('token'\)\)/);
+    expect(src).toMatch(/codeIsUsable\(grant\.code\)/);
+    expect(src).toMatch(/selectEvolveMailable\(\{ ids: \[prospectId\]/);
+    expect(src).toMatch(/renderEvolvePostcardFor\(d, grant\.code\)/);
+    expect(src).not.toMatch(/searchParams\.get\('(website|url|name)'\)/);
+    for (const k of ['no_menu', 'operational_claims', 'not_food', 'no_address']) expect(src).toContain(k);
+  });
   it('/go honours to=evolve only for an unclaimed listing draft, and carries ref', () => {
     const go = read('app/go/[prospectId]/route.ts');
     expect(go).toMatch(/sp\.get\('to'\) === 'evolve'/);

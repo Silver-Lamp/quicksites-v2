@@ -22,18 +22,35 @@ export function frameableFromHeaders(headers: { get(name: string): string | null
   return true;
 }
 
-export async function isFrameable(url: string, ourOrigin: string, fetchImpl: typeof fetch = fetch): Promise<boolean> {
+export type FrameCheck = {
+  frameable: boolean;
+  /**
+   * The URL to put in the iframe: where the site's own redirects ended, upgraded to https.
+   * ⚠️ A browser refuses an http:// iframe inside an https:// page (mixed content) and renders
+   * a blank box with no error we can read — the first live Evolve page framed the prospect's
+   * stored `http://pizzarockisland.com/` and showed nothing (2026-10-10). Always https here.
+   */
+  frameUrl: string;
+};
+
+export function httpsOf(url: string): string {
+  return url.replace(/^http:\/\//i, 'https://');
+}
+
+export async function isFrameable(url: string, ourOrigin: string, fetchImpl: typeof fetch = fetch): Promise<FrameCheck> {
+  const start = httpsOf(/^https?:\/\//i.test(url) ? url : `https://${url}`);
   try {
-    assertPublicHttpUrl(url);
+    assertPublicHttpUrl(start);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 6_000);
     try {
-      const res = await fetchImpl(url, { method: 'GET', redirect: 'follow', signal: controller.signal, headers: { 'user-agent': 'Mozilla/5.0 (compatible; QuickSitesEvolve/1.0)' } });
-      return frameableFromHeaders(res.headers, ourOrigin);
+      const res = await fetchImpl(start, { method: 'GET', redirect: 'follow', signal: controller.signal, headers: { 'user-agent': 'Mozilla/5.0 (compatible; QuickSitesEvolve/1.0)' } });
+      const frameable = res.ok ? frameableFromHeaders(res.headers, ourOrigin) : false;
+      return { frameable, frameUrl: httpsOf(res.url || start) };
     } finally {
       clearTimeout(timer);
     }
   } catch {
-    return true;
+    return { frameable: false, frameUrl: start };
   }
 }

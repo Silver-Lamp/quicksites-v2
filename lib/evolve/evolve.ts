@@ -59,8 +59,10 @@ export type EvolveInput = {
   slug: string;
   orderingPlatform: string | null;
   siteProvider: string | null;
-  /** From a HEAD/GET of their site: can it sit in an iframe? */
+  /** From a GET of their site: can it sit in an iframe? */
   currentFrameable: boolean;
+  /** Where their site's redirects ended, https — the only URL an iframe on an https page may load. */
+  currentFrameUrl?: string | null;
   refCode?: string | null;
   base: string;
   menuHost: string | null;
@@ -100,7 +102,9 @@ export function buildEvolveModel(input: EvolveInput): EvolveModel {
     : published
       ? COPY.payingKnown(provider!, published.pricing, published.verified)
       : COPY.payingUnknown(provider!);
-  const currentUrl = /^https?:\/\//i.test(input.website) ? input.website : `https://${input.website}`;
+  // ⚠️ https, always: an http iframe inside an https page is blocked as mixed content and
+  // renders blank with no error anyone can read (the first live page did exactly that).
+  const currentUrl = (input.currentFrameUrl || (/^https?:\/\//i.test(input.website) ? input.website : `https://${input.website}`)).replace(/^http:\/\//i, 'https://');
   return {
     copy: COPY,
     businessName: input.businessName,

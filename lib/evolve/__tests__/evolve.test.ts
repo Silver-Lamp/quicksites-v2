@@ -73,6 +73,11 @@ describe('what they are likely paying', () => {
     expect(buildEvolveModel({ ...base, siteProvider: null }).paying).toBe(COPY.payingUnread);
     expect(providerPublishedPricing('custom')).toBeNull();
   });
+  it('the current-site frame is always https — an http iframe on an https page is blank (the first live page)', () => {
+    expect(buildEvolveModel({ ...base, siteProvider: null, website: 'http://pizzarockisland.com/' }).currentUrl).toBe('https://pizzarockisland.com/');
+    expect(buildEvolveModel({ ...base, siteProvider: null, website: 'http://pizzarockisland.com/', currentFrameUrl: 'http://www.pizzarockisland.com/' }).currentUrl).toBe('https://www.pizzarockisland.com/');
+    expect(buildEvolveModel({ ...base, siteProvider: null, website: 'pizzarockisland.com' }).currentUrl).toBe('https://pizzarockisland.com');
+  });
   it('links: the evolved site on the menu host, the tracked claim link, the booking page; ref carried', () => {
     const m = buildEvolveModel({ ...base, siteProvider: null, refCode: 'abdou' });
     expect(m.evolvedUrl).toBe('https://deliveredmenu.com/rock-island-pizza-x?ref=abdou');

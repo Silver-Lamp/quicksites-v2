@@ -228,7 +228,7 @@ export async function sendClaimPostcards(opts: SendOptions): Promise<SendReport>
       if (!opts.test) mailedIds.push(p.id);
       try {
         await recordMailing({
-          lobId: r.id, prospectId: p.id, campaignId: null, sentBy: opts.sentBy,
+          lobId: r.id, kind: 'trade_claim', prospectId: p.id, campaignId: null, sentBy: opts.sentBy,
           toName: to.name, toAddress: `${to.line1}, ${to.city}, ${to.state} ${to.zip}`,
           expectedDeliveryDate: r.expectedDeliveryDate, carrier: r.carrier, trackingNumber: r.trackingNumber,
           thumbnailUrl: r.thumbnailUrl, pdfUrl: r.pdfUrl,

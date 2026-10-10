@@ -9,6 +9,7 @@ import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { lobConfigured, postcardMailEnabled, MAX_POSTCARD_PIECES_PER_SEND } from '@/lib/outreach/mail/lob';
 import { getSenderProfile, senderProfileReady } from '@/lib/outreach/senderProfile';
 import { selectEvolveMailable, sendEvolvePostcards, renderEvolvePostcardFor } from '@/lib/outreach/evolvePostcardSend';
+import { loadCardResponse } from '@/lib/outreach/cardResponseServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,8 +29,12 @@ export async function GET(req: Request) {
   const drafts = await selectEvolveMailable({ city: url.searchParams.get('city'), region: url.searchParams.get('region') });
   const blocked: Record<string, number> = {};
   for (const d of drafts) if (d.blocked) blocked[d.blocked] = (blocked[d.blocked] ?? 0) + 1;
+  // The Evolve card's own funnel (mailed → arrived → scanned → claimed), the same numbers the ops
+  // dashboard shows, so the page you mail from is the page you read the response on.
+  const funnel = await loadCardResponse(undefined, 'evolve');
   return NextResponse.json({
     ok: true,
+    funnel,
     mailable: drafts.filter((d) => !d.blocked).map((d) => ({ prospectId: d.prospect.id, businessName: d.prospect.business_name })),
     blocked,
     blockedRows: drafts.filter((d) => d.blocked).map((d) => ({ prospectId: d.prospect.id, businessName: d.prospect.business_name, reason: d.blocked })),

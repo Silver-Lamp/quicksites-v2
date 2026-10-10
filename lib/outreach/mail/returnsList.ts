@@ -11,6 +11,8 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 export type ReturnRow = {
   id: string;
   prospect_id: string | null;
+  /** Which card (trade_claim / competition / evolve / guest). */
+  kind: string | null;
   to_name: string | null;
   to_address: string | null;
   created_at: string;
@@ -39,7 +41,7 @@ export async function loadReturnsList(limit = 400): Promise<ReturnsList> {
   const { data: mailings, error } = await supabaseAdmin
     .from('postcard_mailings')
     .select(
-      'id, prospect_id, to_name, to_address, created_at, expected_delivery_date, returned_at, return_reason, status',
+      'id, prospect_id, kind, to_name, to_address, created_at, expected_delivery_date, returned_at, return_reason, status',
     )
     // ⚠️ Test rows are excluded here rather than in the UI: they are indistinguishable from real
     // ones by eye, and marking a test card "out of business" would close a real prospect.
@@ -63,6 +65,7 @@ export async function loadReturnsList(limit = 400): Promise<ReturnsList> {
     return {
       id: m.id,
       prospect_id: m.prospect_id,
+      kind: m.kind ?? null,
       to_name: m.to_name,
       to_address: m.to_address,
       created_at: m.created_at,

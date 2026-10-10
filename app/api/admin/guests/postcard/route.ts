@@ -88,7 +88,7 @@ export async function POST(req: Request) {
       idempotencyKey: isTest ? `test_guest_${t.id}_${Date.now()}` : `guest_apology_${t.id}`,
     });
     try {
-      await recordMailing({ lobId: r.id, prospectId: null, campaignId: null, sentBy: admin.id, toName: to.name, toAddress: `${to.line1}, ${to.city}, ${to.state} ${to.zip}`, expectedDeliveryDate: r.expectedDeliveryDate, carrier: r.carrier, trackingNumber: r.trackingNumber, thumbnailUrl: r.thumbnailUrl, pdfUrl: r.pdfUrl });
+      await recordMailing({ lobId: r.id, kind: 'guest', prospectId: null, campaignId: null, sentBy: admin.id, toName: to.name, toAddress: `${to.line1}, ${to.city}, ${to.state} ${to.zip}`, expectedDeliveryDate: r.expectedDeliveryDate, carrier: r.carrier, trackingNumber: r.trackingNumber, thumbnailUrl: r.thumbnailUrl, pdfUrl: r.pdfUrl });
     } catch { /* tracking is best-effort */ }
     return NextResponse.json({ ok: true, test: isTest, lobId: r.id, expectedDelivery: r.expectedDeliveryDate ?? null, thumbnailUrl: r.thumbnailUrl ?? null });
   } catch (e: any) {

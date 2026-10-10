@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
+import { recordScanForProspect } from '@/lib/outreach/mail/mailings';
 import { resolveCampaignBrand, defaultOutreachOrgSlug } from '@/lib/outreach/campaignBrand';
 import { publicSiteUrl } from '@/lib/sites/publicUrl';
 import { tradeSiteBaseUrl } from '@/lib/tradeSites/config';
@@ -43,6 +44,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ prospectId: str
       .update({ claim_link_visits: (p.claim_link_visits ?? 0) + 1, claim_link_visited_at: new Date().toISOString() })
       .eq('id', prospectId);
   } catch { /* the counter is advisory */ }
+  // Also bump the piece itself (scans / first_scanned_at on the latest real card of any kind), so
+  // the mailings table can answer "which card was scanned" — it never could for campaign-less cards.
+  try {
+    await recordScanForProspect(prospectId);
+  } catch { /* advisory */ }
   // PostHog mirror of the counter (the guest card already had one; the trade card did not, so
   // "did anyone scan a card" had no answer outside a SQL query). distinctId = the card, not a person.
   try {

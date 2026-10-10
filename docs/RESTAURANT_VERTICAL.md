@@ -225,6 +225,17 @@ Eligible = restaurant · website · `ordering_platform` in none / shop / app-onl
 mail), per-row *card ↗* (`GET /api/admin/prospects/evolve-postcard/<id>?side=front|back` — the
 printer's HTML, also what a rep prints to hand-deliver). Forbidden-promise test over the rendered
 HTML: `lib/outreach/__tests__/evolvePostcard.test.ts`.
+**Tracking is per CARD, not per table (`postcard_mailings.kind`, migration `20260879`).** Three
+campaigns share `postcard_mailings` and the ops funnel counted them as one; `kind` is
+`trade_claim` / `competition` / `evolve` / `guest` (backfilled from the one tell the rows carried —
+a campaign id meant the competition poster — every sender now names its card, pinned by test).
+`loadCardResponse(today, kind)` → `/admin/ops` shows **two** funnels through one
+`CardFunnelSection` (trade claim cards; Evolve cards, with an honest "none mailed yet" note);
+the no-ordering page's Evolve panel shows the same funnel for the city you are on, and every
+built row says *card mailed · status / ETA · scans on the card · link opened N× · claimed*.
+⚠️ **A `/go/` scan now bumps the PIECE too** (`recordScanForProspect`: latest real card of any
+kind for that prospect) — the trade cards' `scans` read 0 for a month because the only scan
+writer was campaign-keyed and those cards carry no campaign. Returns list shows the kind.
 **Preview ordering in the exhibit (same day):** the framed draft's menu rows with no catalog id
 get a preview *Add to order* (`serverData.menu.previewOrdering`, exhibit only) feeding
 `components/sites/preview-order-drawer.tsx` — lines, quantities, a subtotal from the menu's own

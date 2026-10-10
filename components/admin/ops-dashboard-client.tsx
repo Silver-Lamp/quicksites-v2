@@ -18,6 +18,7 @@ import DomainSpendChart from '@/components/admin/domain-spend-chart';
 import RevenueSimulator from '@/components/admin/ops/revenue-simulator';
 import { GuestReachableTile } from '@/components/admin/ops/guest-leads-panel';
 import { KpiTile, Gauge, SegmentBar, SeverityTag, formatMoney, type Tone } from '@/components/admin/ops/ops-widgets';
+import type { CardResponse } from '@/lib/outreach/cardResponse';
 import { HJ_FOUNDING_FAMILY_LINKS, statsUnavailableText } from '@/lib/mesh/hjFoundingFamilies';
 import SuperAdminSetupAlerts from '@/components/admin/super-admin-setup-alerts';
 
@@ -77,7 +78,7 @@ const CATEGORY_META: Record<OpsCategory, { label: string; emoji: string }> = {
 };
 
 export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot }) {
-  const { inventory, revenue, clients, markets, guestFunnel, cardResponse, hjFoundingFamilies } = snapshot;
+  const { inventory, revenue, clients, markets, guestFunnel, cardResponse, evolveCardResponse, hjFoundingFamilies } = snapshot;
 
   const [gscByDomain, setGscByDomain] = useState<Record<string, GscStat> | undefined>(undefined);
   const [gscLoaded, setGscLoaded] = useState(false);
@@ -306,52 +307,23 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
         </p>
       </div>
 
-      {/* Claim postcards → QR scans → claims. The response rate of the automated trade-site loop.
-          On 2026-09-16, 72 real cards were in the mail and the only way to see whether one QR had
-          been scanned was a SQL query. "Arrived" is Lob's forecast; "delivered" stays 0 until the
-          Lob webhook is registered — the tile says which is which. */}
-      <div className="mt-8">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Claim cards → scans → claims</h2>
-        <p className="mt-1 text-xs text-neutral-500">
-          Every card's QR is a tracked link. A scan counts on the prospect; a claim is the site changing hands. Test rows are excluded.
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiTile label="Cards mailed" value={cardResponse.mailed} tone="info" sub={`${cardResponse.byDay.length} mailing day${cardResponse.byDay.length === 1 ? '' : 's'}`} href="/admin/outreach" />
-          <KpiTile label="Should have arrived" value={cardResponse.arrived} tone={cardResponse.arrived > 0 ? 'info' : 'neutral'} sub="by Lob's forecast date" />
-          <KpiTile label="Delivered (known)" value={cardResponse.delivered} tone={cardResponse.delivered > 0 ? 'good' : 'warn'} sub={cardResponse.delivered > 0 ? `${cardResponse.returned} returned` : 'Lob webhook not registered'} />
-          <KpiTile label="QR scanned" value={cardResponse.visited - cardResponse.preDeliveryVisited} tone={cardResponse.visited - cardResponse.preDeliveryVisited > 0 ? 'good' : cardResponse.arrived > 0 ? 'warn' : 'neutral'} sub={cardResponse.preDeliveryVisited > 0 ? `+${cardResponse.preDeliveryVisited} scanned before delivery (tests)` : `${cardResponse.visits} scan${cardResponse.visits === 1 ? '' : 's'} total`} />
-          <KpiTile label="Claimed" value={cardResponse.claimed} tone={cardResponse.claimed > 0 ? 'good' : cardResponse.arrived > 0 ? 'warn' : 'neutral'} sub={cardResponse.arrived ? `${Math.round((100 * cardResponse.claimed) / cardResponse.arrived)}% of arrived` : '—'} />
-          <KpiTile label="Last scan" value={cardResponse.lastVisitAt ? new Date(cardResponse.lastVisitAt).toLocaleDateString() : '—'} tone="neutral" sub={cardResponse.firstVisitAt ? `first ${new Date(cardResponse.firstVisitAt).toLocaleDateString()}` : 'no scans yet'} />
-        </div>
-        {cardResponse.byMetro.length > 0 && (
-          <div className="mt-3 overflow-x-auto rounded-xl border border-zinc-800">
-            <table className="w-full text-xs">
-              <thead className="bg-zinc-900/60 text-neutral-400">
-                <tr>
-                  <th className="px-3 py-1.5 text-left font-medium">Metro</th>
-                  <th className="px-3 py-1.5 text-right font-medium">Mailed</th>
-                  <th className="px-3 py-1.5 text-right font-medium">Arrived</th>
-                  <th className="px-3 py-1.5 text-right font-medium">Scanned</th>
-                  <th className="px-3 py-1.5 text-right font-medium">Scans</th>
-                  <th className="px-3 py-1.5 text-right font-medium">Claimed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cardResponse.byMetro.map((m) => (
-                  <tr key={`${m.city}|${m.region}`} className="border-t border-zinc-800/80">
-                    <td className="px-3 py-1.5 text-neutral-200">{m.city}{m.region ? `, ${m.region}` : ''}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums text-neutral-300">{m.mailed}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums text-neutral-300">{m.arrived}</td>
-                    <td className={`px-3 py-1.5 text-right tabular-nums ${m.visited > 0 ? 'text-emerald-300' : 'text-neutral-500'}`}>{m.visited}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums text-neutral-400">{m.visits}</td>
-                    <td className={`px-3 py-1.5 text-right tabular-nums ${m.claimed > 0 ? 'text-emerald-300' : 'text-neutral-500'}`}>{m.claimed}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Postcard response funnels, ONE PER CARD. The trade-site claim card and the Evolve card go
+          to different businesses with different asks; a single rate would describe neither.
+          "Arrived" is Lob's forecast; "delivered" stays 0 until the Lob webhook is registered —
+          the tile says which is which. */}
+      <CardFunnelSection
+        title="Claim cards → scans → claims"
+        blurb="Auto-built trade sites. Every card's QR is a tracked link. A scan counts on the prospect; a claim is the site changing hands. Test rows are excluded."
+        r={cardResponse}
+        href="/admin/outreach"
+      />
+      <CardFunnelSection
+        title="Evolve cards → scans → claims"
+        blurb="Restaurants with a website and no online ordering. The QR lands on the Evolve page (their site beside the ordering draft); a claim is the ordering page changing hands."
+        r={evolveCardResponse}
+        href="/admin/restaurants/no-ordering"
+        emptyNote="No Evolve card has been mailed yet — the first is the test card on the No Online Ordering page."
+      />
 
       {/* HiveJournal's founding-families pilot (the iPad program), mirrored here so the queue is
           visible from either product. COUNTS ONLY — no applicant name, email or phone crosses the
@@ -444,6 +416,57 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
       {inventory.vercelUnavailable && (
         <div className="mt-6 rounded-lg border border-amber-500/20 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-300/90">
           Couldn't reach Vercel — the domain list may be missing account-only domains and expiry dates.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One postcard funnel: mailed → arrived → delivered (known) → scanned → claimed, with a per-metro table. */
+function CardFunnelSection({ title, blurb, r, href, emptyNote }: { title: string; blurb: string; r: CardResponse; href: string; emptyNote?: string }) {
+  const scanned = r.visited - r.preDeliveryVisited;
+  return (
+    <div className="mt-8">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">{title}</h2>
+      <p className="mt-1 text-xs text-neutral-500">{blurb}</p>
+      {r.mailed === 0 && emptyNote ? (
+        <p className="mt-3 rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-xs text-neutral-400">{emptyNote}</p>
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <KpiTile label="Cards mailed" value={r.mailed} tone="info" sub={`${r.byDay.length} mailing day${r.byDay.length === 1 ? '' : 's'}`} href={href} />
+          <KpiTile label="Should have arrived" value={r.arrived} tone={r.arrived > 0 ? 'info' : 'neutral'} sub="by Lob's forecast date" />
+          <KpiTile label="Delivered (known)" value={r.delivered} tone={r.delivered > 0 ? 'good' : 'warn'} sub={r.delivered > 0 ? `${r.returned} returned` : 'Lob webhook not registered'} />
+          <KpiTile label="QR scanned" value={scanned} tone={scanned > 0 ? 'good' : r.arrived > 0 ? 'warn' : 'neutral'} sub={r.preDeliveryVisited > 0 ? `+${r.preDeliveryVisited} scanned before delivery (tests)` : `${r.visits} scan${r.visits === 1 ? '' : 's'} total`} />
+          <KpiTile label="Claimed" value={r.claimed} tone={r.claimed > 0 ? 'good' : r.arrived > 0 ? 'warn' : 'neutral'} sub={r.arrived ? `${Math.round((100 * r.claimed) / r.arrived)}% of arrived` : '—'} />
+          <KpiTile label="Last scan" value={r.lastVisitAt ? new Date(r.lastVisitAt).toLocaleDateString() : '—'} tone="neutral" sub={r.firstVisitAt ? `first ${new Date(r.firstVisitAt).toLocaleDateString()}` : 'no scans yet'} />
+        </div>
+      )}
+      {r.byMetro.length > 0 && (
+        <div className="mt-3 overflow-x-auto rounded-xl border border-zinc-800">
+          <table className="w-full text-xs">
+            <thead className="bg-zinc-900/60 text-neutral-400">
+              <tr>
+                <th className="px-3 py-1.5 text-left font-medium">Metro</th>
+                <th className="px-3 py-1.5 text-right font-medium">Mailed</th>
+                <th className="px-3 py-1.5 text-right font-medium">Arrived</th>
+                <th className="px-3 py-1.5 text-right font-medium">Scanned</th>
+                <th className="px-3 py-1.5 text-right font-medium">Scans</th>
+                <th className="px-3 py-1.5 text-right font-medium">Claimed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.byMetro.map((m) => (
+                <tr key={`${m.city}|${m.region}`} className="border-t border-zinc-800/80">
+                  <td className="px-3 py-1.5 text-neutral-200">{m.city}{m.region ? `, ${m.region}` : ''}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-neutral-300">{m.mailed}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-neutral-300">{m.arrived}</td>
+                  <td className={`px-3 py-1.5 text-right tabular-nums ${m.visited > 0 ? 'text-emerald-300' : 'text-neutral-500'}`}>{m.visited}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-neutral-400">{m.visits}</td>
+                  <td className={`px-3 py-1.5 text-right tabular-nums ${m.claimed > 0 ? 'text-emerald-300' : 'text-neutral-500'}`}>{m.claimed}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

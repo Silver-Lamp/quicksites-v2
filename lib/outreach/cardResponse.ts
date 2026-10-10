@@ -17,6 +17,8 @@
 
 export type CardMailingRow = {
   prospect_id: string | null;
+  /** Which card (postcard_mailings.kind). Absent on rows read before the column existed. */
+  kind?: string | null;
   created_at: string;
   status: string;
   expected_delivery_date: string | null;
@@ -70,8 +72,10 @@ export type CardResponse = {
 const day = (iso: string) => iso.slice(0, 10);
 
 /** Aggregate the funnel. `today` is an ISO date (YYYY-MM-DD) so the "arrived" cut-off is testable. */
-export function computeCardResponse(mailings: CardMailingRow[], prospects: CardProspectRow[], today: string): CardResponse {
-  const real = mailings.filter((m) => m.status !== 'test' && m.prospect_id);
+export function computeCardResponse(mailings: CardMailingRow[], prospects: CardProspectRow[], today: string, kind?: string | null): CardResponse {
+  // Per card, never per table: the Evolve card and the trade claim card go to different
+  // businesses with different asks, and one response rate for both would describe neither.
+  const real = mailings.filter((m) => m.status !== 'test' && m.prospect_id && (!kind || (m.kind ?? 'trade_claim') === kind));
   const byId = new Map(prospects.map((p) => [p.id, p]));
 
   // One card per prospect for the funnel (a prospect may have been mailed twice by hand); the

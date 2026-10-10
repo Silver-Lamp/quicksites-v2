@@ -972,6 +972,9 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   pricing (`site_provider`, `20260878`, read from markup; labelled, plan disclaimed) · their site
   and the ordering draft side by side in iframes (frameability read from their headers) · claim /
   book a call · a matrix whose every evolved row names where it is true in code. `lib/evolve/*`.
+  **Evolve postcard** (`lib/outreach/evolvePostcard*.ts`, mailed from that admin page): the
+  claim-card pipeline with this copy; QR = `/go/<id>?to=evolve` — counted on the one response
+  counter, lands on the Evolve page. Only a built draft WITH a menu is eligible. Never open `/go/`.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

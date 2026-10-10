@@ -6,11 +6,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { stripComments } from '@/test/stripComments';
-import { freshnessForTemplate } from '@/lib/menu/menuFreshness';
+import { freshnessForTemplate, freshnessNote } from '@/lib/menu/menuFreshness';
 
 describe('freshnessForTemplate', () => {
   it('a sample template is fresh regardless of dates; anything else follows the rule', () => {
-    expect(freshnessForTemplate({ sections: [] }, { meta: { sample: true } }).pricesStale).toBe(false);
+    const sample = freshnessForTemplate({ sections: [] }, { meta: { sample: true } });
+    expect(sample.pricesStale).toBe(false);
+    expect(freshnessNote(sample)).toBeNull();
+    expect(freshnessNote(freshnessForTemplate({ sections: [] }, { meta: {} }))).toMatch(/Prices unconfirmed/);
     expect(freshnessForTemplate({ sections: [] }, { meta: {} }).pricesStale).toBe(true);
     expect(freshnessForTemplate({ sections: [] }, null).pricesStale).toBe(true);
     expect(freshnessForTemplate({ sections: [], sourced_at: new Date().toISOString() }, null).pricesStale).toBe(false);

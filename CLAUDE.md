@@ -944,6 +944,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   — middleware sets `qs_ref` from `ref` on any path, so attribution survives the preview and
   the `/go/` claim link; without it the rep does the work and is never paid. The prefilled SMS
   and every printed sentence are held to the claim-postcard forbidden list by test.
+  **`/compare/toast` (2026-10-10)** — the island's restaurants mostly HAVE sites; the question is
+  whether they take orders online and through whom (8 of ~35 on Toast, 4 on Square, ~15 none; a
+  dated homepage read in `lib/vashon/restaurantOrdering.ts`, shown on `/for-abdou` in three groups:
+  call / offer-a-site-only / leave alone). The comparison lives OUTSIDE the `[slug]` builder matrix
+  because Toast is a POS, and its claim is a **break-even by volume, never "cheaper"**; vendor-read
+  and third-party figures are separate objects on purpose (`lib/compare/toast.ts`, pinned by
+  `toast.test.ts`, which also fails on any typed `$`/`%` in the page). See `docs/RESTAURANT_VERTICAL.md`.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

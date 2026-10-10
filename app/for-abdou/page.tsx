@@ -270,6 +270,7 @@ export default async function ForAbdouPage() {
       reviewCount: r.review_count,
       previewUrl: links?.previewUrl ?? null,
       claimUrl: links?.claimUrl ?? null,
+      evolveUrl: links?.evolveUrl ?? null,
     };
   };
   const restaurantRows: RestaurantTableRow[] = [

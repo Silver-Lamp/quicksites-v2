@@ -22,9 +22,10 @@ export type RestaurantTableRow = {
   reviewCount: number | null;
   previewUrl: string | null;
   claimUrl: string | null;
+  evolveUrl?: string | null;
 };
 
-type Built = { previewUrl: string; claimUrl: string; menuItems?: number; menuSource?: string; droppedItems?: number; droppedPrices?: number; alreadyBuilt?: boolean };
+type Built = { previewUrl: string; claimUrl: string; evolveUrl?: string | null; menuItems?: number; menuSource?: string; droppedItems?: number; droppedPrices?: number; alreadyBuilt?: boolean };
 
 const GROUP_TAG: Record<RestaurantTableRow['group'], { text: string; cls: string }> = {
   call: { text: 'call first', cls: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' },
@@ -36,7 +37,7 @@ const GROUP_TAG: Record<RestaurantTableRow['group'], { text: string; cls: string
 
 export default function RestaurantTable({ rows, token, repName }: { rows: RestaurantTableRow[]; token: string; repName: string }) {
   const [built, setBuilt] = React.useState<Record<string, Built>>(() =>
-    Object.fromEntries(rows.filter((r) => r.previewUrl && r.claimUrl).map((r) => [r.prospectId, { previewUrl: r.previewUrl!, claimUrl: r.claimUrl!, alreadyBuilt: true }])),
+    Object.fromEntries(rows.filter((r) => r.previewUrl && r.claimUrl).map((r) => [r.prospectId, { previewUrl: r.previewUrl!, claimUrl: r.claimUrl!, evolveUrl: r.evolveUrl ?? null, alreadyBuilt: true }])),
   );
   const [busy, setBusy] = React.useState<string | null>(null);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -58,7 +59,7 @@ export default function RestaurantTable({ rows, token, repName }: { rows: Restau
         setErrors((e) => ({ ...e, [r.prospectId]: why }));
         return;
       }
-      setBuilt((b) => ({ ...b, [r.prospectId]: { previewUrl: j.previewUrl, claimUrl: j.claimUrl, menuItems: j.menuItems, menuSource: j.menuSource, droppedItems: j.droppedItems, droppedPrices: j.droppedPrices, alreadyBuilt: !!j.alreadyBuilt } }));
+      setBuilt((b) => ({ ...b, [r.prospectId]: { previewUrl: j.previewUrl, claimUrl: j.claimUrl, evolveUrl: j.evolveUrl ?? null, menuItems: j.menuItems, menuSource: j.menuSource, droppedItems: j.droppedItems, droppedPrices: j.droppedPrices, alreadyBuilt: !!j.alreadyBuilt } }));
     } catch {
       setErrors((e) => ({ ...e, [r.prospectId]: 'Network hiccup — try again.' }));
     } finally {
@@ -136,6 +137,9 @@ export default function RestaurantTable({ rows, token, repName }: { rows: Restau
                       ) : b ? (
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                           <a href={b.previewUrl} target="_blank" rel="noopener noreferrer" className="text-sky-300 hover:underline">Open it →</a>
+                          {b.evolveUrl && (
+                            <a href={b.evolveUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-300 hover:underline">Evolve page (show this) →</a>
+                          )}
                           <button type="button" onClick={() => copy(r.prospectId, b.claimUrl)} className="text-zinc-200 hover:underline">
                             {copied === r.prospectId ? 'Copied' : 'Copy claim link'}
                           </button>

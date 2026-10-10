@@ -29,7 +29,7 @@ type Row = {
 };
 type Groups = { call: Row[]; thirdParty: Row[]; siteOnly: Row[]; leaveAlone: Row[]; unchecked: Row[] };
 type Loaded = { groups: Groups; total: number; checkedOn: string | null };
-type Built = { editorUrl: string; claimUrl: string; slug: string; menuSource?: string; menuItems?: number; droppedItems?: number };
+type Built = { editorUrl: string; claimUrl: string; evolveUrl?: string; slug: string; menuSource?: string; menuItems?: number; droppedItems?: number };
 
 const GROUP_META: Array<{ key: keyof Groups; title: string; blurb: string; tone: string; build: boolean }> = [
   { key: 'call', title: 'Call first — a site, no online ordering found', blurb: 'Nobody charges them for orders today. Build the ordering page from their own menu and walk in with it.', tone: 'border-emerald-500/30 bg-emerald-500/[0.05]', build: true },
@@ -130,7 +130,7 @@ export default function NoOrderingClient({ cities, initialCity, initialRegion }:
         setErrors((e) => ({ ...e, [row.id]: r?.error ?? j?.error ?? `HTTP ${res.status}` }));
         return;
       }
-      setBuilt((b) => ({ ...b, [row.id]: { editorUrl: r.editorUrl, claimUrl: r.claimUrl, slug: r.slug, menuSource: r.menuSource, menuItems: r.summary?.menuItems, droppedItems: r.summary?.droppedItems?.length } }));
+      setBuilt((b) => ({ ...b, [row.id]: { editorUrl: r.editorUrl, claimUrl: r.claimUrl, evolveUrl: r.evolveUrl, slug: r.slug, menuSource: r.menuSource, menuItems: r.summary?.menuItems, droppedItems: r.summary?.droppedItems?.length } }));
     } finally {
       setBusy(null);
     }
@@ -234,9 +234,15 @@ export default function NoOrderingClient({ cities, initialCity, initialRegion }:
                                 <td className="py-1.5 pr-3 text-right text-zinc-400">{typeof r.rating === 'number' && r.rating > 0 ? `${r.rating}★ · ${r.review_count ?? 0}` : '—'}</td>
                                 <td className="py-1.5 pr-3 text-xs">
                                   {b ? (
-                                    <a href={b.editorUrl} className="text-emerald-300 hover:underline">open draft →</a>
+                                    <span className="space-x-2">
+                                      <a href={b.editorUrl} className="text-emerald-300 hover:underline">open draft →</a>
+                                      <a href={`/evolve/${r.id}`} target="_blank" rel="noopener noreferrer" className="text-sky-300 hover:underline">Evolve page →</a>
+                                    </span>
                                   ) : r.template_id ? (
-                                    <a href={`/admin/templates/${r.template_id}`} className="text-sky-300 hover:underline">{r.status === 'claimed' ? 'claimed' : 'built'} →</a>
+                                    <span className="space-x-2">
+                                      <a href={`/admin/templates/${r.template_id}`} className="text-sky-300 hover:underline">{r.status === 'claimed' ? 'claimed' : 'built'} →</a>
+                                      <a href={`/evolve/${r.id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-300 hover:underline">Evolve page →</a>
+                                    </span>
                                   ) : (
                                     <span className="text-zinc-600">—</span>
                                   )}

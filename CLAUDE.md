@@ -967,7 +967,11 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   survives only if its name is in that corpus; an unconfirmed price is dropped, the dish kept) —
   its one measured false drop is a real sandwich the model renamed. Operator surface:
   **`/admin/restaurants/no-ordering`** (sidebar → Restaurants → No Online Ordering): sweep a city's
-  restaurants, re-check sites, build ordering pages from their menus.
+  restaurants, re-check sites, build ordering pages from their menus. **Pitch page
+  `/evolve/<prospectId>`** (noindex, needs a built draft): why evolve · the provider's PUBLISHED
+  pricing (`site_provider`, `20260878`, read from markup; labelled, plan disclaimed) · their site
+  and the ordering draft side by side in iframes (frameability read from their headers) · claim /
+  book a call · a matrix whose every evolved row names where it is true in code. `lib/evolve/*`.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

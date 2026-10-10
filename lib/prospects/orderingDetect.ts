@@ -17,6 +17,7 @@
 // subpage was the known blind spot of the first (homepage-only) read.
 
 import { assertPublicHttpUrl, readCapped } from '@/lib/rebuild/scrapeSite';
+import { detectSiteProvider, type SiteProvider } from '@/lib/prospects/siteProvider';
 
 export type OrderingPlatform =
   | 'toast'
@@ -159,7 +160,7 @@ async function fetchHtml(url: string, fetchImpl: typeof fetch): Promise<{ html: 
 }
 
 export type OrderingReadResult =
-  | { ok: true; detection: OrderingDetection; pagesRead: number }
+  | { ok: true; detection: OrderingDetection; pagesRead: number; provider: SiteProvider }
   | { ok: false; reason: 'unreachable' | 'bad_url' };
 
 /**
@@ -178,6 +179,7 @@ export async function readOrderingPlatform(website: string, fetchImpl: typeof fe
   const home = await fetchHtml(url, fetchImpl);
   if (!home) return { ok: false, reason: 'unreachable' };
   let detection = detectOrderingPlatform(home.html);
+  const provider = detectSiteProvider(home.html);
   let pagesRead = 1;
   if (detection.platform === 'none') {
     for (const sub of orderingSubpageLinks(home.html, home.finalUrl)) {
@@ -191,5 +193,5 @@ export async function readOrderingPlatform(website: string, fetchImpl: typeof fe
       }
     }
   }
-  return { ok: true, detection, pagesRead };
+  return { ok: true, detection, pagesRead, provider };
 }

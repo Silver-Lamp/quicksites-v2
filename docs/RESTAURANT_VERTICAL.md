@@ -171,6 +171,13 @@ browser UA gets the JavaScript shell. Lasagna 16.65 is on the PASTAS page. **A v
 against the wrong rendering reads exactly like proof** — §9's wrong-instance failure, with the
 instance being *which HTML the server chose to send*. To verify a built menu, rebuild the
 scraper's own corpus (`scrapeSite` + `scrapeMenuPages` + `evidenceCorpus`) and search THAT.
+**The operator's surface is `/admin/restaurants/no-ordering`** (sidebar → Restaurants → *No
+Online Ordering*): pick or type a city → *Sweep restaurants here* (Places restaurant/cafe/bar;
+the sweep reads each site as it goes) or *Re-check sites* for a city swept before the signal
+existed → the five groups with *Build ordering page* on call / app-only rows
+(`POST /api/admin/prospects/build { mode: 'from_site' }`). Data: `lib/prospects/noOrderingList.ts`
++ `GET /api/admin/prospects/no-ordering`. The city chips show `no-ordering / restaurants` so the
+segment's size is visible before a click.
 What survived the mistake: `lib/rebuild/menuEvidence.ts`, a check that an item's normalised name
 is in the scraped corpus (a confirmed dish with an unconfirmed price keeps the dish and loses the
 price; an emptied section is dropped), applied in `buildDraftFromSite` before assembly and

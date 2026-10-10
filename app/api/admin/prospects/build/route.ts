@@ -15,6 +15,7 @@ import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { getProspect, markProspectBuilt } from '@/lib/outreach/prospects';
 import { buildDraftFromListing, BuildDraftError } from '@/lib/outreach/buildDraftFromListing';
+import { buildDraftFromSite, BuildFromSiteError } from '@/lib/outreach/buildDraftFromSite';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 // Shared with the nightly pipeline (lib/tradeSites/pipeline.ts) so both build the same draft.
 import { listingForProspect } from '@/lib/outreach/listingForProspect';
@@ -37,6 +38,7 @@ export async function POST(req: Request) {
   }
 
   const ids: string[] = Array.isArray(body.prospectIds) ? body.prospectIds.map(String).filter(Boolean) : [];
+  const mode: 'listing' | 'from_site' = body.mode === 'from_site' ? 'from_site' : 'listing';
   if (!ids.length) return NextResponse.json({ error: 'No prospects selected.' }, { status: 400 });
   if (ids.length > MAX_BATCH) {
     return NextResponse.json({ error: `Build at most ${MAX_BATCH} at a time.` }, { status: 400 });
@@ -53,6 +55,34 @@ export async function POST(req: Request) {
       results.push({ prospectId: id, ok: true, skipped: true, templateId: p.template_id });
       continue;
     }
+    // mode 'from_site': a restaurant WITH a website → the ordering draft is built from the menu it
+    // already published (lib/outreach/buildDraftFromSite.ts), never from listing photos. Same
+    // shape as the rep route; only a restaurant with a website qualifies.
+    if (mode === 'from_site') {
+      if (p.industry_key !== 'restaurant' || !p.website) {
+        results.push({ prospectId: id, ok: false, error: p.website ? 'not_a_restaurant' : 'no_website' });
+        continue;
+      }
+      try {
+        const built = await buildDraftFromSite({ website: p.website, operatorId: operator.id, fallbackName: p.business_name, fallbackPhone: p.phone });
+        await markProspectBuilt(id, built.id);
+        results.push({
+          prospectId: id,
+          ok: true,
+          templateId: built.id,
+          slug: built.slug,
+          industryKey: 'restaurant',
+          editorUrl: `/admin/templates/${built.id}`,
+          claimUrl: `/claim-site/${built.id}?token=${encodeURIComponent(mintSiteClaimToken(built.id))}`,
+          menuSource: built.summary.menuItems > 0 ? 'site' : 'none',
+          summary: built.summary,
+        });
+      } catch (e) {
+        results.push({ prospectId: id, ok: false, error: e instanceof BuildFromSiteError ? e.code : 'build_failed', detail: e instanceof Error ? e.message : undefined });
+      }
+      continue;
+    }
+
     try {
       const listing = await listingForProspect(p);
       // ⚠️ PASS THE PROSPECT'S OWN INDUSTRY. It is the category the operator swept for, stored on

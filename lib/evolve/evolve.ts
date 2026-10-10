@@ -48,7 +48,12 @@ export const COPY = {
   nextTitle: 'Your site, evolved',
   nextNote: 'Built from your own menu and photos. Prices are shown as we read them and are confirmed by you before anything goes live. Tap a dish to try ordering — it is a preview, nothing is charged.',
   nextNoMenuTitle: 'Your menu, next',
-  nextNoMenu: 'We have not been able to read your menu from your site yet, so there is nothing honest to show here. On a call we go through it with you, and nothing is shown to customers before you confirm it.',
+  nextNoMenu: 'We have not been able to read your menu from your site yet, so we will not show you a guess. On a call we go through it with you, and nothing is shown to customers before you confirm it.',
+  // The sample shown in the no-menu case. ⚠️ A SAMPLE, SAID TWICE: a fictional restaurant from our
+  // own starter set, never another real business's draft, and the note says it is not theirs.
+  exampleTitle: 'What an ordering page looks like',
+  exampleNote: (sample: string) => `A sample — ${sample} is not a real restaurant and this is not your menu. Tap a dish to try ordering; nothing is charged. Yours is built from your own menu once we have read it with you.`,
+  ctaOpenExample: 'Open the sample',
   portalTitle: 'What you get when an order comes in',
   portal: [
     'A text and an email with the items, the moment the order is paid.',
@@ -86,6 +91,13 @@ export type EvolveInput = {
   menuHost: string | null;
 };
 
+/**
+ * The sample ordering site framed when a restaurant's own menu has not been read: a published,
+ * fictional starter of ours with a menu and an order bar. Served on the platform host so it
+ * carries no claim bar and exists regardless of the menu host. Checked live by the deploy chain.
+ */
+export const EXAMPLE_SITE = { slug: 'starter-restaurant', name: 'The Copper Kettle' } as const;
+
 export type EvolveModel = {
   copy: typeof COPY;
   businessName: string;
@@ -97,6 +109,10 @@ export type EvolveModel = {
   evolvedUrl: string | null;
   /** The evolved draft for FRAMING: claim bar and preview strip hidden. Null when no menu. */
   evolvedFrameUrl: string | null;
+  /** The sample site, framed in exhibit mode — only when there is no menu of their own. */
+  exampleFrameUrl: string | null;
+  exampleUrl: string | null;
+  exampleName: string;
   hasMenu: boolean;
   /** Null when there is no menu — the owner cannot be asked to take a page we could not fill. */
   claimUrl: string | null;
@@ -170,6 +186,9 @@ export function buildEvolveModel(input: EvolveInput): EvolveModel {
     currentFrameable: input.currentFrameable,
     evolvedUrl,
     evolvedFrameUrl,
+    exampleFrameUrl: hasMenu ? null : `${base}/sites/${EXAMPLE_SITE.slug}?exhibit=1`,
+    exampleUrl: hasMenu ? null : `${base}/sites/${EXAMPLE_SITE.slug}`,
+    exampleName: EXAMPLE_SITE.name,
     hasMenu,
     claimUrl,
     callUrl,

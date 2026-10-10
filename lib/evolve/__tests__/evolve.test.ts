@@ -14,7 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { stripComments } from '@/test/stripComments';
-import { buildEvolveModel, COPY, draftHasMenu, nowLineFor } from '@/lib/evolve/evolve';
+import { buildEvolveModel, COPY, draftHasMenu, nowLineFor, EXAMPLE_SITE } from '@/lib/evolve/evolve';
 import { evolveFeatureRows } from '@/lib/evolve/features';
 import { detectSiteProvider, providerPublishedPricing } from '@/lib/prospects/siteProvider';
 import { frameableFromHeaders } from '@/lib/evolve/frameable';
@@ -88,13 +88,21 @@ describe('what they are likely paying', () => {
 });
 
 describe('the exhibits never contradict the prose', () => {
-  it('no menu in the draft → no evolved frame, no "take it", the call is the only step', () => {
+  it('no menu in the draft → no evolved frame, no "take it", the call is the only step — and a SAMPLE site is framed, labelled as one', () => {
     const m = buildEvolveModel({ ...base, siteProvider: null, draftHasMenu: false });
     expect(m.hasMenu).toBe(false);
     expect(m.evolvedUrl).toBeNull();
     expect(m.evolvedFrameUrl).toBeNull();
     expect(m.claimUrl).toBeNull();
     expect(m.callUrl).toBe('https://www.quicksites.ai/book');
+    expect(m.exampleFrameUrl).toBe(`https://www.quicksites.ai/sites/${EXAMPLE_SITE.slug}?exhibit=1`);
+    expect(m.exampleUrl).toBe(`https://www.quicksites.ai/sites/${EXAMPLE_SITE.slug}`);
+    expect(COPY.exampleNote(m.exampleName)).toMatch(/not a real restaurant/);
+    expect(COPY.exampleNote(m.exampleName)).toMatch(/not your menu/);
+    // The sample is OUR fictional starter, never another real business's draft.
+    expect(EXAMPLE_SITE.slug).toMatch(/^starter-/);
+    // With a menu, no sample.
+    expect(buildEvolveModel({ ...base, siteProvider: null }).exampleFrameUrl).toBeNull();
   });
   it('with a menu, the framed draft is the exhibit URL and the opened one is the normal one', () => {
     const m = buildEvolveModel({ ...base, siteProvider: null, refCode: 'abdou' });
@@ -148,7 +156,9 @@ describe('source guards', () => {
   const page = read('app/evolve/[prospectId]/page.tsx');
   it('noindex; one plain iframe (evolved) + a ScaledFrame (current); no-menu and unframeable fallbacks; a built draft required; no marketing nav', () => {
     expect(page).toMatch(/robots: \{ index: false/);
-    expect((page.match(/<iframe/g) ?? []).length).toBe(1);
+    // Two plain iframes now: the evolved draft (menu branch) and the sample (no-menu branch).
+    expect((page.match(/<iframe/g) ?? []).length).toBe(2);
+    expect(page).toMatch(/m\.exampleFrameUrl && m\.exampleUrl/);
     expect(page).toMatch(/<ScaledFrame/);
     expect(page).toMatch(/currentFrameable \?/);
     expect(page).toMatch(/m\.hasMenu && m\.evolvedFrameUrl/);

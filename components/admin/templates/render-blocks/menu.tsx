@@ -9,7 +9,7 @@ import FoodIcon from '@/components/sites/food-icon';
 import { readMenuIconSet, type MenuIconSet } from '@/lib/menu/foodIcons';
 import { readVenmoHandle } from '@/lib/payments/venmo';
 import {
-  assessFreshness,
+  freshnessForTemplate,
   freshnessNote,
   priceOrConfirm,
   type MenuFreshness,
@@ -389,7 +389,9 @@ export default function RenderMenu(props: any) {
   // backwards: the page presents as the business's site, so an unverifiable number is a stronger
   // claim there than in a list of results. Wired here 2026-08-09 after an import batch added 14
   // more undated menus.
-  const freshness = assessFreshness(content);
+  // A template flagged meta.sample (our fictional starter, shown as a sample on the Evolve page)
+  // has no stale price to hide — lib/menu/menuFreshness.ts#freshnessForTemplate.
+  const freshness = freshnessForTemplate(content, props?.template?.data ?? props?.template);
   const staleNote = freshnessNote(freshness);
 
   const nonEmpty = sections.filter((s) => s && s.name && Array.isArray(s.items) && s.items.length > 0);

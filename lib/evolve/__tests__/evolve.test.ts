@@ -111,7 +111,10 @@ describe('source guards', () => {
   const page = read('app/evolve/[prospectId]/page.tsx');
   it('noindex, two iframes, a link-card fallback when their site refuses framing, requires a built draft', () => {
     expect(page).toMatch(/robots: \{ index: false/);
-    expect((page.match(/<iframe/g) ?? []).length).toBe(2);
+    // One plain iframe for the (mobile-first) evolved site, one ScaledFrame for their desktop site.
+    expect((page.match(/<iframe/g) ?? []).length).toBe(1);
+    expect(page).toMatch(/<ScaledFrame/);
+    expect(read('components/evolve/scaled-frame.tsx')).toMatch(/<iframe/);
     expect(page).toMatch(/currentFrameable \?/);
     expect(page).toMatch(/!p\.template_id/);
   });

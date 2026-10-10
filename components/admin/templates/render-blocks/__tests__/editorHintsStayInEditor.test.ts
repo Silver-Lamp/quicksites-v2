@@ -129,8 +129,13 @@ describe('isEditorContext fails closed toward PUBLIC', () => {
     expect(src).toMatch(/if \(previewOnly\) return true/);
   });
 
-  it('detects both editor shapes — iframe and inline', () => {
-    expect(src).toContain('window.parent !== window');
+  it('detects both editor shapes — the editor preview frame and inline', () => {
+    // ⚠️ Not "any iframe". The Evolve page frames a draft as an exhibit on a cross-origin host
+    // and the owner saw "Paste your embed ID" (2026-10-10). The frame counts only when its
+    // parent is same-origin on an /admin/ path; a cross-origin parent throws, which is "public".
+    expect(src).toMatch(/window\.parent\.location\.pathname/);
+    expect(src).toMatch(/isEditorParentPath/);
+    expect(src).not.toMatch(/return inIframe \|\|/);
     expect(src).toContain('qs-editor');
   });
 });

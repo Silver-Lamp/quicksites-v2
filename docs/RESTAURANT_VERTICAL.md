@@ -210,6 +210,13 @@ iframe as the editor; it now requires a same-origin `/admin/` parent, and the He
 launcher stays out of frames. Copy: the h1 is the offer ("Your menu, orderable from a phone. Your
 site stays as it is."), the fee is in the third paragraph and the matrix, no "Stripe"/"call-ahead"/
 "claim" jargon, the paying box is retitled when it has no figure, no marketing nav on the page.
+**Preview ordering in the exhibit (same day):** the framed draft's menu rows with no catalog id
+get a preview *Add to order* (`serverData.menu.previewOrdering`, exhibit only) feeding
+`components/sites/preview-order-drawer.tsx` — lines, quantities, a subtotal from the menu's own
+prices (unpriced → zero, "price to confirm"), and an order button that ends on *"Nothing was
+charged and no order was sent"* + what happens when ordering is on. No fetch, no beacon, no record
+(`lib/menu/previewOrder.ts`, source-guarded). Demand capture is OFF in an exhibit — the owner's
+own taps are not demand. Real ordering (a catalog id) is untouched.
 What survived the mistake: `lib/rebuild/menuEvidence.ts`, a check that an item's normalised name
 is in the scraped corpus (a confirmed dish with an unconfirmed price keeps the dish and loses the
 price; an emptied section is dropped), applied in `buildDraftFromSite` before assembly and

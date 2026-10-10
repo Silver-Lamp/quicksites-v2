@@ -2,12 +2,14 @@
 //
 // A menu item survives only if the restaurant's own site says it exists.
 //
-// ⚠️ THE FIRST FROM-SITE BUILD INVENTED A DISH (2026-10-10). Rock Island Pizza's draft carried
-// "Lasagna $16.65" and "Spaghetti $14.65"; lasagna appears nowhere on pizzarockisland.com and
-// neither price does. The model's prompt already says not to invent prices "unless the source
-// says so verbatim", and it invented anyway — a prompt is a request, this is a check. Same class
-// as #738 (11 of 26 listing drafts with an invented menu), one layer later: a dish the business
-// never sold, priced, under its name, on a page presenting as its own ordering page.
+// ⚠️ BUILT ON A FALSE ALARM, KEPT AS A CHECK (2026-10-10). Rock Island Pizza's first draft
+// carried "Lasagna $16.65"; a Chrome-UA fetch of the (Wix) site showed no lasagna and the draft
+// was declared invented and deleted. The scraper's bot UA is served the full text, where the
+// lasagna is — the grep was true about the wrong rendering. The invented-menu class (#738: 11
+// of 26 listing drafts) is real, the prompt's "no prices unless verbatim" is only a request, and
+// a check costs nothing when the model is right. Its measured false drop so far: "Roast Beef
+// Sandwich", a real item the site lists as "Roast Beef, Turkey, or Ham". To verify a built
+// menu, search THIS corpus (evidenceCorpus of the scraper's output), never a browser fetch.
 //
 // Rule, in the order it is applied:
 //   1. an item whose NAME is not in the scraped text is DROPPED (an unconfirmed dish is a claim);

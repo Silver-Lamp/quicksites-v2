@@ -19,6 +19,23 @@ import { inferSiteSpec } from '@/lib/rebuild/inferSiteSpec';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
 import { filterMenuToEvidence, evidenceCorpus } from '@/lib/rebuild/menuEvidence';
 
+/** Every copy of every menu block (blocks + content_blocks, content + props) — CLAUDE.md §8. */
+export function stampMenuSourcedAt(data: any, iso: string): number {
+  let n = 0;
+  for (const pg of data?.pages ?? []) {
+    for (const b of [...(pg?.blocks ?? []), ...(pg?.content_blocks ?? [])]) {
+      if (b?.type !== 'menu') continue;
+      for (const copy of [b.content, b.props]) {
+        if (copy && typeof copy === 'object') {
+          copy.sourced_at = iso;
+          n += 1;
+        }
+      }
+    }
+  }
+  return n;
+}
+
 function uuid(): string {
   return globalThis.crypto?.randomUUID?.() ?? `id_${Math.random().toString(36).slice(2)}${Date.now()}`;
 }
@@ -89,6 +106,13 @@ export async function buildDraftFromSite(input: BuildFromSiteInput): Promise<Bui
     galleryImages: scraped.images,
     colorMode: scraped.colorMode,
   });
+  // ⚠️ A price read from the restaurant's LIVE site today is a dated price. The freshness rule
+  // (lib/menu/menuFreshness.ts) hides any price it cannot date — right for a photo of unknown
+  // age, wrong here: the exhibit said "call to confirm" beside dishes whose prices the owner had
+  // published that morning, while the preview drawer totalled them (2026-10-10). `sourced_at` is
+  // the spelling that rule accepts for "read from the source on this date"; only prices the
+  // evidence guard confirmed survive to carry it.
+  stampMenuSourcedAt(tpl.data, new Date().toISOString());
   tpl.data.meta = {
     ...(tpl.data.meta ?? {}),
     ordering_companion: true,

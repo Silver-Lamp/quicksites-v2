@@ -46,7 +46,7 @@ export const COPY = {
   nowPlatform: (platform: string) => `Online orders today: ${platform}.`,
   nowUnframeable: 'Your site does not allow itself to be shown inside another page, so open it in a new tab to compare.',
   nextTitle: 'Your site, evolved',
-  nextNote: 'Built from your own menu and photos. Prices are shown as we read them and are confirmed by you before anything goes live.',
+  nextNote: 'Built from your own menu and photos. Prices are shown as we read them and are confirmed by you before anything goes live. Tap a dish to try ordering — it is a preview, nothing is charged.',
   nextNoMenuTitle: 'Your menu, next',
   nextNoMenu: 'We have not been able to read your menu from your site yet, so there is nothing honest to show here. On a call we go through it with you, and nothing is shown to customers before you confirm it.',
   portalTitle: 'What you get when an order comes in',

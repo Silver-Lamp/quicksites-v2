@@ -31,6 +31,7 @@ import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
 import PreviewWatermark from '@/components/sites/preview-watermark';
 import MenuClaimBar from '@/components/sites/menu-claim-bar';
+import PreviewOrderDrawer from '@/components/sites/preview-order-drawer';
 import DemandCapture from '@/components/sites/demand-capture';
 import CompetitionBanner from '@/components/sites/competition-banner';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
@@ -744,15 +745,22 @@ export default async function SitePreviewPage({
         // hides them. The wrapper owns the surface now; removing the class here is what makes the
         // site's backdrop actually reach a pixel. A second opaque paint is how it stayed hidden
         // even after the renderer stopped painting one.
-        serverData={cityMenuFeed ? { menu_finder: cityMenuFeed } : undefined}
+        serverData={{
+          ...(cityMenuFeed ? { menu_finder: cityMenuFeed } : {}),
+          // Exhibit: menu rows get a preview "Add to order" feeding the drawer below.
+          ...(exhibit ? { menu: { previewOrdering: true } } : {}),
+        }}
       />
       {apexDirectory && <RestaurantCompetitionDirectory dir={apexDirectory} compact />}
       {/* ?exhibit=1: the draft is being shown INSIDE another page of ours (the Evolve page frames
           it beside the restaurant's current site). The claim bar and preview strip are that
           page's job — inside the frame they sold a different product at a different price and
-          put three "claim" doors on one screen (UX review, 2026-10-10). Content unchanged. */}
+          put three "claim" doors on one screen (UX review, 2026-10-10). Content unchanged.
+          ⚠️ Demand capture stays OFF in an exhibit: the owner tapping "order ahead" on their own
+          page is not demand, and it would count toward the number the claim pitch quotes. */}
       {showWatermark && !exhibit && <PreviewWatermark hideCornerBadge={showClaimBar} />}
-      {demandEnabled && <DemandCapture templateId={siteRow.id} phone={demandPhone} />}
+      {demandEnabled && !exhibit && <DemandCapture templateId={siteRow.id} phone={demandPhone} />}
+      {exhibit && <PreviewOrderDrawer />}
       {showClaimBar && !exhibit && claimToken && (
         <MenuClaimBar
           templateId={siteRow.id}

@@ -918,8 +918,15 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   on. Older sites carried a `tel:` link and worked, which is why it read as per-site. Found by
   the owner clicking, in desktop Chrome; nothing errors when a button goes nowhere. The decision
   is now pure in `lib/sites/heroCta.ts`: `/` or empty → contact form; a contact jump whose label
-  says "call" dials the resolved phone (hero `cta_phone`, else `templates.phone` — the geo sites'
+  says "call" dials the resolved phone (hero `cta_phone`, else `phoneFromSite` — the geo sites'
   tracking number); a call with no number falls back to the form rather than hiding the button;
+  ⚠️ **It took two PRs, and the second is the lesson (#1140).** #1139 read the phone from
+  `templates.phone`, a COLUMN, and the public render serves a SNAPSHOT (`published_sites` →
+  `template_versions.data`, or `snapshots.data` on a custom domain) which has no columns — so
+  after it deployed, the live "Call Now" still went to `#contact` while the editor, which hands
+  the hero the draft ROW, showed it dialling. `phoneFromSite` reads the column when present, else
+  `data.meta.contact.phone` (where `pushTrackingNumberToSite` writes the number) and the other
+  contact paths push walks. **Verify a renderer change on the served page, never in the editor.**
   author anchors, `tel:` links, real pages and explicit `cta_action` unchanged. Fixed in the
   renderer so every served site changed without a republish; defaults now seed `#contact`.
   Pinned by `lib/sites/__tests__/heroCta.test.ts` with source guards over all three defaults.

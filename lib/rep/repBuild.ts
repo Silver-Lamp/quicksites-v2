@@ -24,6 +24,8 @@ export function withRef(url: string, code: string): string {
 export function repBuildLinks(input: { slug: string; industryKey: string | null; prospectId: string; code: string; base?: string; menuHost?: string | null }): {
   previewUrl: string;
   claimUrl: string;
+  /** The "Evolve your site" pitch page — restaurants only (it needs a current site to sit beside). */
+  evolveUrl: string | null;
 } {
   const base = (input.base ?? 'https://www.quicksites.ai').replace(/\/+$/, '');
   const isRestaurant = input.industryKey === 'restaurant';
@@ -33,6 +35,7 @@ export function repBuildLinks(input: { slug: string; industryKey: string | null;
     previewUrl: withRef(preview, input.code),
     // The tracked link: mints a fresh claim token on visit and counts the open.
     claimUrl: withRef(`${base}/go/${input.prospectId}`, input.code),
+    evolveUrl: isRestaurant ? withRef(`${base}/evolve/${input.prospectId}`, input.code) : null,
   };
 }
 

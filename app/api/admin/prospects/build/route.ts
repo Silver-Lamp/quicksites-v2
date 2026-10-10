@@ -74,6 +74,7 @@ export async function POST(req: Request) {
           industryKey: 'restaurant',
           editorUrl: `/admin/templates/${built.id}`,
           claimUrl: `/claim-site/${built.id}?token=${encodeURIComponent(mintSiteClaimToken(built.id))}`,
+          evolveUrl: `/evolve/${id}`,
           menuSource: built.summary.menuItems > 0 ? 'site' : 'none',
           summary: built.summary,
         });

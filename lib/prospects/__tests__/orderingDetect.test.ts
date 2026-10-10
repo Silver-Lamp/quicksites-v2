@@ -51,7 +51,7 @@ describe('readOrderingPlatform — a failed read is not a finding', () => {
       return page('<a href="/order">Order online</a>', url);
     }) as unknown as typeof fetch;
     const r = await readOrderingPlatform('https://example.com', fetchImpl);
-    expect(r).toEqual({ ok: true, detection: expect.objectContaining({ platform: 'square' }), pagesRead: 2 });
+    expect(r).toEqual({ ok: true, detection: expect.objectContaining({ platform: 'square' }), pagesRead: 2, provider: 'custom' });
   });
 
   it('an unreachable site is unreachable, never none', async () => {

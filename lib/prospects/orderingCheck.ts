@@ -74,7 +74,7 @@ export async function checkOrderingForProspects(input: OrderingCheckInput = {}):
     const { platform, evidence } = read.detection;
     const { error: upErr } = await supabaseAdmin
       .from('outreach_prospects')
-      .update({ ordering_platform: platform, ordering_evidence: evidence, ordering_checked_at: new Date().toISOString() })
+      .update({ ordering_platform: platform, ordering_evidence: evidence, site_provider: read.provider, ordering_checked_at: new Date().toISOString() })
       .eq('id', r.id);
     if (upErr) return;
     result.checked += 1;

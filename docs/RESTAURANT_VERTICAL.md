@@ -178,6 +178,23 @@ existed → the five groups with *Build ordering page* on call / app-only rows
 (`POST /api/admin/prospects/build { mode: 'from_site' }`). Data: `lib/prospects/noOrderingList.ts`
 + `GET /api/admin/prospects/no-ordering`. The city chips show `no-ordering / restaurants` so the
 segment's size is visible before a click.
+**"Evolve your site" — the pitch page for this segment (`/evolve/<prospectId>`, 2026-10-10).**
+One page per restaurant, public URL, noindex, reached from the rep's row ("Evolve page (show
+this)") and the admin page: *Why evolve your site* · *What you are likely paying today* · their
+current site and the evolved ordering site **side by side in two iframes** · the owner's side
+(text + email on a paid order, the orders page, their own Stripe) · *Claim it* (the tracked
+`/go/` link) and *Set up a call* (`/book`) · a feature matrix. Requires a built draft (404
+otherwise). Model is pure (`lib/evolve/evolve.ts`, matrix `features.ts`), copy held to the
+claim-postcard forbidden list plus a no-results-promise rule by `lib/evolve/__tests__`.
+⚠️ **"Likely paying" is the provider's PUBLISHED pricing, read from the compare registry, labelled
+as published, and the line says we cannot see their plan.** The provider comes from
+`outreach_prospects.site_provider` (`20260878`), read from the site's own markup by
+`lib/prospects/siteProvider.ts` during the ordering check (asset hosts + generator tags, never a
+brand name in prose); a provider we have no sourced pricing for is named without a figure, an
+unread site says so. ⚠️ **Their site may refuse framing**: `lib/evolve/frameable.ts` reads
+X-Frame-Options / CSP frame-ancestors at render and shows a link card instead of a blank box.
+⚠️ **Every "evolved" matrix row names where it is true in code** (`because`), so the matrix cannot
+promise a feature that does not exist; the "today" column asserts only what we observed.
 What survived the mistake: `lib/rebuild/menuEvidence.ts`, a check that an item's normalised name
 is in the scraped corpus (a confirmed dish with an unconfirmed price keeps the dish and loses the
 price; an emptied section is dropped), applied in `buildDraftFromSite` before assembly and

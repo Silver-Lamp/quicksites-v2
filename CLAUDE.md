@@ -958,11 +958,14 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   site-only / leave-alone / unchecked, and the rep table's **"Build their ordering page"** runs
   `buildDraftFromSite` (their published menu, `meta.ordering_companion`), with an SMS that says
   "your website stays as it is" first. The hand-typed `lib/vashon/restaurantOrdering.ts` lasted
-  one PR and was deleted. ⚠️ **The first real from-site build INVENTED "Lasagna $16.65"** on a
-  pizzeria that sells none — the prompt forbade it and the model did it anyway. A dish now
-  survives only if its name is in the scraped text (`lib/rebuild/menuEvidence.ts`, before
-  assembly, source-guarded); an unconfirmed price is dropped, the dish kept. **Verify a built menu
-  against the restaurant's live pages, never against the model's output.**
+  one PR and was deleted. ⚠️ **I declared the first from-site build had INVENTED "Lasagna
+  $16.65" — and the declaration was the error.** A Chrome-UA fetch of a Wix site returns the JS
+  shell; the scraper's bot UA gets the full text, where the lasagna is. A grep that found nothing
+  was true about the wrong rendering, and I deleted a correct draft on it. **Verify a built menu
+  against the SCRAPER'S corpus (`scrapeSite`+`scrapeMenuPages`+`evidenceCorpus`), never against a
+  browser fetch.** The check that came out of it stays (`lib/rebuild/menuEvidence.ts`: a dish
+  survives only if its name is in that corpus; an unconfirmed price is dropped, the dish kept) —
+  its one measured false drop is a real sandwich the model renamed.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

@@ -1,7 +1,13 @@
 /**
  * @jest-environment node
  */
-// lib/rebuild/__tests__/menuEvidence.test.ts — the Rock Island Pizza case, pinned.
+// lib/rebuild/__tests__/menuEvidence.test.ts
+//
+// A synthetic fixture shaped like a pizzeria menu. ⚠️ It is NOT a record that Rock Island
+// Pizza's draft invented lasagna — that was declared on 2026-10-10 and was wrong (the dish is on
+// the site; a browser-UA fetch had returned the JS shell). The rule it pins still holds: an item
+// whose name the scraped corpus does not contain is dropped, an unconfirmed price is dropped
+// with the dish kept, an emptied section goes.
 import fs from 'node:fs';
 import path from 'node:path';
 import { filterMenuToEvidence, normalizeForEvidence, evidenceCorpus } from '@/lib/rebuild/menuEvidence';

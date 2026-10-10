@@ -63,8 +63,14 @@ function Card({ entry, featured }: { entry: Entry; featured?: boolean }) {
           <RestaurantInitials name={entry.business_name} />
         )}
         {entry.is_winner && (
-          <span className="absolute left-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-zinc-950 shadow">
-            ★ Featured
+          // ⚠️ Says WHY it is featured. A neutral listing with one entry on top is a listing carrying
+          // a rank; the honest-scaffold standard ("Rankings and listings", 2026-10-09) requires the
+          // basis per entry. The basis here is first-to-claim, never payment or merit.
+          <span
+            className="absolute left-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-zinc-950 shadow"
+            title="Featured because this restaurant was the first to claim its site. Not paid, not a rating."
+          >
+            ★ Featured · first to claim, unpaid
           </span>
         )}
       </div>

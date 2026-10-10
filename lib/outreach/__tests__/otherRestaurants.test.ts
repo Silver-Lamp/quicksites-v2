@@ -56,5 +56,7 @@ describe('the directory carries the list end to end', () => {
     expect(block).toMatch(/href=\{o\.website\} target="_blank" rel="noopener noreferrer"/);
     // Live only — never written into the block's snapshot.
     expect(block).not.toMatch(/others:\s*\[/);
+    // The featured entry says WHY it is featured (honest-scaffold standard, "Rankings and listings").
+    expect(block).toMatch(/Featured · first to claim, unpaid/);
   });
 });

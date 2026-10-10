@@ -509,7 +509,7 @@ export const blockContentSchemaMap = {
         if (c.headline == null || String(c.headline).trim() === '') c.headline = 'Welcome';
         if (c.subheadline == null) c.subheadline = '';
         if (c.cta_text == null) c.cta_text = '';
-        if (c.cta_link == null) c.cta_link = '/';
+        if (c.cta_link == null) c.cta_link = '#contact';
         if (c.image_url == null) c.image_url = '';
 
         if (c.layout_mode == null) c.layout_mode = 'inline';
@@ -523,7 +523,7 @@ export const blockContentSchemaMap = {
         headline: z.string().min(1).default('Welcome'),
         subheadline: z.string().optional().default(''),
         cta_text: z.string().optional().default(''),
-        cta_link: z.string().optional().default('/'),
+        cta_link: z.string().optional().default('#contact'),
         // ⚠️ RELATIVE PATHS ARE VALID IMAGE SOURCES. This was z.string().url(), which rejects
         // a same-origin path — and our Places photo proxy stores exactly that
         // (/api/public/place-photo?ref=…, so the API key never reaches the browser). The
@@ -2338,7 +2338,7 @@ const HERO_DEFAULT_CONTENT = {
   headline: 'Welcome',
   subheadline: '',
   cta_text: '',
-  cta_link: '/',
+  cta_link: '#contact',
   image_url: '',
   layout_mode: 'inline',
   mobile_layout_mode: 'inline',

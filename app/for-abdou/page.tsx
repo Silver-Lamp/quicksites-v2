@@ -462,7 +462,13 @@ export default async function ForAbdouPage() {
               so you have something to show.
             </span>
           </p>
-          {tableRows.length > 0 && <NoSiteTable rows={tableRows} token={repToken} repName="Abdou" />}
+          {/* The tables break out of the 3xl reading column on wide screens — six columns do not
+              fit in 768px, and a clipped first column read as a broken page (owner, 2026-10-10). */}
+          {tableRows.length > 0 && (
+            <div className="lg:-mx-32 xl:-mx-56">
+              <NoSiteTable rows={tableRows} token={repToken} repName="Abdou" />
+            </div>
+          )}
           <p className="mt-3 text-xs text-zinc-500">
             A listing here means Google shows no website for them today. Check before you walk in — some
             will have a Facebook page or a site Google hasn't linked. Building takes about twenty seconds
@@ -504,7 +510,11 @@ export default async function ForAbdouPage() {
               {' '}— above about {toastBreakEven} online orders a month Toast costs them less, and it says so.
             </Card>
           </div>
-          {restaurantRows.length > 0 && <RestaurantTable rows={restaurantRows} token={repToken} repName="Abdou" />}
+          {restaurantRows.length > 0 && (
+            <div className="lg:-mx-32 xl:-mx-56">
+              <RestaurantTable rows={restaurantRows} token={repToken} repName="Abdou" />
+            </div>
+          )}
           <p className="mt-3 text-xs text-zinc-500">
             The ordering page is built from their own site and is theirs to claim; the text message says their
             website stays as it is. "Not checked" means nobody has read that site yet, not that it takes no

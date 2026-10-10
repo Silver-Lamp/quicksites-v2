@@ -82,7 +82,12 @@ function Row({ r, onDone }: { r: ReturnRow; onDone: () => void }) {
   return (
     <tr className="border-t border-neutral-800 align-top">
       <td className="px-3 py-2">
-        <div className="font-medium text-neutral-100">{r.to_name ?? r.business_name ?? '—'}</div>
+        <div className="font-medium text-neutral-100">
+          {r.to_name ?? r.business_name ?? '—'}
+          {r.kind && r.kind !== 'trade_claim' && (
+            <span className="ml-2 rounded-full border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-neutral-400">{r.kind.replace(/_/g, ' ')}</span>
+          )}
+        </div>
         <div className="text-xs text-neutral-500">{r.to_address ?? '—'}</div>
         {r.phone ? <div className="text-xs text-neutral-600">{r.phone}</div> : null}
         {r.closed_at ? (

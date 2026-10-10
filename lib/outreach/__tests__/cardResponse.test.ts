@@ -69,8 +69,35 @@ describe('source guards', () => {
     const src = fs.readFileSync(path.join(process.cwd(), 'app/go/[prospectId]/route.ts'), 'utf8');
     expect(src).toMatch(/EVENTS\.TRADE_CARD_LINK_VISITED/);
   });
-  it('the ops dashboard renders the funnel', () => {
+  it('the ops dashboard renders the funnel — once per card kind, through one section component', () => {
     const src = fs.readFileSync(path.join(process.cwd(), 'components/admin/ops-dashboard-client.tsx'), 'utf8');
-    expect(src).toMatch(/cardResponse\.visited/);
+    expect(src).toMatch(/function CardFunnelSection/);
+    expect(src).toMatch(/r\.visited - r\.preDeliveryVisited/);
+    expect(src).toMatch(/r=\{cardResponse\}/);
+    expect(src).toMatch(/r=\{evolveCardResponse\}/);
+  });
+});
+
+describe('one funnel per card kind (2026-10-10)', () => {
+  it('a kind filter counts only that card; absent kind on old rows reads as trade_claim', () => {
+    const mailings: CardMailingRow[] = [
+      { prospect_id: 'a', kind: 'trade_claim', created_at: '2026-10-01T00:00:00Z', status: 'created', expected_delivery_date: '2026-10-05', delivered_at: null, returned_at: null },
+      { prospect_id: 'b', kind: 'evolve', created_at: '2026-10-02T00:00:00Z', status: 'created', expected_delivery_date: '2026-10-06', delivered_at: null, returned_at: null },
+      { prospect_id: 'c', created_at: '2026-10-03T00:00:00Z', status: 'created', expected_delivery_date: '2026-10-07', delivered_at: null, returned_at: null },
+    ];
+    const prospects: CardProspectRow[] = ['a', 'b', 'c'].map((id) => ({ id, city: 'Vashon', region: 'WA', claim_link_visits: 0, claim_link_visited_at: null, claimed_at: null }));
+    expect(computeCardResponse(mailings, prospects, '2026-10-10').mailed).toBe(3);
+    expect(computeCardResponse(mailings, prospects, '2026-10-10', 'evolve').mailed).toBe(1);
+    expect(computeCardResponse(mailings, prospects, '2026-10-10', 'trade_claim').mailed).toBe(2);
+  });
+  it('every sender names its card, the loader takes a kind, and a /go scan bumps the piece', () => {
+    const src = (p: string) => fs.readFileSync(path.join(process.cwd(), p), 'utf8');
+    expect(src('lib/outreach/claimPostcardSend.ts')).toMatch(/kind: 'trade_claim'/);
+    expect(src('lib/outreach/evolvePostcardSend.ts')).toMatch(/kind: 'evolve'/);
+    expect(src('app/api/admin/prospects/mail-postcards/route.ts')).toMatch(/kind: 'competition'/);
+    expect(src('app/api/admin/guests/postcard/route.ts')).toMatch(/kind: 'guest'/);
+    expect(src('lib/outreach/cardResponseServer.ts')).toMatch(/if \(kind\) q = q\.eq\('kind', kind\)/);
+    expect(src('lib/ops/opsSnapshotServer.ts')).toMatch(/loadCardResponse\(undefined, 'evolve'\)/);
+    expect(src('app/go/[prospectId]/route.ts')).toMatch(/recordScanForProspect\(prospectId\)/);
   });
 });

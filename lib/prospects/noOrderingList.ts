@@ -14,6 +14,13 @@ export type AdminRestaurantRow = RestaurantRow & {
   categories: string[] | null;
   slug: string | null;
   ordering_evidence: string[] | null;
+  /** Response tracking — the same fields the claim-card funnel reads. */
+  postcard_sent_at: string | null;
+  claim_link_visits: number | null;
+  claim_link_visited_at: string | null;
+  claimed_at: string | null;
+  /** The latest real Evolve card mailed to this prospect, if any. */
+  card: { created_at: string; status: string; expected_delivery_date: string | null; delivered_at: string | null; returned_at: string | null; scans: number } | null;
 };
 
 export type RestaurantCity = { city: string; region: string | null; restaurants: number; checked: number; noOrdering: number };
@@ -25,7 +32,7 @@ export async function listRestaurantsByOrdering(input: { city: string; region?: 
 }> {
   let q = supabaseAdmin
     .from('outreach_prospects')
-    .select('id, business_name, phone, address, website, rating, review_count, ordering_platform, ordering_checked_at, ordering_evidence, template_id, status, categories')
+    .select('id, business_name, phone, address, website, rating, review_count, ordering_platform, ordering_checked_at, ordering_evidence, template_id, status, categories, postcard_sent_at, claim_link_visits, claim_link_visited_at, claimed_at')
     .eq('industry_key', 'restaurant')
     .not('website', 'is', null)
     .neq('website', '')
@@ -34,14 +41,30 @@ export async function listRestaurantsByOrdering(input: { city: string; region?: 
   if (input.region) q = q.ilike('region', input.region);
   const { data, error } = await q;
   if (error) throw new Error(`listRestaurantsByOrdering: ${error.message}`);
-  const base = ((data ?? []) as unknown as Omit<AdminRestaurantRow, 'slug'>[]).filter((r) => (r.business_name ?? '').trim() && looksLikeFoodBusiness(r.categories));
+  const base = ((data ?? []) as unknown as Omit<AdminRestaurantRow, 'slug' | 'card'>[]).filter((r) => (r.business_name ?? '').trim() && looksLikeFoodBusiness(r.categories));
   const templateIds = base.map((r) => r.template_id).filter((id): id is string => !!id);
   const slugById = new Map<string, string>();
   if (templateIds.length) {
     const { data: tpls } = await supabaseAdmin.from('templates').select('id, slug').in('id', templateIds);
     for (const t of (tpls ?? []) as Array<{ id: string; slug: string | null }>) if (t.slug) slugById.set(t.id, t.slug);
   }
-  const rows: AdminRestaurantRow[] = base.map((r) => ({ ...r, slug: r.template_id ? slugById.get(r.template_id) ?? null : null }));
+  // The latest real Evolve card per prospect — so a row says "mailed Oct 10 · in transit · 0 scans",
+  // the same facts the ops funnel aggregates.
+  const cardById = new Map<string, AdminRestaurantRow['card']>();
+  const prospectIds = base.map((r) => r.id);
+  if (prospectIds.length) {
+    const { data: cards } = await supabaseAdmin
+      .from('postcard_mailings')
+      .select('prospect_id, created_at, status, expected_delivery_date, delivered_at, returned_at, scans')
+      .eq('kind', 'evolve')
+      .neq('status', 'test')
+      .in('prospect_id', prospectIds)
+      .order('created_at', { ascending: false });
+    for (const c of (cards ?? []) as Array<{ prospect_id: string; created_at: string; status: string; expected_delivery_date: string | null; delivered_at: string | null; returned_at: string | null; scans: number }>) {
+      if (!cardById.has(c.prospect_id)) cardById.set(c.prospect_id, { created_at: c.created_at, status: c.status, expected_delivery_date: c.expected_delivery_date, delivered_at: c.delivered_at, returned_at: c.returned_at, scans: c.scans ?? 0 });
+    }
+  }
+  const rows: AdminRestaurantRow[] = base.map((r) => ({ ...r, slug: r.template_id ? slugById.get(r.template_id) ?? null : null, card: cardById.get(r.id) ?? null }));
   const checkedOn = rows.reduce<string | null>((m, r) => (r.ordering_checked_at && (!m || r.ordering_checked_at > m) ? r.ordering_checked_at : m), null);
   return { groups: groupRestaurantsByOrdering(rows), total: rows.length, checkedOn };
 }

@@ -38,8 +38,13 @@ const COLS =
   'id, created_at, updated_at, provider, lob_id, prospect_id, campaign_id, sent_by, to_name, to_address, status, expected_delivery_date, carrier, tracking_number, thumbnail_url, pdf_url, events, delivered_at, returned_at, scans, first_scanned_at, last_scanned_at';
 
 /** Record a freshly-mailed piece. Idempotent on lob_id (a retry updates in place). */
+/** Which card a mailing is — funnels are per kind (migration 20260879). */
+export type MailingKind = 'trade_claim' | 'competition' | 'evolve' | 'guest';
+
 export async function recordMailing(m: {
   lobId: string;
+  /** ⚠️ Name the card. The default exists only for the oldest caller; every new sender passes it. */
+  kind?: MailingKind;
   prospectId?: string | null;
   campaignId?: string | null;
   sentBy?: string | null;
@@ -55,6 +60,7 @@ export async function recordMailing(m: {
     {
       provider: 'lob',
       lob_id: m.lobId,
+      kind: m.kind ?? (m.campaignId ? 'competition' : 'trade_claim'),
       prospect_id: m.prospectId ?? null,
       campaign_id: m.campaignId ?? null,
       sent_by: m.sentBy ?? null,
@@ -134,6 +140,29 @@ export async function recordScan(campaignId: string, prospectId: string): Promis
       last_scanned_at: now,
       updated_at: now,
     })
+    .eq('id', (data as any).id);
+}
+
+/**
+ * A scan of a prospect's tracked link (/go/<id>) bumps that prospect's LATEST real card, of any
+ * kind. The trade-site and Evolve cards carry no campaign id, so recordScan (campaign-keyed)
+ * could never reach them — which is why every trade card's `scans` read 0 for a month while the
+ * prospect's own counter moved. Best-effort; the prospect counter stays the primary record.
+ */
+export async function recordScanForProspect(prospectId: string): Promise<void> {
+  const { data } = await supabaseAdmin
+    .from('postcard_mailings')
+    .select('id, scans, first_scanned_at')
+    .eq('prospect_id', prospectId)
+    .neq('status', 'test')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return;
+  const now = new Date().toISOString();
+  await supabaseAdmin
+    .from('postcard_mailings')
+    .update({ scans: ((data as any).scans ?? 0) + 1, first_scanned_at: (data as any).first_scanned_at ?? now, last_scanned_at: now, updated_at: now })
     .eq('id', (data as any).id);
 }
 

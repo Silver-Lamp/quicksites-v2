@@ -56,8 +56,10 @@ export type OpsSnapshot = {
   };
   /** Guest-build → signup funnel (lib/admin/guestFunnel.ts). */
   guestFunnel: GuestFunnel;
-  /** Claim-postcard response: mailed → arrived → QR scans → claims (lib/outreach/cardResponse.ts). */
+  /** Trade-site claim-card response: mailed → arrived → QR scans → claims (lib/outreach/cardResponse.ts). */
   cardResponse: CardResponse;
+  /** The Evolve card (restaurants with a site and no online ordering) — same funnel, its own numbers. */
+  evolveCardResponse: CardResponse;
   /** HiveJournal's Cornerstone founding-families pilot (lib/mesh/hjFoundingFamilies.ts) — counts only. */
   hjFoundingFamilies: FoundingFamilyStats;
 };
@@ -120,14 +122,15 @@ async function loadClients(nowMs: number): Promise<OpsClients> {
 /** Assemble the full server-side snapshot for the ops dashboard. */
 export async function assembleOpsSnapshot(): Promise<OpsSnapshot> {
   const nowMs = Date.now();
-  const [inv, revenue, clients, market, guestFunnel, cardResponse, hjFoundingFamilies] =
+  const [inv, revenue, clients, market, guestFunnel, cardResponse, evolveCardResponse, hjFoundingFamilies] =
     await Promise.all([
       assembleOwnedInventory(12),
       loadRevenue(),
       loadClients(nowMs),
       loadProspectsWorkspaceData(),
       loadGuestFunnel(),
-      loadCardResponse(),
+      loadCardResponse(undefined, 'trade_claim'),
+      loadCardResponse(undefined, 'evolve'),
       fetchFoundingFamilyStats(),
     ]);
 
@@ -148,6 +151,7 @@ export async function assembleOpsSnapshot(): Promise<OpsSnapshot> {
     },
     guestFunnel,
     cardResponse,
+    evolveCardResponse,
     hjFoundingFamilies,
   };
 }

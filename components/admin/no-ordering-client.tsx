@@ -26,7 +26,13 @@ type Row = {
   template_id: string | null;
   status: string | null;
   slug: string | null;
+  postcard_sent_at?: string | null;
+  claim_link_visits?: number | null;
+  claim_link_visited_at?: string | null;
+  claimed_at?: string | null;
+  card?: { created_at: string; status: string; expected_delivery_date: string | null; delivered_at: string | null; returned_at: string | null; scans: number } | null;
 };
+type Funnel = { mailed: number; arrived: number; delivered: number; returned: number; visited: number; visits: number; claimed: number; preDeliveryVisited: number; byMetro: { city: string; region: string; mailed: number; arrived: number; visited: number; visits: number; claimed: number }[] };
 type Groups = { call: Row[]; shop: Row[]; thirdParty: Row[]; siteOnly: Row[]; leaveAlone: Row[]; unchecked: Row[] };
 type Loaded = { groups: Groups; total: number; checkedOn: string | null };
 type Built = { editorUrl: string; claimUrl: string; evolveUrl?: string; slug: string; menuSource?: string; menuItems?: number; droppedItems?: number };
@@ -138,7 +144,7 @@ export default function NoOrderingClient({ cities, initialCity, initialRegion }:
   }
 
   // ── Evolve postcards: count, preview, test-mail, mail ─────────────────────────────────────
-  const [cards, setCards] = React.useState<{ mailable: { prospectId: string; businessName: string }[]; blocked: Record<string, number>; lobConfigured: boolean; mailEnabled: boolean; senderReady: boolean } | null>(null);
+  const [cards, setCards] = React.useState<{ mailable: { prospectId: string; businessName: string }[]; blocked: Record<string, number>; lobConfigured: boolean; mailEnabled: boolean; senderReady: boolean; funnel?: Funnel } | null>(null);
   const [cardNote, setCardNote] = React.useState('');
   const loadCards = React.useCallback(async (c = city, r = region) => {
     if (!c.trim()) return;
@@ -262,6 +268,19 @@ export default function NoOrderingClient({ cities, initialCity, initialRegion }:
             </div>
           </div>
           {cardNote && <p className="mt-2 text-xs text-zinc-400">{cardNote}</p>}
+          {/* The Evolve card's response, the same numbers /admin/ops shows — this city's row first. */}
+          {cards.funnel && cards.funnel.mailed > 0 && (() => {
+            const f = cards.funnel;
+            const here = f.byMetro.find((m) => m.city.toLowerCase() === city.trim().toLowerCase());
+            const scanned = f.visited - f.preDeliveryVisited;
+            return (
+              <p className="mt-2 text-xs text-zinc-300">
+                Response so far{here ? ` in ${here.city}` : ''}: {here ? `${here.mailed} mailed · ${here.arrived} should have arrived · ${here.visited} scanned (${here.visits} scans) · ${here.claimed} claimed` : `${f.mailed} mailed · ${f.arrived} should have arrived · ${scanned} scanned · ${f.claimed} claimed`}
+                {' '}· delivered (known) {f.delivered}{f.returned ? `, ${f.returned} returned` : ''}.{' '}
+                <a href="/admin/ops" className="text-sky-300 hover:underline">Ops dashboard →</a>
+              </p>
+            );
+          })()}
         </div>
       )}
 
@@ -336,6 +355,24 @@ export default function NoOrderingClient({ cities, initialCity, initialRegion }:
                                   </td>
                                 )}
                               </tr>
+                              {/* Card status: what the mailings table and the prospect's own counter say about THIS row. */}
+                              {(r.card || (r.claim_link_visits ?? 0) > 0 || r.claimed_at) && (
+                                <tr>
+                                  <td colSpan={g.build ? 6 : 5} className="pb-1.5 text-[11px] text-zinc-500">
+                                    {r.card ? (
+                                      <>
+                                        Card mailed {new Date(r.card.created_at).toLocaleDateString()} · {r.card.returned_at ? 'returned' : r.card.delivered_at ? `delivered ${new Date(r.card.delivered_at).toLocaleDateString()}` : r.card.status.replace(/_/g, ' ')}
+                                        {!r.card.delivered_at && !r.card.returned_at && r.card.expected_delivery_date ? ` · ETA ${r.card.expected_delivery_date}` : ''}
+                                        {' '}· {r.card.scans} scan{r.card.scans === 1 ? '' : 's'} on the card
+                                      </>
+                                    ) : (
+                                      <>No card mailed</>
+                                    )}
+                                    {(r.claim_link_visits ?? 0) > 0 ? ` · link opened ${r.claim_link_visits}× (last ${r.claim_link_visited_at ? new Date(r.claim_link_visited_at).toLocaleDateString() : '?'})` : ''}
+                                    {r.claimed_at ? <span className="text-emerald-300"> · claimed {new Date(r.claimed_at).toLocaleDateString()}</span> : ''}
+                                  </td>
+                                </tr>
+                              )}
                               {(b || err) && (
                                 <tr>
                                   <td colSpan={g.build ? 6 : 5} className="pb-2 text-xs">

@@ -143,6 +143,7 @@ export async function POST(req: Request) {
       try {
         await recordMailing({
           lobId: r.id,
+          kind: 'competition',
           prospectId: p.id,
           campaignId: campaign.id,
           sentBy: operator.id,

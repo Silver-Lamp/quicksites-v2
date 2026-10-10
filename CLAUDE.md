@@ -975,6 +975,8 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   **Evolve postcard** (`lib/outreach/evolvePostcard*.ts`, mailed from that admin page): the
   claim-card pipeline with this copy; QR = `/go/<id>?to=evolve` — counted on the one response
   counter, lands on the Evolve page. Only a built draft WITH a menu is eligible. Never open `/go/`.
+  **Tracking is per card** (`postcard_mailings.kind`, `20260879`): `/admin/ops` shows one funnel per
+  kind; a `/go/` scan bumps the piece as well as the prospect (`recordScanForProspect`).
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

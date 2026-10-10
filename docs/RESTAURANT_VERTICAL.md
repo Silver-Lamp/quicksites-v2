@@ -140,6 +140,29 @@ fee because orders run as destination charges without `on_behalf_of` (flag off i
 `QUICKSITES_RESTAURANT.processingIncluded`; if that flag is ever turned on, the page's sentence
 becomes false the same day.
 
+**The "site, but no online ordering" segment, as a signal (2026-10-10).** The sweep could see
+*no website* and nothing else about a restaurant's web presence; the restaurants worth calling
+first turned out to be the ones with a site and no way to order from it (11 of ~35 on Vashon;
+8 on Toast, 4 on Square). `lib/prospects/orderingDetect.ts` reads the business's OWN site —
+homepage plus up to two same-origin order/menu links — and decides from **links, never prose**
+(`toast` / `square` / … / `doordash` / … / `none`, matched hosts returned as evidence); the
+writer `orderingCheck.ts` stamps `outreach_prospects.ordering_platform` + `ordering_checked_at`
+(migration `20260877`), runs after every sweep for restaurants with a website (bounded,
+best-effort) and on demand via `POST /api/admin/prospects/check-ordering {city}`. ⚠️ **NULL
+means nobody looked; `none` is the finding.** A failed read writes nothing. The pure
+`orderingSegments.ts` splits rows five ways — *call* (site, none found) · *thirdParty*
+(DoorDash/Grubhub/UberEats only — a per-order commission ours undercuts at any volume) ·
+*siteOnly* (Google's "website" IS a Toast/Square page: offer a site that links it, never the
+ordering) · *leaveAlone* (first-party platform + own site) · *unchecked* — and the rep page
+renders the table with **"Build their ordering page"** on call/thirdParty rows →
+`POST /api/rep/build-draft { mode: 'from_site' }` → `lib/outreach/buildDraftFromSite.ts`
+(scrape → menu subpages → `inferSiteSpec` → operator-owned `listing_import` draft stamped
+`meta.ordering_companion` + `meta.source_site`; no products, no generated hero). The SMS for
+these says **"your website stays as it is"** first (`repOrderingSmsDraft`) — the pitch is a
+page to link from the site they paid for, never a replacement. Drafts for a restaurant that
+has a site must stay `noindex` (a copy of their menu under our domain would compete with their
+own page in search).
+
 ## 7d. City menu search, and measuring it honestly (2026-07-29)
 
 The `menu_finder` block is a narrowing dish search across a whole city cohort (`lib/menu/cityMenuIndex.ts` → `app/api/public/city-menu-search`, rendered by `components/admin/templates/render-blocks/menu-finder.tsx`). A chip that would empty the page is never offered (`nextTags`), because a search that can dead-end feels broken in a way no styling fixes.

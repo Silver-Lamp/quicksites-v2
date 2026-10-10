@@ -44,6 +44,17 @@ export function repSmsDraft(input: { repName: string; businessName: string; prev
   );
 }
 
+/**
+ * The message for a restaurant that already HAS a site: the draft is an ordering page to link
+ * from it, never a replacement for the site they paid for. Says so in the first sentence.
+ */
+export function repOrderingSmsDraft(input: { repName: string; businessName: string; previewUrl: string }): string {
+  return (
+    `Hi, this is ${input.repName}. Your website stays as it is — I set up an online ordering page for ${input.businessName} ` +
+    `from your own menu that you could link from it, no monthly fee: ${input.previewUrl} Have a look; if it's not for you, no problem at all.`
+  );
+}
+
 /** `sms:` URL that opens the phone's messaging app with the draft filled in. */
 export function smsHref(phone: string | null | undefined, body: string): string {
   const digits = String(phone ?? '').replace(/[^0-9+]/g, '');

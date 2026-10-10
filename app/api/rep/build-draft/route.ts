@@ -16,6 +16,7 @@ import { repBuildLinks, REP_BUILDS_PER_DAY } from '@/lib/rep/repBuild';
 import { codeIsUsable } from '@/lib/referrals/codes';
 import { getProspect, markProspectBuilt } from '@/lib/outreach/prospects';
 import { buildDraftFromListing, BuildDraftError } from '@/lib/outreach/buildDraftFromListing';
+import { buildDraftFromSite, BuildFromSiteError } from '@/lib/outreach/buildDraftFromSite';
 import { listingForProspect } from '@/lib/outreach/listingForProspect';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
@@ -67,6 +68,31 @@ export async function POST(req: Request) {
   const operatorId = (who as { discovered_by?: string | null } | null)?.discovered_by || process.env.TRADE_PIPELINE_OPERATOR_ID || null;
   if (!operatorId) return NextResponse.json({ error: 'no_operator' }, { status: 500 });
 
+  // mode 'from_site': the restaurant HAS a website and takes no online orders — build the
+  // ordering draft from the menu it already published (lib/outreach/buildDraftFromSite.ts), not
+  // from listing photos. Still only a parked prospect by id, and only one with a website of its
+  // own; the route never scrapes a URL the rep typed.
+  const mode = body.mode === 'from_site' ? 'from_site' : 'listing';
+  if (mode === 'from_site') {
+    if (p.industry_key !== 'restaurant') return NextResponse.json({ error: 'not_a_restaurant' }, { status: 400 });
+    if (!p.website) return NextResponse.json({ error: 'no_website' }, { status: 400 });
+    try {
+      const built = await buildDraftFromSite({ website: p.website, operatorId, fallbackName: p.business_name, fallbackPhone: p.phone });
+      await markProspectBuilt(prospectId, built.id);
+      return NextResponse.json({
+        ok: true,
+        alreadyBuilt: false,
+        mode,
+        menuSource: built.summary.menuItems > 0 ? 'site' : 'none',
+        menuItems: built.summary.menuItems,
+        ...repBuildLinks({ slug: built.slug, industryKey: 'restaurant', prospectId, code, base, menuHost }),
+      });
+    } catch (e) {
+      const code2 = e instanceof BuildFromSiteError ? e.code : 'build_failed';
+      return NextResponse.json({ error: code2, detail: e instanceof Error ? e.message : undefined }, { status: 502 });
+    }
+  }
+
   try {
     const listing = await listingForProspect(p);
     const built = await buildDraftFromListing({ listing, operatorId, industryKey: (p.industry_key as any) || undefined });
@@ -75,6 +101,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       alreadyBuilt: false,
+      mode,
       menuSource: built.industryKey === 'restaurant' ? (hasMenu ? 'auto' : 'none') : 'n/a',
       ...repBuildLinks({ slug: built.slug, industryKey: built.industryKey, prospectId, code, base, menuHost }),
     });

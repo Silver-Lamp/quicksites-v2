@@ -951,6 +951,14 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   because Toast is a POS, and its claim is a **break-even by volume, never "cheaper"**; vendor-read
   and third-party figures are separate objects on purpose (`lib/compare/toast.ts`, pinned by
   `toast.test.ts`, which also fails on any typed `$`/`%` in the page). See `docs/RESTAURANT_VERTICAL.md`.
+  **That census is now a SIGNAL, not a snapshot (same day):** `outreach_prospects.ordering_platform`
+  (`20260877`) is read from the restaurant's own site by `lib/prospects/orderingDetect.ts` —
+  **links, never prose** — after every sweep and via `POST /api/admin/prospects/check-ordering`;
+  ⚠️ NULL = nobody looked, `none` = the finding. `orderingSegments.ts` splits call / app-only /
+  site-only / leave-alone / unchecked, and the rep table's **"Build their ordering page"** runs
+  `buildDraftFromSite` (their published menu, `meta.ordering_companion`), with an SMS that says
+  "your website stays as it is" first. The hand-typed `lib/vashon/restaurantOrdering.ts` lasted
+  one PR and was deleted.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

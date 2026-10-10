@@ -29,6 +29,14 @@ describe('detectOrderingPlatform — links, never prose', () => {
     expect(both.all).toEqual(['square', 'doordash']);
   });
 
+  it('a self-hosted cart is a SHOP, read from markup — the Roasterie case', () => {
+    const d = detectOrderingPlatform('<a class="button product_type_simple add_to_cart_button" href="/shop/?add-to-cart=1234">Add to cart</a><link href="/wp-content/plugins/woocommerce/assets/css/x.css">');
+    expect(d.platform).toBe('woocommerce');
+    expect(d.evidence[0]).toMatch(/^markup:/);
+    // A food-ordering platform beside a shop wins: the shop is not the ordering.
+    expect(detectOrderingPlatform('<a href="https://order.toasttab.com/x">Order</a><div class="woocommerce">').platform).toBe('toast');
+  });
+
   it('matches the host, not a substring — nottoasttab.com is not Toast', () => {
     expect(detectOrderingPlatform('<a href="https://nottoasttab.com/x">x</a>').platform).toBe('none');
     expect(detectOrderingPlatform('<img src="//cdn.toast.app/logo.png">').platform).toBe('toast');
@@ -75,8 +83,10 @@ describe('groupRestaurantsByOrdering — unchecked is its own bucket', () => {
       row({ id: 'd', ordering_platform: 'toast', ordering_checked_at: '2026-10-10' }),
       row({ id: 'e' }),
       row({ id: 'f', website: null }),
+      row({ id: 'g', ordering_platform: 'woocommerce', ordering_checked_at: '2026-10-10' }),
     ]);
     expect(g.call.map((r) => r.id)).toEqual(['a']);
+    expect(g.shop.map((r) => r.id)).toEqual(['g']);
     expect(g.siteOnly.map((r) => r.id)).toEqual(['b']);
     expect(g.thirdParty.map((r) => r.id)).toEqual(['c']);
     expect(g.leaveAlone.map((r) => r.id)).toEqual(['d']);

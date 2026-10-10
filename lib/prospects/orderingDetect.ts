@@ -32,12 +32,26 @@ export type OrderingPlatform =
   | 'menufy'
   | 'olo'
   | 'shopify'
+  | 'woocommerce'
   | 'doordash'
   | 'grubhub'
   | 'ubereats'
   | 'none';
 
 export const THIRD_PARTY: ReadonlySet<OrderingPlatform> = new Set(['doordash', 'grubhub', 'ubereats']);
+/**
+ * A SHOP, not food ordering: a cart that ships beans, gift cards and merch. Vashon Island Coffee
+ * Roasterie runs WooCommerce and read as "no online ordering found" (2026-10-10) because the
+ * detector only knew external ordering hosts — a self-hosted cart has no host to match. It is
+ * its own segment: they can sell online, they cannot take a drink or food order for pickup.
+ */
+export const SHOP: ReadonlySet<OrderingPlatform> = new Set(['woocommerce', 'shopify']);
+
+/** Markup signatures for self-hosted carts — class names and cart paths, not prose. */
+const MARKUP_SIGNATURES: Array<[OrderingPlatform, RegExp]> = [
+  ['woocommerce', /\bwoocommerce\b|[?&]add-to-cart=|\/wp-content\/plugins\/woocommerce\//i],
+  ['shopify', /cdn\.shopify\.com|Shopify\.theme\b|\/cart\/add\b/i],
+];
 
 /** Host patterns, matched against the HOST of a URL found in an attribute — never against prose. */
 const HOST_SIGNATURES: Array<[OrderingPlatform, RegExp]> = [
@@ -59,7 +73,7 @@ const HOST_SIGNATURES: Array<[OrderingPlatform, RegExp]> = [
 ];
 
 /** First-party ranks above third-party when both are present: the business has its own channel. */
-const PRIORITY: OrderingPlatform[] = ['toast', 'square', 'clover', 'bentobox', 'wix_restaurants', 'chownow', 'popmenu', 'slice', 'owner', 'menufy', 'olo', 'shopify', 'doordash', 'grubhub', 'ubereats'];
+const PRIORITY: OrderingPlatform[] = ['toast', 'square', 'clover', 'bentobox', 'wix_restaurants', 'chownow', 'popmenu', 'slice', 'owner', 'menufy', 'olo', 'doordash', 'grubhub', 'ubereats', 'shopify', 'woocommerce'];
 
 export type OrderingDetection = {
   platform: OrderingPlatform;
@@ -98,6 +112,14 @@ export function detectOrderingPlatform(html: string): OrderingDetection {
         if (!found.has(platform)) found.set(platform, new Set());
         found.get(platform)!.add(host);
       }
+    }
+  }
+  // Self-hosted carts leave no external host behind; they leave markup.
+  for (const [platform, re] of MARKUP_SIGNATURES) {
+    const m = html.match(re);
+    if (m) {
+      if (!found.has(platform)) found.set(platform, new Set());
+      found.get(platform)!.add(`markup:${m[0].slice(0, 40)}`);
     }
   }
   const all = PRIORITY.filter((p) => found.has(p));

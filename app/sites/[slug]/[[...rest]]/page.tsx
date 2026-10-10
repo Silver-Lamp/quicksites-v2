@@ -530,6 +530,7 @@ export default async function SitePreviewPage({
 }) {
   const { slug, rest } = await params;
   const sp = (await searchParams) ?? {};
+  const exhibit = sp.exhibit === '1';
 
   // Special routes served directly.
   //
@@ -746,9 +747,13 @@ export default async function SitePreviewPage({
         serverData={cityMenuFeed ? { menu_finder: cityMenuFeed } : undefined}
       />
       {apexDirectory && <RestaurantCompetitionDirectory dir={apexDirectory} compact />}
-      {showWatermark && <PreviewWatermark hideCornerBadge={showClaimBar} />}
+      {/* ?exhibit=1: the draft is being shown INSIDE another page of ours (the Evolve page frames
+          it beside the restaurant's current site). The claim bar and preview strip are that
+          page's job — inside the frame they sold a different product at a different price and
+          put three "claim" doors on one screen (UX review, 2026-10-10). Content unchanged. */}
+      {showWatermark && !exhibit && <PreviewWatermark hideCornerBadge={showClaimBar} />}
       {demandEnabled && <DemandCapture templateId={siteRow.id} phone={demandPhone} />}
-      {showClaimBar && claimToken && (
+      {showClaimBar && !exhibit && claimToken && (
         <MenuClaimBar
           templateId={siteRow.id}
           token={claimToken}

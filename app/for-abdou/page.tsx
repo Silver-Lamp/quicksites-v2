@@ -275,6 +275,7 @@ export default async function ForAbdouPage() {
   };
   const restaurantRows: RestaurantTableRow[] = [
     ...restaurants.call.map(toRow('call')),
+    ...restaurants.shop.map(toRow('shop')),
     ...restaurants.thirdParty.map(toRow('thirdParty')),
     ...restaurants.siteOnly.map(toRow('siteOnly')),
     ...restaurants.unchecked.map(toRow('unchecked')),
@@ -494,9 +495,10 @@ export default async function ForAbdouPage() {
             Check the door before you walk in.
           </p>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Card title="Call first" tag={`${restaurants.call.length + restaurants.thirdParty.length}`} tone="emerald">
-              A site, but no online ordering found — or orders only through a delivery app that takes a cut on
-              every one. Here the no-monthly fee has nothing to beat. Press <em>Build their ordering page</em>:
+            <Card title="Call first" tag={`${restaurants.call.length + restaurants.shop.length + restaurants.thirdParty.length}`} tone="emerald">
+              A site, but no online ordering found — or a shop that ships beans and gifts but takes no food
+              order, or orders only through a delivery app that takes a cut. Here the no-monthly fee has
+              nothing to beat. Press <em>Build their ordering page</em>:
               it reads the menu they already published, so you walk in with their dishes, not a guess.
             </Card>
             <Card title="Offer a site, not the ordering" tag={`${restaurants.siteOnly.length}`} tone="sky">

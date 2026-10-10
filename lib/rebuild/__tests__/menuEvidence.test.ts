@@ -66,6 +66,17 @@ describe('filterMenuToEvidence', () => {
   });
 });
 
+describe('a from-site menu is dated the day it was read', () => {
+  it('stampMenuSourcedAt writes sourced_at on every copy of every menu block, and the freshness rule reads it', async () => {
+    const { stampMenuSourcedAt } = await import('@/lib/outreach/buildDraftFromSite');
+    const { assessFreshness } = await import('@/lib/menu/menuFreshness');
+    const data = { pages: [{ blocks: [{ type: 'menu', content: { sections: [] }, props: { sections: [] } }, { type: 'hero', content: {} }], content_blocks: [{ type: 'menu', content: { sections: [] } }] }] };
+    expect(stampMenuSourcedAt(data, '2026-10-10T20:00:00Z')).toBe(3);
+    expect(assessFreshness(data.pages[0].blocks[0].content, new Date('2026-10-11T00:00:00Z')).pricesStale).toBe(false);
+    expect(assessFreshness({ sections: [] }).pricesStale).toBe(true);
+  });
+});
+
 describe('source guard — the from-site builder applies it', () => {
   it('buildDraftFromSite filters the inferred menu against the scraped corpus before assembling', () => {
     const src = stripComments(fs.readFileSync(path.join(process.cwd(), 'lib/outreach/buildDraftFromSite.ts'), 'utf8'));
@@ -73,5 +84,6 @@ describe('source guard — the from-site builder applies it', () => {
     expect(src).toMatch(/evidenceCorpus\(/);
     // The filter must run BEFORE the template is assembled, or the invented dish is already in the data.
     expect(src.indexOf('filterMenuToEvidence(')).toBeLessThan(src.indexOf('buildRebuildTemplate('));
+    expect(src).toMatch(/stampMenuSourcedAt\(tpl\.data/);
   });
 });

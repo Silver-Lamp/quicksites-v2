@@ -71,6 +71,17 @@ export function assessFreshness(menuContent: any, now: Date = new Date()): MenuF
 }
 
 /**
+ * Freshness for a menu on a given TEMPLATE. A template flagged `meta.sample` is one of our own
+ * fictional starters (The Copper Kettle), shown as a sample on the Evolve page: its prices are
+ * invented by us, about nobody, so there is no stale fact to hide and "call to confirm" on every
+ * dish only reads as broken. A real business's menu never carries the flag.
+ */
+export function freshnessForTemplate(menuContent: any, templateData: any, now: Date = new Date()): MenuFreshness {
+  if (templateData?.meta?.sample === true) return { verifiedAt: null, ageDays: null, pricesStale: false, menuStale: false };
+  return assessFreshness(menuContent, now);
+}
+
+/**
  * What to render where a price would go.
  *
  * Returns the price when we can stand behind it, otherwise the honest fallback. Callers should

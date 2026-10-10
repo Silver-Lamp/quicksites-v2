@@ -149,6 +149,22 @@ export default async function EvolvePage({ params, searchParams }: { params: Pro
               <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.05] p-4">
                 <h2 className="text-base font-semibold text-white">{c.nextNoMenuTitle}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-300">{c.nextNoMenu}</p>
+                {/* A SAMPLE, labelled as one, so the owner can still see ordering work. */}
+                {m.exampleFrameUrl && m.exampleUrl && (
+                  <div className="mt-4 border-t border-emerald-500/20 pt-4">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h3 className="text-sm font-semibold text-white">{c.exampleTitle}</h3>
+                      <a href={m.exampleUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-300 hover:underline">{c.ctaOpenExample} →</a>
+                    </div>
+                    <p className="mt-1 text-xs text-zinc-500">{c.exampleNote(m.exampleName)}</p>
+                    <iframe
+                      src={m.exampleFrameUrl}
+                      title={`Sample ordering site — ${m.exampleName}`}
+                      loading="lazy"
+                      className="mt-3 h-[560px] w-full rounded-lg border border-emerald-500/30 bg-zinc-950"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

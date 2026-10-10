@@ -77,7 +77,9 @@ export function assessFreshness(menuContent: any, now: Date = new Date()): MenuF
  * dish only reads as broken. A real business's menu never carries the flag.
  */
 export function freshnessForTemplate(menuContent: any, templateData: any, now: Date = new Date()): MenuFreshness {
-  if (templateData?.meta?.sample === true) return { verifiedAt: null, ageDays: null, pricesStale: false, menuStale: false };
+  // Dated "now" so freshnessNote has nothing to say either — a null verifiedAt would still print
+  // "Prices unconfirmed" above a menu whose every price we invented ourselves.
+  if (templateData?.meta?.sample === true) return { verifiedAt: now, ageDays: 0, pricesStale: false, menuStale: false };
   return assessFreshness(menuContent, now);
 }
 

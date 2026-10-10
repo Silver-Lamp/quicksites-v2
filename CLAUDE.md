@@ -958,7 +958,11 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   site-only / leave-alone / unchecked, and the rep table's **"Build their ordering page"** runs
   `buildDraftFromSite` (their published menu, `meta.ordering_companion`), with an SMS that says
   "your website stays as it is" first. The hand-typed `lib/vashon/restaurantOrdering.ts` lasted
-  one PR and was deleted.
+  one PR and was deleted. ⚠️ **The first real from-site build INVENTED "Lasagna $16.65"** on a
+  pizzeria that sells none — the prompt forbade it and the model did it anyway. A dish now
+  survives only if its name is in the scraped text (`lib/rebuild/menuEvidence.ts`, before
+  assembly, source-guarded); an unconfirmed price is dropped, the dish kept. **Verify a built menu
+  against the restaurant's live pages, never against the model's output.**
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

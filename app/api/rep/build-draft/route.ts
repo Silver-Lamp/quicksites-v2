@@ -85,6 +85,8 @@ export async function POST(req: Request) {
         mode,
         menuSource: built.summary.menuItems > 0 ? 'site' : 'none',
         menuItems: built.summary.menuItems,
+        droppedItems: built.summary.droppedItems.length,
+        droppedPrices: built.summary.droppedPrices.length,
         ...repBuildLinks({ slug: built.slug, industryKey: 'restaurant', prospectId, code, base, menuHost }),
       });
     } catch (e) {

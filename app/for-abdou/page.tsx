@@ -7,9 +7,12 @@
 //
 // ⚠️ THE ISLAND IS THE WHOLE PITCH, AND IT IS WRITTEN HONESTLY. Vashon has one road, a ferry
 // at each end, and a few hundred businesses that mostly know each other. What he can do that
-// we cannot is walk in. What we have NOT done yet is said plainly below: no Vashon sweep has
-// run, no vashon-<trade>.com domain is owned, and nobody has been paid a referral commission.
-// "Straight talk" is load-bearing on a page for someone who needs the income to be real.
+// we cannot is walk in. What is and isn't real is said plainly below, and READ LIVE where it can
+// be: the island sweep (the no-website table), the vashon-<trade>.com sites and how many forward
+// calls or have rented (geo_industry_campaigns). ⚠️ This card said "no island site exists, no
+// sweep has run" for two days after both were true (found 2026-10-10 on the served page) — a
+// typed "0 built" is a count that rots, on the one page where a wrong number costs someone's
+// trust. "Straight talk" is load-bearing for someone who needs the income to be real.
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
@@ -72,6 +75,26 @@ async function loadIslandNoSite(): Promise<{ rows: NoSiteRow[]; sweptOn: string 
     .sort((a, b) => tradeLabel(a.industry_key).localeCompare(tradeLabel(b.industry_key)) || (b.review_count ?? 0) - (a.review_count ?? 0));
   const sweptOn = rows.reduce<string | null>((m, r) => (r.last_seen_at && (!m || r.last_seen_at > m) ? r.last_seen_at : m), null);
   return { rows, sweptOn };
+}
+
+/**
+ * The vashon-<trade>.com campaign sites, counted live. ⚠️ `attached` means attached to Vercel, not
+ * owned (CLAUDE.md §8) — but every Vashon domain was bought through the Vercel registrar or is the
+ * owner's own, and the nightly backfill writes `unregistered` for any that is not, so counting
+ * registered/attached is the honest number here. `payment_count > 0` is the only proof of rent.
+ */
+async function loadIslandSites(): Promise<{ built: number; forwarding: number; rented: number }> {
+  const { data } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('domain, domain_status, forward_to, payment_count')
+    .ilike('domain', 'vashon-%')
+    .in('domain_status', ['registered', 'attached']);
+  const rows = (data ?? []) as Array<{ domain: string; forward_to: string | null; payment_count: number | null }>;
+  return {
+    built: rows.length,
+    forwarding: rows.filter((r) => !!r.forward_to).length,
+    rented: rows.filter((r) => (r.payment_count ?? 0) > 0).length,
+  };
 }
 
 function tradeLabel(key: string | null): string {
@@ -168,7 +191,7 @@ function Card({
 const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
 export default async function ForAbdouPage() {
-  const island = await loadIslandNoSite();
+  const [island, sites] = await Promise.all([loadIslandNoSite(), loadIslandSites()]);
   // The grant that lets this page build drafts as the code (lib/rep/repActionToken.ts).
   const repToken = mintRepActionToken(CODE);
   const menuHost = process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null;
@@ -465,7 +488,9 @@ export default async function ForAbdouPage() {
                   This one is more of a conversation than a text — it's a business paying monthly for
                   something, so they'll have questions. The full brief, including what a call sounds
                   like, is at <Link href="/for-sales" className="text-sky-400 underline underline-offset-4">/for-sales</Link>.
-                  Start with referrals; come to this once the island sites exist (next section).
+                  {sites.built > 0
+                    ? `Start with referrals; the island sites exist now (${sites.built} of them — see Straight talk below), but none ranks yet, and a rental is a conversation worth having once one does.`
+                    : 'Start with referrals; come to this once the island sites exist (next section).'}
                 </p>
               </More>
             </Card>
@@ -492,12 +517,24 @@ export default async function ForAbdouPage() {
               business has yet taken a paid order, so the ledger that would pay you has never paid
               anyone. You would be early — which is why the terms are as generous as they are.
             </Card>
-            <Card title="The island sites don't exist yet" tag="0 built" tone="rose">
-              As of today we hold no vashon-<em>anything</em>.com domain and have not yet mapped
-              which island businesses have no website — that's the next step on our side, and it
-              happens whether or not you say yes. Off-island, sites like these hold real search
-              positions but none has rented, so that lane is unproven. Referrals are the safer start.
-            </Card>
+            {sites.built > 0 ? (
+              <Card
+                title={sites.rented > 0 ? `${sites.built} island sites exist; ${sites.rented} rented` : `${sites.built} island sites exist; none has rented yet`}
+                tag={`${sites.built} built · ${sites.rented} rented`}
+                tone={sites.rented > 0 ? 'emerald' : 'rose'}
+              >
+                We hold {sites.built} vashon-<em>trade</em>.com sites (plumbing, towing, electrical, septic and
+                the rest), {sites.forwarding} of them already forward calls to a real island business, and the
+                island has been mapped — that's the no-website table above. {sites.rented > 0 ? null : 'None has rented and none ranks yet; new domains take months to show up in a search, so that lane is unproven on the island. '}
+                Referrals are the safer start.
+              </Card>
+            ) : (
+              <Card title="The island sites don't exist yet" tag="0 built" tone="rose">
+                As of today we hold no vashon-<em>anything</em>.com domain. Off-island, sites like these
+                hold real search positions but none has rented, so that lane is unproven. Referrals are
+                the safer start.
+              </Card>
+            )}
           </div>
           <p className="mt-4 text-sm leading-relaxed text-zinc-400">
             What that means in practice: treat the first few months as{' '}

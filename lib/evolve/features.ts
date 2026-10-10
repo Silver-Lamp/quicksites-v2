@@ -15,13 +15,13 @@ export type EvolveFeatureRow = {
   because: string;
 };
 
-export function evolveFeatureRows(input: { orderingToday: string | null; providerLabel: string | null; keepsSite: true }): EvolveFeatureRow[] {
+export function evolveFeatureRows(input: { orderingToday: string | null; providerLabel: string | null; fee: string }): EvolveFeatureRow[] {
   return [
     {
       key: 'ordering',
       label: 'Online ordering',
       today: input.orderingToday,
-      evolved: 'Yes — pickup and call-ahead orders from a phone, from your own menu',
+      evolved: 'Yes — order ahead for pickup from a phone, from your own menu',
       because: 'menu block + order_bar + authorizeCheckoutItems (docs/RESTAURANT_VERTICAL.md)',
     },
     {
@@ -55,15 +55,15 @@ export function evolveFeatureRows(input: { orderingToday: string | null; provide
     {
       key: 'cost',
       label: 'What you pay for ordering',
-      today: 'Nothing today — and no orders',
-      evolved: 'No monthly fee and no contract; a small share of each online order, card processing included',
+      today: 'Nothing — and no food orders',
+      evolved: input.fee,
       because: 'lib/commerce/pricingDefaults.ts (restaurant fee, floor, no monthly); on_behalf_of off',
     },
     {
       key: 'payout',
       label: 'Getting paid',
       today: null,
-      evolved: 'Card payments go to your own Stripe account; you connect it once',
+      evolved: 'Card payments go to a payment account in your name, paid out to your bank; you set it up once',
       because: 'Stripe Connect destination charges (lib/payments/stripe.ts)',
     },
     {

@@ -13,7 +13,7 @@
 // hand-typed snapshot (lib/vashon/restaurantOrdering.ts, deleted the same week); this one reads
 // the sweep rows, so a re-check moves a restaurant between groups without a deploy.
 
-import { THIRD_PARTY, type OrderingPlatform } from '@/lib/prospects/orderingDetect';
+import { THIRD_PARTY, SHOP, type OrderingPlatform } from '@/lib/prospects/orderingDetect';
 
 export type RestaurantRow = {
   id: string;
@@ -29,6 +29,8 @@ export type RestaurantRow = {
 
 export type RestaurantGroups<T extends RestaurantRow = RestaurantRow> = {
   call: T[];
+  /** A cart on their site (WooCommerce/Shopify) that ships things — still no food ordering. */
+  shop: T[];
   siteOnly: T[];
   thirdParty: T[];
   leaveAlone: T[];
@@ -65,7 +67,7 @@ export function looksLikeFoodBusiness(categories: string[] | null | undefined): 
 }
 
 export function groupRestaurantsByOrdering<T extends RestaurantRow>(rows: T[]): RestaurantGroups<T> {
-  const g: RestaurantGroups<T> = { call: [], siteOnly: [], thirdParty: [], leaveAlone: [], unchecked: [] };
+  const g: RestaurantGroups<T> = { call: [], shop: [], siteOnly: [], thirdParty: [], leaveAlone: [], unchecked: [] };
   for (const r of rows) {
     if (!r.website) continue; // the no-website table owns these
     const hostPlatform = platformFromWebsiteHost(r.website);
@@ -80,6 +82,7 @@ export function groupRestaurantsByOrdering<T extends RestaurantRow>(rows: T[]): 
     const p = r.ordering_platform as OrderingPlatform;
     if (p === 'none') g.call.push(r);
     else if (THIRD_PARTY.has(p)) g.thirdParty.push(r);
+    else if (SHOP.has(p)) g.shop.push(r);
     else g.leaveAlone.push(r);
   }
   const byReviews = (a: T, b: T) => (b.review_count ?? 0) - (a.review_count ?? 0);
@@ -99,7 +102,8 @@ export const PLATFORM_LABEL: Record<OrderingPlatform, string> = {
   owner: 'Owner.com',
   menufy: 'Menufy',
   olo: 'Olo',
-  shopify: 'Shopify',
+  shopify: 'a shop (Shopify)',
+  woocommerce: 'a shop (WooCommerce)',
   doordash: 'DoorDash',
   grubhub: 'Grubhub',
   ubereats: 'Uber Eats',

@@ -22,7 +22,9 @@ export default function ScaledFrame({ src, title, designWidth = 1280, aspect = 0
   }, [designWidth]);
   const designHeight = Math.round(designWidth * aspect);
   return (
-    <div ref={ref} className={`relative w-full overflow-hidden ${className}`} style={{ height: Math.round(designHeight * scale) }}>
+    // Capped on a phone: a 1280px desktop page scaled into 358px is ~1100px of illegible picture.
+    // The "Open your current site" link beside it does the real work there.
+    <div ref={ref} className={`relative w-full overflow-hidden max-h-[420px] md:max-h-none ${className}`} style={{ height: Math.round(designHeight * scale) }}>
       <iframe
         src={src}
         title={title}

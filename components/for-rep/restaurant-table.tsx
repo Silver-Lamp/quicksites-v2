@@ -17,7 +17,7 @@ export type RestaurantTableRow = {
   /** Human label: "Toast", "no online ordering found", "not checked". */
   platformLabel: string;
   /** 'call' rows get the build button; the others are shown for the rep's notes. */
-  group: 'call' | 'siteOnly' | 'thirdParty' | 'leaveAlone' | 'unchecked';
+  group: 'call' | 'shop' | 'siteOnly' | 'thirdParty' | 'leaveAlone' | 'unchecked';
   rating: number | null;
   reviewCount: number | null;
   previewUrl: string | null;
@@ -29,6 +29,7 @@ type Built = { previewUrl: string; claimUrl: string; evolveUrl?: string | null; 
 
 const GROUP_TAG: Record<RestaurantTableRow['group'], { text: string; cls: string }> = {
   call: { text: 'call first', cls: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' },
+  shop: { text: 'shop, no food ordering', cls: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' },
   siteOnly: { text: 'site only', cls: 'border-sky-500/40 bg-sky-500/10 text-sky-300' },
   thirdParty: { text: 'app only', cls: 'border-amber-500/40 bg-amber-500/10 text-amber-300' },
   leaveAlone: { text: 'leave alone', cls: 'border-zinc-700 bg-zinc-800 text-zinc-400' },
@@ -115,7 +116,7 @@ export default function RestaurantTable({ rows, token, repName }: { rows: Restau
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     {b ? (
                       <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-300">built</span>
-                    ) : r.group === 'call' || r.group === 'thirdParty' ? (
+                    ) : r.group === 'call' || r.group === 'thirdParty' || r.group === 'shop' ? (
                       <button
                         type="button"
                         disabled={busy !== null}

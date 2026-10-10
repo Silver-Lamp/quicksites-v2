@@ -27,12 +27,13 @@ type Row = {
   status: string | null;
   slug: string | null;
 };
-type Groups = { call: Row[]; thirdParty: Row[]; siteOnly: Row[]; leaveAlone: Row[]; unchecked: Row[] };
+type Groups = { call: Row[]; shop: Row[]; thirdParty: Row[]; siteOnly: Row[]; leaveAlone: Row[]; unchecked: Row[] };
 type Loaded = { groups: Groups; total: number; checkedOn: string | null };
 type Built = { editorUrl: string; claimUrl: string; evolveUrl?: string; slug: string; menuSource?: string; menuItems?: number; droppedItems?: number };
 
 const GROUP_META: Array<{ key: keyof Groups; title: string; blurb: string; tone: string; build: boolean }> = [
   { key: 'call', title: 'Call first — a site, no online ordering found', blurb: 'Nobody charges them for orders today. Build the ordering page from their own menu and walk in with it.', tone: 'border-emerald-500/30 bg-emerald-500/[0.05]', build: true },
+  { key: 'shop', title: 'A shop on their site, but no food ordering', blurb: 'A WooCommerce or Shopify cart that ships beans, gift cards or merch. They can sell online; they cannot take a drink or food order for pickup. Pitch the ordering page as the thing beside the shop.', tone: 'border-emerald-500/30 bg-emerald-500/[0.05]', build: true },
   { key: 'thirdParty', title: 'App only — DoorDash / Grubhub / Uber Eats', blurb: 'They pay a per-order commission. A single-digit take undercuts it at any volume.', tone: 'border-amber-500/30 bg-amber-500/[0.05]', build: true },
   { key: 'siteOnly', title: 'Ordering page is their only site', blurb: "Google's website for them IS a Toast or Square page. Offer a site that links it — never the ordering.", tone: 'border-sky-500/30 bg-sky-500/[0.04]', build: false },
   { key: 'unchecked', title: 'Not checked yet', blurb: 'Nobody has read these sites. Press Re-check sites.', tone: 'border-zinc-700 bg-zinc-900/40', build: false },

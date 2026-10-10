@@ -195,6 +195,21 @@ unread site says so. ⚠️ **Their site may refuse framing**: `lib/evolve/frame
 X-Frame-Options / CSP frame-ancestors at render and shows a link card instead of a blank box.
 ⚠️ **Every "evolved" matrix row names where it is true in code** (`because`), so the matrix cannot
 promise a feature that does not exist; the "today" column asserts only what we observed.
+⚠️ **The first UX review (sub-agent, 2026-10-10) found the EXHIBITS contradicting the prose, and
+every finding was a defect, not copy:** (1) "no online ordering found" was false for a WooCommerce
+shop — the detector only knew external hosts, so a self-hosted cart read as `none`; now
+`MARKUP_SIGNATURES` read the cart's markup and `SHOP` (woocommerce/shopify) is its own segment:
+*a shop for things you ship, no food ordering* (3 on Vashon). (2) A draft with no menu block is
+the generic trade scaffold ("Are you licensed and insured?") and was shown as "your menu,
+orderable" — `draftHasMenu` now gates the exhibit: no menu → no evolved frame, no "take it", the
+call is the only step. (3) The framed draft's own claim bar sold a different product at a
+different price ("free to keep; your .com is the one thing we charge for") beside our per-order
+fee — `?exhibit=1` hides the claim bar and preview strip inside the frame only. (4) Owner-only
+editor hints ("Paste your embed ID") leaked into the frame because `isEditorContext` treated ANY
+iframe as the editor; it now requires a same-origin `/admin/` parent, and the Hear-this-page
+launcher stays out of frames. Copy: the h1 is the offer ("Your menu, orderable from a phone. Your
+site stays as it is."), the fee is in the third paragraph and the matrix, no "Stripe"/"call-ahead"/
+"claim" jargon, the paying box is retitled when it has no figure, no marketing nav on the page.
 What survived the mistake: `lib/rebuild/menuEvidence.ts`, a check that an item's normalised name
 is in the scraped corpus (a confirmed dish with an unconfirmed price keeps the dish and loses the
 price; an emptied section is dropped), applied in `buildDraftFromSite` before assembly and

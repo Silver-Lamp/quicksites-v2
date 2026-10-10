@@ -59,6 +59,9 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
   if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('qs_export')) {
     return null;
   }
+  // Framed inside another page (the Evolve exhibit, an embed): the outer page owns any launcher.
+  // Two or three pills stacked on one screen was the first thing the UX review saw (2026-10-10).
+  if (typeof window !== 'undefined' && window.parent !== window) return null;
 
   if (ownerVoiceOnPage) return null;
   if (dismissed) return null;

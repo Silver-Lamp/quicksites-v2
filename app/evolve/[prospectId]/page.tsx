@@ -1,21 +1,26 @@
 // app/evolve/[prospectId]/page.tsx
 //
 // "Evolve your site" — the pitch page for ONE restaurant that has a website and takes no online
-// orders: why, what they likely pay today (provider's published pricing, labelled), their site
-// beside the evolved one in two iframes, the next step (claim / set up a call), and a feature
-// matrix. Public URL, noindex, reached from the rep's row or the admin page; the prospect id is
-// the only key. Requires a built draft — no draft, 404 (there is nothing to show beside).
+// food orders: the offer in one line, why, what they likely pay today (provider's published
+// pricing, labelled), their site beside the evolved one, the next step, and a feature matrix.
+// Public URL, noindex, reached from the rep's row or the admin page; the prospect id is the only
+// key. Requires a built draft — no draft, 404.
 //
 // Model: lib/evolve/evolve.ts (pure; copy held to the forbidden list by test). Frameability of
 // their site is read from its response headers at render (lib/evolve/frameable.ts); a site that
 // refuses framing gets a link card instead of a blank box.
+//
+// ⚠️ A draft with NO MENU gets no evolved frame and no "take it" button (UX review 2026-10-10:
+// the generic scaffold was shown as "your menu, orderable"). The call is the only next step then.
+// ⚠️ The framed draft carries ?exhibit=1 so its own claim bar and preview strip stay hidden —
+// inside the frame they sold a different product at a different price.
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import SiteHeader from '@/components/site/site-header';
 import SiteFooter from '@/components/site/site-footer';
 import ScaledFrame from '@/components/evolve/scaled-frame';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { buildEvolveModel } from '@/lib/evolve/evolve';
+import { buildEvolveModel, draftHasMenu } from '@/lib/evolve/evolve';
 import { isFrameable } from '@/lib/evolve/frameable';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 
@@ -48,22 +53,25 @@ export default async function EvolvePage({ params, searchParams }: { params: Pro
     .maybeSingle();
   const p = data as Row | null;
   if (!p || !p.website || !p.template_id || p.industry_key !== 'restaurant' || !(p.business_name ?? '').trim()) notFound();
-  const { data: tpl } = await supabaseAdmin.from('templates').select('slug').eq('id', p.template_id).maybeSingle();
+  const { data: tpl } = await supabaseAdmin.from('templates').select('slug, data').eq('id', p.template_id).maybeSingle();
   const slug = (tpl as { slug: string | null } | null)?.slug ?? null;
   if (!slug) notFound();
+  const hasMenu = draftHasMenu((tpl as { data?: unknown } | null)?.data);
 
   const base = publicBaseUrl();
   const frame = await isFrameable(p.website, base);
+  const refCode = typeof ref === 'string' && /^[a-z0-9-]{2,40}$/i.test(ref) ? ref : null;
   const m = buildEvolveModel({
     prospectId: p.id,
     businessName: (p.business_name ?? '').trim(),
     website: p.website,
     slug,
+    draftHasMenu: hasMenu,
     orderingPlatform: p.ordering_platform,
     siteProvider: p.site_provider,
     currentFrameable: frame.frameable,
     currentFrameUrl: frame.frameUrl,
-    refCode: typeof ref === 'string' && /^[a-z0-9-]{2,40}$/i.test(ref) ? ref : null,
+    refCode,
     base,
     menuHost: process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null,
   });
@@ -71,25 +79,26 @@ export default async function EvolvePage({ params, searchParams }: { params: Pro
 
   return (
     <>
-      <SiteHeader sticky />
+      {/* A one-restaurant page: no marketing nav (four exits above the fold, and "Book a demo"
+          there would drop the rep's code). The page's own two buttons are the navigation. */}
+      <SiteHeader sticky links={[]} />
       <main className="min-h-screen bg-zinc-950 text-white">
-        {/* Why */}
+        {/* The offer, then why */}
         <section className="mx-auto max-w-4xl px-6 pb-6 pt-14">
-          <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">{c.eyebrow}</span>
-          <h1 className="mt-5 text-3xl font-extrabold tracking-tight md:text-5xl">
-            {c.whyTitle}, <span className="text-emerald-300">{m.businessName}</span>
-          </h1>
-          <div className="mt-5 space-y-3 text-base leading-relaxed text-zinc-300">
-            {c.why.map((p) => (
-              <p key={p}>{p}</p>
+          <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">{m.businessName}</span>
+          <h1 className="mt-5 text-3xl font-extrabold tracking-tight md:text-5xl">{m.headline}</h1>
+          <h2 className="mt-6 text-sm font-semibold uppercase tracking-wide text-zinc-500">{c.whyTitle}</h2>
+          <div className="mt-3 space-y-3 text-base leading-relaxed text-zinc-300">
+            {m.why.map((para) => (
+              <p key={para}>{para}</p>
             ))}
           </div>
         </section>
 
-        {/* Paying today */}
+        {/* Paying today — only a figure when the provider publishes one we have sourced */}
         <section className="mx-auto max-w-4xl px-6 py-4">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{c.payingTitle}</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{m.payingTitle}</h2>
             <p className="mt-2 text-sm leading-relaxed text-zinc-300">{m.paying}</p>
             {m.payingSources.length > 0 && (
               <p className="mt-2 text-xs text-zinc-600">
@@ -107,38 +116,41 @@ export default async function EvolvePage({ params, searchParams }: { params: Pro
 
         {/* Side by side */}
         <section className="mx-auto max-w-6xl px-6 py-6">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="text-base font-semibold text-white">{c.nowTitle}</h2>
                 <a href={m.currentUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-300 hover:underline">{c.ctaOpenCurrent} →</a>
               </div>
-              <p className="mt-1 text-xs text-zinc-500">{c.nowNote(m.orderingToday)}</p>
+              <p className="mt-1 text-xs text-zinc-500">{m.nowLine}</p>
               {m.currentFrameable ? (
-                <ScaledFrame
-                  src={m.currentUrl}
-                  title={`${m.businessName} — current site`}
-                  className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900"
-                />
+                <ScaledFrame src={m.currentUrl} title={`${m.businessName} — current site`} className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900" />
               ) : (
-                <div className="mt-3 flex h-[640px] w-full items-center justify-center rounded-lg border border-dashed border-zinc-700 p-6 text-center text-sm text-zinc-400">
+                <div className="mt-3 flex h-[320px] w-full items-center justify-center rounded-lg border border-dashed border-zinc-700 p-6 text-center text-sm text-zinc-400">
                   {c.nowUnframeable}
                 </div>
               )}
             </div>
-            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.05] p-4">
-              <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-base font-semibold text-white">{c.nextTitle}</h2>
-                <a href={m.evolvedUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-300 hover:underline">{c.ctaOpenEvolved} →</a>
+            {m.hasMenu && m.evolvedFrameUrl && m.evolvedUrl ? (
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.05] p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="text-base font-semibold text-white">{c.nextTitle}</h2>
+                  <a href={m.evolvedUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-300 hover:underline">{c.ctaOpenEvolved} →</a>
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">{c.nextNote}</p>
+                <iframe
+                  src={m.evolvedFrameUrl}
+                  title={`${m.businessName} — evolved site`}
+                  loading="lazy"
+                  className="mt-3 h-[640px] w-full rounded-lg border border-emerald-500/30 bg-zinc-950"
+                />
               </div>
-              <p className="mt-1 text-xs text-zinc-500">{c.nextNote}</p>
-              <iframe
-                src={m.evolvedUrl}
-                title={`${m.businessName} — evolved site`}
-                loading="lazy"
-                className="mt-3 h-[640px] w-full rounded-lg border border-emerald-500/30 bg-zinc-950"
-              />
-            </div>
+            ) : (
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.05] p-4">
+                <h2 className="text-base font-semibold text-white">{c.nextNoMenuTitle}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-300">{c.nextNoMenu}</p>
+              </div>
+            )}
           </div>
 
           {/* The owner's side */}
@@ -154,12 +166,18 @@ export default async function EvolvePage({ params, searchParams }: { params: Pro
             </ul>
           </div>
 
-          {/* Next step */}
+          {/* Next step — the fee beside it, in foreground, because it is the sentence that lets the owner say yes */}
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <a href={m.claimUrl} className="rounded-lg bg-emerald-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-emerald-400">{c.ctaClaim}</a>
-            <a href={m.callUrl} className="rounded-lg border border-zinc-700 px-6 py-3 text-base font-medium text-zinc-200 transition hover:bg-zinc-800">{c.ctaCall}</a>
-            <span className="text-sm text-zinc-500">{m.fee}</span>
+            {m.claimUrl ? (
+              <>
+                <a href={m.claimUrl} className="rounded-lg bg-emerald-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-emerald-400">{c.ctaClaim}</a>
+                <a href={m.callUrl} className="rounded-lg border border-zinc-700 px-6 py-3 text-base font-medium text-zinc-200 transition hover:bg-zinc-800">{c.ctaCall}</a>
+              </>
+            ) : (
+              <a href={m.callUrl} className="rounded-lg bg-emerald-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-emerald-400">{c.ctaCallOnly}</a>
+            )}
           </div>
+          <p className="mt-3 max-w-2xl text-sm text-zinc-200">{m.fee}</p>
         </section>
 
         {/* Matrix */}

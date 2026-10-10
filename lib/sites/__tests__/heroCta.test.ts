@@ -7,7 +7,7 @@
 // default was `cta_link: '/'` and the renderer read it as "go to /" — on 109 published sites.
 import fs from 'node:fs';
 import path from 'node:path';
-import { resolveHeroCta, deriveCtaAction } from '@/lib/sites/heroCta';
+import { resolveHeroCta, deriveCtaAction, phoneFromSite } from '@/lib/sites/heroCta';
 import { stripComments } from '@/test/stripComments';
 
 const read = (p: string) => stripComments(fs.readFileSync(path.join(process.cwd(), p), 'utf8'));
@@ -41,6 +41,19 @@ describe('the rules that already held', () => {
   });
 });
 
+describe('phoneFromSite — the served snapshot has no columns', () => {
+  it('reads the tracking number from data.meta.contact.phone when templates.phone is absent (the live vashon-electrical case)', () => {
+    expect(phoneFromSite({ data: { meta: { contact: { phone: '+13604047198' } } } })).toBe('13604047198');
+    expect(phoneFromSite({ data: JSON.stringify({ meta: { contact: { phone: '(360) 404-7198' } } }) })).toBe('3604047198');
+  });
+  it('prefers the column when present and returns empty, never a guess, when nothing is there', () => {
+    expect(phoneFromSite({ phone: '2065551234', data: { meta: { contact: { phone: '3604047198' } } } })).toBe('2065551234');
+    expect(phoneFromSite({ data: { meta: {} } })).toBe('');
+    expect(phoneFromSite(null)).toBe('');
+    expect(phoneFromSite({ data: { meta: { contact: { phone: '555' } } } })).toBe('');
+  });
+});
+
 describe('source guards', () => {
   it('no default seeds `/` as a hero link any more', () => {
     for (const f of ['lib/blocks/defaultBlockContent.ts', 'admin/lib/zod/blockSchema.ts']) {
@@ -55,5 +68,6 @@ describe('source guards', () => {
     expect(hero).toMatch(/resolveHeroCta\(\{ cta_action, cta_link, cta_text, phoneDigits: resolvedPhoneDigits, contactAnchor \}\)/);
     expect(hero).toMatch(/merged\.cta_action = deriveCtaAction\(merged\.cta_link\)/);
     expect(hero).not.toMatch(/href = cta_link \|\| '\/contact'/);
+    expect(hero).toMatch(/const dbPhoneDigits = phoneFromSite\(template\)/);
   });
 });

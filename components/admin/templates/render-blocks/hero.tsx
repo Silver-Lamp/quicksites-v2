@@ -6,7 +6,7 @@ import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import PainterlyBackdrop from '@/components/site/painterly-backdrop';
 import { heroBackdropFor } from '@/lib/sites/heroBackdrop';
-import { deriveCtaAction, resolveHeroCta } from '@/lib/sites/heroCta';
+import { deriveCtaAction, resolveHeroCta, phoneFromSite } from '@/lib/sites/heroCta';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
@@ -235,7 +235,8 @@ export default function HeroRender({
     [cta_link]
   );
 
-  const dbPhoneDigits = (template?.phone || '').replace(/\D/g, '');
+  // The column on the draft, or the contact in the served snapshot's data — see phoneFromSite.
+  const dbPhoneDigits = phoneFromSite(template);
   const resolvedPhoneDigits = (cta_phone || dbPhoneDigits || '').replace(/\D/g, '');
   const resolvedPhoneDisplay = formatPhoneDisplay(resolvedPhoneDigits);
 

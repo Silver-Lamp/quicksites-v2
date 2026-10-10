@@ -43,6 +43,36 @@ export function deriveCtaAction(link: string | null | undefined): HeroCtaAction 
   return 'go_to_page';
 }
 
+/**
+ * The site's phone, digits only, from wherever the data actually carries it.
+ *
+ * ⚠️ `templates.phone` is a COLUMN and the public render serves a SNAPSHOT (`published_sites` →
+ * `template_versions.data`), which has no columns — so on the live site `template.phone` was
+ * undefined and "Call Now" fell through to the contact form even though the tracking number
+ * sat in `data.meta.contact.phone`, which is exactly where `pushTrackingNumberToSite` writes it.
+ * Same paths that push walks: `meta.contact`, `identity.contact`, `meta.identity.contact`.
+ */
+export function phoneFromSite(site: unknown): string {
+  const s = (site ?? {}) as Record<string, any>;
+  const data = (typeof s.data === 'string' ? safeJson(s.data) : s.data) ?? {};
+  const candidates: unknown[] = [
+    s.phone,
+    data?.meta?.contact?.phone,
+    data?.identity?.contact?.phone,
+    data?.meta?.identity?.contact?.phone,
+    data?.meta?.phone,
+  ];
+  for (const c of candidates) {
+    const digits = String(c ?? '').replace(/\D/g, '');
+    if (digits.length >= 10) return digits;
+  }
+  return '';
+}
+
+function safeJson(s: string): unknown {
+  try { return JSON.parse(s); } catch { return null; }
+}
+
 export function resolveHeroCta(input: HeroCtaInput): HeroCta {
   const link = String(input.cta_link ?? '').trim();
   const phone = String(input.phoneDigits ?? '').replace(/\D/g, '');

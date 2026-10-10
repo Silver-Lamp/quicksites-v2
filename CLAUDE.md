@@ -911,6 +911,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   guard trigger and is not content anyway), marked AFTER the send. Machine sources
   (`listing_import`, `demo_seed`, `directory`, `operator_draft`, `persona_build`) are never
   candidates. `/status` gate `site_created_alert`. Tests: `lib/sites/__tests__/siteProgress.test.ts`.
+- **⚠️ THE HERO BUTTON ON 109 PUBLISHED SITES RELOADED THE HOME PAGE (fixed 2026-10-10).** The
+  scaffold's hero default was `cta_link: '/'` in THREE places (`defaultBlockContent.ts`, the zod
+  normaliser and the zod schema default in `blockSchema.ts`), and the renderer read it as "go to
+  page /" — so "Call Now" on vashon-electrical.com navigated to the page the visitor was already
+  on. Older sites carried a `tel:` link and worked, which is why it read as per-site. Found by
+  the owner clicking, in desktop Chrome; nothing errors when a button goes nowhere. The decision
+  is now pure in `lib/sites/heroCta.ts`: `/` or empty → contact form; a contact jump whose label
+  says "call" dials the resolved phone (hero `cta_phone`, else `templates.phone` — the geo sites'
+  tracking number); a call with no number falls back to the form rather than hiding the button;
+  author anchors, `tel:` links, real pages and explicit `cta_action` unchanged. Fixed in the
+  renderer so every served site changed without a republish; defaults now seed `#contact`.
+  Pinned by `lib/sites/__tests__/heroCta.test.ts` with source guards over all three defaults.
 - **Rep pages, the starter kit, and the rep's one-click build (2026-10-08, built for Abdou on
   Vashon)**: a rep gets an unlisted `/for-<name>` page (pattern: `/for-angela`) whose
   no-website table is LIVE from `outreach_prospects` and carries **"Build their site"** per row

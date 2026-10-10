@@ -13,6 +13,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import SiteHeader from '@/components/site/site-header';
 import SiteFooter from '@/components/site/site-footer';
+import ScaledFrame from '@/components/evolve/scaled-frame';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { buildEvolveModel } from '@/lib/evolve/evolve';
 import { isFrameable } from '@/lib/evolve/frameable';
@@ -114,12 +115,10 @@ export default async function EvolvePage({ params, searchParams }: { params: Pro
               </div>
               <p className="mt-1 text-xs text-zinc-500">{c.nowNote(m.orderingToday)}</p>
               {m.currentFrameable ? (
-                <iframe
+                <ScaledFrame
                   src={m.currentUrl}
                   title={`${m.businessName} — current site`}
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  className="mt-3 h-[640px] w-full rounded-lg border border-zinc-800 bg-zinc-900"
+                  className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900"
                 />
               ) : (
                 <div className="mt-3 flex h-[640px] w-full items-center justify-center rounded-lg border border-dashed border-zinc-700 p-6 text-center text-sm text-zinc-400">

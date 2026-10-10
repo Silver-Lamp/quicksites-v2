@@ -8,6 +8,7 @@ import { searchNearby, type NearbyBusiness } from '@/lib/places/searchNearby';
 import { searchTextNearby } from '@/lib/places/searchTextNearby';
 import { scoreSiteFreshness } from '@/lib/rebuild/siteFreshness';
 import { classifyLeadTier, upsertProspects, fillMissingPlaceSignals, markProspectsSeen, type ProspectInput, type LeadTier } from '@/lib/outreach/prospects';
+import { checkOrderingForProspects } from '@/lib/prospects/orderingCheck';
 import { backfillPlaceSignals, placeSignalsBackfillOnSweepEnabled, placeSignalsBackfillLimit } from '@/lib/outreach/placeSignals';
 import { getLatLonForCityState } from '@/lib/utils/geocode';
 import { typeToIndustryKey } from '@/lib/places/typeToIndustry';
@@ -36,6 +37,8 @@ export type SweepResult = {
   seen: number;
   /** Prospect inputs as parked — the pipeline builds from the no-website ones straight away. */
   rows: ProspectInput[];
+  /** Restaurants with a website whose ordering platform was read this sweep (best-effort). */
+  orderingChecked: number;
 };
 
 export class SweepInputError extends Error {}
@@ -157,6 +160,20 @@ export async function runSweep(input: SweepInput): Promise<SweepResult> {
     }
   }
 
+  // 3d) Restaurants WITH a website: read whether their site takes online orders, and through
+  //     whom (lib/prospects/orderingCheck.ts). Best-effort and bounded — a failed read leaves
+  //     the row "not checked", never "no ordering". The segment this feeds ("a site, no
+  //     ordering") is the one the sweep could not see before 2026-10-10.
+  let orderingChecked = 0;
+  if (rows.some((r) => r.industryKey === 'restaurant' && r.website)) {
+    try {
+      const res = await checkOrderingForProspects({ city: city || null, region: region || null, limit: 40 });
+      orderingChecked = res.checked;
+    } catch {
+      orderingChecked = 0;
+    }
+  }
+
   const tallies = rows.reduce(
     (acc, r) => {
       acc[r.leadTier] += 1;
@@ -166,5 +183,5 @@ export async function runSweep(input: SweepInput): Promise<SweepResult> {
     { no_website: 0, dated: 0, has_site: 0, total: 0 } as Record<string, number>,
   );
 
-  return { sweepId, inserted, found: rows.length, tallies, signals, signalsFilled, seen, rows };
+  return { sweepId, inserted, found: rows.length, tallies, signals, signalsFilled, seen, rows, orderingChecked };
 }

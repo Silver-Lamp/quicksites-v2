@@ -23,7 +23,8 @@ import { KEY_TO_LABEL } from '@/lib/industries';
 import { mintRepActionToken } from '@/lib/rep/repActionToken';
 import { repBuildLinks } from '@/lib/rep/repBuild';
 import NoSiteTable, { type NoSiteRow as TableRow } from '@/components/for-rep/no-site-table';
-import { islandRestaurantGroups, PLATFORM_LABEL, RESTAURANT_ORDERING_READ_ON } from '@/lib/vashon/restaurantOrdering';
+import { groupRestaurantsByOrdering, platformLabel, platformFromWebsiteHost, looksLikeFoodBusiness, type RestaurantRow } from '@/lib/prospects/orderingSegments';
+import RestaurantTable, { type RestaurantTableRow } from '@/components/for-rep/restaurant-table';
 import { breakEvenOrders } from '@/lib/compare/toast';
 
 // The island list is read live: a re-sweep changes it, and a date on the section says how
@@ -95,6 +96,44 @@ async function loadIslandSites(): Promise<{ built: number; forwarding: number; r
     forwarding: rows.filter((r) => !!r.forward_to).length,
     rented: rows.filter((r) => (r.payment_count ?? 0) > 0).length,
   };
+}
+
+/**
+ * Island restaurants WITH a website, and what their own site says about online ordering
+ * (`ordering_platform`, read by lib/prospects/orderingCheck.ts). NULL checked_at is "nobody
+ * looked", shown as its own count — never folded into "no ordering found".
+ */
+async function loadIslandRestaurants(): Promise<{ rows: (RestaurantRow & { slug: string | null })[]; checkedOn: string | null }> {
+  const { data } = await supabaseAdmin
+    .from('outreach_prospects')
+    .select('id, business_name, phone, website, rating, review_count, ordering_platform, ordering_checked_at, template_id, categories')
+    .eq('city', 'Vashon')
+    .eq('region', 'WA')
+    .eq('industry_key', 'restaurant')
+    .not('website', 'is', null)
+    .neq('website', '')
+    .limit(200);
+  // ⚠️ `industry_key` is stamped by the QUERY that found the row, so a vet clinic answered
+  // "restaurants near Vashon" and carried it. Google's own types decide (looksLikeFoodBusiness).
+  const base = ((data ?? []) as unknown as (RestaurantRow & { categories: string[] | null })[])
+    .filter((r) => (r.business_name ?? '').trim() && looksLikeFoodBusiness(r.categories));
+  const templateIds = base.map((r) => r.template_id).filter((id): id is string => !!id);
+  const slugById = new Map<string, string>();
+  if (templateIds.length) {
+    const { data: tpls } = await supabaseAdmin.from('templates').select('id, slug').in('id', templateIds);
+    for (const t of (tpls ?? []) as Array<{ id: string; slug: string | null }>) if (t.slug) slugById.set(t.id, t.slug);
+  }
+  const rows = base.map((r) => ({ ...r, slug: r.template_id ? slugById.get(r.template_id) ?? null : null }));
+  const checkedOn = rows.reduce<string | null>((m, r) => (r.ordering_checked_at && (!m || r.ordering_checked_at > m) ? r.ordering_checked_at : m), null);
+  return { rows, checkedOn };
+}
+
+function hostOf(url: string | null): string {
+  try {
+    return new URL(url ?? '').hostname.replace(/^www\./, '');
+  } catch {
+    return url ?? '';
+  }
 }
 
 function tradeLabel(key: string | null): string {
@@ -191,7 +230,7 @@ function Card({
 const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
 export default async function ForAbdouPage() {
-  const [island, sites] = await Promise.all([loadIslandNoSite(), loadIslandSites()]);
+  const [island, sites, eateries] = await Promise.all([loadIslandNoSite(), loadIslandSites(), loadIslandRestaurants()]);
   // The grant that lets this page build drafts as the code (lib/rep/repActionToken.ts).
   const repToken = mintRepActionToken(CODE);
   const menuHost = process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null;
@@ -213,9 +252,33 @@ export default async function ForAbdouPage() {
   const sweptLabel = island.sweptOn
     ? new Date(island.sweptOn).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' })
     : null;
-  // The restaurant groups are a dated snapshot (lib/vashon/restaurantOrdering.ts), not live data.
-  const restaurants = islandRestaurantGroups();
-  const restaurantsReadOn = new Date(RESTAURANT_ORDERING_READ_ON + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  // Live from the sweep rows: a re-check moves a restaurant between groups without a deploy.
+  const restaurants = groupRestaurantsByOrdering(eateries.rows);
+  const restaurantsReadOn = eateries.checkedOn
+    ? new Date(eateries.checkedOn).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' })
+    : null;
+  const toRow = (group: RestaurantTableRow['group']) => (r: (typeof eateries.rows)[number]): RestaurantTableRow => {
+    const links = r.slug ? repBuildLinks({ slug: r.slug, industryKey: 'restaurant', prospectId: r.id, code: CODE, menuHost }) : null;
+    return {
+      prospectId: r.id,
+      businessName: (r.business_name ?? '').trim(),
+      phone: r.phone,
+      websiteHost: hostOf(r.website),
+      platformLabel: group === 'siteOnly' || group === 'thirdParty' ? platformLabel(platformFromWebsiteHost(r.website) ?? r.ordering_platform) : group === 'unchecked' ? 'not checked' : platformLabel(r.ordering_platform),
+      group,
+      rating: r.rating,
+      reviewCount: r.review_count,
+      previewUrl: links?.previewUrl ?? null,
+      claimUrl: links?.claimUrl ?? null,
+    };
+  };
+  const restaurantRows: RestaurantTableRow[] = [
+    ...restaurants.call.map(toRow('call')),
+    ...restaurants.thirdParty.map(toRow('thirdParty')),
+    ...restaurants.siteOnly.map(toRow('siteOnly')),
+    ...restaurants.unchecked.map(toRow('unchecked')),
+    ...restaurants.leaveAlone.map(toRow('leaveAlone')),
+  ];
   // A $20 ticket, the same figure /compare/toast tabulates — derived, never typed.
   const toastBreakEven = breakEvenOrders(2000) ?? 0;
   return (
@@ -415,43 +478,38 @@ export default async function ForAbdouPage() {
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-zinc-400">
             Most island restaurants already have a website. The question that decides the pitch is whether
-            they take orders online, and through whom. Read from each restaurant's own site on {restaurantsReadOn};
-            a link kept on a subpage would be missed, so "none found" means exactly that. Check the door before
-            you walk in.
+            they take orders online, and through whom.{' '}
+            {restaurantsReadOn ? (
+              <>Read from each restaurant's own site, last on {restaurantsReadOn} — the homepage and its order or menu links. A link kept somewhere else would be missed, so "none found" means exactly that. </>
+            ) : (
+              <>Their sites haven't been read yet; this fills in when they are. </>
+            )}
+            Check the door before you walk in.
           </p>
-          <div className="mt-4 space-y-3">
-            <Card title="Call these first — a site, but no online ordering found" tag={`${restaurants.noOrdering.length} places`} tone="emerald">
-              <p>
-                {restaurants.noOrdering.map((r) => r.name).join(' · ')}
-              </p>
-              <p className="mt-2">
-                This is where the no-monthly fee is a real win: they pay nothing until an order comes in. The
-                pizza places are the obvious first two — pizza is what people order from a phone.
-              </p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Card title="Call first" tag={`${restaurants.call.length + restaurants.thirdParty.length}`} tone="emerald">
+              A site, but no online ordering found — or orders only through a delivery app that takes a cut on
+              every one. Here the no-monthly fee has nothing to beat. Press <em>Build their ordering page</em>:
+              it reads the menu they already published, so you walk in with their dishes, not a guess.
             </Card>
-            <Card title="On Toast with no website of their own — offer the site, not the ordering" tag={`${restaurants.toastNoSite.length} places`} tone="sky">
-              <p>
-                {restaurants.toastNoSite.map((r) => r.name).join(' · ')}
-              </p>
-              <p className="mt-2">
-                Their only web presence is a Toast ordering page. Build them a site that links to it. You are not
-                asking them to change how they take orders; you are giving the name a home. Ordering can move later
-                if they ever leave Toast — never pitch that first.
-              </p>
+            <Card title="Offer a site, not the ordering" tag={`${restaurants.siteOnly.length}`} tone="sky">
+              Their only web presence is a Toast or Square ordering page. Build them a site that links to it —
+              you are giving the name a home, not asking them to change how they take orders. Never pitch
+              that first.
             </Card>
-            <Card title="Leave alone — on Toast or Square with their own site" tag={`${restaurants.leaveAlone.length} places`} tone="zinc">
-              <p>
-                {restaurants.leaveAlone.map((r) => `${r.name} (${PLATFORM_LABEL[r.platform]})`).join(' · ')}
-              </p>
-              <p className="mt-2">
-                A restaurant on Toast's point-of-sale signed a multi-year contract and their online orders post
-                straight to the kitchen; Square's ordering is free. Nothing to offer them today. If one asks,
-                the honest comparison is at{' '}
-                <Link href="/compare/toast" className="text-sky-400 underline underline-offset-4">quicksites.ai/compare/toast</Link>
-                {' '}— it says plainly that above about {toastBreakEven} online orders a month Toast costs them less.
-              </p>
+            <Card title="Leave alone" tag={`${restaurants.leaveAlone.length}`} tone="zinc">
+              On Toast or Square with a site of their own. Nothing to offer today. If one asks, the honest
+              comparison is at{' '}
+              <Link href="/compare/toast" className="text-sky-400 underline underline-offset-4">quicksites.ai/compare/toast</Link>
+              {' '}— above about {toastBreakEven} online orders a month Toast costs them less, and it says so.
             </Card>
           </div>
+          {restaurantRows.length > 0 && <RestaurantTable rows={restaurantRows} token={repToken} repName="Abdou" />}
+          <p className="mt-3 text-xs text-zinc-500">
+            The ordering page is built from their own site and is theirs to claim; the text message says their
+            website stays as it is. "Not checked" means nobody has read that site yet, not that it takes no
+            orders.{restaurants.unchecked.length ? ` ${restaurants.unchecked.length} still to check.` : ''}
+          </p>
         </section>
 
         {/* The money */}

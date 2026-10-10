@@ -87,7 +87,7 @@ export const DEFAULT_BLOCK_CONTENT = {
     headline: 'Welcome to Your New Site',
     subheadline: 'Start editing, and let the magic happen.',
     cta_text: 'Get Started',
-    cta_link: '/',
+    cta_link: '#contact',
     image_url: '',
     layout_mode: 'inline',
     blur_amount: 0,

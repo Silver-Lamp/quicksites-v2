@@ -6,6 +6,7 @@ import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import PainterlyBackdrop from '@/components/site/painterly-backdrop';
 import { heroBackdropFor } from '@/lib/sites/heroBackdrop';
+import { deriveCtaAction, resolveHeroCta } from '@/lib/sites/heroCta';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
@@ -90,16 +91,14 @@ function selectHeroContent(propsRaw: any, contentRaw: any) {
   }
 
   if (!merged.cta_action && typeof merged.cta_link === 'string') {
-    const link = merged.cta_link.trim();
     // ⚠️ AN IN-PAGE ANCHOR IS NOT AUTOMATICALLY THE CONTACT FORM. This mapped EVERY `#…` link to
     // `jump_to_contact`, which then throws the link away and scrolls to `#contact` — so a hero
     // reading "Browse restaurants → #restaurants" landed on the contact form, as did every
     // "See the menu", "Our services", "Read the FAQ". The button worked, went somewhere, and
     // went somewhere wrong, which is why it survived: nothing errors when a CTA lies.
-    if (link === '#' || link === '#contact') merged.cta_action = 'jump_to_contact';
-    else if (link.startsWith('#')) merged.cta_action = 'jump_to_anchor';
-    else if (link.startsWith('tel:')) merged.cta_action = 'call_phone';
-    else merged.cta_action = 'go_to_page';
+    // ⚠️ AND `/` IS NOT A DESTINATION (2026-10-10): the scaffold default reloaded the home page on
+    // 109 published sites. The rules live in lib/sites/heroCta.ts, with the test.
+    merged.cta_action = deriveCtaAction(merged.cta_link);
   }
 
   return merged;
@@ -240,8 +239,11 @@ export default function HeroRender({
   const resolvedPhoneDigits = (cta_phone || dbPhoneDigits || '').replace(/\D/g, '');
   const resolvedPhoneDisplay = formatPhoneDisplay(resolvedPhoneDigits);
 
-  const action: 'jump_to_contact' | 'jump_to_anchor' | 'go_to_page' | 'call_phone' =
-    (cta_action as any) || 'go_to_page';
+  // The decision is pure (lib/sites/heroCta.ts): "Call Now" dials the resolved phone, a `/` or
+  // empty link goes to the contact form, an author's anchor is kept, a call with no number
+  // falls back to the form instead of hiding the button.
+  const resolved = resolveHeroCta({ cta_action, cta_link, cta_text, phoneDigits: resolvedPhoneDigits, contactAnchor });
+  const action = resolved.action;
   let href: string | undefined;
   let onClick: React.MouseEventHandler<HTMLAnchorElement> | undefined;
 
@@ -249,19 +251,11 @@ export default function HeroRender({
     href = undefined;
     onClick = (e) => e.preventDefault();
   } else {
-    if (action === 'jump_to_contact') {
-      href = `#${contactAnchor}`;
-      onClick = handleJumpClick;
-    } else if (action === 'jump_to_anchor') {
-      // The author's own anchor, kept. Falls back to a plain href if the id isn't on the page,
-      // so a mistyped anchor does nothing visible rather than silently going somewhere else.
-      href = cta_link;
-      onClick = handleAnchorClick;
-    } else if (action === 'call_phone') {
-      href = resolvedPhoneDigits ? `tel:${resolvedPhoneDigits}` : undefined;
-    } else {
-      href = cta_link || '/contact';
-    }
+    href = resolved.href;
+    if (action === 'jump_to_contact') onClick = handleJumpClick;
+    // The author's own anchor, kept. Falls back to a plain href if the id isn't on the page,
+    // so a mistyped anchor does nothing visible rather than silently going somewhere else.
+    else if (action === 'jump_to_anchor') onClick = handleAnchorClick;
   }
 
   const canShowCTA = !hide_cta && !!cta_text && (!!href || previewOnly);

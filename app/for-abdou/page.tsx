@@ -20,6 +20,8 @@ import { KEY_TO_LABEL } from '@/lib/industries';
 import { mintRepActionToken } from '@/lib/rep/repActionToken';
 import { repBuildLinks } from '@/lib/rep/repBuild';
 import NoSiteTable, { type NoSiteRow as TableRow } from '@/components/for-rep/no-site-table';
+import { islandRestaurantGroups, PLATFORM_LABEL, RESTAURANT_ORDERING_READ_ON } from '@/lib/vashon/restaurantOrdering';
+import { breakEvenOrders } from '@/lib/compare/toast';
 
 // The island list is read live: a re-sweep changes it, and a date on the section says how
 // fresh it is. Never a hand-typed table — that is a count that rots.
@@ -188,6 +190,11 @@ export default async function ForAbdouPage() {
   const sweptLabel = island.sweptOn
     ? new Date(island.sweptOn).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' })
     : null;
+  // The restaurant groups are a dated snapshot (lib/vashon/restaurantOrdering.ts), not live data.
+  const restaurants = islandRestaurantGroups();
+  const restaurantsReadOn = new Date(RESTAURANT_ORDERING_READ_ON + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+  // A $20 ticket, the same figure /compare/toast tabulates — derived, never typed.
+  const toastBreakEven = breakEvenOrders(2000) ?? 0;
   return (
     <>
       <SiteHeader sticky />
@@ -376,6 +383,52 @@ export default async function ForAbdouPage() {
             and costs nothing; a built row gives you the link to open, the claim link to copy, and a text
             message ready to send. Every link carries your code.
           </p>
+        </section>
+
+        {/* Restaurants: who already takes orders online, and through whom */}
+        <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
+            Island restaurants — who takes online orders, and who doesn't
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            Most island restaurants already have a website. The question that decides the pitch is whether
+            they take orders online, and through whom. Read from each restaurant's own site on {restaurantsReadOn};
+            a link kept on a subpage would be missed, so "none found" means exactly that. Check the door before
+            you walk in.
+          </p>
+          <div className="mt-4 space-y-3">
+            <Card title="Call these first — a site, but no online ordering found" tag={`${restaurants.noOrdering.length} places`} tone="emerald">
+              <p>
+                {restaurants.noOrdering.map((r) => r.name).join(' · ')}
+              </p>
+              <p className="mt-2">
+                This is where the no-monthly fee is a real win: they pay nothing until an order comes in. The
+                pizza places are the obvious first two — pizza is what people order from a phone.
+              </p>
+            </Card>
+            <Card title="On Toast with no website of their own — offer the site, not the ordering" tag={`${restaurants.toastNoSite.length} places`} tone="sky">
+              <p>
+                {restaurants.toastNoSite.map((r) => r.name).join(' · ')}
+              </p>
+              <p className="mt-2">
+                Their only web presence is a Toast ordering page. Build them a site that links to it. You are not
+                asking them to change how they take orders; you are giving the name a home. Ordering can move later
+                if they ever leave Toast — never pitch that first.
+              </p>
+            </Card>
+            <Card title="Leave alone — on Toast or Square with their own site" tag={`${restaurants.leaveAlone.length} places`} tone="zinc">
+              <p>
+                {restaurants.leaveAlone.map((r) => `${r.name} (${PLATFORM_LABEL[r.platform]})`).join(' · ')}
+              </p>
+              <p className="mt-2">
+                A restaurant on Toast's point-of-sale signed a multi-year contract and their online orders post
+                straight to the kitchen; Square's ordering is free. Nothing to offer them today. If one asks,
+                the honest comparison is at{' '}
+                <Link href="/compare/toast" className="text-sky-400 underline underline-offset-4">quicksites.ai/compare/toast</Link>
+                {' '}— it says plainly that above about {toastBreakEven} online orders a month Toast costs them less.
+              </p>
+            </Card>
+          </div>
         </section>
 
         {/* The money */}

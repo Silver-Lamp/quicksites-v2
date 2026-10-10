@@ -121,6 +121,25 @@ The strongest claim pitch isn't "we built you a site" — it's "**people already
 
 **Pricing for this funnel** (`lib/commerce/pricingPolicy.ts`): a claimed menu-ordering site launches on **8% + 60¢/order, no monthly** — a single-digit take that beats DoorDash, with a per-order floor so a small ticket still clears Stripe's fixed $0.30. Chosen by vertical, not funnel: `resolveMerchantFeeDefault(merchantId)` seeds the fee at Connect onboarding (`/api/connect/onboard`) — a site with a `menu` block (`hasMenuBlock`) gets restaurant terms, everything else keeps the general **5% / no-floor** default, so no other vertical is touched. The concrete rate is stated on the claim page ("you keep 92%, no monthly" — `components/sites/claim-site-hero.tsx`, menu sites only). All numbers env-overridable + clamped to the partner cap. **Deferred:** a subscription *buy-down* (a monthly that lowers the %) once real order volume shows where merchants land — the Shopify model; `lib/billing/*` already has the tier machinery.
 
+**Against Toast — the break-even is the claim, never "cheaper" (2026-10-10, `/compare/toast`,
+`lib/compare/toast.ts`).** Toast is a point-of-sale with ordering as an add-on; we overlap on exactly
+one thing, so the page compares only that. Its reported online channel is a LOWER per-order rate plus
+a monthly; ours is a higher percentage with no monthly — so below roughly a hundred online orders a
+month (at a $20 ticket) we cost the restaurant less, above it Toast does, and the page tabulates that
+by ticket size instead of giving a verdict (`breakEvenOrders`, derived from the real
+`computePlatformFeeCents` so the floor counts). ⚠️ **Two classes of Toast figure, kept apart in the
+module and on the page**: plan prices are read on Toast's own pricing page; processing rates, the
+online-ordering add-on and the per-order guest fee are **third-party** — Toast publishes none of them,
+and a reader cannot tell a vendor figure from a blog figure by looking. The audit cron covers it
+(`restaurant-ordering` in `lib/compare/registry.ts`). **Who the page is for:** the restaurant with a
+site and no online ordering (the Vashon census: ~15 of ~35 food businesses), and the Toast-only
+restaurant with no website (3 on Vashon — offer the site that links their Toast page, never a
+replacement). A restaurant already on Toast POS is told in the first screen to keep it. Square's
+ordering is free with processing only; nothing to undercut there. Card processing is **inside** our
+fee because orders run as destination charges without `on_behalf_of` (flag off in production) —
+`QUICKSITES_RESTAURANT.processingIncluded`; if that flag is ever turned on, the page's sentence
+becomes false the same day.
+
 ## 7d. City menu search, and measuring it honestly (2026-07-29)
 
 The `menu_finder` block is a narrowing dish search across a whole city cohort (`lib/menu/cityMenuIndex.ts` → `app/api/public/city-menu-search`, rendered by `components/admin/templates/render-blocks/menu-finder.tsx`). A chip that would empty the page is never offered (`nextTags`), because a search that can dead-end feels broken in a way no styling fixes.

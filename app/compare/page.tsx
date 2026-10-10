@@ -86,6 +86,21 @@ export default function CompareHubPage() {
                 </span>
               </Link>
             ))}
+            {/* Toast is a restaurant POS, not a builder — its own page, outside the feature matrix. */}
+            <Link
+              href="/compare/toast"
+              className="group flex flex-col rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 text-left transition hover:border-emerald-500/40 hover:bg-zinc-900/70"
+            >
+              <h3 className="text-lg font-bold text-white">QuickSites vs Toast</h3>
+              <div className="mt-0.5 text-xs uppercase tracking-wide text-zinc-500">restaurant online ordering</div>
+              <p className="mt-2 flex-1 text-sm text-zinc-400">
+                A full restaurant POS with ordering as an add-on, against an ordering site with no monthly. Costs by
+                volume, and the point at which you should keep Toast.
+              </p>
+              <span className="mt-3 text-sm font-semibold text-emerald-400 group-hover:text-emerald-300">
+                See the comparison →
+              </span>
+            </Link>
           </div>
         </section>
 

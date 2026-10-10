@@ -12,6 +12,7 @@
 // refresh stays easy.
 
 import { COMPETITOR_SLUGS } from '@/lib/compare/competitors';
+import { TOAST_PRICES_VERIFIED } from '@/lib/compare/toast';
 
 export type CompareRegistryStatus = 'live' | 'candidate' | 'skip';
 
@@ -36,6 +37,17 @@ export const COMPARE_REGISTRY: CompareRegistryEntry[] = [
     competitors: COMPETITOR_SLUGS,
     pricesVerified: '2026-07-01', // mirrors PRICES_VERIFIED = 'July 2026' — the OLDEST read in the cluster; 10Web + Framer carry their own 2026-09 stamp
     notes: 'Wix, Squarespace, GoDaddy, Webflow, Shopify, Duda, GoHighLevel, 10Web, Framer',
+  },
+  {
+    key: 'restaurant-ordering',
+    name: 'QuickSites vs Toast (online ordering)',
+    status: 'live',
+    clusterPath: '/compare/toast',
+    libFile: 'lib/compare/toast.ts',
+    competitors: ['toast'],
+    pricesVerified: TOAST_PRICES_VERIFIED,
+    notes:
+      'A different category from the builders: Toast is a POS. Plan prices are vendor-read; processing, add-on and guest fee are third-party (Toast publishes none of them) — re-read both when this goes stale.',
   },
   // Add CANDIDATE entries (a product/set worth comparing but with no cluster yet) to have the
   // audit file a "Build compare cluster: X" task. None today.

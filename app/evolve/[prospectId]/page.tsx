@@ -52,7 +52,7 @@ export default async function EvolvePage({ params, searchParams }: { params: Pro
   if (!slug) notFound();
 
   const base = publicBaseUrl();
-  const currentFrameable = await isFrameable(/^https?:\/\//i.test(p.website) ? p.website : `https://${p.website}`, base);
+  const frame = await isFrameable(p.website, base);
   const m = buildEvolveModel({
     prospectId: p.id,
     businessName: (p.business_name ?? '').trim(),
@@ -60,7 +60,8 @@ export default async function EvolvePage({ params, searchParams }: { params: Pro
     slug,
     orderingPlatform: p.ordering_platform,
     siteProvider: p.site_provider,
-    currentFrameable,
+    currentFrameable: frame.frameable,
+    currentFrameUrl: frame.frameUrl,
     refCode: typeof ref === 'string' && /^[a-z0-9-]{2,40}$/i.test(ref) ? ref : null,
     base,
     menuHost: process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null,

@@ -3,6 +3,7 @@
 
 import * as React from 'react';
 import { useCartStore } from '@/components/cart/cart-store';
+import { parsePriceCents } from '@/lib/menu/previewOrder';
 import VenmoPay from '@/components/sites/venmo-pay';
 import FoodIcon from '@/components/sites/food-icon';
 import { readMenuIconSet, type MenuIconSet } from '@/lib/menu/foodIcons';
@@ -116,18 +117,43 @@ function addToOrder(it: MenuItem, option?: MenuOption, addons: MenuAddon[] = [],
 }
 
 /** One menu item row — holds its own selected-option state for "choose one" items. */
+/**
+ * PREVIEW ordering (exhibit only): the Evolve page frames an unclaimed draft so the owner can see
+ * ordering work. A row with no catalog id gets a button that feeds the preview drawer
+ * (components/sites/preview-order-drawer.tsx) — client state, no money, no record. Real
+ * ordering (a catalog id) is untouched. See lib/menu/previewOrder.ts.
+ */
+function addToPreviewOrder(it: MenuItem, rowKey: string, option?: MenuOption) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent('qs:preview-order:add', {
+        detail: {
+          key: option ? `${rowKey}::${option.label}` : rowKey,
+          name: it.name,
+          option: option?.label ?? null,
+          priceCents: parsePriceCents(option ? { price_cents: option.price_cents ?? null, price: (option as any).price ?? null } : { price_cents: it.price_cents ?? null, price: it.price ?? null }),
+        },
+      }),
+    );
+  } catch {
+    /* noop */
+  }
+}
+
 function MenuItemRow({
   item,
   rowKey,
   freshness,
   iconSet,
   merchantId,
+  previewOrdering = false,
 }: {
   item: MenuItem;
   rowKey: string;
   freshness: MenuFreshness;
   iconSet: MenuIconSet;
   merchantId: string | null;
+  previewOrdering?: boolean;
 }) {
   const options = orderableOptions(item);
   const hasOptions = options.length > 0;
@@ -294,6 +320,18 @@ function MenuItemRow({
           </div>
         )}
 
+        {previewOrdering && !item.catalog_item_id && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => addToPreviewOrder(item, rowKey)}
+              className="inline-flex items-center rounded-md border border-border px-3 py-1 text-sm font-medium transition hover:bg-muted"
+            >
+              Add to order
+            </button>
+          </div>
+        )}
+
         {item.catalog_item_id && (hasOptions ? selected != null : true) && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
@@ -341,6 +379,9 @@ export default function RenderMenu(props: any) {
   const iconSet = readMenuIconSet(props?.template?.data ?? props?.template);
   // Resolved from the TEMPLATE, so it works on a published page and not just in the editor.
   const merchantId = readMerchantId(props?.template);
+  // Exhibit mode (the Evolve page framing an unclaimed draft): rows without a catalog id get a
+  // preview "Add to order". Passed by the public page as serverData for this block type.
+  const previewOrdering = props?.serverData?.previewOrdering === true;
   const sections: MenuSection[] = Array.isArray(content.sections) ? content.sections : [];
 
   // ⚠️ THE RULE EXISTED AND HAD EXACTLY ONE CALLER — the city SEARCH index — so prices aged out
@@ -415,7 +456,7 @@ export default function RenderMenu(props: any) {
 
             <ul className="mt-4 divide-y divide-border">
               {(section.items ?? []).map((it, ii) => (
-                <MenuItemRow key={`${slugId(section.name, si)}-${ii}`} item={it} rowKey={`${slugId(section.name, si)}-${ii}`} freshness={freshness} iconSet={iconSet} merchantId={merchantId} />
+                <MenuItemRow key={`${slugId(section.name, si)}-${ii}`} item={it} rowKey={`${slugId(section.name, si)}-${ii}`} freshness={freshness} iconSet={iconSet} merchantId={merchantId} previewOrdering={previewOrdering} />
               ))}
             </ul>
           </div>

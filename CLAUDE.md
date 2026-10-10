@@ -965,7 +965,9 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   against the SCRAPER'S corpus (`scrapeSite`+`scrapeMenuPages`+`evidenceCorpus`), never against a
   browser fetch.** The check that came out of it stays (`lib/rebuild/menuEvidence.ts`: a dish
   survives only if its name is in that corpus; an unconfirmed price is dropped, the dish kept) —
-  its one measured false drop is a real sandwich the model renamed.
+  its one measured false drop is a real sandwich the model renamed. Operator surface:
+  **`/admin/restaurants/no-ordering`** (sidebar → Restaurants → No Online Ordering): sweep a city's
+  restaurants, re-check sites, build ordering pages from their menus.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

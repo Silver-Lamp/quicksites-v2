@@ -44,6 +44,7 @@ import {
   Volume2,
   Mic,
   Eye,
+  Utensils,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useBrand } from '@/app/providers';
@@ -254,6 +255,14 @@ const NAV_ADMIN: NavItem[] = [
      Its own funnel cockpits (order-intent demand → launch readiness) + the owner offer.
      Discovery + the outreach pipeline stay in Growth: they feed both businesses. */
   { type: 'section', label: 'Restaurants', adminOnly: true },
+  {
+    type: 'item',
+    label: 'No Online Ordering',
+    href: '/admin/restaurants/no-ordering',
+    icon: <Utensils size={18} />,
+    adminOnly: true,
+    keywords: ['toast', 'square', 'doordash', 'ordering', 'sweep', 'restaurants without ordering', 'menu'],
+  },
   {
     type: 'item',
     label: 'Location Domains',

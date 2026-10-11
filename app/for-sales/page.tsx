@@ -30,14 +30,17 @@
 import type { Metadata } from 'next';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
 import VerticalFlow from '@/components/for-rep/vertical-flow';
-import { FOR_SALES_PITCHES } from '@/lib/sales/forSalesPitches';
+import { FOR_SALES_PITCHES, BUSINESS_SUBPITCHES } from '@/lib/sales/forSalesPitches';
 import PitchArt, { type PitchArtKind } from '@/components/for-rep/pitch-art';
 import SiteHeader from '@/components/site/site-header';
 
 export const metadata: Metadata = {
   title: 'QuickSites — commission sales',
-  description: 'What you would be selling, what a call looks like, and what it pays.',
+  description: 'Spread the word. Earn for life. Help a lunch spot take orders online, or a small business owner evolve their online presence — and earn a share for as long as they do.',
   robots: { index: false, follow: false }, // unlisted: public URL, invisible to search
+  // The share card is app/for-sales/opengraph-image.tsx; a large card so the sentence reads.
+  openGraph: { title: 'Spread the word. Earn for life.', description: 'Help a lunch spot take orders online, or a small business owner evolve their online presence — and earn a share for as long as they do.', type: 'website' },
+  twitter: { card: 'summary_large_image' },
 };
 
 /** The two pitches the page opens with (lib/sales/forSalesPitches.ts): a native <details> each. */
@@ -56,6 +59,25 @@ function Pitch({ summary, art, children }: { summary: string; art: PitchArtKind;
         </span>
       </summary>
       <div className="-mx-6 mt-2 border-l border-zinc-800/60 md:ml-0">{children}</div>
+    </details>
+  );
+}
+
+/** A box inside a pitch: title + one line, opens to the vertical's own section. */
+function SubPitch({ k, children }: { k: keyof typeof BUSINESS_SUBPITCHES; children: React.ReactNode }) {
+  const c = BUSINESS_SUBPITCHES[k];
+  return (
+    <details className="group/sub mx-auto max-w-3xl px-6 pt-3">
+      <summary className="cursor-pointer select-none rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 transition-colors hover:border-sky-500/50 group-open/sub:border-sky-500/60 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-start gap-3">
+          <span aria-hidden className="mt-0.5 inline-block shrink-0 text-sky-400 transition-transform group-open/sub:rotate-90">›</span>
+          <span>
+            <span className="block text-base font-semibold text-white">{c.title}</span>
+            <span className="mt-1 block text-sm leading-relaxed text-zinc-400">{c.line}</span>
+          </span>
+        </span>
+      </summary>
+      <div className="-mx-6 mt-1">{children}</div>
     </details>
   );
 }
@@ -150,6 +172,45 @@ export default async function ForSalesPage() {
         {/* Pitch 2: a small business owner → the domain rental, the free website build, the call,
             what it pays — all folded under the sentence. */}
         <Pitch summary={FOR_SALES_PITCHES.business} art="business">
+          {/* Three boxes, one per vertical (owner, 2026-10-11): the store first, the free site second,
+              the domain rental last — "have the SEO site sales one be secondary". Copy in
+              lib/sales/forSalesPitches.ts; each box is its own fold so only one reads at a time. */}
+          <section className="mx-auto max-w-3xl px-6 pb-2 pt-6">
+            <p className="text-sm leading-relaxed text-zinc-400">Three things a small business owner might need. Open the one that fits.</p>
+          </section>
+          <SubPitch k="store">
+            <section className="mx-auto max-w-3xl px-6 pb-4">
+              <VerticalFlow flow="store" />
+            </section>
+          </SubPitch>
+          <SubPitch k="website">
+            <section className="mx-auto max-w-3xl space-y-4 px-6 pb-4">
+          {/* ⚠️ This card exists to stop a rep spending calls on the wrong product. We also build
+              sites for businesses that have none, and that product is deliberately NOT theirs —
+              a commission on it cannot pay for a phone call, so it is self-serve or it is nothing.
+              Naming it turns a "no" on the rental into somewhere to send them. No price here: the
+              tiers are a proposal, and forSalesBrief.test.ts fails on a typed figure near it. */}
+          <Card title="The other product — and why it isn’t a call" tag="not yours" tone="amber">
+            Two different things get sold here. You sell the{' '}
+            <span className="text-zinc-200">exact-match domain</span> — exclusive, one per city and
+            trade, and worth a phone call. The{' '}
+            <span className="text-zinc-200">build-them-a-website</span> product is self-serve on
+            purpose, because a commission on it would not cover the call that sold it. The tiers are
+            on{' '}
+            <a href="/business-plan" target="_blank" rel="noopener noreferrer" className={linkClass}>
+              the business plan
+            </a>
+            , written as a proposal rather than a rate, because nobody has been asked to pay one yet.
+            <p className="mt-3">
+              <span className="text-zinc-200">What it’s good for on your call:</span> a prospect who
+              won’t rent the exact-match domain but has no website at all is not a dead lead. Send
+              them the claim link and move on.
+            </p>
+          </Card>
+          <VerticalFlow flow="website" />
+            </section>
+          </SubPitch>
+          <SubPitch k="rental">
         {/* The domain rental — three cards, the second with the one fold left on the page. */}
         <section className="mx-auto max-w-3xl space-y-4 px-6 pb-4 pt-6">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
@@ -234,31 +295,7 @@ export default async function ForSalesPage() {
             </p>
           </Card>
 
-          {/* ⚠️ This card exists to stop a rep spending calls on the wrong product. We also build
-              sites for businesses that have none, and that product is deliberately NOT theirs —
-              a commission on it cannot pay for a phone call, so it is self-serve or it is nothing.
-              Naming it turns a "no" on the rental into somewhere to send them. No price here: the
-              tiers are a proposal, and forSalesBrief.test.ts fails on a typed figure near it. */}
-          <Card title="The other product — and why it isn’t a call" tag="not yours" tone="amber">
-            Two different things get sold here. You sell the{' '}
-            <span className="text-zinc-200">exact-match domain</span> — exclusive, one per city and
-            trade, and worth a phone call. The{' '}
-            <span className="text-zinc-200">build-them-a-website</span> product is self-serve on
-            purpose, because a commission on it would not cover the call that sold it. The tiers are
-            on{' '}
-            <a href="/business-plan" target="_blank" rel="noopener noreferrer" className={linkClass}>
-              the business plan
-            </a>
-            , written as a proposal rather than a rate, because nobody has been asked to pay one yet.
-            <p className="mt-3">
-              <span className="text-zinc-200">What it’s good for on your call:</span> a prospect who
-              won’t rent the exact-match domain but has no website at all is not a dead lead. Send
-              them the claim link and move on.
-            </p>
-          </Card>
-          <VerticalFlow flow="website" />
         </section>
-
         {/* The call — the sheet is the script. It is deliberately a separate surface: nothing
             folds away there, and it works with no signal. */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">
@@ -347,6 +384,8 @@ export default async function ForSalesPage() {
             </ul>
           </div>
         </section>
+
+          </SubPitch>
 
         </Pitch>
 

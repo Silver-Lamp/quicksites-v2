@@ -58,9 +58,14 @@ describe('/for-sales mounts a flowchart under each remaining vertical', () => {
     const website = page.indexOf('<VerticalFlow flow="website"');
     expect(rental).toBeGreaterThan(page.indexOf('The domain rental'));
     expect(website).toBeGreaterThan(page.indexOf('The other product'));
-    expect(rental).toBeLessThan(website);
-    // The restaurants section is the FIRST folded pitch (lunch first, owner 2026-10-11), before both flows.
-    expect(page.indexOf('<RestaurantsSection')).toBeLessThan(rental);
+    // Inside the business pitch the boxes run store → free site → domain rental (owner, 2026-10-11:
+    // "have the SEO site sales one be secondary"), so the rental flow comes LAST.
+    const store = page.indexOf('<VerticalFlow flow="store"');
+    expect(store).toBeGreaterThan(0);
+    expect(store).toBeLessThan(website);
+    expect(website).toBeLessThan(rental);
+    // The restaurants section is the FIRST folded pitch (lunch first, owner 2026-10-11), before all flows.
+    expect(page.indexOf('<RestaurantsSection')).toBeLessThan(store);
   });
   it('the public table offers a Build link that goes to sign-up when there is no rep grant', () => {
     const table = read('components/for-rep/restaurant-table.tsx');

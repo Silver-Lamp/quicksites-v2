@@ -39,6 +39,17 @@ describe('the straight-talk section is hidden (owner, 2026-10-10)', () => {
     // No "If you want it" close (owner, 2026-10-11): the page ends when the second pitch does.
     expect(code).not.toMatch(/If you want it/);
   });
+  it('the business pitch holds three boxes in the owner\'s order — store, free site, domain rental — and the rental box carries the call and the pay', () => {
+    const store = code.indexOf('<SubPitch k="store">');
+    const website = code.indexOf('<SubPitch k="website">');
+    const rental = code.indexOf('<SubPitch k="rental">');
+    expect(store).toBeGreaterThan(code.indexOf('<Pitch summary={FOR_SALES_PITCHES.business}'));
+    expect(store).toBeLessThan(website);
+    expect(website).toBeLessThan(rental);
+    expect(code.indexOf('The domain rental')).toBeGreaterThan(rental);
+    expect(code.indexOf('What it pays')).toBeGreaterThan(rental);
+    expect(code.indexOf('What it pays')).toBeLessThan(code.lastIndexOf('</SubPitch>'));
+  });
 });
 
 /**
@@ -145,7 +156,10 @@ describe('two products, and only one of them is the rep’s', () => {
   it('quotes no price for the self-serve tiers, because none has been paid', () => {
     // The business plan calls those numbers a proposal, not a rate. A rep page stating them as
     // prices would make a guess look settled — and a rep would then quote it on a call.
-    const card = BRIEF.slice(BRIEF.indexOf('other product'), BRIEF.indexOf('other product') + 2500);
+    // The card alone: it now sits in the free-site box ABOVE the rental cards (owner, 2026-10-11),
+    // so a fixed window would run into the rental's own, legitimate rent figures.
+    const start = BRIEF.indexOf('other product');
+    const card = BRIEF.slice(start, BRIEF.indexOf('</Card>', start));
     expect(card).not.toMatch(/\$\s?\d/);
     expect(card).toMatch(/proposal rather than a rate/i);
   });

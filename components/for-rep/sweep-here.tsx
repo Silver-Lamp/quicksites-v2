@@ -37,7 +37,7 @@ export default function SweepHere({ code, token, repName, initialCity, initialRe
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) {
         setNote(
-          res.status === 429 ? 'That is two sweeps from this connection today — the limit exists because each one costs money. Try tomorrow, or type a city someone has already swept.'
+          res.status === 429 ? 'That is two sweeps from this connection today, and nobody has swept that city yet — the limit exists because each one costs money. Try tomorrow, or type a city someone has already swept. (Signed in as the operator, there is no limit.)'
           : j?.error === 'could_not_place_you' ? 'Could not work out which town that is. Type the city and state instead.'
           : j?.error === 'places_unavailable' ? 'The map service is not answering right now. Tell Sandon.'
           : `Could not sweep (${j?.error ?? res.status}).`,
@@ -52,6 +52,8 @@ export default function SweepHere({ code, token, repName, initialCity, initialRe
           ? `Swept ${j.city}, ${j.region}: ${j.found ?? '?'} places found, ${j.inserted ?? 0} new to us. ${j.counts.call + j.counts.shop + j.counts.thirdParty} worth a visit.`
           : j.reason === 'daily_cap'
             ? `Everyone's sweeps for today are used up; here is what we already hold for ${j.city}.`
+            : j.reason === 'ip_cap'
+              ? `That is two sweeps from this connection today, so nothing new was read — but ${j.city}, ${j.region} has been swept before${j.sweptOn ? ` (${new Date(j.sweptOn).toLocaleDateString()})` : ''}; here is what we hold.`
             : `${j.city}, ${j.region} was swept ${j.sweptOn ? new Date(j.sweptOn).toLocaleDateString() : 'recently'} — here is what we hold.`,
       );
     } catch {

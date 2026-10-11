@@ -11,9 +11,16 @@
 //   4. the shape is fixed server-side — restaurant/cafe/bar, 2.5 km, the operator as owner —
 //      nothing in the body chooses a radius, a category or an owner.
 // Reads are not gated the same way: GET /api/rep/restaurants lists a city without sweeping.
+//
+// ⚠️ Two refinements (owner, 2026-10-10). The caps are for STRANGERS: a signed-in platform
+// admin is the person paying the Places bill, so neither cap applies to them. And a capped
+// visitor whose city we have ALREADY swept is shown what we hold instead of a bare 429 — the
+// cap guards spend, and showing existing rows spends nothing. That is why the per-IP check
+// runs after the city is resolved, not before.
 import { NextResponse } from 'next/server';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { runSweep, SweepInputError } from '@/lib/prospects/runSweep';
 import { getCityStateForLatLon } from '@/lib/utils/geocode';
 import { loadRestaurantsFor, sweptRecently } from '@/lib/rep/repRestaurants';
@@ -28,8 +35,8 @@ export const SWEEPS_PER_IP_PER_DAY = 2;
 export const SWEEPS_PER_DAY_GLOBAL = 25;
 
 export async function POST(req: Request) {
-  const limited = await rateLimitOr429(req, 'rep-sweep', SWEEPS_PER_IP_PER_DAY, 86_400);
-  if (limited) return limited;
+  const admin = await getAdminUser().catch(() => null);
+  const asOwner = !!admin;
   let body: any = {};
   try {
     body = await req.json();
@@ -58,12 +65,21 @@ export async function POST(req: Request) {
   const menuHost = process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null;
   const existing = await loadRestaurantsFor({ city, region, code, menuHost });
   if (sweptRecently(existing.sweptOn)) {
-    return NextResponse.json({ ok: true, city, region, swept: false, reason: 'recent', ...existing });
+    return NextResponse.json({ ok: true, city, region, swept: false, reason: 'recent', asOwner, ...existing });
   }
 
-  // 3. Global cap, then the sweep itself.
-  const global = await checkRateLimit('rep-sweep:global', SWEEPS_PER_DAY_GLOBAL, 86_400);
-  if (!global.ok) return NextResponse.json({ ok: true, city, region, swept: false, reason: 'daily_cap', ...existing }, { status: 200 });
+  // 3. The caps — strangers only. A capped visitor still sees a city we have swept before.
+  if (!asOwner) {
+    const limited = await rateLimitOr429(req, 'rep-sweep', SWEEPS_PER_IP_PER_DAY, 86_400);
+    if (limited) {
+      if (existing.rows.length > 0) return NextResponse.json({ ok: true, city, region, swept: false, reason: 'ip_cap', asOwner, ...existing });
+      return limited;
+    }
+    const global = await checkRateLimit('rep-sweep:global', SWEEPS_PER_DAY_GLOBAL, 86_400);
+    if (!global.ok) return NextResponse.json({ ok: true, city, region, swept: false, reason: 'daily_cap', asOwner, ...existing }, { status: 200 });
+  }
+
+  // 4. The sweep itself.
   const operatorId = process.env.TRADE_PIPELINE_OPERATOR_ID || null;
   try {
     const r = await runSweep({
@@ -77,7 +93,7 @@ export async function POST(req: Request) {
       operatorId: operatorId ?? undefined,
     } as any);
     const after = await loadRestaurantsFor({ city, region, code, menuHost });
-    return NextResponse.json({ ok: true, city, region, swept: true, found: r.found, inserted: r.inserted, orderingChecked: r.orderingChecked, ...after });
+    return NextResponse.json({ ok: true, city, region, swept: true, asOwner, found: r.found, inserted: r.inserted, orderingChecked: r.orderingChecked, ...after });
   } catch (e: any) {
     if (e instanceof SweepInputError) return NextResponse.json({ error: e.message }, { status: 400 });
     // A dead Places key reads as a 501 — say so rather than "no restaurants here".

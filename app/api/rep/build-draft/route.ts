@@ -16,6 +16,7 @@ import { repBuildLinks, REP_BUILDS_PER_DAY } from '@/lib/rep/repBuild';
 import { codeIsUsable } from '@/lib/referrals/codes';
 import { requireUser } from '@/lib/auth/requireUser';
 import { codeForMember } from '@/lib/rep/memberCode';
+import { resolveOperatorId } from '@/lib/outreach/defaultOperator';
 import { getProspect, markProspectBuilt } from '@/lib/outreach/prospects';
 import { buildDraftFromListing, BuildDraftError } from '@/lib/outreach/buildDraftFromListing';
 import { buildDraftFromSite, BuildFromSiteError } from '@/lib/outreach/buildDraftFromSite';
@@ -81,7 +82,9 @@ export async function POST(req: Request) {
   // The draft's owner is the operator who swept the business (the cron does the same), never
   // the rep — the rep has no account, and ownership transfers to the business on claim.
   const { data: who } = await supabaseAdmin.from('outreach_prospects').select('discovered_by').eq('id', prospectId).maybeSingle();
-  const operatorId = (who as { discovered_by?: string | null } | null)?.discovered_by || process.env.TRADE_PIPELINE_OPERATOR_ID || null;
+  // A row the public sweep inserted carries no discovered_by (the env var is unset in prod);
+  // resolveOperatorId falls back to the programme's operator account rather than failing.
+  const operatorId = (who as { discovered_by?: string | null } | null)?.discovered_by || (await resolveOperatorId());
   if (!operatorId) return NextResponse.json({ error: 'no_operator' }, { status: 500 });
 
   // mode 'from_site': the restaurant HAS a website and takes no online orders — build the

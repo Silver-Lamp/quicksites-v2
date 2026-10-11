@@ -2,7 +2,11 @@
 export function cityStateFromNominatim(json: any): { city: string; region: string } | null {
   const a = json?.address;
   if (!a) return null;
-  const city = a.city || a.town || a.village || a.hamlet || a.municipality || a.county || null;
+  // A place name before a county: a point in unincorporated land has no city, and the first
+  // "Sweep where I am" from such a point filed twenty restaurants under city = "King County"
+  // (2026-10-11). The suburb / neighbourhood Nominatim gives is the name people use for where
+  // they are; the county is the last resort, not the second.
+  const city = a.city || a.town || a.village || a.hamlet || a.municipality || a.suburb || a.neighbourhood || a.city_district || a.county || null;
   const iso = typeof a['ISO3166-2-lvl4'] === 'string' ? a['ISO3166-2-lvl4'] : '';
   const region = iso.startsWith('US-') ? iso.slice(3) : (a.state_code || '').toUpperCase();
   if (!city || !region) return null;

@@ -177,15 +177,24 @@ export default async function ForSalesPage() {
               Commission sales
             </span>
           </div>
+          {/* ⚠️ The hero used to open on the domain rental ("Selling a domain, not a website") while
+              the restaurants section sat below it as "the main event" — a page cannot have two.
+              Restaurants lead now (owner, 2026-10-10); the domain line keeps every number and moves
+              to second place, where "Our other verticals" picks it up. */}
           <h1 className="mt-6 text-4xl font-extrabold tracking-tight md:text-5xl">
-            Selling a domain, not a website
+            The fastest yes is a restaurant.
           </h1>
           <p className="mt-4 text-lg leading-relaxed text-zinc-400">
             <span className="text-zinc-200">
-              I own 32 city-and-trade domains that are live right now. The product is renting one of
-              them to the one business in that city that wants it, for $99/month.
+              A restaurant with a website and no online ordering pays nobody for orders today. You build
+              its ordering page from the menu it already published, show it over lunch, and leave a card.
             </span>{' '}
-            You get half of that, every month, for as long as they stay.
+            When they take it, you earn a share of every order for as long as they sell — and only then.
+          </p>
+          <p className="mt-4 text-base leading-relaxed text-zinc-400">
+            Below that is the domain rental: I own 32 city-and-trade domains that are live right now,
+            rented to the one business in that city that wants one for $99/month, with half of that to
+            you every month for as long as they stay.
           </p>
           <p className="mt-3 text-sm text-zinc-500">
             This is the whole brief: the mechanics, the numbers, the script, and the parts that

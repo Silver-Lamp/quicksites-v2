@@ -10,6 +10,7 @@ import { CheckCircle, XCircle, Loader2, ChevronRight, ChevronDown, Info } from '
 import RowActions from '@/components/admin/templates/row-actions';
 import { CampaignBadge } from '@/components/admin/templates/campaign-badge';
 import { RebuildPitchBadge } from '@/components/admin/templates/rebuild-pitch-badge';
+import DraftOutreachLinksRow from '@/components/admin/templates/draft-outreach-links';
 import NextStepButton from '@/components/admin/templates/next-step-button';
 import type { NextStep } from '@/lib/outreach/readiness';
 import type { Template } from '@/types/template';
@@ -574,6 +575,7 @@ export default function TemplatesIndexTable({
                 </div>
               ) : null}
               <RebuildPitchBadge row={t} slug={t.slug} className="mt-1" />
+              <DraftOutreachLinksRow links={(t as any).outreach} className="mt-1" />
               {effectiveGroupMode !== 'none' && hasChildren > 0 && (
                 <div className="text-[11px] text-white/45 mt-0.5">
                   {expanded[gKey]

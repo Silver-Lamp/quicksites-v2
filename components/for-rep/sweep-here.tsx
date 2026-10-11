@@ -112,7 +112,7 @@ export default function SweepHere({ code, token, repName, initialCity, initialRe
           </p>
           {result.rows.length > 0 && <RestaurantTable rows={result.rows} token={token ?? ''} repName={repName ?? 'a QuickSites rep'} readOnly={!token} />}
           {!token && result.rows.length > 0 && (
-            <p className="mt-2 text-xs text-zinc-500">The build buttons appear on a rep’s own page, where every link carries their code. These are the doors; the code is how you get paid for walking through them.</p>
+            <p className="mt-2 text-xs text-zinc-500">Signed in, the Build buttons work from here and every link carries a code of your own; a rep’s own page carries theirs. These are the doors; the code is how you get paid for walking through them.</p>
           )}
         </div>
       )}

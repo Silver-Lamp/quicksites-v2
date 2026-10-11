@@ -69,6 +69,16 @@ describe('the route is bounded on the server', () => {
     expect(src).toMatch(/checkRateLimit\(`rep-build:\$\{code\}`, REP_BUILDS_PER_DAY, 24 \* 3600\)/);
     expect(REP_BUILDS_PER_DAY).toBeLessThanOrEqual(25);
   });
+  it('with no grant, a signed-in member builds under a code of their own (never an admin bypass)', () => {
+    expect(src).toMatch(/const who = await requireUser\(\);/);
+    expect(src).toMatch(/codeForMember\(\{ userId: who\.user\.id, email: who\.user\.email \}\)/);
+    // The code reaches the same cap and the same usable check as a grant's.
+    expect(src.indexOf('codeIsUsable(code)')).toBeGreaterThan(src.indexOf('codeForMember('));
+    const table = read('components/for-rep/restaurant-table.tsx');
+    expect(table).toMatch(/CurrentUserContext/);
+    expect(table).toMatch(/is_anonymous/);
+    expect(table).toMatch(/const canBuild = !readOnly \|\| member;/);
+  });
   it('builds only a parked prospect by id, with its own industry, and never a second draft', () => {
     expect(src).toMatch(/\^\[0-9a-f-\]\{36\}\$/);
     expect(src).toMatch(/industryKey: \(p\.industry_key as any\) \|\| undefined/);

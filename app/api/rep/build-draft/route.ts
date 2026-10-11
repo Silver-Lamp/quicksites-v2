@@ -14,6 +14,8 @@ import { NextResponse } from 'next/server';
 import { verifyRepActionToken } from '@/lib/rep/repActionToken';
 import { repBuildLinks, REP_BUILDS_PER_DAY } from '@/lib/rep/repBuild';
 import { codeIsUsable } from '@/lib/referrals/codes';
+import { requireUser } from '@/lib/auth/requireUser';
+import { codeForMember } from '@/lib/rep/memberCode';
 import { getProspect, markProspectBuilt } from '@/lib/outreach/prospects';
 import { buildDraftFromListing, BuildDraftError } from '@/lib/outreach/buildDraftFromListing';
 import { buildDraftFromSite, BuildFromSiteError } from '@/lib/outreach/buildDraftFromSite';
@@ -37,9 +39,23 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
   }
-  const grant = verifyRepActionToken(typeof body.token === 'string' ? body.token : null);
-  if (!grant) return NextResponse.json({ error: 'bad_token' }, { status: 403 });
-  const code = grant.code;
+  // Who is building: a rep page's signed grant (the rep usually has no account), or — with no
+  // token — a signed-in member, who builds under a code of their own (owner, 2026-10-11: the
+  // /for-sales table said "Build — sign up" to someone already signed in). Anonymous guests
+  // are not members; requireUser() rejects them.
+  let code: string;
+  const token = typeof body.token === 'string' && body.token ? body.token : null;
+  if (token) {
+    const grant = verifyRepActionToken(token);
+    if (!grant) return NextResponse.json({ error: 'bad_token' }, { status: 403 });
+    code = grant.code;
+  } else {
+    const who = await requireUser();
+    if (who instanceof NextResponse) return NextResponse.json({ error: 'sign_in_required' }, { status: 401 });
+    const mine = await codeForMember({ userId: who.user.id, email: who.user.email });
+    if (!mine) return NextResponse.json({ error: 'no_code' }, { status: 500 });
+    code = mine;
+  }
   if (!(await codeIsUsable(code))) return NextResponse.json({ error: 'code_inactive' }, { status: 403 });
 
   const prospectId = typeof body.prospectId === 'string' ? body.prospectId.trim() : '';

@@ -10,6 +10,7 @@ import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import { repOrderingSmsDraft, smsHref } from '@/lib/rep/repBuild';
 import { signUpHref } from '@/lib/auth/authLinks';
+import { CurrentUserContext } from '@/components/admin/context/current-user-provider';
 
 export type RestaurantTableRow = {
   prospectId: string;
@@ -40,8 +41,13 @@ const GROUP_TAG: Record<RestaurantTableRow['group'], { text: string; cls: string
 
 export default function RestaurantTable({ rows, token, repName, readOnly = false }: { rows: RestaurantTableRow[]; token: string; repName: string; readOnly?: boolean }) {
   // A reader with no rep grant (the public /for-sales brief) sees a Build link that goes to
-  // sign-up and comes back here — the build itself needs a code, so the label says "sign up".
+  // sign-up and comes back here. A signed-in MEMBER (not an anonymous guest) can build without a
+  // grant: the route gives them a code of their own, so the links they hand out are attributed.
+  // ⚠️ It said "Build — sign up" to the owner while the header said "Sign out" (2026-10-11).
   const pathname = usePathname();
+  const { user, ready } = React.useContext(CurrentUserContext);
+  const member = ready && !!user && !(user as { is_anonymous?: boolean | null }).is_anonymous;
+  const canBuild = !readOnly || member;
   const [built, setBuilt] = React.useState<Record<string, Built>>(() =>
     Object.fromEntries(rows.filter((r) => r.previewUrl && r.claimUrl).map((r) => [r.prospectId, { previewUrl: r.previewUrl!, claimUrl: r.claimUrl!, evolveUrl: r.evolveUrl ?? null, alreadyBuilt: true }])),
   );
@@ -53,12 +59,13 @@ export default function RestaurantTable({ rows, token, repName, readOnly = false
     setBusy(r.prospectId);
     setErrors((e) => ({ ...e, [r.prospectId]: '' }));
     try {
-      const res = await fetch('/api/rep/build-draft', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, prospectId: r.prospectId, mode: 'from_site' }) });
+      const res = await fetch('/api/rep/build-draft', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: token || undefined, prospectId: r.prospectId, mode: 'from_site' }) });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j?.ok) {
         const why =
           j?.error === 'daily_cap' ? `That's today's limit (${j.limit} builds a day). Try again tomorrow.`
           : j?.error === 'bad_token' ? 'This page link has expired — ask Sandon for a fresh one.'
+          : j?.error === 'sign_in_required' ? 'Sign in first — the build is attributed to your own code.'
           : j?.error === 'scrape_failed' ? "Couldn't read their site just now. Try once more; if it sticks, build from the listing instead."
           : j?.error === 'ai_failed' ? 'The menu reader is busy — try again in a minute.'
           : `Couldn't build it (${j?.error ?? res.status}). Try once more; if it sticks, tell Sandon.`;
@@ -124,7 +131,7 @@ export default function RestaurantTable({ rows, token, repName, readOnly = false
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     {b ? (
                       <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-300">built</span>
-                    ) : !readOnly && (r.group === 'call' || r.group === 'thirdParty' || r.group === 'shop') ? (
+                    ) : canBuild && (r.group === 'call' || r.group === 'thirdParty' || r.group === 'shop') ? (
                       <button
                         type="button"
                         disabled={busy !== null}
@@ -133,7 +140,7 @@ export default function RestaurantTable({ rows, token, repName, readOnly = false
                       >
                         {busy === r.prospectId ? 'Reading their menu…' : 'Build their ordering page'}
                       </button>
-                    ) : readOnly && (r.group === 'call' || r.group === 'thirdParty' || r.group === 'shop') ? (
+                    ) : !canBuild && (r.group === 'call' || r.group === 'thirdParty' || r.group === 'shop') ? (
                       <a
                         href={signUpHref(pathname || '/for-sales')}
                         className="inline-block rounded-md border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20"

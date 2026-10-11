@@ -136,7 +136,7 @@ export default async function ForSalesPage() {
             </span>
           </div>
           <h1 className="mt-6 text-2xl font-extrabold tracking-tight text-zinc-300 md:text-3xl">
-            Two ways to earn. Open either one.
+            Spread the word. Earn for life.
           </h1>
         </section>
 
@@ -350,19 +350,8 @@ export default async function ForSalesPage() {
 
         </Pitch>
 
-        {/* Close */}
-        <section className="mx-auto max-w-3xl px-6 pb-24 pt-10">
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-6 text-center">
-            <p className="text-lg font-semibold text-white">If you want it</p>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-              What we&apos;d agree first: which cities and trades you work, and the two open
-              questions above. The split isn&apos;t one of them — 50/50 is the offer, and I&apos;d
-              rather start there than negotiate you down to something that stops being worth your
-              time in week three.
-            </p>
-            <p className="mt-3 text-sm font-medium text-amber-300">— Sandon</p>
-          </div>
-        </section>
+        {/* No closing section (owner, 2026-10-11): the two pitches are the page; it ends when they do. */}
+        <div className="pb-24" />
       </div>
     </>
   );

@@ -36,6 +36,8 @@ describe('the straight-talk section is hidden (owner, 2026-10-10)', () => {
     expect(business).toBeLessThan(code.indexOf('The domain rental'));
     expect(code.indexOf('The domain rental')).toBeLessThan(code.indexOf('What it pays'));
     expect(code).toMatch(/href="\/for-sales\/call"/);
+    // No "If you want it" close (owner, 2026-10-11): the page ends when the second pitch does.
+    expect(code).not.toMatch(/If you want it/);
   });
 });
 

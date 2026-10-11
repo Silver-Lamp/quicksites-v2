@@ -67,7 +67,27 @@ describe('every sales-related /for-<name> page mounts it; partner-orientation pa
     expect(read(p)).not.toMatch(/<RestaurantsSection /);
   });
   it('/for-sales has no code and no grant: read-only lists, the sweep still works', () => {
-    expect(read('app/for-sales/page.tsx')).toMatch(/<RestaurantsSection code=\{null\} repName="a QuickSites rep" token=\{null\} \/>/);
+    expect(read('app/for-sales/page.tsx')).toMatch(/<RestaurantsSection code=\{null\} repName="a QuickSites rep" token=\{null\} prominent \/>/);
+  });
+  it.each(['app/for-sales/page.tsx', 'app/for-abdou/page.tsx', 'app/for-angela/page.tsx', 'app/for-ryan/page.tsx'])(
+    '%s: restaurants are THE MAIN EVENT — right after the opening section, prominent, then "Our other verticals"',
+    (p) => {
+      const src = read(p);
+      const header = src.indexOf('<SiteHeader');
+      const firstClose = src.indexOf('</section>', header);
+      const mount = src.indexOf('<RestaurantsSection');
+      const secondClose = src.indexOf('</section>', firstClose + 1);
+      expect(mount).toBeGreaterThan(firstClose);
+      expect(mount).toBeLessThan(secondClose);
+      expect(src.slice(mount, mount + 200)).toMatch(/prominent \/>/);
+      expect(src.indexOf('<OtherVerticals />')).toBeGreaterThan(mount);
+      expect(src.indexOf('<OtherVerticals />')).toBeLessThan(secondClose);
+    },
+  );
+  it("/for-amber keeps the section inside its QuickSites half (the kitchen half is held free of numbers by its own test)", () => {
+    const src = read('app/for-amber/page.tsx');
+    expect(src.indexOf('<RestaurantsSection')).toBeGreaterThan(src.indexOf('A separate thing, because you know half the island'));
+    expect(src).not.toMatch(/<OtherVerticals/);
   });
 });
 

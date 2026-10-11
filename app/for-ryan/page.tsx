@@ -6,6 +6,7 @@
 // Each card expands (native <details>, no JS) into deeper mechanics + a worked example.
 import Link from 'next/link';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import OtherVerticals from '@/components/for-rep/other-verticals';
 import { mintRepActionToken } from '@/lib/rep/repActionToken';
 
 /** The vanity code minted for Ryan (referral_codes, 35% lifetime). */
@@ -159,6 +160,11 @@ export default async function ForRyanPage() {
           </p>
         </section>
 
+        {/* THE MAIN EVENT (owner, 2026-10-10): restaurants first — walk in, have lunch, drop a
+            card. Everything else on the page sits under "Our other verticals". */}
+        <RestaurantsSection code={CODE} repName="Ryan" token={repToken} prominent />
+        <OtherVerticals />
+
         {/* Your referral code — the no-effort option */}
         <section className="mx-auto max-w-3xl px-6 pb-4">
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6">
@@ -220,7 +226,6 @@ export default async function ForRyanPage() {
         </section>
 
         {/* Restaurants: walk in, have lunch, drop a card (components/for-rep/restaurants-section.tsx). */}
-        <RestaurantsSection code={CODE} repName="Ryan" token={repToken} />
 
         {/* For you, as a realtor */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">

@@ -24,6 +24,7 @@ import { mintRepActionToken } from '@/lib/rep/repActionToken';
 import { repBuildLinks } from '@/lib/rep/repBuild';
 import NoSiteTable, { type NoSiteRow as TableRow } from '@/components/for-rep/no-site-table';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import OtherVerticals from '@/components/for-rep/other-verticals';
 
 // The island list is read live: a re-sweep changes it, and a date on the section says how
 // fresh it is. Never a hand-typed table — that is a count that rots.
@@ -239,6 +240,11 @@ export default async function ForAbdouPage() {
           </p>
         </section>
 
+        {/* THE MAIN EVENT (owner, 2026-10-10): restaurants first — walk in, have lunch, drop a
+            card. Everything else on the page sits under "Our other verticals". */}
+        <RestaurantsSection code={CODE} repName="Abdou" token={repToken} prominent />
+        <OtherVerticals />
+
         {/* The one-liner */}
         <section className="mx-auto max-w-3xl px-6 pb-4">
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6">
@@ -409,7 +415,6 @@ export default async function ForAbdouPage() {
         </section>
 
         {/* Restaurants: the shared section — walk in, have lunch, drop a card (components/for-rep/restaurants-section.tsx). */}
-        <RestaurantsSection code={CODE} repName="Abdou" token={repToken} />
 
         {/* The money */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">

@@ -134,6 +134,20 @@ describe('assemblePostTemplate', () => {
     expect(assemblePostTemplate({ ...POST, kind: 'services' }).industry).toBe('other');
   });
 
+  it('an event (a ticketed dinner) keeps its menu, says "Reserve a seat", takes a mailto CTA, and is filed non-food', () => {
+    const e = assemblePostTemplate({ ...POST, kind: 'event', ctaLink: 'mailto:host@example.com?subject=RSVP', sectionName: 'The menu' });
+    expect(e.industry).toBe('other');
+    const hero = e.data.pages[0].blocks.find((b: any) => b.type === 'hero');
+    expect(hero.content.cta_text).toBe('Reserve a seat');
+    expect(hero.content.cta_link).toBe('mailto:host@example.com?subject=RSVP');
+    expect(e.data.pages[0].blocks.map((b: any) => b.type)).toContain('menu');
+    const text = walkStrings(e.data).join('\n');
+    expect(text).not.toMatch(/View Menu|Our Menu|for sale|See prices/);
+    // A CTA that is not a mailto/http link is ignored, never written.
+    const bad = assemblePostTemplate({ ...POST, kind: 'event', ctaLink: 'javascript:alert(1)' });
+    expect(bad.data.pages[0].blocks.find((b: any) => b.type === 'hero').content.cta_link).not.toMatch(/javascript/);
+  });
+
   it('keeps the provenance on meta', () => {
     expect(tpl.data.meta.built_from_post).toBe(true);
     expect(tpl.data.meta.source_note).toBe(POST.sourceNote);

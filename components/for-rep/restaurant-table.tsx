@@ -26,6 +26,10 @@ export type RestaurantTableRow = {
   previewUrl: string | null;
   claimUrl: string | null;
   evolveUrl?: string | null;
+  /** What has already happened (lib/outreach/prospectOutreach.ts): last text / DM logged, latest card. */
+  textedAt?: string | null;
+  dmAt?: string | null;
+  cardLine?: string | null;
 };
 
 type Built = { previewUrl: string; claimUrl: string; evolveUrl?: string | null; menuItems?: number; menuSource?: string; droppedItems?: number; droppedPrices?: number; alreadyBuilt?: boolean };
@@ -54,6 +58,20 @@ export default function RestaurantTable({ rows, token, repName, readOnly = false
   const [busy, setBusy] = React.useState<string | null>(null);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [copied, setCopied] = React.useState<string | null>(null);
+  // "Texted them ✓": logs the exact text that was offered as an outbound touch (owner, 2026-10-11).
+  const [texted, setTexted] = React.useState<Record<string, string>>(() => Object.fromEntries(rows.filter((r) => r.textedAt).map((r) => [r.prospectId, r.textedAt!])));
+  async function logTexted(r: RestaurantTableRow, body: string) {
+    setBusy(`touch:${r.prospectId}`);
+    try {
+      const res = await fetch('/api/rep/touch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: token || undefined, prospectId: r.prospectId, channel: 'sms', body }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) { setErrors((e) => ({ ...e, [r.prospectId]: j?.error === 'sign_in_required' ? 'Sign in to log it.' : `Could not log it (${j?.error ?? res.status}).` })); return; }
+      setTexted((t) => ({ ...t, [r.prospectId]: j.occurredAt }));
+    } finally {
+      setBusy(null);
+    }
+  }
+  const fmtDay = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   async function build(r: RestaurantTableRow) {
     setBusy(r.prospectId);
@@ -176,6 +194,15 @@ export default function RestaurantTable({ rows, token, repName, readOnly = false
                             {copied === r.prospectId ? 'Copied' : 'Copy claim link'}
                           </button>
                           {sms && r.phone && <a href={sms} className="text-zinc-200 hover:underline">Text them</a>}
+                          {sms && r.phone && (texted[r.prospectId] ? (
+                            <span className="text-emerald-300/90">texted {fmtDay(texted[r.prospectId])} ✓</span>
+                          ) : (
+                            <button type="button" disabled={busy === `touch:${r.prospectId}`} onClick={() => logTexted(r, repOrderingSmsDraft({ repName, businessName: r.businessName, previewUrl: b.previewUrl, evolveUrl: b.evolveUrl }))} className="text-zinc-300 hover:underline disabled:opacity-50" title="Logs the text above as sent — a record, not a tally">
+                              Texted them ✓
+                            </button>
+                          ))}
+                          {r.dmAt && <span className="text-emerald-300/90">DM {fmtDay(r.dmAt)}</span>}
+                          <span className="text-violet-300/90">{r.cardLine ? `Card ${r.cardLine}` : 'No card mailed'}</span>
                           {b.menuSource === 'site' && (
                             <span className="text-emerald-300/90">
                               Menu read from their own site{typeof b.menuItems === 'number' ? ` — ${b.menuItems} items` : ''}.

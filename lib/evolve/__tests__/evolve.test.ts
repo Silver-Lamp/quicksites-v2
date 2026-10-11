@@ -177,3 +177,24 @@ describe('source guards', () => {
     for (const r of evolveFeatureRows({ orderingToday: null, providerLabel: null, fee: 'FEE' })) expect(r.because.length).toBeGreaterThan(8);
   });
 });
+
+describe('the operator strip (owner, 2026-10-11): a signed-in member sees it, a visitor never does, and only an admin gets the claim link', () => {
+  const read = (p: string) => stripComments(fs.readFileSync(path.join(process.cwd(), p), 'utf8'));
+  const page = read('app/evolve/[prospectId]/page.tsx');
+  const bar = read('components/evolve/operator-bar.tsx');
+  it('the page mounts the bar right under the header, with the phone and the admin extras', () => {
+    expect(page.indexOf('<OperatorBar')).toBeGreaterThan(page.indexOf('<SiteHeader'));
+    expect(page).toMatch(/<OperatorBar businessName=\{m\.businessName\} phone=\{phone\} evolveUrl=\{evolveUrl\} previewUrl=\{m\.evolvedUrl\} admin=\{adminExtras\} \/>/);
+  });
+  it('the claim token is minted only inside the admin branch', () => {
+    const adminBranch = page.indexOf('if (admin) {');
+    expect(adminBranch).toBeGreaterThan(0);
+    expect(page.indexOf('mintSiteClaimToken(p.template_id)')).toBeGreaterThan(adminBranch);
+  });
+  it('the bar renders nothing for a visitor or an anonymous guest', () => {
+    expect(bar).toMatch(/is_anonymous/);
+    expect(bar).toMatch(/if \(!member\) return null;/);
+    expect(bar).toMatch(/repOrderingDmDraft\(/);
+    expect(bar).toMatch(/repOrderingSmsDraft\(/);
+  });
+});

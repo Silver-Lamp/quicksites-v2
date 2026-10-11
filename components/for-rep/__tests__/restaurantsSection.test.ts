@@ -11,6 +11,7 @@ import path from 'node:path';
 import { stripComments } from '@/test/stripComments';
 import { SECTION_COPY } from '@/components/for-rep/restaurants-section';
 import { OTHER_VERTICALS_COPY } from '@/components/for-rep/other-verticals';
+import { FOR_SALES_PITCHES } from '@/lib/sales/forSalesPitches';
 import { REP_TERRITORIES } from '@/lib/rep/territories';
 import { sweptRecently } from '@/lib/rep/repRestaurants';
 import { cityStateFromNominatim } from '@/lib/utils/geocode';
@@ -70,7 +71,20 @@ describe('every sales-related /for-<name> page mounts it; partner-orientation pa
   it('/for-sales has no code and no grant: read-only lists, the sweep still works', () => {
     expect(read('app/for-sales/page.tsx')).toMatch(/<RestaurantsSection code=\{null\} repName="a QuickSites rep" token=\{null\} prominent \/>/);
   });
-  it.each(['app/for-sales/page.tsx', 'app/for-abdou/page.tsx', 'app/for-angela/page.tsx', 'app/for-ryan/page.tsx'])(
+  it('/for-sales is two folded pitches in the owner\'s order (2026-10-11); the lunch pitch holds the restaurants section', () => {
+    const src = read('app/for-sales/page.tsx');
+    const business = src.indexOf('<Pitch summary={FOR_SALES_PITCHES.business}>');
+    const lunch = src.indexOf('<Pitch summary={FOR_SALES_PITCHES.lunch}>');
+    const mount = src.indexOf('<RestaurantsSection');
+    expect(business).toBeGreaterThan(0);
+    expect(lunch).toBeGreaterThan(business);
+    expect(mount).toBeGreaterThan(lunch);
+    expect(src.slice(mount, mount + 200)).toMatch(/prominent \/>/);
+    expect(src).not.toMatch(/<OtherVerticals/);
+    expect(FOR_SALES_PITCHES.business).toMatch(/^Know a small business owner\?/);
+    expect(FOR_SALES_PITCHES.lunch).toMatch(/^Know of a great lunch spot\?/);
+  });
+  it.each(['app/for-abdou/page.tsx', 'app/for-angela/page.tsx', 'app/for-ryan/page.tsx'])(
     '%s: restaurants are THE MAIN EVENT — right after the opening section, prominent, then "Our other verticals"',
     (p) => {
       const src = read(p);
@@ -88,8 +102,7 @@ describe('every sales-related /for-<name> page mounts it; partner-orientation pa
       expect(divider).toBeLessThan(secondClose);
     },
   );
-  it('/for-sales uses the short divider line, which names no straight-talk section', () => {
-    expect(read('app/for-sales/page.tsx')).toMatch(/<OtherVerticals line=\{OTHER_VERTICALS_COPY\.lineBrief\} \/>/);
+  it('the short divider line names no straight-talk section', () => {
     expect(OTHER_VERTICALS_COPY.lineBrief).not.toMatch(/straight talk|referral code/i);
     expect(OTHER_VERTICALS_COPY.line.startsWith(OTHER_VERTICALS_COPY.lineBrief.replace(/\.$/, ''))).toBe(true);
   });

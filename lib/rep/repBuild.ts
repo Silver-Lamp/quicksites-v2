@@ -66,6 +66,20 @@ export function repOrderingSmsDraft(input: { repName: string; businessName: stri
   );
 }
 
+/**
+ * The Facebook / Messenger DM a signed-in operator copies from the Evolve page (owner,
+ * 2026-10-11). Longer than the text, same promise-free shape; links the Evolve page.
+ */
+export function repOrderingDmDraft(input: { repName: string; businessName: string; evolveUrl: string }): string {
+  return (
+    `Hi — ${input.repName} here. Wanted to help you evolve your online presence. ` +
+    `I put together an online ordering page for ${input.businessName} from your own menu, prices as printed. ` +
+    `Your website stays exactly as it is — this would just be a link from it, and there's no monthly fee.\n\n` +
+    `Here it is next to your current site:\n${input.evolveUrl}\n\n` +
+    `If it's not for you, no problem at all — say the word and I'll take it down.`
+  );
+}
+
 /** `sms:` URL that opens the phone's messaging app with the draft filled in. */
 export function smsHref(phone: string | null | undefined, body: string): string {
   const digits = String(phone ?? '').replace(/[^0-9+]/g, '');

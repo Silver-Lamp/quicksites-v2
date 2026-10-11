@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { mintRepActionToken, verifyRepActionToken, REP_ACTION_TTL_MS } from '@/lib/rep/repActionToken';
-import { repBuildLinks, repSmsDraft, repOrderingSmsDraft, smsHref, withRef, REP_BUILDS_PER_DAY } from '@/lib/rep/repBuild';
+import { repBuildLinks, repSmsDraft, repOrderingSmsDraft, repOrderingDmDraft, smsHref, withRef, REP_BUILDS_PER_DAY } from '@/lib/rep/repBuild';
 import { stripComments } from '@/test/stripComments';
 
 process.env.CLAIM_TOKEN_SECRET ||= 'test-secret-for-rep-grants';
@@ -64,6 +64,13 @@ describe('the prefilled text', () => {
     const noEvolve = repOrderingSmsDraft({ repName: 'Abdou', businessName: 'Rock Island Pizza', previewUrl: 'https://deliveredmenu.com/rock-island-pizza-0ll5d?ref=abdou', evolveUrl: null });
     expect(noEvolve).toContain('https://deliveredmenu.com/rock-island-pizza-0ll5d?ref=abdou');
     expect(read('components/for-rep/restaurant-table.tsx')).toMatch(/evolveUrl: b\.evolveUrl/);
+  });
+  it('the Facebook DM draft links the Evolve page, opens with the evolve line, and makes no promise', () => {
+    const dm = repOrderingDmDraft({ repName: 'Sandon', businessName: "Pete's Eggnest", evolveUrl: 'https://www.quicksites.ai/evolve/p1' });
+    expect(dm).toMatch(/^Hi — Sandon here\. Wanted to help you evolve your online presence\./);
+    expect(dm).toContain('https://www.quicksites.ai/evolve/p1');
+    expect(dm).toMatch(/website stays exactly as it is/);
+    for (const re of FORBIDDEN) expect(dm).not.toMatch(re);
   });
   it('smsHref normalises the number and encodes the body', () => {
     expect(smsHref('(206) 463-3782', 'hi there')).toBe('sms:+12064633782?&body=hi%20there');

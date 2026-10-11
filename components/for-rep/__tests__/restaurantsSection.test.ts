@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { stripComments } from '@/test/stripComments';
 import { SECTION_COPY } from '@/components/for-rep/restaurants-section';
+import { OTHER_VERTICALS_COPY } from '@/components/for-rep/other-verticals';
 import { REP_TERRITORIES } from '@/lib/rep/territories';
 import { sweptRecently } from '@/lib/rep/repRestaurants';
 import { cityStateFromNominatim } from '@/lib/utils/geocode';
@@ -80,10 +81,18 @@ describe('every sales-related /for-<name> page mounts it; partner-orientation pa
       expect(mount).toBeGreaterThan(firstClose);
       expect(mount).toBeLessThan(secondClose);
       expect(src.slice(mount, mount + 200)).toMatch(/prominent \/>/);
-      expect(src.indexOf('<OtherVerticals />')).toBeGreaterThan(mount);
-      expect(src.indexOf('<OtherVerticals />')).toBeLessThan(secondClose);
+      // Prefix, not the literal `<OtherVerticals />`: /for-sales passes the short `line` variant
+      // (its straight-talk section is hidden), and a divider with a prop is still the divider.
+      const divider = src.indexOf('<OtherVerticals');
+      expect(divider).toBeGreaterThan(mount);
+      expect(divider).toBeLessThan(secondClose);
     },
   );
+  it('/for-sales uses the short divider line, which names no straight-talk section', () => {
+    expect(read('app/for-sales/page.tsx')).toMatch(/<OtherVerticals line=\{OTHER_VERTICALS_COPY\.lineBrief\} \/>/);
+    expect(OTHER_VERTICALS_COPY.lineBrief).not.toMatch(/straight talk|referral code/i);
+    expect(OTHER_VERTICALS_COPY.line.startsWith(OTHER_VERTICALS_COPY.lineBrief.replace(/\.$/, ''))).toBe(true);
+  });
   it("/for-amber keeps the section inside its QuickSites half (the kitchen half is held free of numbers by its own test)", () => {
     const src = read('app/for-amber/page.tsx');
     expect(src.indexOf('<RestaurantsSection')).toBeGreaterThan(src.indexOf('A separate thing, because you know half the island'));

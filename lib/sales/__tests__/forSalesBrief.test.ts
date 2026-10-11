@@ -10,8 +10,29 @@
 //      <city>" — a future promise, and the exact phrasing `no_ranking_promise` bans.
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { stripComments } from '@/test/stripComments';
 
 const BRIEF = readFileSync(join(process.cwd(), 'app/for-sales/page.tsx'), 'utf8');
+
+describe('the straight-talk section is hidden (owner, 2026-10-10)', () => {
+  // ⚠️ Source guard over the CODE, not the prose: the page's header comment explains that the
+  // section was hidden, and the clearest comment about a removed heading contains the heading.
+  const code = stripComments(BRIEF);
+  it('the stripper left a page behind, not an empty string', () => {
+    expect(code.length).toBeGreaterThan(4000);
+    expect(code).toMatch(/<RestaurantsSection /);
+  });
+  it('renders no "Straight talk" heading and no "what isn\'t proven" cards', () => {
+    expect(code).not.toMatch(/straight talk/i);
+    expect(code).not.toMatch(/what isn\W*t proven/i);
+    expect(code).not.toMatch(/0 rented|0 of 19|4 calls/);
+  });
+  it('the restaurants section and the divider still lead, and the call sheet is still linked', () => {
+    expect(code.indexOf('<RestaurantsSection')).toBeLessThan(code.indexOf('<OtherVerticals'));
+    expect(code.indexOf('<OtherVerticals')).toBeLessThan(code.indexOf('The domain rental'));
+    expect(code).toMatch(/href="\/for-sales\/call"/);
+  });
+});
 
 /**
  * Future-tense ranking claims. The tense is the whole difference.

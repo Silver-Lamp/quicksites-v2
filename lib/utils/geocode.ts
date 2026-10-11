@@ -1,3 +1,26 @@
+/** Pure: a Nominatim reverse-geocode answer → { city, region } (US state code), or null. */
+export function cityStateFromNominatim(json: any): { city: string; region: string } | null {
+  const a = json?.address;
+  if (!a) return null;
+  const city = a.city || a.town || a.village || a.hamlet || a.municipality || a.county || null;
+  const iso = typeof a['ISO3166-2-lvl4'] === 'string' ? a['ISO3166-2-lvl4'] : '';
+  const region = iso.startsWith('US-') ? iso.slice(3) : (a.state_code || '').toUpperCase();
+  if (!city || !region) return null;
+  return { city: String(city), region: String(region) };
+}
+
+/** Reverse: where is this point? (Nominatim; same source and user agent as the forward lookup.) */
+export async function getCityStateForLatLon(lat: number, lon: number): Promise<{ city: string; region: string } | null> {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&zoom=10&lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}`;
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': 'QuickSites-Geocoder/1.0 (support@quicksites.ai)', Accept: 'application/json' } });
+    return cityStateFromNominatim(await res.json());
+  } catch (e) {
+    console.warn(`🌐 Failed to reverse-geocode ${lat},${lon}`, e);
+    return null;
+  }
+}
+
 export async function getLatLonForCityState(
     city: string,
     state?: string

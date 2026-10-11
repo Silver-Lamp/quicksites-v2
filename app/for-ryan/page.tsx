@@ -5,6 +5,11 @@
 // link directly. Numbers come from lib/commerce/partner-terms so they stay honest.
 // Each card expands (native <details>, no JS) into deeper mechanics + a worked example.
 import Link from 'next/link';
+import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import { mintRepActionToken } from '@/lib/rep/repActionToken';
+
+/** The vanity code minted for Ryan (referral_codes, 35% lifetime). */
+const CODE = 'ryan';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import {
@@ -115,7 +120,8 @@ function Path({
   );
 }
 
-export default function ForRyanPage() {
+export default async function ForRyanPage() {
+  const repToken = mintRepActionToken(CODE);
   return (
     <>
       <SiteHeader sticky />
@@ -212,6 +218,9 @@ export default function ForRyanPage() {
             </div>
           </div>
         </section>
+
+        {/* Restaurants: walk in, have lunch, drop a card (components/for-rep/restaurants-section.tsx). */}
+        <RestaurantsSection code={CODE} repName="Ryan" token={repToken} />
 
         {/* For you, as a realtor */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">

@@ -977,6 +977,10 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   counter, lands on the Evolve page. Only a built draft WITH a menu is eligible. Never open `/go/`.
   **Tracking is per card** (`postcard_mailings.kind`, `20260879`): `/admin/ops` shows one funnel per
   kind; a `/go/` scan bumps the piece as well as the prospect (`recordScanForProspect`).
+  **Every sales `/for-<name>` page carries the restaurants section** (`components/for-rep/
+  restaurants-section.tsx`, territories in `lib/rep/territories.ts`) with **"Sweep where I am"**;
+  `POST /api/rep/sweep` spends Places money on a stranger's click and is capped 2/IP/day,
+  25/day globally, never re-sweeps a city within 7 days, and fixes the shape server-side.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

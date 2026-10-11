@@ -17,6 +17,8 @@
 // Sandon thinks she is the right person to open a door.
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
+import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import { mintRepActionToken } from '@/lib/rep/repActionToken';
 
 export const metadata: Metadata = {
   title: 'For Amber',
@@ -67,7 +69,8 @@ function Card({ title, tag, tone = 'zinc', children }: { title: string; tag?: st
   );
 }
 
-export default function ForAmberPage() {
+export default async function ForAmberPage() {
+  const repToken = mintRepActionToken(REF_CODE);
   return (
     <>
       <SiteHeader sticky />
@@ -256,6 +259,9 @@ export default function ForAmberPage() {
         </section>
 
         {/* What is real */}
+        {/* Restaurants: walk in, have lunch, drop a card (components/for-rep/restaurants-section.tsx). */}
+        <RestaurantsSection code={REF_CODE} repName="Amber" token={repToken} />
+
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
           <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">What's real and what isn't, side by side</h2>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">

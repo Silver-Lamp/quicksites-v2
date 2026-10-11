@@ -29,6 +29,7 @@
 // invented promises off these exact sites ("fully licensed and insured", "we respond within the
 // hour"). A script that re-adds them verbally puts them back where it counts.
 import Link from 'next/link';
+import RestaurantsSection from '@/components/for-rep/restaurants-section';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import EarningsLines from '@/components/charts/earnings-lines';
@@ -158,7 +159,7 @@ const SAMPLE_DOMAINS = [
   'seatac-towing.com',
 ];
 
-export default function ForSalesPage() {
+export default async function ForSalesPage() {
   return (
     <>
       <SiteHeader sticky />
@@ -556,6 +557,10 @@ export default function ForSalesPage() {
             </More>
           </div>
         </section>
+
+        {/* Restaurants: walk in, have lunch, drop a card — read-only here (no code), with the
+            sweep that grows the database from wherever the reader is standing. */}
+        <RestaurantsSection code={null} repName="a QuickSites rep" token={null} />
 
         {/* Money */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">

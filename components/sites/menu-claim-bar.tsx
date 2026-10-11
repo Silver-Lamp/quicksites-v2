@@ -34,7 +34,11 @@ export default function MenuClaimBar({
    */
   isFood?: boolean;
 }) {
-  const [dismissed, setDismissed] = React.useState(false);
+  // ⚠️ A page built from someone's POST is shared to their CUSTOMERS, and the full bar is written
+  // for the owner: on the salmon page 11 of 72 visitors tapped ✕ to get it out of the way
+  // (PostHog, 2026-10-11). So a post-built page starts in the compact state — the small
+  // bottom-right pill, no sentence, no ✕ — and the owner still has a one-tap way in.
+  const [dismissed, setDismissed] = React.useState(builtFrom === 'post');
 
   const claimHref = `/claim-site/${templateId}?token=${encodeURIComponent(token)}`;
   const name = businessName?.trim();
@@ -53,7 +57,7 @@ export default function MenuClaimBar({
           href={claimHref}
           className="rounded-full border border-amber-400/40 bg-neutral-900/95 px-4 py-2 text-sm font-semibold text-amber-300 shadow-2xl backdrop-blur transition hover:bg-neutral-900"
         >
-          {hasDemand ? `🔥 ${demandCount} want to order — claim →` : 'Claim this site →'}
+          {hasDemand ? `🔥 ${demandCount} want to order — claim →` : builtFrom === 'post' ? 'Is this your page? Claim it →' : 'Claim this site →'}
         </a>
       </div>
     );

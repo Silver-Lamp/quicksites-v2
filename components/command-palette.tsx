@@ -54,11 +54,6 @@ export function CommandPalette() {
                     className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 dark:hover:bg-zinc-700 text-sm"
                     onClick={() => {
                       window.location.href = item.href;
-                      // ✅ Event log
-                      fetch('/api/log-event', {
-                        method: 'POST',
-                        body: JSON.stringify({ type: 'nav_click', href: item.href }),
-                      });
                     }}
                   >
                     {item.label} <span className="text-zinc-400 text-xs ml-2">{item.href}</span>

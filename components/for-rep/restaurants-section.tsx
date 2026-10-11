@@ -99,11 +99,7 @@ export default async function RestaurantsSection({ code, repName, token, promine
             </div>
           </div>
           {data.rows.length > 0 ? (
-            <div className="relative left-1/2 w-[min(100vw_-_2rem,1400px)] -translate-x-1/2">
-              {/* Full-bleed: the table has five columns and a phone number in the first, so it
-                  breaks out of the 3xl column to nearly the viewport (capped) instead of scrolling. */}
-              <RestaurantTable rows={data.rows} token={token ?? ''} repName={repName} readOnly={!token} />
-            </div>
+            <RestaurantTable rows={data.rows} token={token ?? ''} repName={repName} readOnly={!token} />
           ) : (
             <p className="mt-4 text-sm text-zinc-400">Nobody has swept {place} for restaurants yet — press the button below and it fills in.</p>
           )}

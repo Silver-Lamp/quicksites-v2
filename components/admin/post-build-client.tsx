@@ -12,6 +12,7 @@ const input = 'mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py
 const label = 'block text-xs text-zinc-500';
 
 export default function PostBuildClient() {
+  const [kind, setKind] = React.useState<'food' | 'goods'>('food');
   const [businessName, setBusinessName] = React.useState('');
   const [firstName, setFirstName] = React.useState('');
   const [words, setWords] = React.useState('');
@@ -56,7 +57,7 @@ export default function PostBuildClient() {
     setResult(null);
     try {
       const spec = {
-        businessName, firstName, words, headline, subheadline, sectionName,
+        kind, businessName, firstName, words, headline, subheadline, sectionName,
         items: items.filter((i) => i.name.trim()),
         menuNote,
         where: { address, city, state },
@@ -80,6 +81,14 @@ export default function PostBuildClient() {
   return (
     <div className="mt-6 space-y-5">
       <div className="grid gap-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 sm:grid-cols-2">
+        <div className="text-sm sm:col-span-2">
+          <span className={label}>What are they selling?</span>
+          <div className="mt-1 flex gap-2">
+            {([['food', 'Food — a menu, "View Menu", the order-ahead pitch'], ['goods', 'Goods — a decor or garage sale, a maker\'s table; no menu wording']] as const).map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-md border px-3 py-1.5 text-left text-xs ${kind === k ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-200' : 'border-zinc-700 text-zinc-400'}`}>{l}</button>
+            ))}
+          </div>
+        </div>
         <label className="text-sm"><span className={label}>Business / page name</span><input className={input} value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="River Williams Smoked Salmon" /></label>
         <label className="text-sm"><span className={label}>Their first name (for the DM)</span><input className={input} value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="River" /></label>
         <label className="text-sm sm:col-span-2"><span className={label}>Their words — the post, as written (becomes the about text)</span><textarea className={`${input} min-h-[120px]`} value={words} onChange={(e) => setWords(e.target.value)} /></label>

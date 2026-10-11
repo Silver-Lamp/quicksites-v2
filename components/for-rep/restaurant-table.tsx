@@ -83,8 +83,11 @@ export default function RestaurantTable({ rows, token, repName, readOnly = false
     }
   }
 
+  // Full-bleed: five columns plus a phone number in the first, so the table breaks out of the
+  // page's 3xl column to min(viewport, 1400px) wherever it is mounted — the rep pages' section
+  // AND the sweep result on /for-sales, which used to render inside the narrow column.
   return (
-    <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800">
+    <div className="relative left-1/2 mt-4 w-[min(100vw_-_2rem,1400px)] -translate-x-1/2 overflow-x-auto rounded-xl border border-zinc-800">
       <table className="w-full min-w-[640px] text-left text-sm">
         <thead className="bg-zinc-900/60 text-xs uppercase tracking-wide text-zinc-500">
           <tr>

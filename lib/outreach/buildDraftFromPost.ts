@@ -27,6 +27,13 @@ export type PostHours = { day: HoursDaySpec['day']; open: string; close: string 
 
 export type PostSpec = {
   businessName: string;
+  /**
+   * What is being sold. `food` keeps the restaurant chrome (menu, "View Menu", the order-ahead
+   * claim pitch). `goods` — a decor sale, a garage sale, a maker's table — keeps the same
+   * blocks but none of the food wording, and is filed under a non-food industry so the public
+   * render shows no "Order online?" pill and no "take online orders" promise.
+   */
+  kind?: 'food' | 'goods';
   /** The post, as written. Becomes the about text. */
   words: string;
   headline: string;
@@ -47,6 +54,9 @@ export type PostSpec = {
 };
 
 export const STRIPPED_BLOCKS = ['faq', 'services', 'contact_form', 'order_bar', 'about_that', 'cta', 'testimonials'] as const;
+/** The industry a goods sale is filed under: `needsMenu()` is false for it, so the food chrome stays off. */
+export const GOODS_INDUSTRY = 'pop_up_shop';
+export const GOODS_COPY = { cta: "See what's for sale", nav: 'For sale', where: 'Where' } as const;
 export const ALLOWED_BLOCKS = new Set(['hero', 'menu', 'location', 'hours', 'story', 'gallery', 'header', 'footer']);
 
 const DAYS: HoursDaySpec['day'][] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -87,12 +97,28 @@ export function assemblePostTemplate(p: PostSpec) {
   const spec = postToRebuildSpec(p);
   const photos = p.photos.filter((x) => /^https:\/\//.test(x.url));
   const tpl = buildRebuildTemplate({ spec, heroImage: photos[0]?.url ?? null, sourceUrl: null, galleryImages: photos.slice(1).map((x) => x.url), colorMode: 'dark' });
+  // ⚠️ The scaffold's hours and location blocks carry PLACEHOLDER days and an empty map when the
+  // spec gives none — on a one-off sale with no weekly schedule that is an invented schedule
+  // under a real person's name. No hours typed → no hours block; no place typed → no map.
+  const strip = new Set<string>(STRIPPED_BLOCKS);
+  if (!spec.hours) strip.add('hours');
+  if (!spec.contact) strip.add('location');
+  const goods = p.kind === 'goods';
   for (const pg of tpl.data.pages ?? []) {
     for (const key of ['blocks', 'content_blocks'] as const) {
       if (!Array.isArray(pg[key])) continue;
-      pg[key] = pg[key].filter((b: any) => !(STRIPPED_BLOCKS as readonly string[]).includes(b?.type));
+      pg[key] = pg[key].filter((b: any) => !strip.has(b?.type));
       for (const b of pg[key]) {
-        if (b?.type === 'menu') for (const c of [b.content, b.props]) if (c) { c.sourced_at = new Date().toISOString(); if (p.menuNote?.trim()) c.note = p.menuNote.trim(); }
+        for (const c of [b?.content, b?.props]) {
+          if (!c) continue;
+          if (b.type === 'menu') {
+            c.sourced_at = new Date().toISOString();
+            if (p.menuNote?.trim()) c.note = p.menuNote.trim();
+            if (goods) c.title = p.sectionName.trim() || c.title;
+          }
+          if (goods && b.type === 'hero' && typeof c.cta_text === 'string') c.cta_text = GOODS_COPY.cta;
+          if (goods && b.type === 'location' && typeof c.title === 'string') c.title = GOODS_COPY.where;
+        }
       }
       if (photos.length) {
         const gallery: any = createDefaultBlock('gallery');
@@ -102,7 +128,24 @@ export function assemblePostTemplate(p: PostSpec) {
       }
     }
   }
-  tpl.data.meta = { ...(tpl.data.meta ?? {}), built_from_post: true, source_note: p.sourceNote.trim(), built_for: p.businessName.trim() };
+  tpl.data.meta = { ...(tpl.data.meta ?? {}), built_from_post: true, post_kind: goods ? 'goods' : 'food', source_note: p.sourceNote.trim(), built_for: p.businessName.trim() };
+  if (goods) {
+    // Filed under a non-food industry everywhere the render looks (row column, data, meta), and
+    // the restaurant scaffold's "Menu" nav relabelled in the header and footer.
+    tpl.industry = GOODS_INDUSTRY;
+    if (tpl.data && typeof tpl.data === 'object') {
+      if ('industry' in tpl.data) tpl.data.industry = GOODS_INDUSTRY;
+      if (tpl.data.meta && 'industry' in tpl.data.meta) tpl.data.meta.industry = GOODS_INDUSTRY;
+    }
+    for (const blk of [tpl.header_block, tpl.footer_block, tpl.data?.headerBlock, tpl.data?.footerBlock]) {
+      for (const c of [blk?.content, blk?.props]) {
+        for (const item of c?.nav_items ?? c?.links ?? []) {
+          if (item?.label === 'Menu') item.label = GOODS_COPY.nav;
+          if (item?.label === 'Location & Hours') item.label = GOODS_COPY.where;
+        }
+      }
+    }
+  }
   return tpl;
 }
 

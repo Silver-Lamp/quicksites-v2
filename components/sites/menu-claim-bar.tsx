@@ -14,11 +14,14 @@ export default function MenuClaimBar({
   businessName,
   demandCount = 0,
   isFood = true,
+  builtFrom = 'listing',
 }: {
   templateId: string;
   token: string;
   /** The business's name, so the bar reads "Is this {name}?" instead of the generic prompt. */
   businessName?: string | null;
+  /** Where the draft came from: a public listing (the default) or the person's own post. */
+  builtFrom?: 'listing' | 'post';
   /** Order-intents logged on this draft — escalates the pitch to "N people tried to order". */
   demandCount?: number;
   /**
@@ -92,8 +95,10 @@ export default function MenuClaimBar({
                   {/* ⚠️ "take online orders" is a FOOD promise. On an auto shop it offers something
                       the page cannot do and the owner does not want — the same wrongness as the
                       "Is this your restaurant?" heading above it. */}
-                  We built it from your public listing so customers could find you. Claim it to
-                  edit{isFood ? ', take online orders' : ''}, and go live —
+                  {builtFrom === 'post'
+                    ? 'We built it from your own post and photos so people could find what you have. Claim it to edit'
+                    : 'We built it from your public listing so customers could find you. Claim it to edit'}
+                  {isFood ? ', take online orders' : ''}, and go live —
                 </span>{' '}
                 {/* ⚠️ ANSWERS "AND THEN WHAT DOES IT COST?", which is the first thing an owner
                     asks and the page did not address. A persona given the goal "work out what

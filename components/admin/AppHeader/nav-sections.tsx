@@ -46,12 +46,6 @@ export function NavSections() {
                     href={r.href}
                     target={r.external ? '_blank' : undefined}
                     title={r.title}
-                    onClick={() => {
-                      fetch('/api/log-event', {
-                        method: 'POST',
-                        body: JSON.stringify({ href: r.href, type: 'nav_click' }),
-                      });
-                    }}
                   >
                     {labelWithCount}
                     <NavBadge flag={r.flags?.[0]} />
@@ -73,10 +67,6 @@ export function NavSections() {
           className="w-full p-2 border rounded text-sm"
           onChange={(e) => {
             if (e.target.value) {
-              fetch('/api/log-event', {
-                method: 'POST',
-                body: JSON.stringify({ href: e.target.value, type: 'nav_click' }),
-              });
               window.location.href = e.target.value;
             }
           }}

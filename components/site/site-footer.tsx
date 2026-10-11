@@ -14,6 +14,8 @@ const NAV: Array<{ label: string; href: string }> = [
   { label: 'Restaurants', href: '/restaurants' },
   { label: 'Realtors', href: '/realtors' },
   { label: 'Partners', href: '/partners' },
+  // The public referral page (owner, 2026-10-11): spreading the word, not a sales job.
+  { label: 'Spread the word', href: '/spread-the-word' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Compare', href: '/compare' },
   // The roundup targets the shopping query ("best website builder 2026") that /compare

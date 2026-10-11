@@ -996,6 +996,19 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   **private DM**, never a public reply (a bearer credential), and we never post cold into a group.
   Tests: `lib/outreach/__tests__/buildDraftFromPost.test.ts` (block allowlist, dated prices, DM
   held to the claim-postcard forbidden list).
+- **`/spread-the-word` — the public referral page (2026-10-11)**: `/for-sales` is the brief for
+  people recruited to SELL (calls, the domain rental, territories) and reads like a job; the
+  owner wanted a shareable version that is "just about telling people about it and helping
+  them". Same two sentences (`lib/sales/forSalesPitches.ts`), the restaurants section with the
+  live table + sweep, the store and free-site boxes (`components/for-rep/pitch.tsx`, shared), one
+  button (sign in), indexed, in the footer. ⚠️ **"Earn for life" is true only because a member's
+  self-minted referral code carries `MEMBER_REFERRAL_PLAN` (`lib/rep/memberCode.ts`: 20% of the
+  per-order fee, `durationMonths: 0` = lifetime)** — `createVanityCode`'s default is 20% for 12
+  months, which would have made the sentence false for exactly the strangers the page attracts.
+  The pay line is derived from that constant; `spreadTheWord.test.ts` fails on any typed money,
+  any "commission sales"/call-sheet/domain-rental text, and a non-lifetime plan. A file-based
+  `opengraph-image` needs `metadataBase` on the page: with ~100 custom domains on the project,
+  Next otherwise resolves it on one of them (it read `lebanon-towing.com` live, same day).
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

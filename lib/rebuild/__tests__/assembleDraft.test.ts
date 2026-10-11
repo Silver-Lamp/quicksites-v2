@@ -84,6 +84,17 @@ describe('buildRebuildTemplate', () => {
     expect(dark.data.color_mode).toBe('dark');
   });
 
+  it('a food spec with NO hours gets no hours block — the scaffold default is an invented week (Pete\'s Eggnest, 2026-10-11)', () => {
+    const none = buildRebuildTemplate({ spec: baseSpec({ hours: undefined }) });
+    const types = none.data.pages[0].blocks.map((b: any) => b.type);
+    expect(types).not.toContain('hours');
+    const nav = [...(none.header_block?.content?.nav_items ?? []), ...(none.footer_block?.content?.links ?? [])].map((l: any) => l.label);
+    expect(nav).not.toContain('Location & Hours');
+    const some = buildRebuildTemplate({ spec: baseSpec({ hours: [{ day: 'mon', open: '07:00', close: '14:00' }] }) });
+    const hours = some.data.pages[0].blocks.find((b: any) => b.type === 'hours');
+    expect(hours.content.days[0].periods).toEqual([{ open: '07:00', close: '14:00' }]);
+  });
+
   it('leaves meta.contact fields empty when the spec has no contact', () => {
     const tpl = buildRebuildTemplate({ spec: baseSpec({ contact: undefined }) });
     expect(tpl.data.meta.contact?.address ?? null).toBeNull();

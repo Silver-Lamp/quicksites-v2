@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { mintRepActionToken, verifyRepActionToken, REP_ACTION_TTL_MS } from '@/lib/rep/repActionToken';
-import { repBuildLinks, repSmsDraft, smsHref, withRef, REP_BUILDS_PER_DAY } from '@/lib/rep/repBuild';
+import { repBuildLinks, repSmsDraft, repOrderingSmsDraft, smsHref, withRef, REP_BUILDS_PER_DAY } from '@/lib/rep/repBuild';
 import { stripComments } from '@/test/stripComments';
 
 process.env.CLAIM_TOKEN_SECRET ||= 'test-secret-for-rep-grants';
@@ -53,6 +53,17 @@ describe('the prefilled text', () => {
     expect(msg).toContain('Durong');
     expect(msg).toContain('https://deliveredmenu.com/durong-ip8ay?ref=abdou');
     for (const re of FORBIDDEN) expect(msg).not.toMatch(re);
+  });
+  it('the ordering text links the EVOLVE page when there is one, opens with the evolve line, and makes no promise (owner, 2026-10-11)', () => {
+    const withEvolve = repOrderingSmsDraft({ repName: 'Abdou', businessName: 'Rock Island Pizza', previewUrl: 'https://deliveredmenu.com/rock-island-pizza-0ll5d?ref=abdou', evolveUrl: 'https://www.quicksites.ai/evolve/p1?ref=abdou' });
+    expect(withEvolve).toMatch(/^Hi, this is Abdou\. Wanted to help you evolve your online presence\./);
+    expect(withEvolve).toContain('https://www.quicksites.ai/evolve/p1?ref=abdou');
+    expect(withEvolve).not.toContain('deliveredmenu.com');
+    expect(withEvolve).toMatch(/website stays as it is/);
+    for (const re of FORBIDDEN) expect(withEvolve).not.toMatch(re);
+    const noEvolve = repOrderingSmsDraft({ repName: 'Abdou', businessName: 'Rock Island Pizza', previewUrl: 'https://deliveredmenu.com/rock-island-pizza-0ll5d?ref=abdou', evolveUrl: null });
+    expect(noEvolve).toContain('https://deliveredmenu.com/rock-island-pizza-0ll5d?ref=abdou');
+    expect(read('components/for-rep/restaurant-table.tsx')).toMatch(/evolveUrl: b\.evolveUrl/);
   });
   it('smsHref normalises the number and encodes the body', () => {
     expect(smsHref('(206) 463-3782', 'hi there')).toBe('sms:+12064633782?&body=hi%20there');

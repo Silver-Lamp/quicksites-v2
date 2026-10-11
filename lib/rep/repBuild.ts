@@ -51,10 +51,18 @@ export function repSmsDraft(input: { repName: string; businessName: string; prev
  * The message for a restaurant that already HAS a site: the draft is an ordering page to link
  * from it, never a replacement for the site they paid for. Says so in the first sentence.
  */
-export function repOrderingSmsDraft(input: { repName: string; businessName: string; previewUrl: string }): string {
+/**
+ * The text a rep sends a restaurant that has a site but no online ordering. ⚠️ It links the
+ * EVOLVE page, not the bare draft (owner, 2026-10-11): the Evolve page shows their current site
+ * beside the ordering page, which is the pitch — "your website stays as it is". The draft alone
+ * reads as "here is a replacement". Falls back to the preview only when no Evolve page exists.
+ */
+export function repOrderingSmsDraft(input: { repName: string; businessName: string; previewUrl: string; evolveUrl?: string | null }): string {
+  const link = input.evolveUrl || input.previewUrl;
   return (
-    `Hi, this is ${input.repName}. Your website stays as it is — I set up an online ordering page for ${input.businessName} ` +
-    `from your own menu that you could link from it, no monthly fee: ${input.previewUrl} Have a look; if it's not for you, no problem at all.`
+    `Hi, this is ${input.repName}. Wanted to help you evolve your online presence. Your website stays as it is — ` +
+    `I set up an online ordering page for ${input.businessName} from your own menu, no monthly fee. ` +
+    `Here it is next to your current site: ${link} If it's not for you, no problem at all.`
   );
 }
 

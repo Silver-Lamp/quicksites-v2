@@ -188,7 +188,20 @@ export function buildRebuildTemplate(opts: {
     }
   }
 
-  // Real hours → the hours block days.
+  // Real hours → the hours block days. ⚠️ NO hours → NO hours block: the scaffold's default is
+  // a placeholder week (Mon–Fri 9–5), and on a REAL business that is an invented schedule —
+  // Pete's Eggnest (7 AM–2 PM, open weekends) shipped as "Mon–Fri 9–5, closed today" on a
+  // Sunday because parseHours missed its site's format (2026-10-11). Same rule the post builder
+  // already applies. The nav item that pointed at the block is relabelled to the location.
+  if (!spec.hours?.length) {
+    const idx = blocks.findIndex((b) => b?.type === 'hours');
+    if (idx >= 0) blocks.splice(idx, 1);
+    for (const blk of [(tpl as any)?.data?.headerBlock, (tpl as any)?.headerBlock, (tpl as any)?.header_block, (tpl as any)?.data?.footerBlock, (tpl as any)?.footerBlock, (tpl as any)?.footer_block]) {
+      for (const c of [blk?.content, blk?.props]) {
+        for (const item of c?.nav_items ?? c?.links ?? []) if (item?.label === 'Location & Hours') item.label = 'Location';
+      }
+    }
+  }
   if (spec.hours?.length) {
     const hoursBlock = blocks.find((b) => b?.type === 'hours');
     if (hoursBlock?.content) {

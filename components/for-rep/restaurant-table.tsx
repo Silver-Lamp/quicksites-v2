@@ -110,7 +110,7 @@ export default function RestaurantTable({ rows, token, repName, readOnly = false
             const b = built[r.prospectId];
             const err = errors[r.prospectId];
             const tag = GROUP_TAG[r.group];
-            const sms = b ? smsHref(r.phone, repOrderingSmsDraft({ repName, businessName: r.businessName, previewUrl: b.previewUrl })) : null;
+            const sms = b ? smsHref(r.phone, repOrderingSmsDraft({ repName, businessName: r.businessName, previewUrl: b.previewUrl, evolveUrl: b.evolveUrl })) : null;
             return (
               <React.Fragment key={r.prospectId}>
                 <tr className="border-t border-zinc-800/80">

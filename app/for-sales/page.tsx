@@ -30,6 +30,7 @@
 import type { Metadata } from 'next';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
 import OtherVerticals, { OTHER_VERTICALS_COPY } from '@/components/for-rep/other-verticals';
+import VerticalFlow from '@/components/for-rep/vertical-flow';
 import SiteHeader from '@/components/site/site-header';
 
 export const metadata: Metadata = {
@@ -143,6 +144,9 @@ export default async function ForSalesPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
             The domain rental
           </h2>
+          {/* What you do and what comes of it, as a flowchart (owner, 2026-10-10). Copy in
+              lib/rep/verticalFlows.ts, held to the forbidden list there. */}
+          <VerticalFlow flow="rental" />
           <Card title="An exact-match domain, rented — not a website" tag="$99/mo" tone="emerald">
             <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-200">
               renton-towing.com
@@ -241,6 +245,7 @@ export default async function ForSalesPage() {
               them the claim link and move on.
             </p>
           </Card>
+          <VerticalFlow flow="website" />
         </section>
 
         {/* The call — the sheet is the script. It is deliberately a separate surface: nothing

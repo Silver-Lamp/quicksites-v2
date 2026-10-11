@@ -35,6 +35,11 @@ import PitchArt, { type PitchArtKind } from '@/components/for-rep/pitch-art';
 import SiteHeader from '@/components/site/site-header';
 
 export const metadata: Metadata = {
+  // ⚠️ The project serves ~100 custom domains, and without a base Next resolved the share image
+  // to the first of them: og:image read https://lebanon-towing.com/for-sales/opengraph-image on
+  // the live page (2026-10-11). The rest of the site sidesteps this with absolute marketing-OG
+  // URLs (lib/marketingOg.ts); a file-based image needs the base stated.
+  metadataBase: new URL('https://www.quicksites.ai'),
   title: 'QuickSites — commission sales',
   description: 'Spread the word. Earn for life. Help a lunch spot take orders online, or a small business owner evolve their online presence — and earn a share for as long as they do.',
   robots: { index: false, follow: false }, // unlisted: public URL, invisible to search
@@ -68,7 +73,10 @@ function SubPitch({ k, children }: { k: keyof typeof BUSINESS_SUBPITCHES; childr
   const c = BUSINESS_SUBPITCHES[k];
   return (
     <details className="group/sub mx-auto max-w-3xl px-6 pt-3">
-      <summary className="cursor-pointer select-none rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 transition-colors hover:border-sky-500/50 group-open/sub:border-sky-500/60 [&::-webkit-details-marker]:hidden">
+      {/* `list-none` as well as the webkit marker rule: a block-display summary still paints the
+          default ▶ triangle beside our own arrow (seen live 2026-10-11); the Pitch summary is
+          display:flex, which is why it never did. */}
+      <summary className="list-none cursor-pointer select-none rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 transition-colors hover:border-sky-500/50 group-open/sub:border-sky-500/60 [&::-webkit-details-marker]:hidden">
         <span className="flex items-start gap-3">
           <span aria-hidden className="mt-0.5 inline-block shrink-0 text-sky-400 transition-transform group-open/sub:rotate-90">›</span>
           <span>

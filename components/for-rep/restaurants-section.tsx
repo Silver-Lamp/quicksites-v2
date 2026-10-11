@@ -39,7 +39,7 @@ export const SECTION_COPY = {
   elsewhere: 'Somewhere else today?',
 } as const;
 
-export default async function RestaurantsSection({ code, repName, token }: { code: string | null; repName: string; token: string | null }) {
+export default async function RestaurantsSection({ code, repName, token, prominent = false }: { code: string | null; repName: string; token: string | null; /** The main event: a larger title, placed right under the page's opening. */ prominent?: boolean }) {
   const territory = territoryFor(code);
   const menuHost = process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null;
   const data = territory ? await loadRestaurantsFor({ city: territory.city, region: territory.region, code, menuHost }) : null;
@@ -49,9 +49,9 @@ export default async function RestaurantsSection({ code, repName, token }: { cod
   const c = SECTION_COPY;
 
   return (
-    <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">
+    <section className={`mx-auto max-w-3xl px-6 pb-4 ${prominent ? 'pt-4' : 'pt-8'}`}>
       <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">{c.kicker}</h2>
-      <h3 className="mt-2 text-xl font-bold text-white">{c.title}</h3>
+      <h3 className={`mt-2 font-bold text-white ${prominent ? 'text-2xl md:text-3xl' : 'text-xl'}`}>{c.title}</h3>
       <p className="mt-3 text-sm leading-relaxed text-zinc-400">
         {c.intro(place)}
         {readOn ? ` Sites last read ${readOn}.` : ''}

@@ -30,6 +30,7 @@
 // hour"). A script that re-adds them verbally puts them back where it counts.
 import Link from 'next/link';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import OtherVerticals from '@/components/for-rep/other-verticals';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import EarningsLines from '@/components/charts/earnings-lines';
@@ -193,6 +194,11 @@ export default async function ForSalesPage() {
             it&apos;s what I can&apos;t yet promise you.
           </p>
         </section>
+
+        {/* THE MAIN EVENT (owner, 2026-10-10): restaurants first — walk in, have lunch, drop a
+            card. Everything else on the page sits under "Our other verticals". */}
+        <RestaurantsSection code={null} repName="a QuickSites rep" token={null} prominent />
+        <OtherVerticals />
 
         {/* The product */}
         <section className="mx-auto max-w-3xl space-y-4 px-6 pb-4">
@@ -560,7 +566,6 @@ export default async function ForSalesPage() {
 
         {/* Restaurants: walk in, have lunch, drop a card — read-only here (no code), with the
             sweep that grows the database from wherever the reader is standing. */}
-        <RestaurantsSection code={null} repName="a QuickSites rep" token={null} />
 
         {/* Money */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">

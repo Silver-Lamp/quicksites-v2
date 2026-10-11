@@ -13,6 +13,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { groupRestaurantsByOrdering, platformLabel, platformFromWebsiteHost, looksLikeFoodBusiness, type RestaurantRow } from '@/lib/prospects/orderingSegments';
 import { repBuildLinks } from '@/lib/rep/repBuild';
 import type { RestaurantTableRow } from '@/components/for-rep/restaurant-table';
+import { loadOutreachMarks, postcardStatusLine } from '@/lib/outreach/prospectOutreach';
 
 export type RepRestaurantsResult = {
   rows: RestaurantTableRow[];
@@ -51,10 +52,16 @@ export async function loadRestaurantsFor(input: { city: string; region?: string 
     for (const t of (tpls ?? []) as Array<{ id: string; slug: string | null }>) if (t.slug) slugById.set(t.id, t.slug);
   }
   const groups = groupRestaurantsByOrdering(base);
+  // What has already happened to each built row: last text / DM logged, latest Evolve card.
+  const marks = await loadOutreachMarks(base.filter((r) => r.template_id).map((r) => r.id)).catch(() => new Map());
   const toRow = (group: RestaurantTableRow['group']) => (r: R): RestaurantTableRow => {
     const slug = r.template_id ? slugById.get(r.template_id) ?? null : null;
     const links = slug && input.code ? repBuildLinks({ slug, industryKey: 'restaurant', prospectId: r.id, code: input.code, base: input.base, menuHost: input.menuHost ?? null }) : null;
+    const m = marks.get(r.id);
     return {
+      textedAt: m?.textedAt ?? null,
+      dmAt: m?.dmAt ?? null,
+      cardLine: postcardStatusLine(m?.card),
       prospectId: r.id,
       businessName: (r.business_name ?? '').trim(),
       phone: r.phone,

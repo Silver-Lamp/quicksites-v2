@@ -33,9 +33,15 @@ export type PostSpec = {
    * blocks but none of the food wording, and is filed under a non-food industry so the public
    * render shows no "Order online?" pill and no "take online orders" promise.
    */
-  kind?: 'food' | 'goods' | 'services';
+  kind?: 'food' | 'goods' | 'services' | 'event';
   /** Industry the row is filed under for a non-food kind; defaults per kind (see NON_FOOD_INDUSTRY). */
   industry?: string;
+  /**
+   * Where the hero button goes when the post names it — a `mailto:` for an RSVP-by-email dinner,
+   * a ticket URL. Only a link the post itself published; otherwise the hero falls back to the
+   * contact form / phone as usual.
+   */
+  ctaLink?: string;
   /** The post, as written. Becomes the about text. */
   words: string;
   headline: string;
@@ -64,13 +70,17 @@ export type PostSpec = {
 
 export const STRIPPED_BLOCKS = ['faq', 'services', 'contact_form', 'order_bar', 'about_that', 'cta', 'testimonials'] as const;
 /** The industry a non-food kind is filed under by default: `needsMenu()` is false for each, so the food chrome stays off. */
-export const NON_FOOD_INDUSTRY = { goods: 'pop_up_shop', services: 'other' } as const;
+export const NON_FOOD_INDUSTRY = { goods: 'pop_up_shop', services: 'other', event: 'other' } as const;
 /** @deprecated kept for the first goods build; use NON_FOOD_INDUSTRY */
 export const GOODS_INDUSTRY = NON_FOOD_INDUSTRY.goods;
 /** The chrome words per non-food kind: the hero button, the nav item that replaces "Menu", the location heading. */
 export const NON_FOOD_COPY = {
   goods: { cta: "See what's for sale", nav: 'For sale', where: 'Where' },
   services: { cta: 'See prices', nav: 'Prices', where: 'Where' },
+  // A ticketed dinner / pop-up: it HAS a menu, but nobody orders from it — they reserve a seat.
+  // Filed under a non-food industry so the order-ahead pill and "take online orders" pitch stay
+  // off (Lil Mamas at Landhaus, 2026-10-11: a ten-seat dinner, RSVP by email).
+  event: { cta: 'Reserve a seat', nav: 'Menu', where: 'Where' },
 } as const;
 export const GOODS_COPY = NON_FOOD_COPY.goods;
 export const ALLOWED_BLOCKS = new Set(['hero', 'menu', 'location', 'hours', 'story', 'gallery', 'header', 'footer']);
@@ -122,7 +132,7 @@ export function assemblePostTemplate(p: PostSpec) {
   const strip = new Set<string>(STRIPPED_BLOCKS);
   if (!spec.hours) strip.add('hours');
   if (!spec.contact?.address) strip.add('location');
-  const nonFood = p.kind === 'goods' || p.kind === 'services' ? p.kind : null;
+  const nonFood = p.kind === 'goods' || p.kind === 'services' || p.kind === 'event' ? p.kind : null;
   const goods = nonFood !== null;
   const words = nonFood ? NON_FOOD_COPY[nonFood] : null;
   for (const pg of tpl.data.pages ?? []) {
@@ -140,6 +150,7 @@ export function assemblePostTemplate(p: PostSpec) {
             if (words) c.title = words.nav;
           }
           if (words && b.type === 'hero' && typeof c.cta_text === 'string') c.cta_text = words.cta;
+          if (b.type === 'hero' && p.ctaLink && /^(mailto:|https?:\/\/)/i.test(p.ctaLink.trim())) c.cta_link = p.ctaLink.trim();
           if (words && b.type === 'location' && typeof c.title === 'string') c.title = words.where;
         }
       }

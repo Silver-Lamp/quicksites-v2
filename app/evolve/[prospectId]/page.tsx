@@ -22,6 +22,8 @@ import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { draftOutreachLinks } from '@/lib/outreach/draftLinks';
 import { getSenderProfile } from '@/lib/outreach/senderProfile';
+import { selectEvolveMailable } from '@/lib/outreach/evolvePostcardSend';
+import { loadOutreachMarks, postcardStatusLine } from '@/lib/outreach/prospectOutreach';
 import SiteFooter from '@/components/site/site-footer';
 import ScaledFrame from '@/components/evolve/scaled-frame';
 import { supabaseAdmin } from '@/lib/supabase/admin';
@@ -89,20 +91,30 @@ export default async function EvolvePage({ params, searchParams }: { params: Pro
   // who is not an admin gets the DM / text / page-link buttons and nothing privileged.
   const admin = await getAdminUser().catch(() => null);
   const evolveUrl = `${base}/evolve/${p.id}${refCode ? `?ref=${encodeURIComponent(refCode)}` : ''}`;
-  let adminExtras: { claimUrl: string | null; cardFrontUrl: string | null; cardBackUrl: string | null; senderName: string } | null = null;
+  let adminExtras: { claimUrl: string | null; cardFrontUrl: string | null; cardBackUrl: string | null; senderName: string; postcardBlocked: string | null } | null = null;
   if (admin) {
     const links = draftOutreachLinks({ templateId: p.template_id, slug, claimSource: 'listing_import', builtFromPost: false, prospect: { id: p.id, website: p.website }, claimToken: mintSiteClaimToken(p.template_id), base, menuHost: process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null });
-    const sender = await getSenderProfile().catch(() => null);
-    adminExtras = { claimUrl: links?.claimUrl ?? null, cardFrontUrl: links?.cardFrontUrl ?? null, cardBackUrl: links?.cardBackUrl ?? null, senderName: sender?.name?.split(' ')[0] || 'Sandon' };
+    const [sender, mailable] = await Promise.all([getSenderProfile().catch(() => null), selectEvolveMailable({ ids: [p.id] }).catch(() => [])]);
+    const me = mailable.find((d) => d.prospect.id === p.id);
+    adminExtras = {
+      claimUrl: links?.claimUrl ?? null,
+      cardFrontUrl: links?.cardFrontUrl ?? null,
+      cardBackUrl: links?.cardBackUrl ?? null,
+      senderName: sender?.name?.split(' ')[0] || 'Sandon',
+      postcardBlocked: me ? (me.blocked ?? null) : 'not_eligible',
+    };
   }
-  const phone = typeof (p as { phone?: string | null }).phone === 'string' ? (p as { phone?: string | null }).phone! : null;
+  const phone = typeof p.phone === 'string' ? p.phone : null;
+  const marksById = await loadOutreachMarks([p.id]).catch(() => new Map());
+  const mk = marksById.get(p.id);
+  const marks = { textedAt: mk?.textedAt ?? null, dmAt: mk?.dmAt ?? null, cardLine: postcardStatusLine(mk?.card) };
 
   return (
     <>
       {/* A one-restaurant page: no marketing nav (four exits above the fold, and "Book a demo"
           there would drop the rep's code). The page's own two buttons are the navigation. */}
       <SiteHeader sticky links={[]} />
-      <OperatorBar businessName={m.businessName} phone={phone} evolveUrl={evolveUrl} previewUrl={m.evolvedUrl} admin={adminExtras} />
+      <OperatorBar prospectId={p.id} businessName={m.businessName} phone={phone} evolveUrl={evolveUrl} previewUrl={m.evolvedUrl} marks={marks} admin={adminExtras} />
       <main className="min-h-screen bg-zinc-950 text-white">
         {/* The offer, then why */}
         <section className="mx-auto max-w-4xl px-6 pb-6 pt-14">

@@ -12,7 +12,8 @@ const input = 'mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py
 const label = 'block text-xs text-zinc-500';
 
 export default function PostBuildClient() {
-  const [kind, setKind] = React.useState<'food' | 'goods' | 'services'>('food');
+  const [kind, setKind] = React.useState<'food' | 'goods' | 'services' | 'event'>('food');
+  const [ctaLink, setCtaLink] = React.useState('');
   const [businessName, setBusinessName] = React.useState('');
   const [firstName, setFirstName] = React.useState('');
   const [words, setWords] = React.useState('');
@@ -58,7 +59,7 @@ export default function PostBuildClient() {
     setResult(null);
     try {
       const spec = {
-        kind, businessName, firstName, words, headline, subheadline, sectionName,
+        kind, ctaLink: ctaLink.trim() || undefined, businessName, firstName, words, headline, subheadline, sectionName,
         items: items.filter((i) => i.name.trim()),
         menuNote,
         where: { address, city, state, phone },
@@ -85,7 +86,7 @@ export default function PostBuildClient() {
         <div className="text-sm sm:col-span-2">
           <span className={label}>What are they selling?</span>
           <div className="mt-1 flex gap-2">
-            {([['food', 'Food — a menu, "View Menu", the order-ahead pitch'], ['goods', 'Goods — a decor or garage sale, a maker\'s table; no menu wording'], ['services', 'Services — a price list (alterations, lessons, repairs); "See prices"']] as const).map(([k, l]) => (
+            {([['food', 'Food — a menu, "View Menu", the order-ahead pitch'], ['goods', 'Goods — a decor or garage sale, a maker\'s table; no menu wording'], ['services', 'Services — a price list (alterations, lessons, repairs); "See prices"'], ['event', 'Event — a ticketed dinner or pop-up with a menu; "Reserve a seat", no ordering']] as const).map(([k, l]) => (
               <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-md border px-3 py-1.5 text-left text-xs ${kind === k ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-200' : 'border-zinc-700 text-zinc-400'}`}>{l}</button>
             ))}
           </div>
@@ -120,6 +121,9 @@ export default function PostBuildClient() {
         <label className="text-sm"><span className={label}>Where (as they put it)</span><input className={input} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Across from Harbor Mercantile" /></label>
         <label className="text-sm"><span className={label}>City</span><input className={input} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Vashon" /></label>
         <label className="text-sm"><span className={label}>State</span><input className={input} value={state} onChange={(e) => setState(e.target.value)} maxLength={2} /></label>
+        {kind === 'event' && (
+          <label className="text-sm sm:col-span-3"><span className={label}>RSVP / tickets link the post published (mailto: or https://) — the hero button goes there</span><input className={input} value={ctaLink} onChange={(e) => setCtaLink(e.target.value)} placeholder="mailto:host@example.com?subject=RSVP" /></label>
+        )}
         <label className="text-sm sm:col-span-3"><span className={label}>Phone — only if the post itself published it (the hero button dials it)</span><input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="206-463-3782" /></label>
         <div className="sm:col-span-3">
           <span className={label}>When (days they are open; everything else shows closed)</span>

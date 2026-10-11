@@ -184,7 +184,7 @@ describe('the operator strip (owner, 2026-10-11): a signed-in member sees it, a 
   const bar = read('components/evolve/operator-bar.tsx');
   it('the page mounts the bar right under the header, with the phone and the admin extras', () => {
     expect(page.indexOf('<OperatorBar')).toBeGreaterThan(page.indexOf('<SiteHeader'));
-    expect(page).toMatch(/<OperatorBar businessName=\{m\.businessName\} phone=\{phone\} evolveUrl=\{evolveUrl\} previewUrl=\{m\.evolvedUrl\} admin=\{adminExtras\} \/>/);
+    expect(page).toMatch(/<OperatorBar prospectId=\{p\.id\} businessName=\{m\.businessName\} phone=\{phone\} evolveUrl=\{evolveUrl\} previewUrl=\{m\.evolvedUrl\} marks=\{marks\} admin=\{adminExtras\} \/>/);
   });
   it('the claim token is minted only inside the admin branch', () => {
     const adminBranch = page.indexOf('if (admin) {');

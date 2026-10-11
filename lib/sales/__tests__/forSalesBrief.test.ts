@@ -39,6 +39,12 @@ describe('the straight-talk section is hidden (owner, 2026-10-10)', () => {
     // No "If you want it" close (owner, 2026-10-11): the page ends when the second pitch does.
     expect(code).not.toMatch(/If you want it/);
   });
+  it('the share image resolves on quicksites.ai and the sub-box summaries paint no default marker (both seen wrong live, 2026-10-11)', () => {
+    expect(code).toMatch(/metadataBase: new URL\('https:\/\/www\.quicksites\.ai'\)/);
+    const sub = code.slice(code.indexOf('function SubPitch'), code.indexOf('function More'));
+    expect(sub).toMatch(/<summary className="list-none /);
+    expect(readFileSync(join(process.cwd(), 'app/for-sales/opengraph-image.tsx'), 'utf8')).toMatch(/FOR_SALES_PITCHES\.(lunch|business)/);
+  });
   it('the business pitch holds three boxes in the owner\'s order — store, free site, domain rental — and the rental box carries the call and the pay', () => {
     const store = code.indexOf('<SubPitch k="store">');
     const website = code.indexOf('<SubPitch k="website">');

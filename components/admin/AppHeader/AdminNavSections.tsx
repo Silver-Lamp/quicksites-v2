@@ -209,6 +209,14 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'section', label: 'Growth', adminOnly: true },
   {
     type: 'item',
+    label: 'Build from a Post',
+    href: '/admin/post-build',
+    icon: <Megaphone size={18} />,
+    adminOnly: true,
+    keywords: ['facebook', 'pop-up', 'popup', 'post', 'sale', 'fisherman', 'river', 'build from post'],
+  },
+  {
+    type: 'item',
     label: 'SERP check',
     href: '/admin/serp-check',
     icon: <Search size={18} />,

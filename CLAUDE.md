@@ -981,6 +981,21 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   restaurants-section.tsx`, territories in `lib/rep/territories.ts`) with **"Sweep where I am"**;
   `POST /api/rep/sweep` spends Places money on a stranger's click and is capped 2/IP/day,
   25/day globally, never re-sweeps a city within 7 days, and fixes the shape server-side.
+- **Build from a post (2026-10-10, `/admin/post-build`)**: someone announces a sale in a Facebook
+  group — a product, a price, a time, a place, photos, their own words — and the operator types it
+  in as written; `lib/outreach/buildDraftFromPost.ts` builds the same operator-owned
+  `listing_import` draft River Williams got the night before his smoked-salmon pop-up (that one
+  was a scratch script and drew real traffic from the post), mints the claim link **on the server
+  that will verify it** (a locally minted token reads "expired" on prod), and drafts the DM.
+  ⚠️ **Only what they said**: the scaffold blocks that would speak for them (`faq`, `services`,
+  `contact_form`, `order_bar`, `cta`, `about_that`, `testimonials`) are stripped and nothing is
+  generated; the menu is stamped `sourced_at` so the prices they posted show as dated prices;
+  photos are uploaded by hand (`POST /api/admin/post-build/photo` → `site-images/post-builds/`,
+  https only). ⚠️ The operator must declare the seller is an adult — a child's stand is the
+  lemonade vertical with the parent, never a page in a minor's name. ⚠️ The claim link goes in a
+  **private DM**, never a public reply (a bearer credential), and we never post cold into a group.
+  Tests: `lib/outreach/__tests__/buildDraftFromPost.test.ts` (block allowlist, dated prices, DM
+  held to the claim-postcard forbidden list).
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

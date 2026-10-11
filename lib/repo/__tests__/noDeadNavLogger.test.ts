@@ -9,7 +9,9 @@ import path from 'path';
 
 describe('no dead nav logger', () => {
   it('nothing references /api/log-event and the route is gone', () => {
-    const hits = execSync("git grep -l '/api/log-event' -- app components lib middleware.ts || true", { cwd: process.cwd() }).toString().trim();
+    // ⚠️ Exclude this file: `git grep` searches TRACKED files, so once the guard was committed its
+    // own comment matched and CI failed while the untracked local run passed (2026-10-11).
+    const hits = execSync("git grep -l '/api/log-event' -- app components lib middleware.ts ':!lib/repo/__tests__/noDeadNavLogger.test.ts' || true", { cwd: process.cwd() }).toString().trim();
     expect(hits).toBe('');
     expect(fs.existsSync(path.join(process.cwd(), 'app/api/log-event/route.ts'))).toBe(false);
   });

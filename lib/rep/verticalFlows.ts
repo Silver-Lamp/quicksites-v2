@@ -14,7 +14,7 @@ import { SPLIT } from '@/lib/commerce/rentalSplits';
 export type FlowWho = 'rep' | 'business' | 'auto';
 export type FlowStep = { who: FlowWho; title: string; detail: string };
 export type VerticalFlow = {
-  key: 'rental' | 'website';
+  key: 'rental' | 'website' | 'store';
   caption: string;
   steps: FlowStep[];
   result: { title: string; detail: string };
@@ -29,6 +29,24 @@ export const WHO_LABEL: Record<FlowWho, string> = {
 const closerShare = `${Math.round(SPLIT.closer * 100)}%`;
 
 export const VERTICAL_FLOWS: Record<VerticalFlow['key'], VerticalFlow> = {
+  // A store with checkout for a business that sells things but not online. The money path is
+  // the same take-rate the restaurants ride (an attributed referral earns on each paid order —
+  // markOrderPaid writes the ledger row), so the result is stated the same way.
+  store: {
+    key: 'store',
+    caption: 'A store with checkout, start to finish',
+    steps: [
+      { who: 'rep', title: 'Spot a maker or a shop with no checkout', detail: 'A bakery that posts its loaves, a farm stand, a shop whose site is a brochure. The sweep and the no-website table are both doors.' },
+      { who: 'rep', title: 'Build it from what they already show', detail: 'Their listing, their site, or their post: products, prices and photos they published. Nothing invented about a business we have never spoken to.' },
+      { who: 'rep', title: 'Hand them the claim link', detail: 'Text it or leave the card. The link carries your code, so the store is attributed to you.' },
+      { who: 'business', title: 'They claim it and connect payouts', detail: 'Their own name, their own prices; card payouts go to their account. They fix anything we read wrong before it goes live.' },
+      { who: 'auto', title: 'Orders run through checkout', detail: 'Each paid order carries the per-order fee; your share of it posts to the ledger the payout run pays from.' },
+    ],
+    result: {
+      title: 'A share of every order they take through it, for as long as they sell',
+      detail: 'You earn when they do, and only then. No monthly fee for them, no bonus up front for you — the same deal as the lunch spot.',
+    },
+  },
   rental: {
     key: 'rental',
     caption: 'The domain rental, start to finish',

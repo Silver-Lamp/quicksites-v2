@@ -10,7 +10,7 @@
 //      "Build ordering page" on the first two → the draft is their published menu.
 import * as React from 'react';
 import type { RestaurantCity } from '@/lib/prospects/noOrderingList';
-import { platformLabel, platformFromWebsiteHost } from '@/lib/prospects/orderingSegments';
+import { platformLabel, segmentLabel } from '@/lib/prospects/orderingSegments';
 
 type Row = {
   id: string;
@@ -316,7 +316,7 @@ export default function NoOrderingClient({ cities, initialCity, initialRegion }:
                         {rows.map((r) => {
                           const b = built[r.id];
                           const err = errors[r.id];
-                          const label = g.key === 'siteOnly' || g.key === 'thirdParty' ? platformLabel(platformFromWebsiteHost(r.website) ?? r.ordering_platform) : g.key === 'unchecked' ? 'not checked' : platformLabel(r.ordering_platform);
+                          const label = segmentLabel(r, g.key);
                           return (
                             <React.Fragment key={r.id}>
                               <tr className="border-t border-zinc-800/60">

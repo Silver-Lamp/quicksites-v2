@@ -21,6 +21,7 @@ import { NextResponse } from 'next/server';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 import { checkRateLimit } from '@/lib/rateLimit';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
+import { resolveOperatorId } from '@/lib/outreach/defaultOperator';
 import { runSweep, SweepInputError } from '@/lib/prospects/runSweep';
 import { getCityStateForLatLon } from '@/lib/utils/geocode';
 import { loadRestaurantsFor, sweptRecently } from '@/lib/rep/repRestaurants';
@@ -80,7 +81,9 @@ export async function POST(req: Request) {
   }
 
   // 4. The sweep itself.
-  const operatorId = process.env.TRADE_PIPELINE_OPERATOR_ID || null;
+  // Stamp the rows with the programme's operator so a later build has an owner (the env var is
+  // unset in prod; without this every public-sweep row built as `no_operator`, 2026-10-11).
+  const operatorId = await resolveOperatorId();
   try {
     const r = await runSweep({
       lat: Number.isFinite(lat) ? lat : (undefined as any),

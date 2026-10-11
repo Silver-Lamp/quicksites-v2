@@ -14,6 +14,7 @@
 // the sweep rows, so a re-check moves a restaurant between groups without a deploy.
 
 import { THIRD_PARTY, SHOP, type OrderingPlatform } from '@/lib/prospects/orderingDetect';
+import { isChain } from '@/lib/prospects/chains';
 
 export type RestaurantRow = {
   id: string;
@@ -70,6 +71,12 @@ export function groupRestaurantsByOrdering<T extends RestaurantRow>(rows: T[]): 
   const g: RestaurantGroups<T> = { call: [], shop: [], siteOnly: [], thirdParty: [], leaveAlone: [], unchecked: [] };
   for (const r of rows) {
     if (!r.website) continue; // the no-website table owns these
+    // A national chain is never a call: head office decides and the app exists. Its location
+    // page carries no ordering link we recognise, so without this rule it read "call first".
+    if (isChain({ website: r.website, businessName: r.business_name })) {
+      g.leaveAlone.push(r);
+      continue;
+    }
     const hostPlatform = platformFromWebsiteHost(r.website);
     if (hostPlatform) {
       (THIRD_PARTY.has(hostPlatform) ? g.thirdParty : g.siteOnly).push(r);
@@ -88,6 +95,17 @@ export function groupRestaurantsByOrdering<T extends RestaurantRow>(rows: T[]): 
   const byReviews = (a: T, b: T) => (b.review_count ?? 0) - (a.review_count ?? 0);
   for (const k of Object.keys(g) as Array<keyof RestaurantGroups<T>>) g[k].sort(byReviews);
   return g;
+}
+
+/**
+ * The one label for a row in a group — so the rep table and the admin page cannot disagree.
+ * A chain reads "national chain", never "no online ordering found".
+ */
+export function segmentLabel(r: Pick<RestaurantRow, 'website' | 'business_name' | 'ordering_platform'>, group: keyof RestaurantGroups): string {
+  if (isChain({ website: r.website, businessName: r.business_name })) return 'national chain';
+  if (group === 'siteOnly' || group === 'thirdParty') return platformLabel(platformFromWebsiteHost(r.website) ?? r.ordering_platform);
+  if (group === 'unchecked') return 'not checked';
+  return platformLabel(r.ordering_platform);
 }
 
 export const PLATFORM_LABEL: Record<OrderingPlatform, string> = {

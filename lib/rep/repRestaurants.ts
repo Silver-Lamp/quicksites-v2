@@ -10,7 +10,7 @@
 // what is food (looksLikeFoodBusiness). A rep's code, when given, puts their ref on every link.
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { groupRestaurantsByOrdering, platformLabel, platformFromWebsiteHost, looksLikeFoodBusiness, type RestaurantRow } from '@/lib/prospects/orderingSegments';
+import { groupRestaurantsByOrdering, segmentLabel, looksLikeFoodBusiness, type RestaurantRow } from '@/lib/prospects/orderingSegments';
 import { repBuildLinks } from '@/lib/rep/repBuild';
 import type { RestaurantTableRow } from '@/components/for-rep/restaurant-table';
 import { loadOutreachMarks, postcardStatusLine } from '@/lib/outreach/prospectOutreach';
@@ -66,7 +66,7 @@ export async function loadRestaurantsFor(input: { city: string; region?: string 
       businessName: (r.business_name ?? '').trim(),
       phone: r.phone,
       websiteHost: hostOf(r.website),
-      platformLabel: group === 'siteOnly' || group === 'thirdParty' ? platformLabel(platformFromWebsiteHost(r.website) ?? r.ordering_platform) : group === 'unchecked' ? 'not checked' : platformLabel(r.ordering_platform),
+      platformLabel: segmentLabel(r, group),
       group,
       rating: r.rating,
       reviewCount: r.review_count,

@@ -43,6 +43,11 @@ describe('postToRebuildSpec', () => {
     expect(spec.faqs).toEqual([]);
     expect(spec.menu?.sections[0].items.map((i) => i.name)).toEqual(['Wildflower honey, 12 oz', 'Comb honey']);
   });
+  it('a phone the post published reaches the contact; none typed means none on the page', () => {
+    expect(postToRebuildSpec({ ...POST, where: { ...POST.where, phone: '206-555-0100' } }).contact?.phone).toBe('206-555-0100');
+    expect(spec.contact?.phone).toBeUndefined();
+    expect(JSON.stringify(assemblePostTemplate(POST).data)).not.toMatch(/\(?\d{3}\)?[-. ]\d{3}[-. ]\d{4}/);
+  });
   it('fills the days they did not name as closed, never open', () => {
     const sat = spec.hours!.find((h) => h.day === 'sat');
     expect(sat).toEqual({ day: 'sat', open: '10:00', close: '14:00' });

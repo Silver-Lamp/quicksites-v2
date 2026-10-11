@@ -43,7 +43,8 @@ export type PostSpec = {
   sectionName: string;
   items: PostItem[];
   menuNote?: string;
-  where?: { address?: string; city?: string; state?: string };
+  /** Where, and the number they published for orders — only when the post itself carries it. */
+  where?: { address?: string; city?: string; state?: string; phone?: string };
   hours?: PostHours[];
   story?: { heading: string; body: string }[];
   photos: PostPhoto[];
@@ -99,7 +100,7 @@ export function postToRebuildSpec(p: PostSpec): RebuildSpec {
     services: [],
     faqs: [],
     menu: items.length ? { sections: [{ name: p.sectionName.trim() || 'For sale', items: items.map((i) => ({ name: i.name.trim(), ...(i.description?.trim() ? { description: i.description.trim() } : {}), ...(i.price?.trim() ? { price: i.price.trim() } : {}) })) }] } : undefined,
-    contact: p.where && (p.where.address || p.where.city) ? { address: p.where.address?.trim() || undefined, city: p.where.city?.trim() || undefined, state: p.where.state?.trim() || undefined } : undefined,
+    contact: p.where && (p.where.address || p.where.city || p.where.phone) ? { address: p.where.address?.trim() || undefined, city: p.where.city?.trim() || undefined, state: p.where.state?.trim() || undefined, phone: p.where.phone?.trim() || undefined } : undefined,
     hours,
     seoTitle: p.headline.trim() ? `${p.businessName.trim()} — ${p.headline.trim()}` : p.businessName.trim(),
     seoDescription: (p.subheadline ?? p.words).trim().slice(0, 160),

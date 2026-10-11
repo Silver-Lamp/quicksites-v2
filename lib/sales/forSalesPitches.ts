@@ -15,6 +15,21 @@ export const FOR_SALES_PITCHES = {
  * and have the SEO site sales one be secondary"). Order is the owner's: store first, free site
  * second, the domain rental last.
  */
+/**
+ * /spread-the-word — the public, indexed version (owner, 2026-10-11: "people turned off by
+ * thinking it's a 'sales job' when it's really just about telling people about it and helping
+ * them"). Same two sentences, the restaurants section, the store and free-site boxes; no domain
+ * rental, no call sheet, no "commission sales". The pay line is DERIVED from the member plan.
+ */
+export const SPREAD_COPY = {
+  title: 'Spread the word. Earn for life.',
+  intro: 'Not a job. If you know a lunch spot that should take orders online, or a maker who should have a store, point them at a page we build from their own menu or listing — one link, a minute of your time. When they take it and it earns, so do you.',
+  howPaidTitle: 'How you are paid',
+  howPaid: (ratePct: number, lifetime: boolean) =>
+    `Sign in once and every link you share carries your own code. When a business you pointed here takes orders through its page, ${ratePct}% of our per-order fee is yours${lifetime ? ', for as long as they sell' : ''}. You earn when they do, and only then — nothing up front, nothing for a signup that never sells.`,
+  start: 'Sign in, then open either box: the tables show "Build their ordering page" and every link it hands you carries your code.',
+} as const;
+
 export const BUSINESS_SUBPITCHES = {
   store: {
     title: 'They sell things, but not online yet.',

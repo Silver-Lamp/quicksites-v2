@@ -30,8 +30,8 @@
 import type { Metadata } from 'next';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
 import VerticalFlow from '@/components/for-rep/vertical-flow';
-import { FOR_SALES_PITCHES, BUSINESS_SUBPITCHES } from '@/lib/sales/forSalesPitches';
-import PitchArt, { type PitchArtKind } from '@/components/for-rep/pitch-art';
+import { FOR_SALES_PITCHES } from '@/lib/sales/forSalesPitches';
+import { Pitch, SubPitch } from '@/components/for-rep/pitch';
 import SiteHeader from '@/components/site/site-header';
 
 export const metadata: Metadata = {
@@ -47,48 +47,6 @@ export const metadata: Metadata = {
   openGraph: { title: 'Spread the word. Earn for life.', description: 'Help a lunch spot take orders online, or a small business owner evolve their online presence — and earn a share for as long as they do.', type: 'website' },
   twitter: { card: 'summary_large_image' },
 };
-
-/** The two pitches the page opens with (lib/sales/forSalesPitches.ts): a native <details> each. */
-function Pitch({ summary, art, children }: { summary: string; art: PitchArtKind; children: React.ReactNode }) {
-  return (
-    <details className="group mx-auto max-w-3xl px-6 pt-5">
-      <summary className="flex cursor-pointer select-none items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 text-xl font-bold leading-snug text-white transition-colors hover:border-emerald-500/50 group-open:border-emerald-500/60 md:p-5 md:text-2xl [&::-webkit-details-marker]:hidden">
-        <PitchArt kind={art} />
-        <span className="flex-1">
-          {summary}
-          <span className="mt-2 block text-xs font-medium uppercase tracking-wider text-emerald-400/90">
-            <span aria-hidden className="inline-block transition-transform group-open:rotate-90">›</span>{' '}
-            <span className="group-open:hidden">Open to see how</span>
-            <span className="hidden group-open:inline">Close</span>
-          </span>
-        </span>
-      </summary>
-      <div className="-mx-6 mt-2 border-l border-zinc-800/60 md:ml-0">{children}</div>
-    </details>
-  );
-}
-
-/** A box inside a pitch: title + one line, opens to the vertical's own section. */
-function SubPitch({ k, children }: { k: keyof typeof BUSINESS_SUBPITCHES; children: React.ReactNode }) {
-  const c = BUSINESS_SUBPITCHES[k];
-  return (
-    <details className="group/sub mx-auto max-w-3xl px-6 pt-3">
-      {/* `list-none` as well as the webkit marker rule: a block-display summary still paints the
-          default ▶ triangle beside our own arrow (seen live 2026-10-11); the Pitch summary is
-          display:flex, which is why it never did. */}
-      <summary className="list-none cursor-pointer select-none rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 transition-colors hover:border-sky-500/50 group-open/sub:border-sky-500/60 [&::-webkit-details-marker]:hidden">
-        <span className="flex items-start gap-3">
-          <span aria-hidden className="mt-0.5 inline-block shrink-0 text-sky-400 transition-transform group-open/sub:rotate-90">›</span>
-          <span>
-            <span className="block text-base font-semibold text-white">{c.title}</span>
-            <span className="mt-1 block text-sm leading-relaxed text-zinc-400">{c.line}</span>
-          </span>
-        </span>
-      </summary>
-      <div className="-mx-6 mt-1">{children}</div>
-    </details>
-  );
-}
 
 /** Native-details expander — server-rendered, zero JS. */
 function More({ label = 'More detail', children }: { label?: string; children: React.ReactNode }) {
@@ -168,6 +126,13 @@ export default async function ForSalesPage() {
           <h1 className="mt-6 text-2xl font-extrabold tracking-tight text-zinc-300 md:text-3xl">
             Spread the word. Earn for life.
           </h1>
+          {/* This is the rep brief (calls, the domain rental, territories). The public, shareable
+              version — referrals, no sales job — is /spread-the-word (owner, 2026-10-11). */}
+          <p className="mt-3 text-sm text-zinc-500">
+            Sharing this with friends? Send them{' '}
+            <a href="/spread-the-word" className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300">quicksites.ai/spread-the-word</a>{' '}
+            — the same two ideas without the sales brief.
+          </p>
         </section>
 
         {/* Pitch 1 — LUNCH FIRST (owner, 2026-10-11, reversed the same afternoon): a lunch spot →

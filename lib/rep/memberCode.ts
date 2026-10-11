@@ -14,6 +14,14 @@ function admin(): any {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!, { auth: { persistSession: false } });
 }
 
+/**
+ * The plan a self-minted member code carries (owner, 2026-10-11, choosing "earn for life" over
+ * "earn for a year"): the referral default rate, for the LIFE of the account — duration 0 is
+ * lifetime in buildPlan, and matches what the ledger already does (no code enforces a month
+ * limit). The public page reads its "how you're paid" line from this, never a typed number.
+ */
+export const MEMBER_REFERRAL_PLAN = { ratePct: 20, durationMonths: 0 } as const;
+
 /** Pure: the code base a member's email yields ("sandon+tester2@x" → "sandon"). */
 export function codeBaseFor(email: string | null | undefined, userId: string): string {
   const local = String(email || '').split('@')[0].split('+')[0];
@@ -28,7 +36,7 @@ export async function codeForMember(input: { userId: string; email: string | nul
   const base = codeBaseFor(input.email, input.userId);
   for (let i = 0; i < 5; i++) {
     const candidate = i === 0 ? base : `${base}-${Math.random().toString(36).slice(2, 5)}`;
-    const made = await createVanityCode({ code: candidate, label: 'member (self-serve, /for-sales)', ownerEmail: input.email ?? undefined, createdBy: input.userId });
+    const made = await createVanityCode({ code: candidate, label: 'member (self-serve, /spread-the-word)', ownerEmail: input.email ?? undefined, createdBy: input.userId, ratePct: MEMBER_REFERRAL_PLAN.ratePct, durationMonths: MEMBER_REFERRAL_PLAN.durationMonths });
     if ('error' in made) continue; // taken — try a suffix
     const claimed = await claimCode(candidate, input.userId);
     if ('error' in claimed) continue;

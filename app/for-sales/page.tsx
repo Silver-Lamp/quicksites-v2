@@ -136,7 +136,7 @@ export default async function ForSalesPage() {
             </span>
           </div>
           <h1 className="mt-6 text-2xl font-extrabold tracking-tight text-zinc-300 md:text-3xl">
-            Two ways to earn. Open either one.
+            Spread the word. Earn for life.
           </h1>
         </section>
 

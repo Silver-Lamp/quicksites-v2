@@ -24,6 +24,7 @@ export default function PostBuildClient() {
   const [address, setAddress] = React.useState('');
   const [city, setCity] = React.useState('');
   const [state, setState] = React.useState('WA');
+  const [phone, setPhone] = React.useState('');
   const [days, setDays] = React.useState<Record<string, { on: boolean; open: string; close: string }>>(Object.fromEntries(DAYS.map(([d]) => [d, { on: false, open: '12:00', close: '18:00' }])));
   const [story, setStory] = React.useState<Story[]>([{ heading: '', body: '' }]);
   const [photos, setPhotos] = React.useState<Photo[]>([]);
@@ -60,7 +61,7 @@ export default function PostBuildClient() {
         kind, businessName, firstName, words, headline, subheadline, sectionName,
         items: items.filter((i) => i.name.trim()),
         menuNote,
-        where: { address, city, state },
+        where: { address, city, state, phone },
         hours: DAYS.filter(([d]) => days[d].on).map(([d]) => ({ day: d, open: days[d].open, close: days[d].close })),
         story: story.filter((s) => s.heading.trim() && s.body.trim()),
         photos: photos.map((p) => ({ url: p.url, alt: p.alt })),
@@ -119,6 +120,7 @@ export default function PostBuildClient() {
         <label className="text-sm"><span className={label}>Where (as they put it)</span><input className={input} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Across from Harbor Mercantile" /></label>
         <label className="text-sm"><span className={label}>City</span><input className={input} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Vashon" /></label>
         <label className="text-sm"><span className={label}>State</span><input className={input} value={state} onChange={(e) => setState(e.target.value)} maxLength={2} /></label>
+        <label className="text-sm sm:col-span-3"><span className={label}>Phone — only if the post itself published it (the hero button dials it)</span><input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="206-463-3782" /></label>
         <div className="sm:col-span-3">
           <span className={label}>When (days they are open; everything else shows closed)</span>
           <div className="mt-1 flex flex-wrap gap-3">

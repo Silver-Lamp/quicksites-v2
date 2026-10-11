@@ -12,7 +12,7 @@ const input = 'mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py
 const label = 'block text-xs text-zinc-500';
 
 export default function PostBuildClient() {
-  const [kind, setKind] = React.useState<'food' | 'goods'>('food');
+  const [kind, setKind] = React.useState<'food' | 'goods' | 'services'>('food');
   const [businessName, setBusinessName] = React.useState('');
   const [firstName, setFirstName] = React.useState('');
   const [words, setWords] = React.useState('');
@@ -84,7 +84,7 @@ export default function PostBuildClient() {
         <div className="text-sm sm:col-span-2">
           <span className={label}>What are they selling?</span>
           <div className="mt-1 flex gap-2">
-            {([['food', 'Food — a menu, "View Menu", the order-ahead pitch'], ['goods', 'Goods — a decor or garage sale, a maker\'s table; no menu wording']] as const).map(([k, l]) => (
+            {([['food', 'Food — a menu, "View Menu", the order-ahead pitch'], ['goods', 'Goods — a decor or garage sale, a maker\'s table; no menu wording'], ['services', 'Services — a price list (alterations, lessons, repairs); "See prices"']] as const).map(([k, l]) => (
               <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-md border px-3 py-1.5 text-left text-xs ${kind === k ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-200' : 'border-zinc-700 text-zinc-400'}`}>{l}</button>
             ))}
           </div>

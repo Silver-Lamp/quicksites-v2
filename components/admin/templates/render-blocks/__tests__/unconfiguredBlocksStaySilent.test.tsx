@@ -17,6 +17,7 @@ import ImageBlock from '@/components/admin/templates/render-blocks/image';
 import AudioBlock from '@/components/admin/templates/render-blocks/audio';
 import RenderGallery from '@/components/admin/templates/render-blocks/gallery';
 import RenderReviews from '@/components/admin/templates/render-blocks/reviews';
+import RenderLocation from '@/components/admin/templates/render-blocks/location';
 
 const CASES: Array<[string, React.ComponentType<any>, Record<string, unknown>]> = [
   ['video', VideoBlock, {}],
@@ -24,6 +25,8 @@ const CASES: Array<[string, React.ComponentType<any>, Record<string, unknown>]> 
   ['audio', AudioBlock, {}],
   ['gallery', RenderGallery, { images: [] }],
   ['reviews', RenderReviews, { reviews: [] }],
+  // Shipped its "Add your address and phone number…" hint on a public page (2026-10-10).
+  ['location', RenderLocation, { show_map: false }],
 ];
 
 describe('public: silence', () => {

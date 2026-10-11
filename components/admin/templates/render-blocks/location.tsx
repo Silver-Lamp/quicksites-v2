@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import { isEditorContext } from '@/lib/editor/isEditorContext';
 
 // Location card for local businesses (restaurants especially): address, a big
 // tap-to-call phone, a "Get Directions" button, and an optional keyless Google Maps
@@ -37,10 +38,16 @@ export default function RenderLocation(props: any) {
   const dir = directionsHref(content);
   const map = showMap ? mapEmbedSrc(content) : '';
 
+  // ⚠️ The empty state is a hint for the OWNER, not a sentence for a visitor. It shipped on a
+  // public page ("Add your address and phone number so customers can find and call you." under
+  // a real person's name, 2026-10-10) because it did not check where it was rendering. Same
+  // rule as gallery / products_grid: the hint belongs in the editor; the page stays silent.
   if (!address && !phone && !map) {
+    if (!isEditorContext(props?.previewOnly)) return null;
     return (
       <section className="mx-auto max-w-3xl px-4 py-8 text-center text-sm text-muted-foreground">
-        Add your address and phone number so customers can find and call you.
+        Location block — add your address and phone number so customers can find and call you.
+        Until then nothing shows on your live site.
       </section>
     );
   }

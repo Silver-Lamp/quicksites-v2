@@ -7,7 +7,9 @@
 // nothing was found. The build runs /api/rep/build-draft in mode 'from_site', so the draft is
 // their published menu, not a guess — and the text message says their site stays as it is.
 import * as React from 'react';
+import { usePathname } from 'next/navigation';
 import { repOrderingSmsDraft, smsHref } from '@/lib/rep/repBuild';
+import { signUpHref } from '@/lib/auth/authLinks';
 
 export type RestaurantTableRow = {
   prospectId: string;
@@ -37,6 +39,9 @@ const GROUP_TAG: Record<RestaurantTableRow['group'], { text: string; cls: string
 };
 
 export default function RestaurantTable({ rows, token, repName, readOnly = false }: { rows: RestaurantTableRow[]; token: string; repName: string; readOnly?: boolean }) {
+  // A reader with no rep grant (the public /for-sales brief) sees a Build link that goes to
+  // sign-up and comes back here — the build itself needs a code, so the label says "sign up".
+  const pathname = usePathname();
   const [built, setBuilt] = React.useState<Record<string, Built>>(() =>
     Object.fromEntries(rows.filter((r) => r.previewUrl && r.claimUrl).map((r) => [r.prospectId, { previewUrl: r.previewUrl!, claimUrl: r.claimUrl!, evolveUrl: r.evolveUrl ?? null, alreadyBuilt: true }])),
   );
@@ -125,6 +130,13 @@ export default function RestaurantTable({ rows, token, repName, readOnly = false
                       >
                         {busy === r.prospectId ? 'Reading their menu…' : 'Build their ordering page'}
                       </button>
+                    ) : readOnly && (r.group === 'call' || r.group === 'thirdParty' || r.group === 'shop') ? (
+                      <a
+                        href={signUpHref(pathname || '/for-sales')}
+                        className="inline-block rounded-md border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20"
+                      >
+                        Build — sign up
+                      </a>
                     ) : (
                       <span className="text-xs text-zinc-600">—</span>
                     )}

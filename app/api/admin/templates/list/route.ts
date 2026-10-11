@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { getFromDate } from '@/lib/getFromDate';
 import { geoCampaignsByTemplateIds } from '@/lib/outreach/geoCampaigns';
+import { draftOutreachLinks } from '@/lib/outreach/draftLinks';
+import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
+import { tradeSiteBaseUrl } from '@/lib/tradeSites/config';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { readinessScore } from '@/lib/outreach/readiness';
 import { resolveIndustryKey } from '@/lib/industries';
 
@@ -357,6 +361,43 @@ export async function GET(req: Request) {
     }
   } catch {
     /* best-effort — campaign badges are non-essential */
+  }
+
+  // Outreach links on listing-import drafts: the prospect's Evolve page and postcard, the claim
+  // link (minted here, on the server that verifies it), and what has happened so far. Admin-
+  // only route, so the claim token — a bearer credential — is safe to include.
+  try {
+    const tplIds = items.map((it: any) => it.id || it.canonical_id).filter(Boolean);
+    if (tplIds.length) {
+      // Service-role client: `outreach_prospects` is not in the generated types, and the route
+      // is admin-gated above.
+      const admin = supabaseAdmin as any;
+      const [{ data: srcRows }, { data: prospects }] = await Promise.all([
+        admin.from('templates').select('id, claim_source, data->meta->built_from_post').in('id', tplIds).eq('claim_source', 'listing_import'),
+        admin.from('outreach_prospects').select('id, template_id, website, ordering_platform, postcard_sent_at, claim_link_visits, claim_link_visited_at, claimed_at').in('template_id', tplIds),
+      ]);
+      const srcById = new Map<string, any>((srcRows ?? []).map((r: any) => [r.id, r]));
+      const prospectByTpl = new Map<string, any>((prospects ?? []).map((p: any) => [p.template_id, p]));
+      const base = tradeSiteBaseUrl();
+      const menuHost = process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null;
+      for (const it of items as any[]) {
+        const id = it.id || it.canonical_id;
+        const src = srcById.get(id);
+        if (!src) continue;
+        it.outreach = draftOutreachLinks({
+          templateId: id,
+          slug: it.slug ?? null,
+          claimSource: src.claim_source ?? null,
+          builtFromPost: !!src.built_from_post,
+          prospect: prospectByTpl.get(id) ?? null,
+          claimToken: mintSiteClaimToken(id),
+          base,
+          menuHost,
+        });
+      }
+    }
+  } catch {
+    /* best-effort — the links are a convenience on the row */
   }
 
   // Score every row for display (campaign key feeds industry resolution above, so last).

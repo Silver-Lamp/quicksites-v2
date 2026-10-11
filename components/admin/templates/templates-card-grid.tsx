@@ -10,6 +10,7 @@ import { prettifySlug } from '@/lib/home/showcase-helpers';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
 import { CampaignBadge, type CampaignInfo } from '@/components/admin/templates/campaign-badge';
 import { RebuildPitchBadge } from '@/components/admin/templates/rebuild-pitch-badge';
+import DraftOutreachLinksRow from '@/components/admin/templates/draft-outreach-links';
 import NextStepButton from '@/components/admin/templates/next-step-button';
 import type { NextStep } from '@/lib/outreach/readiness';
 
@@ -228,6 +229,7 @@ export default function TemplatesCardGrid({
                   </div>
                 ) : null}
                 <RebuildPitchBadge row={r} slug={r.slug} className="mt-1.5" />
+                <DraftOutreachLinksRow links={(r as any).outreach} className="mt-1.5" />
                 {(() => {
                   const stat = gscByDomain && gscKeysForRow(r).map((k) => gscByDomain[k]).find(Boolean);
                   return stat ? (

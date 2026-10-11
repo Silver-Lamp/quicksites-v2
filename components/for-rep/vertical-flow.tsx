@@ -14,8 +14,11 @@ const TONE: Record<FlowWho, { box: string; tag: string; dot: string }> = {
 
 export default function VerticalFlow({ flow }: { flow: Flow | Flow['key'] }) {
   const f = typeof flow === 'string' ? VERTICAL_FLOWS[flow] : flow;
+  // Full-bleed like the restaurants table: seven boxes in the page's 3xl column were 75px wide
+  // on a desktop (one word per line, boxes taller than the viewport). Capped at 1400px; on a
+  // mid-size screen the row wraps rather than squeezing.
   return (
-    <figure className="mt-4" data-vertical-flow={f.key}>
+    <figure className="relative left-1/2 mt-4 w-[min(100vw_-_2rem,1400px)] -translate-x-1/2" data-vertical-flow={f.key}>
       <figcaption className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{f.caption}</span>
         <span className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-zinc-400">
@@ -27,9 +30,9 @@ export default function VerticalFlow({ flow }: { flow: Flow | Flow['key'] }) {
           ))}
         </span>
       </figcaption>
-      <ol className="mt-3 flex flex-col gap-2 md:flex-row md:items-stretch">
+      <ol className="mt-3 flex flex-col gap-2 md:flex-row md:flex-wrap md:items-stretch">
         {f.steps.map((s, i) => (
-          <li key={s.title} className="flex flex-col md:flex-1 md:flex-row md:items-stretch">
+          <li key={s.title} className="flex flex-col md:min-w-[190px] md:flex-1 md:flex-row md:items-stretch">
             <div className={`flex-1 rounded-lg border p-3 ${TONE[s.who].box}`}>
               <div className={`text-[10px] font-semibold uppercase tracking-wider ${TONE[s.who].tag}`}>
                 {i + 1} · {WHO_LABEL[s.who]}
@@ -43,7 +46,7 @@ export default function VerticalFlow({ flow }: { flow: Flow | Flow['key'] }) {
             </span>
           </li>
         ))}
-        <li className="flex-1 rounded-lg border border-emerald-500/40 bg-emerald-500/[0.08] p-3 md:flex-[1.3]">
+        <li className="flex-1 rounded-lg border border-emerald-500/40 bg-emerald-500/[0.08] p-3 md:min-w-[240px] md:flex-[1.3]">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">result</div>
           <div className="mt-1 text-sm font-semibold text-white">{f.result.title}</div>
           <p className="mt-1 text-xs leading-relaxed text-zinc-300">{f.result.detail}</p>

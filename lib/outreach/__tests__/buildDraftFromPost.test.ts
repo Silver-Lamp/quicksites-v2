@@ -73,6 +73,33 @@ describe('assemblePostTemplate', () => {
     expect(JSON.stringify(tpl.data)).not.toContain('http://insecure');
   });
 
+  it('a post with no hours gets NO hours block — the scaffold default is an invented schedule', () => {
+    const t = assemblePostTemplate({ ...POST, hours: [] });
+    const types = t.data.pages[0].blocks.map((b: any) => b.type);
+    expect(types).not.toContain('hours');
+    expect(types).toContain('location');
+    const u = assemblePostTemplate({ ...POST, hours: [], where: undefined });
+    expect(u.data.pages[0].blocks.map((b: any) => b.type)).not.toContain('location');
+  });
+
+  it('a goods sale carries no food wording and is filed under a non-food industry', () => {
+    const g = assemblePostTemplate({ ...POST, kind: 'goods', sectionName: 'What is for sale' });
+    expect(g.industry).toBe('pop_up_shop');
+    const text = walkStrings(g.data).concat(walkStrings(g.header_block), walkStrings(g.footer_block)).join('\n');
+    expect(text).not.toMatch(/View Menu|Our Menu/);
+    expect(text).toMatch(/See what's for sale/);
+    const menu = g.data.pages[0].blocks.find((b: any) => b.type === 'menu');
+    expect(menu.content.title).toBe('What is for sale');
+    expect(g.data.meta.post_kind).toBe('goods');
+    const navLabels = [...(g.header_block?.content?.nav_items ?? []), ...(g.footer_block?.content?.links ?? [])].map((l: any) => l.label);
+    expect(navLabels).toContain('For sale');
+    expect(navLabels).toContain('Where');
+    expect(navLabels).not.toContain('Menu');
+    expect(navLabels).not.toContain('Location & Hours');
+    // The food default is untouched.
+    expect(assemblePostTemplate(POST).industry).toBe('restaurant');
+  });
+
   it('keeps the provenance on meta', () => {
     expect(tpl.data.meta.built_from_post).toBe(true);
     expect(tpl.data.meta.source_note).toBe(POST.sourceNote);

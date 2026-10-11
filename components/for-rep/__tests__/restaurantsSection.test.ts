@@ -105,6 +105,18 @@ describe('the public sweep is bounded in the source', () => {
   it('per-IP and global daily caps, a recent city is not re-swept, and the shape is fixed server-side', () => {
     expect(src).toMatch(/rateLimitOr429\(req, 'rep-sweep', SWEEPS_PER_IP_PER_DAY, 86_400\)/);
     expect(src).toMatch(/checkRateLimit\('rep-sweep:global', SWEEPS_PER_DAY_GLOBAL, 86_400\)/);
+  });
+  it('the caps are for strangers: a platform admin is exempt, and a capped visitor still sees a swept city (owner, 2026-10-10)', () => {
+    expect(src).toMatch(/getAdminUser\(\)/);
+    // Both caps sit inside the not-owner branch, and the per-IP check runs AFTER the city is
+    // resolved so the "already swept" answer can be returned instead of a bare 429.
+    const notOwner = src.indexOf('if (!asOwner)');
+    expect(notOwner).toBeGreaterThan(src.indexOf('loadRestaurantsFor({ city, region, code, menuHost })'));
+    expect(src.indexOf("rateLimitOr429(req, 'rep-sweep'")).toBeGreaterThan(notOwner);
+    expect(src.indexOf("checkRateLimit('rep-sweep:global'")).toBeGreaterThan(notOwner);
+    expect(src).toMatch(/reason: 'ip_cap'/);
+    const w = read('components/for-rep/sweep-here.tsx');
+    expect(w).toMatch(/j\.reason === 'ip_cap'/);
     expect(src).toMatch(/if \(sweptRecently\(existing\.sweptOn\)\)/);
     expect(src).toMatch(/radiusMeters: RADIUS_METERS/);
     expect(src).toMatch(/includedTypes: TYPES/);

@@ -80,6 +80,22 @@ describe('assemblePostTemplate', () => {
     expect(types).toContain('location');
     const u = assemblePostTemplate({ ...POST, hours: [], where: undefined });
     expect(u.data.pages[0].blocks.map((b: any) => b.type)).not.toContain('location');
+    // A city alone is not a place to go: no map block, but the city still reaches the contact.
+    const c = assemblePostTemplate({ ...POST, kind: 'goods', where: { city: 'Vashon', state: 'WA' } });
+    expect(c.data.pages[0].blocks.map((b: any) => b.type)).not.toContain('location');
+    // …and the nav no longer points at the block that is not there.
+    const hrefs = [...(c.header_block?.content?.nav_items ?? []), ...(c.footer_block?.content?.links ?? [])].map((l: any) => l.href);
+    expect(hrefs).not.toContain('#location');
+    expect(hrefs).toContain('#menu');
+  });
+
+  it('heroPhoto:false keeps a document-like photo out of the hero and in the gallery', () => {
+    const t = assemblePostTemplate({ ...POST, heroPhoto: false });
+    const hero = t.data.pages[0].blocks.find((b: any) => b.type === 'hero');
+    const heroStrings = walkStrings(hero).join('\n');
+    expect(heroStrings).not.toContain(POST.photos[0].url);
+    const gallery = t.data.pages[0].blocks.find((b: any) => b.type === 'gallery');
+    expect(gallery.content.images.map((i: any) => i.url)).toContain(POST.photos[0].url);
   });
 
   it('a goods sale carries no food wording and is filed under a non-food industry', () => {
@@ -89,7 +105,8 @@ describe('assemblePostTemplate', () => {
     expect(text).not.toMatch(/View Menu|Our Menu/);
     expect(text).toMatch(/See what's for sale/);
     const menu = g.data.pages[0].blocks.find((b: any) => b.type === 'menu');
-    expect(menu.content.title).toBe('What is for sale');
+    expect(menu.content.title).toBe('For sale');
+    expect(menu.content.sections[0].name).toBe('What is for sale');
     expect(g.data.meta.post_kind).toBe('goods');
     const navLabels = [...(g.header_block?.content?.nav_items ?? []), ...(g.footer_block?.content?.links ?? [])].map((l: any) => l.label);
     expect(navLabels).toContain('For sale');
@@ -98,6 +115,18 @@ describe('assemblePostTemplate', () => {
     expect(navLabels).not.toContain('Location & Hours');
     // The food default is untouched.
     expect(assemblePostTemplate(POST).industry).toBe('restaurant');
+  });
+
+  it('a services post (alterations, a price list) says "prices", never "menu" or "for sale", and takes an industry override', () => {
+    const s = assemblePostTemplate({ ...POST, kind: 'services', industry: 'custom_apparel', sectionName: 'Alterations' });
+    expect(s.industry).toBe('custom_apparel');
+    const text = walkStrings(s.data).concat(walkStrings(s.header_block), walkStrings(s.footer_block)).join('\n');
+    expect(text).not.toMatch(/View Menu|Our Menu|for sale/i);
+    expect(text).toMatch(/See prices/);
+    const navLabels = [...(s.header_block?.content?.nav_items ?? []), ...(s.footer_block?.content?.links ?? [])].map((l: any) => l.label);
+    expect(navLabels).toContain('Prices');
+    expect(s.data.meta.post_kind).toBe('services');
+    expect(assemblePostTemplate({ ...POST, kind: 'services' }).industry).toBe('other');
   });
 
   it('keeps the provenance on meta', () => {

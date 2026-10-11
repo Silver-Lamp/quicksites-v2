@@ -29,8 +29,8 @@
 // counts — which is why the rule stays on the brief even though the call sheet carries it too.
 import type { Metadata } from 'next';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
-import OtherVerticals, { OTHER_VERTICALS_COPY } from '@/components/for-rep/other-verticals';
 import VerticalFlow from '@/components/for-rep/vertical-flow';
+import { FOR_SALES_PITCHES } from '@/lib/sales/forSalesPitches';
 import SiteHeader from '@/components/site/site-header';
 
 export const metadata: Metadata = {
@@ -38,6 +38,21 @@ export const metadata: Metadata = {
   description: 'What you would be selling, what a call looks like, and what it pays.',
   robots: { index: false, follow: false }, // unlisted: public URL, invisible to search
 };
+
+/** The two pitches the page opens with (lib/sales/forSalesPitches.ts): a native <details> each. */
+function Pitch({ summary, children }: { summary: string; children: React.ReactNode }) {
+  return (
+    <details className="group mx-auto max-w-3xl px-6 pt-5">
+      <summary className="flex cursor-pointer select-none items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 text-xl font-bold leading-snug text-white transition-colors hover:border-emerald-500/50 md:text-2xl [&::-webkit-details-marker]:hidden">
+        <span aria-hidden className="mt-0.5 inline-block shrink-0 text-emerald-400 transition-transform group-open:rotate-90">
+          ›
+        </span>
+        <span>{summary}</span>
+      </summary>
+      <div className="-mx-6 mt-2 border-l border-zinc-800/60 md:ml-0">{children}</div>
+    </details>
+  );
+}
 
 /** Native-details expander — server-rendered, zero JS. */
 function More({ label = 'More detail', children }: { label?: string; children: React.ReactNode }) {
@@ -114,33 +129,16 @@ export default async function ForSalesPage() {
               Commission sales
             </span>
           </div>
-          {/* Restaurants lead (owner, 2026-10-10) — a page cannot have two main events. The domain
-              line keeps every number and sits second, where "Our other verticals" picks it up. */}
-          <h1 className="mt-6 text-4xl font-extrabold tracking-tight md:text-5xl">
-            The fastest yes is a restaurant.
+          <h1 className="mt-6 text-2xl font-extrabold tracking-tight text-zinc-300 md:text-3xl">
+            Two ways to earn. Open either one.
           </h1>
-          <p className="mt-4 text-lg leading-relaxed text-zinc-400">
-            <span className="text-zinc-200">
-              A restaurant with a website and no online ordering pays nobody for orders today. You build
-              its ordering page from the menu it already published, show it over lunch, and leave a card.
-            </span>{' '}
-            When they take it, you earn a share of every order for as long as they sell — and only then.
-          </p>
-          <p className="mt-4 text-base leading-relaxed text-zinc-400">
-            Below that is the domain rental: I own 32 city-and-trade domains that are live right now,
-            rented to the one business in that city that wants one for $99/month, with half of that to
-            you every month for as long as they stay.
-          </p>
         </section>
 
-        {/* THE MAIN EVENT (owner, 2026-10-10): restaurants first — walk in, have lunch, drop a
-            card. Everything else on the page sits under "Our other verticals". The divider's line
-            is the short variant: this page carries no straight-talk section for it to point at. */}
-        <RestaurantsSection code={null} repName="a QuickSites rep" token={null} prominent />
-        <OtherVerticals line={OTHER_VERTICALS_COPY.lineBrief} />
-
+        {/* Pitch 1 (owner's order, 2026-10-11): a small business owner → the domain rental, the
+            free website build, the call, what it pays — all folded under the sentence. */}
+        <Pitch summary={FOR_SALES_PITCHES.business}>
         {/* The domain rental — three cards, the second with the one fold left on the page. */}
-        <section className="mx-auto max-w-3xl space-y-4 px-6 pb-4">
+        <section className="mx-auto max-w-3xl space-y-4 px-6 pb-4 pt-6">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
             The domain rental
           </h2>
@@ -337,8 +335,17 @@ export default async function ForSalesPage() {
           </div>
         </section>
 
+        </Pitch>
+
+        {/* Pitch 2: a lunch spot → the restaurants section (walk in, have lunch, drop a card;
+            the live table; sweep where you are). The section's own copy is held to the
+            claim-postcard forbidden list by test. */}
+        <Pitch summary={FOR_SALES_PITCHES.lunch}>
+          <RestaurantsSection code={null} repName="a QuickSites rep" token={null} prominent />
+        </Pitch>
+
         {/* Close */}
-        <section className="mx-auto max-w-3xl px-6 pb-24 pt-8">
+        <section className="mx-auto max-w-3xl px-6 pb-24 pt-10">
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-6 text-center">
             <p className="text-lg font-semibold text-white">If you want it</p>
             <p className="mt-1 text-sm leading-relaxed text-zinc-400">

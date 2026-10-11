@@ -27,9 +27,14 @@ describe('the straight-talk section is hidden (owner, 2026-10-10)', () => {
     expect(code).not.toMatch(/what isn\W*t proven/i);
     expect(code).not.toMatch(/0 rented|0 of 19|4 calls/);
   });
-  it('the restaurants section and the divider still lead, and the call sheet is still linked', () => {
-    expect(code.indexOf('<RestaurantsSection')).toBeLessThan(code.indexOf('<OtherVerticals'));
-    expect(code.indexOf('<OtherVerticals')).toBeLessThan(code.indexOf('The domain rental'));
+  it('two folded pitches in the owner\'s order: business (domain rental, build, call, pay) then lunch (restaurants); the call sheet is still linked', () => {
+    const business = code.indexOf('<Pitch summary={FOR_SALES_PITCHES.business}>');
+    const lunch = code.indexOf('<Pitch summary={FOR_SALES_PITCHES.lunch}>');
+    expect(business).toBeGreaterThan(0);
+    expect(business).toBeLessThan(code.indexOf('The domain rental'));
+    expect(code.indexOf('The domain rental')).toBeLessThan(lunch);
+    expect(code.indexOf('What it pays')).toBeLessThan(lunch);
+    expect(lunch).toBeLessThan(code.indexOf('<RestaurantsSection'));
     expect(code).toMatch(/href="\/for-sales\/call"/);
   });
 });

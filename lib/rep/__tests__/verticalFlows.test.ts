@@ -59,7 +59,8 @@ describe('/for-sales mounts a flowchart under each remaining vertical', () => {
     expect(rental).toBeGreaterThan(page.indexOf('The domain rental'));
     expect(website).toBeGreaterThan(page.indexOf('The other product'));
     expect(rental).toBeLessThan(website);
-    expect(page.indexOf('<RestaurantsSection')).toBeLessThan(rental);
+    // Since 2026-10-11 the restaurants section is the SECOND folded pitch, after both flows.
+    expect(page.indexOf('<RestaurantsSection')).toBeGreaterThan(website);
   });
   it('the public table offers a Build link that goes to sign-up when there is no rep grant', () => {
     const table = read('components/for-rep/restaurant-table.tsx');

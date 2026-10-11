@@ -71,14 +71,21 @@ describe('every sales-related /for-<name> page mounts it; partner-orientation pa
   it('/for-sales has no code and no grant: read-only lists, the sweep still works', () => {
     expect(read('app/for-sales/page.tsx')).toMatch(/<RestaurantsSection code=\{null\} repName="a QuickSites rep" token=\{null\} prominent \/>/);
   });
-  it('/for-sales is two folded pitches in the owner\'s order (2026-10-11); the lunch pitch holds the restaurants section', () => {
+  it('/for-sales is two folded pitches, LUNCH FIRST (owner, 2026-10-11 — reversed the same day); the lunch pitch holds the restaurants section', () => {
     const src = read('app/for-sales/page.tsx');
-    const business = src.indexOf('<Pitch summary={FOR_SALES_PITCHES.business}>');
-    const lunch = src.indexOf('<Pitch summary={FOR_SALES_PITCHES.lunch}>');
+    const business = src.indexOf('<Pitch summary={FOR_SALES_PITCHES.business}');
+    const lunch = src.indexOf('<Pitch summary={FOR_SALES_PITCHES.lunch}');
     const mount = src.indexOf('<RestaurantsSection');
-    expect(business).toBeGreaterThan(0);
-    expect(lunch).toBeGreaterThan(business);
+    expect(lunch).toBeGreaterThan(0);
+    expect(business).toBeGreaterThan(lunch);
     expect(mount).toBeGreaterThan(lunch);
+    expect(mount).toBeLessThan(business);
+    // Each pitch carries its own looping visual, and the visual respects reduced motion.
+    expect(src).toMatch(/<Pitch summary=\{FOR_SALES_PITCHES\.lunch\} art="lunch">/);
+    expect(src).toMatch(/<Pitch summary=\{FOR_SALES_PITCHES\.business\} art="business">/);
+    const art = read('components/for-rep/pitch-art.tsx');
+    expect(art).toMatch(/prefers-reduced-motion: reduce/);
+    expect(art).not.toMatch(/lottie|from 'react'|useEffect/);
     expect(src.slice(mount, mount + 200)).toMatch(/prominent \/>/);
     expect(src).not.toMatch(/<OtherVerticals/);
     expect(FOR_SALES_PITCHES.business).toMatch(/^Know a small business owner\?/);

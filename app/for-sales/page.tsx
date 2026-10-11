@@ -31,6 +31,7 @@ import type { Metadata } from 'next';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
 import VerticalFlow from '@/components/for-rep/vertical-flow';
 import { FOR_SALES_PITCHES } from '@/lib/sales/forSalesPitches';
+import PitchArt, { type PitchArtKind } from '@/components/for-rep/pitch-art';
 import SiteHeader from '@/components/site/site-header';
 
 export const metadata: Metadata = {
@@ -40,14 +41,19 @@ export const metadata: Metadata = {
 };
 
 /** The two pitches the page opens with (lib/sales/forSalesPitches.ts): a native <details> each. */
-function Pitch({ summary, children }: { summary: string; children: React.ReactNode }) {
+function Pitch({ summary, art, children }: { summary: string; art: PitchArtKind; children: React.ReactNode }) {
   return (
     <details className="group mx-auto max-w-3xl px-6 pt-5">
-      <summary className="flex cursor-pointer select-none items-start gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 text-xl font-bold leading-snug text-white transition-colors hover:border-emerald-500/50 md:text-2xl [&::-webkit-details-marker]:hidden">
-        <span aria-hidden className="mt-0.5 inline-block shrink-0 text-emerald-400 transition-transform group-open:rotate-90">
-          ›
+      <summary className="flex cursor-pointer select-none items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 text-xl font-bold leading-snug text-white transition-colors hover:border-emerald-500/50 group-open:border-emerald-500/60 md:p-5 md:text-2xl [&::-webkit-details-marker]:hidden">
+        <PitchArt kind={art} />
+        <span className="flex-1">
+          {summary}
+          <span className="mt-2 block text-xs font-medium uppercase tracking-wider text-emerald-400/90">
+            <span aria-hidden className="inline-block transition-transform group-open:rotate-90">›</span>{' '}
+            <span className="group-open:hidden">Open to see how</span>
+            <span className="hidden group-open:inline">Close</span>
+          </span>
         </span>
-        <span>{summary}</span>
       </summary>
       <div className="-mx-6 mt-2 border-l border-zinc-800/60 md:ml-0">{children}</div>
     </details>
@@ -134,9 +140,16 @@ export default async function ForSalesPage() {
           </h1>
         </section>
 
-        {/* Pitch 1 (owner's order, 2026-10-11): a small business owner → the domain rental, the
-            free website build, the call, what it pays — all folded under the sentence. */}
-        <Pitch summary={FOR_SALES_PITCHES.business}>
+        {/* Pitch 1 — LUNCH FIRST (owner, 2026-10-11, reversed the same afternoon): a lunch spot →
+            the restaurants section (walk in, have lunch, drop a card; the live table; sweep where
+            you are). The section's own copy is held to the claim-postcard forbidden list by test. */}
+        <Pitch summary={FOR_SALES_PITCHES.lunch} art="lunch">
+          <RestaurantsSection code={null} repName="a QuickSites rep" token={null} prominent />
+        </Pitch>
+
+        {/* Pitch 2: a small business owner → the domain rental, the free website build, the call,
+            what it pays — all folded under the sentence. */}
+        <Pitch summary={FOR_SALES_PITCHES.business} art="business">
         {/* The domain rental — three cards, the second with the one fold left on the page. */}
         <section className="mx-auto max-w-3xl space-y-4 px-6 pb-4 pt-6">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
@@ -335,13 +348,6 @@ export default async function ForSalesPage() {
           </div>
         </section>
 
-        </Pitch>
-
-        {/* Pitch 2: a lunch spot → the restaurants section (walk in, have lunch, drop a card;
-            the live table; sweep where you are). The section's own copy is held to the
-            claim-postcard forbidden list by test. */}
-        <Pitch summary={FOR_SALES_PITCHES.lunch}>
-          <RestaurantsSection code={null} repName="a QuickSites rep" token={null} prominent />
         </Pitch>
 
         {/* Close */}

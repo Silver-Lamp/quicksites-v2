@@ -9,6 +9,8 @@
 // The "straight talk" section is load-bearing: this is written for someone who needs the income
 // to be real, so the page says what has and has not happened rather than what could.
 import Link from 'next/link';
+import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import { mintRepActionToken } from '@/lib/rep/repActionToken';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import { MAX_PLATFORM_FEE_PERCENT } from '@/lib/commerce/partner-terms';
@@ -96,7 +98,8 @@ function Card({
 
 const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
-export default function ForAngelaPage() {
+export default async function ForAngelaPage() {
+  const repToken = mintRepActionToken(CODE);
   return (
     <>
       <SiteHeader sticky />
@@ -260,6 +263,9 @@ export default function ForAngelaPage() {
         </section>
 
         {/* The money */}
+        {/* Restaurants: walk in, have lunch, drop a card (components/for-rep/restaurants-section.tsx). */}
+        <RestaurantsSection code={CODE} repName="Angela" token={repToken} />
+
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">
           <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">What it pays</h2>
           <div className="mt-4 space-y-4">

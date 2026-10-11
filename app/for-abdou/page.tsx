@@ -23,9 +23,7 @@ import { KEY_TO_LABEL } from '@/lib/industries';
 import { mintRepActionToken } from '@/lib/rep/repActionToken';
 import { repBuildLinks } from '@/lib/rep/repBuild';
 import NoSiteTable, { type NoSiteRow as TableRow } from '@/components/for-rep/no-site-table';
-import { groupRestaurantsByOrdering, platformLabel, platformFromWebsiteHost, looksLikeFoodBusiness, type RestaurantRow } from '@/lib/prospects/orderingSegments';
-import RestaurantTable, { type RestaurantTableRow } from '@/components/for-rep/restaurant-table';
-import { breakEvenOrders } from '@/lib/compare/toast';
+import RestaurantsSection from '@/components/for-rep/restaurants-section';
 
 // The island list is read live: a re-sweep changes it, and a date on the section says how
 // fresh it is. Never a hand-typed table — that is a count that rots.
@@ -96,44 +94,6 @@ async function loadIslandSites(): Promise<{ built: number; forwarding: number; r
     forwarding: rows.filter((r) => !!r.forward_to).length,
     rented: rows.filter((r) => (r.payment_count ?? 0) > 0).length,
   };
-}
-
-/**
- * Island restaurants WITH a website, and what their own site says about online ordering
- * (`ordering_platform`, read by lib/prospects/orderingCheck.ts). NULL checked_at is "nobody
- * looked", shown as its own count — never folded into "no ordering found".
- */
-async function loadIslandRestaurants(): Promise<{ rows: (RestaurantRow & { slug: string | null })[]; checkedOn: string | null }> {
-  const { data } = await supabaseAdmin
-    .from('outreach_prospects')
-    .select('id, business_name, phone, website, rating, review_count, ordering_platform, ordering_checked_at, template_id, categories')
-    .eq('city', 'Vashon')
-    .eq('region', 'WA')
-    .eq('industry_key', 'restaurant')
-    .not('website', 'is', null)
-    .neq('website', '')
-    .limit(200);
-  // ⚠️ `industry_key` is stamped by the QUERY that found the row, so a vet clinic answered
-  // "restaurants near Vashon" and carried it. Google's own types decide (looksLikeFoodBusiness).
-  const base = ((data ?? []) as unknown as (RestaurantRow & { categories: string[] | null })[])
-    .filter((r) => (r.business_name ?? '').trim() && looksLikeFoodBusiness(r.categories));
-  const templateIds = base.map((r) => r.template_id).filter((id): id is string => !!id);
-  const slugById = new Map<string, string>();
-  if (templateIds.length) {
-    const { data: tpls } = await supabaseAdmin.from('templates').select('id, slug').in('id', templateIds);
-    for (const t of (tpls ?? []) as Array<{ id: string; slug: string | null }>) if (t.slug) slugById.set(t.id, t.slug);
-  }
-  const rows = base.map((r) => ({ ...r, slug: r.template_id ? slugById.get(r.template_id) ?? null : null }));
-  const checkedOn = rows.reduce<string | null>((m, r) => (r.ordering_checked_at && (!m || r.ordering_checked_at > m) ? r.ordering_checked_at : m), null);
-  return { rows, checkedOn };
-}
-
-function hostOf(url: string | null): string {
-  try {
-    return new URL(url ?? '').hostname.replace(/^www\./, '');
-  } catch {
-    return url ?? '';
-  }
 }
 
 function tradeLabel(key: string | null): string {
@@ -230,7 +190,7 @@ function Card({
 const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
 export default async function ForAbdouPage() {
-  const [island, sites, eateries] = await Promise.all([loadIslandNoSite(), loadIslandSites(), loadIslandRestaurants()]);
+  const [island, sites] = await Promise.all([loadIslandNoSite(), loadIslandSites()]);
   // The grant that lets this page build drafts as the code (lib/rep/repActionToken.ts).
   const repToken = mintRepActionToken(CODE);
   const menuHost = process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null;
@@ -252,37 +212,6 @@ export default async function ForAbdouPage() {
   const sweptLabel = island.sweptOn
     ? new Date(island.sweptOn).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' })
     : null;
-  // Live from the sweep rows: a re-check moves a restaurant between groups without a deploy.
-  const restaurants = groupRestaurantsByOrdering(eateries.rows);
-  const restaurantsReadOn = eateries.checkedOn
-    ? new Date(eateries.checkedOn).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' })
-    : null;
-  const toRow = (group: RestaurantTableRow['group']) => (r: (typeof eateries.rows)[number]): RestaurantTableRow => {
-    const links = r.slug ? repBuildLinks({ slug: r.slug, industryKey: 'restaurant', prospectId: r.id, code: CODE, menuHost }) : null;
-    return {
-      prospectId: r.id,
-      businessName: (r.business_name ?? '').trim(),
-      phone: r.phone,
-      websiteHost: hostOf(r.website),
-      platformLabel: group === 'siteOnly' || group === 'thirdParty' ? platformLabel(platformFromWebsiteHost(r.website) ?? r.ordering_platform) : group === 'unchecked' ? 'not checked' : platformLabel(r.ordering_platform),
-      group,
-      rating: r.rating,
-      reviewCount: r.review_count,
-      previewUrl: links?.previewUrl ?? null,
-      claimUrl: links?.claimUrl ?? null,
-      evolveUrl: links?.evolveUrl ?? null,
-    };
-  };
-  const restaurantRows: RestaurantTableRow[] = [
-    ...restaurants.call.map(toRow('call')),
-    ...restaurants.shop.map(toRow('shop')),
-    ...restaurants.thirdParty.map(toRow('thirdParty')),
-    ...restaurants.siteOnly.map(toRow('siteOnly')),
-    ...restaurants.unchecked.map(toRow('unchecked')),
-    ...restaurants.leaveAlone.map(toRow('leaveAlone')),
-  ];
-  // A $20 ticket, the same figure /compare/toast tabulates — derived, never typed.
-  const toastBreakEven = breakEvenOrders(2000) ?? 0;
   return (
     <>
       <SiteHeader sticky />
@@ -479,53 +408,8 @@ export default async function ForAbdouPage() {
           </p>
         </section>
 
-        {/* Restaurants: who already takes orders online, and through whom */}
-        <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            Island restaurants — who takes online orders, and who doesn't
-          </h2>
-          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-            Most island restaurants already have a website. The question that decides the pitch is whether
-            they take orders online, and through whom.{' '}
-            {restaurantsReadOn ? (
-              <>Read from each restaurant's own site, last on {restaurantsReadOn} — the homepage and its order or menu links. A link kept somewhere else would be missed, so "none found" means exactly that. </>
-            ) : (
-              <>Their sites haven't been read yet; this fills in when they are. </>
-            )}
-            Check the door before you walk in.
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Card title="Call first" tag={`${restaurants.call.length + restaurants.shop.length + restaurants.thirdParty.length}`} tone="emerald">
-              A site, but no online ordering found — or a shop that ships beans and gifts but takes no food
-              order, or orders only through a delivery app that takes a cut. Here the no-monthly fee has
-              nothing to beat. Press <em>Build their ordering page</em>:
-              it reads the menu they already published, so you walk in with their dishes, not a guess.
-            </Card>
-            <Card title="Offer a site, not the ordering" tag={`${restaurants.siteOnly.length}`} tone="sky">
-              Their only web presence is a Toast or Square ordering page. Build them a site that links to it —
-              you are giving the name a home, not asking them to change how they take orders. Never pitch
-              that first.
-            </Card>
-            <Card title="Leave alone" tag={`${restaurants.leaveAlone.length}`} tone="zinc">
-              On Toast or Square with a site of their own. Nothing to offer today. If one asks, the honest
-              comparison is at{' '}
-              <Link href="/compare/toast" className="text-sky-400 underline underline-offset-4">quicksites.ai/compare/toast</Link>
-              {' '}— above about {toastBreakEven} online orders a month Toast costs them less, and it says so.
-            </Card>
-          </div>
-          {restaurantRows.length > 0 && (
-            <div className="lg:-mx-32 xl:-mx-56">
-              <RestaurantTable rows={restaurantRows} token={repToken} repName="Abdou" />
-            </div>
-          )}
-          <p className="mt-3 text-xs text-zinc-500">
-            The ordering page is built from their own site and is theirs to claim; the text message says their
-            website stays as it is. A built row also has a <span className="text-zinc-300">postcard</span> — front and
-            back, 6×9, print at full size — with a QR that opens the Evolve page and credits you; leave it on the
-            counter if the owner is not in. "Not checked" means nobody has read that site yet, not that it takes no
-            orders.{restaurants.unchecked.length ? ` ${restaurants.unchecked.length} still to check.` : ''}
-          </p>
-        </section>
+        {/* Restaurants: the shared section — walk in, have lunch, drop a card (components/for-rep/restaurants-section.tsx). */}
+        <RestaurantsSection code={CODE} repName="Abdou" token={repToken} />
 
         {/* The money */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">

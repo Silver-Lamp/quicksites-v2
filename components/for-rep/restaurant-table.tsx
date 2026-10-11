@@ -36,7 +36,7 @@ const GROUP_TAG: Record<RestaurantTableRow['group'], { text: string; cls: string
   unchecked: { text: 'not checked', cls: 'border-zinc-700 bg-zinc-800 text-zinc-500' },
 };
 
-export default function RestaurantTable({ rows, token, repName }: { rows: RestaurantTableRow[]; token: string; repName: string }) {
+export default function RestaurantTable({ rows, token, repName, readOnly = false }: { rows: RestaurantTableRow[]; token: string; repName: string; readOnly?: boolean }) {
   const [built, setBuilt] = React.useState<Record<string, Built>>(() =>
     Object.fromEntries(rows.filter((r) => r.previewUrl && r.claimUrl).map((r) => [r.prospectId, { previewUrl: r.previewUrl!, claimUrl: r.claimUrl!, evolveUrl: r.evolveUrl ?? null, alreadyBuilt: true }])),
   );
@@ -116,7 +116,7 @@ export default function RestaurantTable({ rows, token, repName }: { rows: Restau
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     {b ? (
                       <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-300">built</span>
-                    ) : r.group === 'call' || r.group === 'thirdParty' || r.group === 'shop' ? (
+                    ) : !readOnly && (r.group === 'call' || r.group === 'thirdParty' || r.group === 'shop') ? (
                       <button
                         type="button"
                         disabled={busy !== null}

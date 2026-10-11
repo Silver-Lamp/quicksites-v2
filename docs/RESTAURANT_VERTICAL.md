@@ -225,6 +225,20 @@ Eligible = restaurant · website · `ordering_platform` in none / shop / app-onl
 mail), per-row *card ↗* (`GET /api/admin/prospects/evolve-postcard/<id>?side=front|back` — the
 printer's HTML, also what a rep prints to hand-deliver). Forbidden-promise test over the rendered
 HTML: `lib/outreach/__tests__/evolvePostcard.test.ts`.
+**Every sales page carries the restaurants (2026-10-10):** `components/for-rep/restaurants-section.tsx`
+— *"Walk in, have lunch, drop a card, earn residuals for life."* — the four-move method, the three
+groups, the rep table (build buttons + postcard when the page carries a grant; read-only on
+`/for-sales`), and **"Sweep where I am"** (`components/for-rep/sweep-here.tsx`). Mounted on
+`/for-abdou`, `/for-ryan`, `/for-angela`, `/for-amber`, `/for-sales`; NOT on the partner
+orientation pages (`/for-daniel`, `/for-daryle`) — pinned by test. Territories are hand-typed in
+`lib/rep/territories.ts` (abdou/amber → Vashon, ryan → Renton); a rep with none gets the sweep
+widget and the section fills from their first sweep. ⚠️ **The sweep spends Places money on a
+stranger's click, so `POST /api/rep/sweep` is bounded four ways**: 2 per IP per day, 25 per day
+globally, a city swept within 7 days is shown instead of re-swept, and the shape (restaurant/
+cafe/bar, 2.5 km, operator owner) is fixed server-side — the body chooses only WHERE. Location
+comes from the browser → Nominatim reverse geocode (`getCityStateForLatLon`), or a typed
+city + state. `GET /api/rep/restaurants` lists a city without sweeping (public, throttled;
+it is Google's listing data and what the business's own site links).
 **Tracking is per CARD, not per table (`postcard_mailings.kind`, migration `20260879`).** Three
 campaigns share `postcard_mailings` and the ops funnel counted them as one; `kind` is
 `trade_claim` / `competition` / `evolve` / `guest` (backfilled from the one tell the rows carried —

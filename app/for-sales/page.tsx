@@ -192,7 +192,7 @@ export default async function ForSalesPage() {
             When they take it, you earn a share of every order for as long as they sell — and only then.
           </p>
           <p className="mt-4 text-base leading-relaxed text-zinc-400">
-            Below that is the other product: I own 32 city-and-trade domains that are live right now,
+            Below that is the domain rental: I own 32 city-and-trade domains that are live right now,
             rented to the one business in that city that wants one for $99/month, with half of that to
             you every month for as long as they stay.
           </p>

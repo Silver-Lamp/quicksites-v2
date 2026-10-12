@@ -46,7 +46,10 @@ describe('the notifications change their ask on the answer', () => {
 
   it('the business is not texted about a fax tone', () => {
     const route = strip(read('app/api/twilio/geo/[campaignId]/voicemail/route.ts'));
-    expect(route).toMatch(/if \(speech === 'no_speech'\)[\s\S]*skipped: 'no_speech'/);
+    // Since 2026-10-12 the decision is the pure `decideVoicemailRelay` (no_speech → not texted,
+    // pinned in voicemailVerdict.test.ts); the route must gate the text on it and record why.
+    expect(route).toMatch(/decideVoicemailRelay\(\{ speech, verdict/);
+    expect(route).toMatch(/if \(!relay\.textBusiness\)[\s\S]*skipped: relay\.skipped/);
   });
 
   it('Twilio is answered before any transcription runs', () => {

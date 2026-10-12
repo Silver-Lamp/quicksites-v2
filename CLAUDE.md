@@ -879,6 +879,22 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   the email and the call-alert digest quote what they said; `unknown` keeps the "listen"
   wording — a failed transcription must never read as "nothing there". ⚠️ The parent-call status
   callback (above) proved itself on that same call: `ended`, 35 s, not `ringing`.
+  ⚠️ **AND A SPOKEN VOICEMAIL IS JUDGED BEFORE THE BUSINESS IS TEXTED (2026-10-12).** The
+  first call on cullmantow.com was a home-care agency ringing "about your account" — a vendor
+  on a misdialled or recycled number — and the tow company was texted a recording link as if a
+  customer had called. `lib/ppl/voicemailVerdict.ts#judgeVoicemail` (metered `gpt-4o-mini`,
+  JSON, temperature 0) reads the transcript against the campaign's trade and city and answers
+  `lead` / `not_lead` / `unclear` with a reason (`call_logs.voicemail_verdict/_reason/_judged_at`,
+  `20260880`); the pure `decideVoicemailRelay` texts the business for `lead` and `unclear` and
+  holds `not_lead` and `no_speech`. ⚠️ **Fails OPEN toward the business**: no key, timeout, bad
+  JSON → `unclear` → texted, and the email says "could not judge", never a dressed-up verdict —
+  a lost customer is the worse error. ⚠️ **The model never sees the caller's number** (a verdict
+  rests on what was said; a source guard greps the call). The operator email reads "Voicemail,
+  not a lead (held)" and drops the "relay it" ask; the digest appends the verdict and reason.
+  ⚠️ A rang-out call with NO message has no words to judge, so the missed-call text still goes
+  out blind — the vashon-landscaping call the same day (a Quezon City desktop visitor clicked
+  Contact and a Jacksonville number rang 41 s later, hung up at the voicemail prompt) is exactly
+  that shape and was texted to Herb's as "someone called".
 - **Inbound-call email alerts (2026-10-01)**: `/api/cron/call-alert` every 5 min emails
   `ADMIN_EMAILS` when a call lands in `call_logs`, so a real lead cannot sit unseen in a dashboard
   nobody opened (two did, on 2026-09-30). ⚠️ **Deliberately NOT in the Twilio webhook**: that

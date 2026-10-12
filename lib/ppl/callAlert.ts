@@ -29,6 +29,9 @@ export type CallRow = {
   /** From the voicemail transcription (lib/ppl/voicemailSpeech.ts); absent on older rows. */
   voicemail_speech?: string | null;
   voicemail_transcript?: string | null;
+  /** From lib/ppl/voicemailVerdict.ts; absent before 2026-10-12. */
+  voicemail_verdict?: string | null;
+  voicemail_verdict_reason?: string | null;
   /** From the missed-call text (lib/ppl/missedCallNotice.ts); absent on older rows. */
   missed_call_notified_at?: string | null;
   missed_call_notify_result?: Record<string, unknown> | null;
@@ -92,7 +95,7 @@ export function handlingLabel(row: CallRow): string {
       const base = 'Sent to voicemail (voicemail-first is on for this number)';
       if (row.voicemail_speech === 'no_speech') return `${base} · no speech on the recording — likely fax or robocall`;
       const t = (row.voicemail_transcript ?? '').trim();
-      if (row.voicemail_speech === 'speech' && t) return `${base} · they said: "${t.length > 160 ? `${t.slice(0, 157)}…` : t}"`;
+      if (row.voicemail_speech === 'speech' && t) return `${base} · they said: "${t.length > 160 ? `${t.slice(0, 157)}…` : t}"${verdictSuffix(row)}`;
       return base;
     }
     case 'cascade':
@@ -110,6 +113,16 @@ export function handlingLabel(row: CallRow): string {
  * with no result or a failed one reads as "tried to text", so the operator knows to relay it
  * by hand rather than assuming the business has the number.
  */
+/** The voicemail verdict (2026-10-12): a held non-lead must read as held, not as a lead to relay. */
+export function verdictSuffix(row: CallRow): string {
+  const v = row.voicemail_verdict;
+  if (!v) return '';
+  const why = (row.voicemail_verdict_reason ?? '').trim();
+  if (v === 'not_lead') return ` · judged NOT a lead${why ? ` (${why})` : ''} — the business was not texted`;
+  if (v === 'lead') return ` · judged a lead${why ? ` (${why})` : ''}`;
+  return ` · could not judge${why ? ` (${why})` : ''} — treated as a possible lead`;
+}
+
 export function missedCallSuffix(row: CallRow): string {
   if (!row.missed_call_notified_at) return '';
   const r = row.missed_call_notify_result ?? null;

@@ -148,6 +148,17 @@ describe('the missed-call text', () => {
     expect(t).not.toContain(base.link);
   });
 
+  // Owner, 2026-10-12: "our text could include an AI summary of the VM". Labelled, and only
+  // beside the link — the paraphrase must be checkable against the recording.
+  it('carries the AI summary, labelled, beside the recording link — and never without one', () => {
+    const t = missedCallSmsText({ ...base, hasRecording: true, summary: 'Car broke down on 167 near the Kent exit, needs a tow.' });
+    expect(t).toContain('AI summary: "Car broke down on 167 near the Kent exit, needs a tow."');
+    expect(t.indexOf('AI summary')).toBeLessThan(t.indexOf(base.link));
+    expect(t).toContain('(253) 486-8402');
+    expect(missedCallSmsText({ ...base, hasRecording: false, summary: 'anything' })).not.toContain('AI summary');
+    expect(missedCallSmsText({ ...base, hasRecording: true, summary: '' })).toContain(`They left a message: ${base.link}`);
+  });
+
   // ⚠️ A new KIND of message needs its own way out. The forwarding notice covered "calls are
   // forwarded to you"; it never covered us texting about missed ones.
   it('always offers STOP', () => {

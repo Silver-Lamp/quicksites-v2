@@ -27,7 +27,14 @@ export function industryLabelFor(key: string | null | undefined): string {
 }
 
 export type VoicemailVerdict = 'lead' | 'not_lead' | 'unclear';
-export type VerdictResult = { verdict: VoicemailVerdict; reason: string };
+/**
+ * `summary` is the one sentence the BUSINESS is texted beside the recording link (owner,
+ * 2026-10-12: "our text could include an AI summary of the VM") — what the caller wants and the
+ * details they gave, in plain words. Always labelled as an AI summary where it is shown: a
+ * paraphrase presented as the caller's words is the voice_basis mislabel in text form.
+ * Empty when there is nothing worth relaying.
+ */
+export type VerdictResult = { verdict: VoicemailVerdict; reason: string; summary: string };
 
 const MODEL = 'gpt-4o-mini';
 const ROUTE = '/api/twilio/geo/[campaignId]/voicemail';
@@ -38,11 +45,12 @@ export function parseVerdict(raw: unknown): VerdictResult {
     const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
     const v = String((obj as { verdict?: unknown })?.verdict ?? '').trim().toLowerCase();
     const reason = String((obj as { reason?: unknown })?.reason ?? '').trim().slice(0, 240);
-    if (v === 'lead' || v === 'not_lead' || v === 'unclear') return { verdict: v, reason: reason || v };
+    const summary = String((obj as { summary?: unknown })?.summary ?? '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (v === 'lead' || v === 'not_lead' || v === 'unclear') return { verdict: v, reason: reason || v, summary };
   } catch {
     /* fall through */
   }
-  return { verdict: 'unclear', reason: 'could not read the verdict' };
+  return { verdict: 'unclear', reason: 'could not read the verdict', summary: '' };
 }
 
 /**
@@ -69,7 +77,9 @@ export function verdictLine(v: { verdict: VoicemailVerdict; reason: string } | n
 export const VERDICT_SYSTEM_PROMPT =
   'You read the transcript of a voicemail left on a phone number that belongs to a local-business website, ' +
   'and decide whether the caller is a CUSTOMER who wants that business\'s service. ' +
-  'Answer with JSON only: {"verdict":"lead"|"not_lead"|"unclear","reason":"<one short sentence>"}. ' +
+  'Answer with JSON only: {"verdict":"lead"|"not_lead"|"unclear","reason":"<one short sentence>","summary":"<one sentence>"}. ' +
+  '"summary": what the caller wants and the details they gave (name, where they are, what is wrong, when), ' +
+  'written for the business that will call them back, at most 30 words, only facts stated in the transcript; empty string if there is nothing worth relaying. ' +
   '"lead": a person who needs the service the business sells (now or soon), or is asking about availability, price or location of that service. ' +
   '"not_lead": a vendor, supplier, salesperson, recruiter, billing or "about your account" call, a political or charity call, a robocall, a survey, ' +
   'a caller clearly trying to reach a different kind of business, or a wrong number. ' +
@@ -83,7 +93,7 @@ export async function judgeVoicemail(input: {
   callSid?: string;
 }): Promise<VerdictResult> {
   const text = input.transcript.trim();
-  if (!text) return { verdict: 'unclear', reason: 'empty transcript' };
+  if (!text) return { verdict: 'unclear', reason: 'empty transcript', summary: '' };
   try {
     const user =
       `The business: a ${input.industryLabel} company${input.city ? ` serving ${input.city}` : ''}, reached through ${input.domain}.\n` +
@@ -108,6 +118,6 @@ export async function judgeVoicemail(input: {
     );
     return parseVerdict(raw);
   } catch (e) {
-    return { verdict: 'unclear', reason: `judge failed: ${e instanceof Error ? e.message.slice(0, 120) : 'error'}` };
+    return { verdict: 'unclear', reason: `judge failed: ${e instanceof Error ? e.message.slice(0, 120) : 'error'}`, summary: '' };
   }
 }

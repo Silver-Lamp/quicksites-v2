@@ -107,7 +107,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ campaignId: st
       });
       await admin
         .from('call_logs')
-        .update({ voicemail_verdict: verdict.verdict, voicemail_verdict_reason: verdict.reason, voicemail_judged_at: new Date().toISOString() })
+        .update({
+          voicemail_verdict: verdict.verdict,
+          voicemail_verdict_reason: verdict.reason,
+          voicemail_summary: verdict.summary || null,
+          voicemail_judged_at: new Date().toISOString(),
+        })
         .eq('call_sid', callSid)
         .then(() => undefined, () => undefined);
     }
@@ -136,6 +141,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ campaignId: st
             link,
             senderName: sender?.name ?? null,
             hasRecording: !!recordingUrl,
+            // Labelled "AI summary" in the text; the recording link beside it is the check.
+            summary: verdict?.summary ?? null,
           }),
         ).catch(() => ({ ok: false }));
         result = { ...result, business_sms: !!r.ok };

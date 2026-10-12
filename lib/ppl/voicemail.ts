@@ -297,12 +297,21 @@ export function missedCallSmsText(opts: {
   link: string;
   senderName?: string | null;
   hasRecording: boolean;
+  /**
+   * The model's one-sentence summary of the voicemail (lib/ppl/voicemailVerdict.ts). Shown
+   * labelled "AI summary" and only beside the recording link, so the business can check the
+   * paraphrase against the message. Ignored without a recording.
+   */
+  summary?: string | null;
 }): string {
   const first = (opts.senderName ?? '').trim().split(/\s+/)[0] || '';
   const who = first ? `${first} here from QuickSites.` : 'This is QuickSites.';
   const caller = opts.callerPhone ? formatUsPhone(opts.callerPhone) : 'a number we did not get';
+  const summary = opts.hasRecording ? (opts.summary ?? '').replace(/\s+/g, ' ').trim().slice(0, 200) : '';
   const tail = opts.hasRecording
-    ? `They left a message: ${opts.link}`
+    ? summary
+      ? `They left a message. AI summary: "${summary}" Listen: ${opts.link}`
+      : `They left a message: ${opts.link}`
     : `They didn't leave a message.`;
   return (
     `${who} Someone called ${opts.domain} and it rang out. ` +

@@ -14,6 +14,7 @@
 // ground for the PPL IVR and is asserted against this module's strings too.
 import crypto from 'node:crypto';
 import { formatUsPhone } from '@/lib/phone/formatUs';
+import { verdictLine } from '@/lib/ppl/voicemailVerdict';
 
 /** How long a texted voicemail link keeps working. */
 export const VOICEMAIL_LINK_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -232,16 +233,23 @@ export async function notifyOperatorOfVoicemail(opts: {
    */
   speech?: 'speech' | 'no_speech' | 'unknown';
   transcript?: string | null;
+  /** From lib/ppl/voicemailVerdict.ts — a non-lead is reported as held, never as "New lead". */
+  verdict?: { verdict: 'lead' | 'not_lead' | 'unclear'; reason: string } | null;
 }): Promise<{ email: boolean; sms: boolean }> {
   const caller = opts.callerPhone ? formatUsPhone(opts.callerPhone) : 'unknown number';
   const speech = opts.speech ?? 'unknown';
   const noSpeech = opts.hasRecording && speech === 'no_speech';
+  const notLead = opts.verdict?.verdict === 'not_lead';
   const excerpt = (opts.transcript ?? '').trim();
+  const said = excerpt ? ` They said: "${excerpt.length > 280 ? `${excerpt.slice(0, 277)}…` : excerpt}"` : '';
+  const judged = verdictLine(opts.verdict);
   const body = !opts.hasRecording
     ? `Call on ${opts.domain} from ${caller} — reached the prompt but left no message.`
     : noSpeech
       ? `Voicemail on ${opts.domain} from ${caller} contains no speech — likely a fax machine or robocall. Listen if you want: ${opts.link}`
-      : `New lead on ${opts.domain} from ${caller}.${excerpt ? ` They said: "${excerpt.length > 280 ? `${excerpt.slice(0, 277)}…` : excerpt}"` : ''} Listen: ${opts.link}`;
+      : notLead
+        ? `Voicemail on ${opts.domain} from ${caller} — ${judged}${said} Listen if you want: ${opts.link}`
+        : `New lead on ${opts.domain} from ${caller}.${said}${judged ? ` (${judged})` : ''} Listen: ${opts.link}`;
 
   let email = false;
   let sms = false;
@@ -255,12 +263,14 @@ export async function notifyOperatorOfVoicemail(opts: {
       const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       await sendEmail({
         to: admins,
-        subject: `[QuickSites] ${!opts.hasRecording ? 'Hang-up' : noSpeech ? 'Voicemail, no speech (likely fax or robocall)' : 'Lead'} — ${opts.domain}`,
+        subject: `[QuickSites] ${!opts.hasRecording ? 'Hang-up' : noSpeech ? 'Voicemail, no speech (likely fax or robocall)' : notLead ? 'Voicemail, not a lead (held)' : 'Lead'} — ${opts.domain}`,
         html:
           `<p>${esc(body)}</p>` +
           (noSpeech
             ? `<p>Nothing to relay. Twenty seconds of transcription found no words; if that is wrong, the recording is at the link.</p>`
-            : `<p>Relay it to a local business, then note who took it.</p>`),
+            : notLead
+              ? `<p>Nothing to relay. The model read it as a vendor, sales or wrong-number call; if that is wrong, the recording is at the link and the number is above.</p>`
+              : `<p>Relay it to a local business, then note who took it.</p>`),
       });
       email = true;
     }

@@ -31,6 +31,7 @@ import {
   notifyOperatorOfVoicemail,
 } from '@/lib/ppl/voicemail';
 import { transcribeVoicemail, type VoicemailSpeech } from '@/lib/ppl/voicemailSpeech';
+import { judgeVoicemail, decideVoicemailRelay, industryLabelFor, type VerdictResult } from '@/lib/ppl/voicemailVerdict';
 import { sendSms } from '@/lib/sms/sendSms';
 import { getSenderProfile } from '@/lib/outreach/senderProfile';
 import { isOptedOut } from '@/lib/ppl/forwardNotice';
@@ -91,18 +92,40 @@ export async function POST(req: Request, ctx: { params: Promise<{ campaignId: st
     const to = campaign?.forward_to ?? null;
     const link = voicemailUrl(callSid, publicBaseUrl());
 
+    // 2) Is what they said a LEAD for this trade? (owner, 2026-10-12.) A home-care agency rang
+    // cullmantow.com "about your account" and the tow company was texted a recording link as if a
+    // customer had called. Judged from the transcript only — the caller's number is not shown to
+    // the model — and a failure is `unclear`, which still texts the business (fail open).
+    let verdict: VerdictResult | null = null;
+    if (speech === 'speech' && transcript) {
+      verdict = await judgeVoicemail({
+        transcript,
+        industryLabel: industryLabelFor(campaign?.industry_key ?? null),
+        city: campaign?.city ?? null,
+        domain: campaign?.domain ?? 'a QuickSites site',
+        callSid,
+      });
+      await admin
+        .from('call_logs')
+        .update({ voicemail_verdict: verdict.verdict, voicemail_verdict_reason: verdict.reason, voicemail_judged_at: new Date().toISOString() })
+        .eq('call_sid', callSid)
+        .then(() => undefined, () => undefined);
+    }
+    const relay = decideVoicemailRelay({ speech, verdict: verdict?.verdict ?? null });
+
     // ⚠️ WHAT ACTUALLY REACHED SOMEONE, RECORDED. `voicemail_notified_at` is stamped by the
     // CLAIM, before either channel runs, so it only ever says we tried. On the first real
     // voicemail-first call the email arrived and the SMS did not, and because this outcome was
     // discarded the cause had to be reconstructed from Vercel deployment timestamps. A
     // notification that silently did not happen is the same silence this whole feature exists to
     // prevent, one level up. See 20260866.
-    let result: Record<string, boolean | string> = { speech };
+    let result: Record<string, boolean | string> = { speech, ...(verdict ? { verdict: verdict.verdict } : {}) };
 
     if (to && !(await isOptedOut(to).catch(() => false))) {
-      if (speech === 'no_speech') {
-        // A business must never be texted "someone called, ring them back" about a fax tone.
-        result = { ...result, business_sms: false, skipped: 'no_speech' };
+      if (!relay.textBusiness) {
+        // A business must never be texted "someone called, ring them back" about a fax tone —
+        // or about a vendor's "call me back about your account".
+        result = { ...result, business_sms: false, skipped: relay.skipped ?? 'held' };
       } else {
         const sender = await getSenderProfile().catch(() => null);
         const r = await sendSms(
@@ -133,6 +156,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ campaignId: st
         hasRecording: !!recordingUrl,
         speech,
         transcript,
+        verdict,
       });
       result = { ...result, operator_email: r.email, operator_sms: r.sms };
     }

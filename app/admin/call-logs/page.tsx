@@ -6,10 +6,12 @@
 // dashboard that paints failure in the success colour is worse than one that omits it, because it
 // is consulted and believed. Colour now comes from `classifyDial`, the same function the health
 // rollup uses, so the page cannot disagree with the numbers above it.
+import { Fragment } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { classifyDial, type DialOutcome } from '@/lib/ppl/forwardHealth';
+import { analysisLine } from '@/lib/ppl/callAnalysis';
 import { formatUsPhone } from '@/lib/phone/formatUs';
 
 export const dynamic = 'force-dynamic';
@@ -92,8 +94,12 @@ export default async function CallLogsPage() {
             <tbody>
               {rows.map((log) => {
                 const outcome = classifyDial(log.call_status, log.call_duration);
+                // The stored per-call analysis (lib/ppl/callAnalysis.ts): one indented line under
+                // the row, labelled "AI read". Absent until the call-alert cron has analysed it.
+                const analysis = analysisLine(log);
                 return (
-                  <tr key={log.call_sid} className="border-t border-zinc-800 hover:bg-zinc-800/30">
+                  <Fragment key={log.call_sid ?? log.id}>
+                  <tr className="border-t border-zinc-800 hover:bg-zinc-800/30">
                     <td className="px-4 py-2 font-mono text-zinc-100">{log.from_number}</td>
                     <td className="px-4 py-2 font-mono text-zinc-100">{log.to_number}</td>
                     <td className="px-4 py-2 font-mono text-zinc-300">
@@ -142,6 +148,14 @@ export default async function CallLogsPage() {
                       )}
                     </td>
                   </tr>
+                  {analysis ? (
+                    <tr className="hover:bg-zinc-800/30">
+                      <td colSpan={7} className="px-4 pb-2 pt-0 text-xs text-indigo-200/90">
+                        ↳ {analysis}
+                      </td>
+                    </tr>
+                  ) : null}
+                  </Fragment>
                 );
               })}
 

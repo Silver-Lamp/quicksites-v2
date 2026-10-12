@@ -93,6 +93,17 @@ export const CONFIG_GATES: ConfigGate[] = [
       'site. Set ADMIN_EMAILS (comma-separated) and RESEND_API_KEY.',
   },
   {
+    key: 'call_analysis',
+    label: 'Per-call analysis stored on call_logs (lib/ppl/callAnalysis.ts, run by the call-alert cron)',
+    requires: ['OPENAI_API_KEY', 'POSTHOG_PERSONAL_API_KEY', 'POSTHOG_PROJECT_ID'],
+    degradeOnly: true,
+    breaks:
+      'Without the OpenAI key every call is stored as "unknown / analysis failed" with its facts. ' +
+      'Without the read-only PostHog personal key + project id the analysis runs blind to what ' +
+      'happened on the site before the call — the one fact that told a Quezon City prospector ' +
+      'from a customer on 2026-10-12 — and records "visit data unavailable" rather than "no visit".',
+  },
+  {
     key: 'site_created_alert',
     label: 'New-site email to the owner with where the builder left off (/api/cron/site-created-alert, every 15 min)',
     requires: ['ADMIN_EMAILS', 'RESEND_API_KEY'],

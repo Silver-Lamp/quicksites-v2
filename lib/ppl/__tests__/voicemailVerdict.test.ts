@@ -9,10 +9,21 @@ import { stripComments } from '@/test/stripComments';
 const read = (p: string) => stripComments(fs.readFileSync(path.join(process.cwd(), p), 'utf8'));
 
 describe('parseVerdict', () => {
-  it('reads the three answers and keeps the reason', () => {
-    expect(parseVerdict('{"verdict":"not_lead","reason":"A home-care agency calling about an account."}')).toEqual({ verdict: 'not_lead', reason: 'A home-care agency calling about an account.' });
-    expect(parseVerdict({ verdict: 'LEAD', reason: 'Needs a tow tonight' })).toEqual({ verdict: 'lead', reason: 'Needs a tow tonight' });
-    expect(parseVerdict('{"verdict":"unclear","reason":""}').verdict).toBe('unclear');
+  it('reads the three answers and keeps the reason and the summary', () => {
+    expect(parseVerdict('{"verdict":"not_lead","reason":"A home-care agency calling about an account.","summary":""}')).toEqual({ verdict: 'not_lead', reason: 'A home-care agency calling about an account.', summary: '' });
+    expect(parseVerdict({ verdict: 'LEAD', reason: 'Needs a tow tonight', summary: 'Jim, car dead on I-65 at exit 310,  wants a tow tonight.' })).toEqual({
+      verdict: 'lead',
+      reason: 'Needs a tow tonight',
+      summary: 'Jim, car dead on I-65 at exit 310, wants a tow tonight.',
+    });
+    expect(parseVerdict('{"verdict":"unclear","reason":""}')).toMatchObject({ verdict: 'unclear', summary: '' });
+  });
+  it('the prompt asks for a summary of stated facts only, and the route passes it to the business text', () => {
+    expect(VERDICT_SYSTEM_PROMPT).toMatch(/"summary"/);
+    expect(VERDICT_SYSTEM_PROMPT).toMatch(/only facts stated in the transcript/);
+    const route = read('app/api/twilio/geo/[campaignId]/voicemail/route.ts');
+    expect(route).toMatch(/voicemail_summary: /);
+    expect(route).toMatch(/summary: verdict\?\.summary/);
   });
   it('anything malformed is unclear, never a guess', () => {
     expect(parseVerdict('nope').verdict).toBe('unclear');

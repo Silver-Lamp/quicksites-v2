@@ -894,7 +894,38 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   ⚠️ A rang-out call with NO message has no words to judge, so the missed-call text still goes
   out blind — the vashon-landscaping call the same day (a Quezon City desktop visitor clicked
   Contact and a Jacksonville number rang 41 s later, hung up at the voicemail prompt) is exactly
-  that shape and was texted to Herb's as "someone called".
+  that shape and was texted to Herb's as "someone called". The judge also returns a **`summary`**
+  (what the caller wants, ≤30 words, stated facts only; `call_logs.voicemail_summary`, `20260881`)
+  that rides in the business text as `AI summary: "…"` beside the recording link — labelled,
+  because a paraphrase presented as the caller's words is the `voice_basis` mislabel in text.
+  **EVERY CALL NOW GETS A STORED ANALYSIS (2026-10-12, owner: "do that for each call that comes
+  in and put the analysis in the call db").** `lib/ppl/callAnalysis.ts` reproduces the hand
+  analysis that read the vashon-landscaping call: FACTS we measured — the site's PostHog
+  pageviews/clicks in the 20 min before the call (`lib/analytics/posthogQuery.ts`, read-only
+  personal key + `POSTHOG_PROJECT_ID`, now set in prod), the caller's area code and prior calls,
+  whether the number is a listed business or a campaign's own forward-to, the campaign's age /
+  rank / GSC impressions, the dial outcome and voicemail verdict — then a metered **`gpt-4.1`**
+  READ (`customer` / `vendor_or_sales` / `robocall` / `wrong_number` / `own_business` /
+  `unknown` + confidence + a ≤60-word summary that must name its driving facts and call a
+  geolocation an inference). ⚠️ Not the mini: on the first backfill `gpt-4o-mini` answered
+  "unknown" on 5 of 12 rows whose facts pointed one way and filed a named vendor as a robocall;
+  `gpt-4.1` with the tightened prompt matched the hand reads on all 12 (~1¢ a call). **What the
+  backfill found**: three calls on two Vashon sites in four days share one shape — a desktop in
+  the Philippines (Quezon City, Calapan) opens the site, clicks Contact, and a Florida number
+  (904/813/941) rings the line within a minute — an offshore prospecting team working new
+  domains, not customers. Stored as `call_logs.analysis` (facts + read) /
+  `analysis_summary` / `analyzed_at` (`20260882`); shown as an "AI read" line in the alert
+  email and under each row on `/admin/call-logs`. ⚠️ **It gates NOTHING** — it runs in the
+  call-alert cron after the webhooks have already texted (or held) the business, and a test
+  asserts no Twilio route imports it: an inference about who a caller probably is must never
+  stop a possible customer being relayed. ⚠️ The model sees the AREA CODE, never the number.
+  Each source degrades alone and says so (`unavailable: POSTHOG_PERSONAL_API_KEY is not set`
+  is not "no visit"). ⚠️ **The owner's own test calls look like anything** — one number has 19
+  calls across three towing sites since 2025-08 and read as a vendor at 11:19 and a customer at
+  12:57; `OPERATOR_PHONE_NUMBERS` (comma list, owner action, unset in prod) files those as
+  `operator_test`, and the facts say "no operator phone list is configured" rather than implying
+  "not the operator". Backfill / re-run: `npx tsx --env-file=.env.local scripts/analyze-calls.mts
+  [n] [--redo]`. `/status` gate `call_analysis`.
 - **Inbound-call email alerts (2026-10-01)**: `/api/cron/call-alert` every 5 min emails
   `ADMIN_EMAILS` when a call lands in `call_logs`, so a real lead cannot sit unseen in a dashboard
   nobody opened (two did, on 2026-09-30). ⚠️ **Deliberately NOT in the Twilio webhook**: that

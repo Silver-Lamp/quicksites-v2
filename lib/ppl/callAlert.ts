@@ -14,6 +14,7 @@
 // nothing we hold can tell a person from a machine that picked up.
 
 import { classifyDial, type DialOutcome } from '@/lib/ppl/forwardHealth';
+import { analysisLine } from '@/lib/ppl/callAnalysis';
 
 export type CallRow = {
   id: string;
@@ -35,6 +36,9 @@ export type CallRow = {
   /** From the missed-call text (lib/ppl/missedCallNotice.ts); absent on older rows. */
   missed_call_notified_at?: string | null;
   missed_call_notify_result?: Record<string, unknown> | null;
+  /** The stored per-call analysis (lib/ppl/callAnalysis.ts); null until the cron has run it. */
+  analysis_summary?: string | null;
+  analysis?: { read?: string; confidence?: string } | null;
 };
 
 /** Human label per outcome. No word here may mean "a person picked up" — see the header. */
@@ -156,12 +160,14 @@ export function buildCallAlertEmail(rows: CallRow[], baseUrl: string): AlertEmai
       site: r.custom_domain || '—',
       outcome: outcomeLine(r),
       handling: handlingLabel(r),
+      // Labelled "AI read" — a model's reading of measured facts, never presented as one of them.
+      analysis: analysisLine(r),
     };
   });
 
   const text = lines
     .map((l) =>
-      [`${l.when} PT — ${l.from}`, `  Site: ${l.site}`, l.outcome ? `  ${l.outcome}` : null, `  ${l.handling}`]
+      [`${l.when} PT — ${l.from}`, `  Site: ${l.site}`, l.outcome ? `  ${l.outcome}` : null, `  ${l.handling}`, l.analysis ? `  ${l.analysis}` : null]
         .filter(Boolean)
         .join('\n'),
     )
@@ -174,7 +180,9 @@ export function buildCallAlertEmail(rows: CallRow[], baseUrl: string): AlertEmai
         <td style="padding:10px 12px;border-bottom:1px solid #27272a;font:13px -apple-system,sans-serif;color:#e4e4e7;white-space:nowrap">${esc(l.when)}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #27272a;font:600 13px -apple-system,sans-serif;color:#fff;white-space:nowrap">${esc(l.from)}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #27272a;font:13px -apple-system,sans-serif;color:#a1a1aa">${esc(l.site)}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #27272a;font:13px -apple-system,sans-serif;color:#e4e4e7">${l.outcome ? `${esc(l.outcome)}<br>` : ''}<span style="color:#71717a;font-size:12px">${esc(l.handling)}</span></td>
+        <td style="padding:10px 12px;border-bottom:1px solid #27272a;font:13px -apple-system,sans-serif;color:#e4e4e7">${l.outcome ? `${esc(l.outcome)}<br>` : ''}<span style="color:#71717a;font-size:12px">${esc(l.handling)}</span>${
+          l.analysis ? `<br><span style="color:#a5b4fc;font-size:12px">${esc(l.analysis)}</span>` : ''
+        }</td>
       </tr>`,
     )
     .join('');

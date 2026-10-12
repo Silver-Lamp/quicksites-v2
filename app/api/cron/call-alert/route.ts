@@ -25,10 +25,18 @@ import { isCronAuthorized } from '@/lib/cron/auth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/email';
 import { buildCallAlertEmail, alertRecipients, type CallRow } from '@/lib/ppl/callAlert';
+import { analyzeAndStore, type CallLogForAnalysis } from '@/lib/ppl/callAnalysis';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// A few model calls + PostHog queries per run; the default serverless budget is not enough.
+export const maxDuration = 120;
+
+/** Wall-clock budget for the analysis pass; anything left over waits for the next run. */
+const ANALYSIS_BUDGET_MS = 70_000;
+const ANALYSIS_COLS =
+  'id, call_sid, from_number, call_status, call_duration, handling, custom_domain, geo_campaign_id, created_at, recording_url, voicemail_speech, voicemail_transcript, voicemail_verdict, voicemail_verdict_reason, voicemail_notify_result, missed_call_notify_result';
 
 /** Don't report a call that may still be ringing. */
 const SETTLE_SECONDS = Number(process.env.CALL_ALERT_SETTLE_SECONDS ?? '90') || 90;
@@ -52,10 +60,36 @@ async function handle(req: NextRequest) {
     const settledBefore = new Date(now - SETTLE_SECONDS * 1000).toISOString();
     const notOlderThan = new Date(now - LOOKBACK_HOURS * 3600 * 1000).toISOString();
 
+    // 0) Analyse every settled call that has no analysis yet (lib/ppl/callAnalysis.ts), so the
+    // email below can carry the read. ⚠️ Independent of `alerted_at` on purpose: a failed
+    // analysis is retried next run while the alert still goes out; and it gates NOTHING — the
+    // business was texted (or not) minutes ago by the webhook's own decision.
+    const analysed: { id: string; read: string; error?: string }[] = [];
+    {
+      const { data: todo } = await db
+        .from('call_logs')
+        .select(ANALYSIS_COLS)
+        .is('analyzed_at', null)
+        .lt('created_at', settledBefore)
+        .gte('created_at', notOlderThan)
+        .order('created_at', { ascending: false })
+        .limit(MAX_PER_RUN);
+      const started = Date.now();
+      for (const row of (todo ?? []) as CallLogForAnalysis[]) {
+        if (Date.now() - started > ANALYSIS_BUDGET_MS) break;
+        try {
+          const r = await analyzeAndStore(db, row);
+          analysed.push({ id: row.id, read: r.read, ...(r.error ? { error: r.error } : {}) });
+        } catch (e) {
+          analysed.push({ id: row.id, read: 'unknown', error: e instanceof Error ? e.message.slice(0, 160) : 'error' });
+        }
+      }
+    }
+
     const { data, error } = await db
       .from('call_logs')
       .select(
-        'id, call_sid, from_number, to_number, forwarded_to, call_status, call_duration, handling, custom_domain, created_at, voicemail_speech, voicemail_transcript, voicemail_verdict, voicemail_verdict_reason, missed_call_notified_at, missed_call_notify_result',
+        'id, call_sid, from_number, to_number, forwarded_to, call_status, call_duration, handling, custom_domain, created_at, voicemail_speech, voicemail_transcript, voicemail_verdict, voicemail_verdict_reason, missed_call_notified_at, missed_call_notify_result, analysis_summary, analysis',
       )
       .is('alerted_at', null)
       .lt('created_at', settledBefore)
@@ -65,7 +99,7 @@ async function handle(req: NextRequest) {
     if (error) throw new Error(`call_logs read failed: ${error.message}`);
 
     const rows = (data ?? []) as CallRow[];
-    if (rows.length === 0) return NextResponse.json({ ok: true, alerted: 0 });
+    if (rows.length === 0) return NextResponse.json({ ok: true, alerted: 0, analysed });
 
     // `text` is built too, but sendEmail takes only html — it is returned below so a cron_runs
     // record shows what went out without digging through the provider.
@@ -83,6 +117,7 @@ async function handle(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       alerted: rows.length,
+      analysed,
       to: to.length,
       subject,
       preview: text.slice(0, 500),

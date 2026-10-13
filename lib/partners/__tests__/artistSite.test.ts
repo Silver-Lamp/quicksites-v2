@@ -92,6 +92,23 @@ describe('assembleArtistTemplate — only what the profile says', () => {
   });
 });
 
+// ⚠️ THE FIRST REAL SIGNED POST (2026-10-13 19:19 UTC) 500'D ON THIS. The URL rules were defined in
+// the block renderer, a 'use client' file; imported into the server route they arrive as client
+// references and throw when called. Jest ignores the directive, so only reading the import graph
+// catches it: nothing the route reaches may import from a client component file.
+describe('server code never imports from a client component', () => {
+  it.each(['lib/partners/artistSite.ts', 'app/api/partner/hj/artist-site/route.ts', 'lib/partners/perfectLoopsUrls.ts'])('%s', (p) => {
+    const src = read(p);
+    expect(src).not.toMatch(/from '@\/components\//);
+    expect(src).not.toMatch(/['"]use client['"]/);
+  });
+  it('the renderer takes the URL rules from the plain module rather than defining them', () => {
+    const r = read('components/admin/templates/render-blocks/perfect-loops-player.tsx');
+    expect(r).toMatch(/from '@\/lib\/partners\/perfectLoopsUrls'/);
+    expect(r).not.toMatch(/export function isAllowed/);
+  });
+});
+
 describe('the route', () => {
   const src = read('app/api/partner/hj/artist-site/route.ts');
   it('fails closed, verifies the raw body, rate-limits, validates, and mints the claim on this side', () => {

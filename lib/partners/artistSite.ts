@@ -22,7 +22,8 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { mintSiteClaimToken, SITE_CLAIM_TTL_MS } from '@/lib/auth/siteClaimToken';
-import { isAllowedEmbedUrl, isAllowedFanLink } from '@/components/admin/templates/render-blocks/perfect-loops-player';
+// ⚠️ From the plain module, never from the renderer (a 'use client' file): see perfectLoopsUrls.ts.
+import { isAllowedEmbedUrl, isAllowedFanLink } from '@/lib/partners/perfectLoopsUrls';
 
 const https = z.string().url().refine((u) => u.startsWith('https://'), 'https only');
 

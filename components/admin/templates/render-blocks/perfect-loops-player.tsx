@@ -18,44 +18,15 @@
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
 import { isEditorContext } from '@/lib/editor/isEditorContext';
+// ⚠️ The URL rules live in a plain module, NOT here: this file is 'use client', and the server
+// route that validates HJ's profile needs the same rules. Importing them from here handed the
+// route client references, and the first real signed POST threw inside validation.
+import { isAllowedEmbedUrl, isAllowedFanLink, fanLinkWithVia } from '@/lib/partners/perfectLoopsUrls';
 
 type Link = { platform?: string; url?: string };
 type Props = { block?: Block; content?: Block['content']; previewOnly?: boolean };
 
 const s = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
-
-/** Hosts whose pages may be framed here. Exact hosts, no suffix match. */
-export const PERFECT_LOOPS_EMBED_HOSTS = new Set(['www.hivejournal.com', 'hivejournal.com']);
-export const PERFECT_LOOPS_FAN_LINK_HOSTS = new Set(['perfectloops.fm', 'www.perfectloops.fm', 'www.hivejournal.com', 'hivejournal.com']);
-
-export function isAllowedEmbedUrl(u: string): boolean {
-  try {
-    const url = new URL(u);
-    return url.protocol === 'https:' && PERFECT_LOOPS_EMBED_HOSTS.has(url.hostname);
-  } catch {
-    return false;
-  }
-}
-
-export function isAllowedFanLink(u: string): boolean {
-  try {
-    const url = new URL(u);
-    return url.protocol === 'https:' && PERFECT_LOOPS_FAN_LINK_HOSTS.has(url.hostname);
-  } catch {
-    return false;
-  }
-}
-
-/** `?via=site` is accepted and recommended by HJ; nothing else is appended. */
-export function fanLinkWithVia(u: string): string {
-  try {
-    const url = new URL(u);
-    if (!url.searchParams.has('via')) url.searchParams.set('via', 'site');
-    return url.toString();
-  } catch {
-    return u;
-  }
-}
 
 const PLATFORM_LABEL: Record<string, string> = {
   bandcamp: 'Bandcamp',

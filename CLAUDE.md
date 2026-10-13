@@ -1090,6 +1090,16 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   The contract's `shows` block is the existing `events` block titled "Shows" (venue + city →
   `location`, ticket → `cta_link`); no new block was needed. Tests:
   `lib/partners/__tests__/artistSite.test.ts`, `lib/builder/__tests__/musicianScaffold.test.ts`.
+  ⚠️ **THE FIRST REAL SIGNED POST 500'D, AND FOUR CHECKS HAD SAID GREEN (2026-10-13 19:19 UTC).**
+  The URL allow-list helpers were defined in the block renderer — a `'use client'` file — and
+  the server route imported them from there. Next gives a server module **client references**
+  for exports of a client file; calling one throws *"Attempted to call isAllowedFanLink() from
+  the server"*, inside zod's refine, after the signature had passed. `tsc` cannot see it, jest
+  ignores the directive, the unsigned smoke test stops at the signature, and the signed one used
+  a placeholder secret. Found in the Vercel runtime log. Rule: **a helper a route needs lives in a
+  plain `lib/` module, never in a component file, however small** — now
+  `lib/partners/perfectLoopsUrls.ts`, pinned by a source guard that nothing the route reaches
+  imports from `@/components/`.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

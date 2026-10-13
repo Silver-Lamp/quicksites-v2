@@ -165,16 +165,18 @@ export default async function ForAmberPage() {
                 the hall makes decisions, being in the room — so it stays a neighbour asking rather than a company.
               </p>
               <p>
-                If a kitchen arrangement ever came out of that door, the introducer would be owed a share of what
-                PorchHearth earns from cooks working out of it, for as long as that arrangement runs. A share of something
-                that exists — never a fee for the introduction itself, and nothing if nothing comes of it.
+                If this ever becomes a business, how the introducer shares in it is a conversation with Sandon, not a
+                structure described on a page. The honest reason: the mechanism that would pay her does not exist yet —
+                PorchHearth can credit a person on an individual order, and nothing ties an earning to a kitchen — and
+                describing one that does not exist is the thing this page is built to avoid. Never a fee for the
+                introduction itself, and nothing if nothing comes of it.
               </p>
             </Card>
             <Card title="The operator" tag="holds the permit and cooks" tone="emerald">
               <p>
-                An operator is a cook with their own catering permit, renting kitchen time and selling meals — orders
-                would come through PorchHearth, and the cook would keep what they sell less the platform's cut and the
-                kitchen's rent.
+                An operator is a cook with their own catering permit, renting kitchen hours and selling — at a market,
+                direct to neighbours, to a caterer, however they like. PorchHearth is not part of this yet: its platform
+                cannot currently register a Washington cook at all, and saying when it could would be a guess.
               </p>
               <p>
                 This one is a real business with real paperwork: a King County permit, food-handler cards, insurance.
@@ -269,7 +271,7 @@ export default async function ForAmberPage() {
               <p>Washington gives home cooks no permit for prepared meals. King County permits shared kitchens and requires caterers to use one. The Eagles describe themselves as a bar and a restaurant. Nobody on the island advertises kitchen time for rent.</p>
             </Card>
             <Card title="Not real yet" tag="honest" tone="rose">
-              <p>A permitted commissary on Vashon. A rate for kitchen time. A single completed order on PorchHearth. Any agreement with the Eagles, or with you. Any number about what this pays.</p>
+              <p>A permitted commissary on Vashon. A rate for kitchen time. A single completed order on PorchHearth. A way for PorchHearth to register a Washington cook, or to pay an introducer for a kitchen. Any agreement with the Eagles, or with you. Any number about what this pays.</p>
             </Card>
           </div>
         </section>

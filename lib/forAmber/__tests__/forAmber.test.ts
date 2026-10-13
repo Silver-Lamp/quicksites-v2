@@ -86,6 +86,21 @@ describe('/for-amber promises nothing about the kitchen', () => {
     expect(quicksitesSection).toMatch(/Not a number about the kitchen above/);
   });
 
+  // PorchHearth's correction (crosstalk 2026-10-13): the fee path credits a referral code on an
+  // individual order, nothing ties an earning to a kitchen, and a per-cook fee waiver zeroes the
+  // affiliate's earning; and PorchHearth cannot register a Washington cook at all. So the page may
+  // not describe a revenue-share mechanism or route the operator's sales through PorchHearth. Same
+  // rule as the no-figures guard, one level up: refuse a MECHANISM that does not exist.
+  it('describes no payout mechanism that does not exist, and does not route the operator through PorchHearth', () => {
+    expect(kitchenPart).not.toMatch(/share of what\s+PorchHearth earns/i);
+    expect(kitchenPart).not.toMatch(/for as long as (that|the) arrangement/i);
+    expect(kitchenPart).not.toMatch(/orders\s+would come through PorchHearth/i);
+    expect(kitchenPart).not.toMatch(/less the platform's cut/i);
+    expect(page).toMatch(/PorchHearth is not part of this yet/);
+    expect(page).toMatch(/cannot currently register a Washington cook/);
+    expect(page).toMatch(/a conversation with Sandon, not a\s+structure described on a page/);
+  });
+
   it('keeps the two roles apart and names the first step as a question, not a commitment', () => {
     expect(page).toMatch(/The introducer/);
     expect(page).toMatch(/The operator/);

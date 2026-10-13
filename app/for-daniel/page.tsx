@@ -1,22 +1,47 @@
 // app/for-daniel/page.tsx
-// Personal, UNLISTED orientation page for Daniel (majority owner of DeckSketch).
-// Not a reseller pitch — it's the picture of how the QuickSites↔DeckSketch
-// integrations we've shipped compound DeckSketch's business: every deck-builder
-// website QuickSites makes becomes a live front door for DeckSketch's estimating
-// engine, and QuickSites' discovery/outreach engine becomes a builder-acquisition
-// channel that feeds DeckSketch usage. Public URL, noindex, linked from nowhere.
+// Personal, UNLISTED page for Daniel Russo (ScaleUp Software; majority owner of DeckSketch).
+// Rewritten 2026-10-13 (owner: "make sure his for-daniel is fully updated with how it all works,
+// for the UK example, and for the Italy example, so that we can simplify our understanding"):
+//   1. How it works now — his white-label reseller org (`scaleup-software`), his partner code
+//      (`daniel`, converted in place from the affiliate code this page used to describe), the
+//      four dashboard steps, the money in order, and what DeliveredMenu is.
+//   2. Example: a UK sales rep — the rep page, the build/text flow, and that the rep's code is
+//      OWNED BY DANIEL so its orders land on his ledger and he pays the rep.
+//   3. Example: the Italy restaurant — Option B (booking as a DeliveredMenu capability, resold
+//      white-label), the steps, who pays whom, and that the subscription split is a SEPARATE term
+//      from his order-fee share.
+//   4. DeckSketch — the seams already running, unchanged (a separate relationship).
 //
-// Honesty rules for this page: claims about what's BUILT are limited to seams that
-// are actually LIVE + prod-verified (crosstalk/contracts/{deck,quote}-estimate-embed.md,
-// verified 2026-07-17). Dollar figures are clearly-hypothetical "Example" framing, never
-// presented as DeckSketch's real numbers.
+// Honesty rules: every card is tagged live / next / proposed; the two numbers about his money
+// (partner share, fee cap) are read from lib/commerce/partner-terms, never typed; the Italy
+// proposal's prices and split are NOT repeated here (they live on HJ's passphrase-protected
+// proposal page and are Sandon's to set); no third party is named. The earlier promises this
+// page made — the code `daniel`, the `?ref=daniel` link, a lifetime share, "the top rate" —
+// all still hold; the rate only went up. Pinned by lib/forDaniel/__tests__/forDaniel.test.ts.
+// Public URL, noindex, linked from nowhere.
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
+// The two numbers the page states about his money come from the module that pays them, so the
+// page cannot drift from the ledger (lib/forDaniel/__tests__/forDaniel.test.ts pins it).
+import { PARTNER_FEE_SHARE, MAX_PLATFORM_FEE_PERCENT } from '@/lib/commerce/partner-terms';
+// The folded cards /for-sales and /spread-the-word use: one sentence per pitch, boxes inside,
+// native <details>, zero JS (owner, 2026-10-13: "simplify it as much as possible").
+import { Pitch, SubBox } from '@/components/for-rep/pitch';
+
+const partnerPct = Math.round(PARTNER_FEE_SHARE * 100);
+const feeCapPct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
+const CODE = 'rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-200';
+const LINK = 'text-amber-400 underline underline-offset-4 hover:text-amber-300';
+
+/** The prose inside an opened box. */
+function Body({ children }: { children: React.ReactNode }) {
+  return <div className="mx-auto max-w-3xl space-y-3 px-6 pb-4 pt-2 text-sm leading-relaxed text-zinc-400">{children}</div>;
+}
 
 export const metadata: Metadata = {
-  title: 'QuickSites × DeckSketch — for Daniel',
-  description: 'How the QuickSites integrations grow DeckSketch.',
+  title: 'ScaleUp Software × QuickSites — for Daniel',
+  description: 'How the reseller setup, a UK rep, and the Italy restaurant work — and the DeckSketch seams.',
   robots: { index: false, follow: false }, // unlisted: public URL, invisible to search
 };
 
@@ -91,198 +116,156 @@ export default function ForDanielPage() {
           </span>
           <h1 className="mt-6 text-4xl font-extrabold tracking-tight md:text-5xl">Hey Daniel 👋</h1>
           <p className="mt-4 text-lg leading-relaxed text-zinc-400">
-            Quick picture of what the QuickSites side is doing for DeckSketch. Short version:{' '}
-            <span className="text-zinc-200">
-              every website we build for a deck builder becomes a live front door for
-              DeckSketch&apos;s estimating engine
-            </span>
-            , and our lead-gen machine turns into a way to put DeckSketch in front of builders
-            who&apos;ve never heard of it. The seams are already shipped and running in production —
-            cards expand if you want the gears.
-          </p>
-          <p className="mt-3 text-sm text-zinc-500">
-            The frame I care about: DeckSketch has the hard, valuable thing — the math (BOM engine +
-            per-trade pricing models). QuickSites has distribution (free sites + a
-            discovery/outreach engine that acquires the businesses that need that math). Bolted
-            together, each one makes the other worth more.
-          </p>
-          <p className="mt-3 text-sm text-zinc-500">
-            First though — the thing I texted you about: your referral code. It&apos;s set up and
-            live right now. 👇
+            Four sentences. Open any of them for the gears. Every box says whether a thing is{' '}
+            <span className="text-emerald-300">live</span>, <span className="text-amber-300">next</span>{' '}
+            or <span className="text-sky-300">proposed</span>.
           </p>
         </section>
 
-        {/* Your referral code — the timely action item */}
-        <section className="mx-auto max-w-3xl px-6 pb-4">
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-6">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-lg font-bold text-white">Your referral code</h2>
-              <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-medium text-amber-300">
-                lifetime residual
-              </span>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-300">
-              If you ever mention QuickSites to anyone, just tell them to use the code{' '}
-              <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-sm font-semibold text-amber-200">
-                daniel
-              </code>{' '}
-              when they sign up — or send them your link:
+        {/* ───────────── 1. How it works now ───────────── */}
+        <Pitch summary={`ScaleUp Software resells DeliveredMenu under your brand. Your code daniel keeps ${partnerPct}% of every order fee, for life.`} art="business">
+          <SubBox title="Your org and your dashboard" line="Live. A white-label reseller org, you as owner, four steps to finish — only the first is waiting on you.">
+            <Body>
+              <p>
+                Your organisation on the platform is <code className={CODE}>scaleup-software</code>. On a reseller
+                org the client-facing surfaces carry your name and logo instead of ours: sign-in and join pages,
+                the editor chrome, and the welcome, invite and order emails. Dashboard:{' '}
+                <Link href="/partners/dashboard" className={LINK}>/partners/dashboard</Link>.
+              </p>
+              <p>
+                <span className="text-zinc-200">1. Brand</span> — name, support email, logo, accent. Waiting on you.{' '}
+                <span className="text-zinc-200">2. Domain</span> — the address your restaurants sign in at, e.g.{' '}
+                <code className={CODE}>app.scaleupsoftware.io</code>; one DNS record, and <code className={CODE}>/login</code>,{' '}
+                <code className={CODE}>/join/daniel</code> and the editor render under your brand there with no change on our side.{' '}
+                <span className="text-zinc-200">3. Email domain</span> — optional; emails go out from your domain.{' '}
+                <span className="text-zinc-200">4. Payouts</span> — connect Stripe; until then approved commissions are
+                recorded and paid by hand, nothing is lost by waiting.
+              </p>
+            </Body>
+          </SubBox>
+          <SubBox title="Your code and the money" line={`Live. Same code, same link as before — now a partner code at the top rate: ${partnerPct}% of the platform fee, lifetime.`}>
+            <Body>
+              <p>
+                <code className={CODE}>daniel</code> · <code className={CODE}>www.quicksites.ai/?ref=daniel</code>. It only
+                went up: an affiliate code became a partner code tied to your account. The platform fee is capped
+                at {feeCapPct}% of an order; you keep {partnerPct}% of that fee on every order a merchant under your
+                code processes, for as long as their account lives.
+              </p>
+              <p>
+                In order: a customer orders from a restaurant&apos;s page → the restaurant is paid through Stripe →
+                the platform fee is taken → {partnerPct}% of it is credited to your ledger the same day → paid out on
+                the next run, or held for you until you connect Stripe. The restaurant pays nothing to keep the page;
+                the only money is a share of orders that actually happen. Your dashboard shows signups, accrued, held
+                and paid — live numbers.
+              </p>
+            </Body>
+          </SubBox>
+          <SubBox title="What DeliveredMenu is" line="Live. An ordering page built from a restaurant's own menu, at <name>.delivered.menu or their own domain.">
+            <Body>
+              <p>
+                Built from photos, a PDF, or the menu on their current website. The owner confirms prices,
+                &ldquo;Add to order&rdquo; goes through Stripe, and &ldquo;book a table&rdquo; is the next thing being
+                built (the Italy story below). The builder underneath is QuickSites; what a restaurant sees is
+                DeliveredMenu, and under your org it is DeliveredMenu with your name on the chrome.
+              </p>
+            </Body>
+          </SubBox>
+        </Pitch>
+
+        {/* ───────────── 2. The UK rep ───────────── */}
+        <Pitch summary="A rep in the UK walks restaurants, builds their ordering page, and every order they bring lands on your ledger." art="lunch">
+          <SubBox title="What the rep does" line="Live. Their own unlisted page, a live table of restaurants that take no orders online, build and text from a row.">
+            <Body>
+              <p>
+                The rep gets <code className={CODE}>/for-&lt;name&gt;</code>: the restaurants in their city that have a
+                site but take no orders online, and a &ldquo;sweep where I am&rdquo; button that finds more. From a row
+                they press <em>Build their ordering page</em> (made from the restaurant&apos;s own published menu) and{' '}
+                <em>Text them</em> (a message pointing at it). They walk in, have lunch, drop a card. The owner claims
+                the page from the link on it and it goes live.
+              </p>
+              <p>
+                Every printed or prefilled sentence is held to a forbidden list — no ranking promises, no 24/7, no
+                guarantee, no printed price. The rep writes the message; the page only prefills a start. A menu that
+                cannot be read from the restaurant&apos;s own material is not invented.
+              </p>
+            </Body>
+          </SubBox>
+          <SubBox title="How the rep is paid — through you" line="Live, minted by Sandon for now. The rep's code is a child of yours and owned by you; you pay the rep.">
+            <Body>
+              <p>
+                Every restaurant the rep signs up is recorded against the rep&apos;s code, and the {partnerPct}% it
+                earns lands on <em>your</em> ledger, not theirs. You pay the rep from your share on whatever terms you
+                agree; we never pay the rep directly and never set their rate. The dashboard shows which code brought
+                which restaurant, so the arithmetic is yours and easy to check.
+              </p>
+              <p>
+                <span className="text-amber-300">Next:</span> an &ldquo;Add a rep&rdquo; control on your dashboard
+                that mints the code and the page yourself (today: send Sandon a name, an email and a city).{' '}
+                <span className="text-amber-300">Next:</span> the restaurant pages and claim pages a rep builds carry
+                your brand (today only the sign-in, join and editor chrome are yours). Neither is needed for a rep to
+                start.
+              </p>
+            </Body>
+          </SubBox>
+        </Pitch>
+
+        {/* ───────────── 3. Italy ───────────── */}
+        <Pitch summary="The restaurant in Italy: table booking built into DeliveredMenu, resold under your brand — proposed, nothing built yet." art="business">
+          <SubBox title="The shape, and who pays whom" line="Proposed · nothing built yet. Option B recommended; Option A (he owns it, EU-hosted) stays in as the pricier alternative.">
+            <Body>
+              <p>
+                He wants a booking page his customers use, a phone screen where he adds a booking in seconds and a
+                cancellation frees the table, and later to sell it to other restaurants. Sandon chose <em>Option B</em>:
+                build booking into DeliveredMenu — every restaurant site gets &ldquo;book a table&rdquo; next to
+                &ldquo;order&rdquo; and &ldquo;call&rdquo; — and license it to him white-label through an org exactly
+                like yours.
+              </p>
+              <p>
+                The proposal is in steps, each priced and timed on its own: booking first, then his floor plan
+                (drawing the room, placing tables, bookings on a table — a tool we build, so its own step), then a
+                food-cost calculator, then the white-label SaaS to resell, with analytics and staff shifts after. The
+                build steps are paid through you on Upwork. Once restaurants are on it they pay a monthly subscription,
+                billed under the reseller&apos;s brand and shared with us — the larger share to the reseller. Prices and
+                the exact split live on the proposal page (passphrase-protected, Sandon&apos;s to set); this page does
+                not repeat them. Data is US-hosted with a GDPR data-processing agreement to be put in place before
+                launch; a &ldquo;lifetime&rdquo; price for hosted software is an obligation with no end date, so we
+                proposed a subscription or a one-time price plus a small yearly fee.
+              </p>
+            </Body>
+          </SubBox>
+          <SubBox title="How this differs from your order-fee share" line="Read this one. Two separate terms on two separate kinds of money.">
+            <Body>
+              <p>
+                Your {partnerPct}% is a share of the <em>per-order platform fee</em> on DeliveredMenu orders, unchanged.
+                A booking is not an order and carries no fee, so the Italy product earns through a <em>monthly
+                subscription</em> with its own split. Neither changes the other.
+              </p>
+            </Body>
+          </SubBox>
+          <SubBox title="What exists today, so the quote is honest" line="Live. A scheduler with a no-overlap rule and zero bookings ever; 300 restaurant sites with a menu; no floor plan, food cost, shifts or Italian yet.">
+            <Body>
+              <p>
+                QuickSites already has a scheduler with slot math and a database rule that two bookings cannot overlap
+                on one table — used on two sites, with zero bookings ever taken, so it is a schema, not a product.
+                Three hundred restaurant sites carry a menu. There is no floor plan, no food-cost model, no staff
+                scheduler and no Italian-language layer; those are the steps, priced as builds. DeckSketch was asked
+                whether its 2D editor could carry the floor plan and said build our own, which the quote already
+                assumed.
+              </p>
+            </Body>
+          </SubBox>
+        </Pitch>
+
+        {/* ───────────── 4. DeckSketch ───────────── */}
+        <Pitch summary="DeckSketch × QuickSites: the seams already running, unchanged by any of the above." art="business">
+          <section className="mx-auto max-w-3xl px-6 pb-2 pt-4">
+            <p className="text-sm leading-relaxed text-zinc-500">
+              A separate relationship from the reseller one: every website we build for a deck builder is a live
+              front door for DeckSketch&apos;s estimating engine, and our outreach engine puts DeckSketch in front of
+              builders who have never heard of it. The clean-split rules below still hold — neither product owns the
+              other&apos;s customer.
             </p>
-            <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-sm text-zinc-200">
-              www.quicksites.ai/?ref=daniel
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-              Anyone who signs up under it is tied to you, and you earn a{' '}
-              <span className="text-zinc-200">
-                lifetime share of what QuickSites earns on their orders
-              </span>{' '}
-              — for as long as their account lives, not just year one. As a founding partner
-              you&apos;re locked in at the top rate. It&apos;s already recording signups, so
-              there&apos;s nothing to &ldquo;turn on.&rdquo; Your exact cut + projections are on the
-              dashboard below — I&apos;d rather you see live numbers than a number on a page.
-            </p>
-
-            <More label="How you get paid (and the escrow bit)">
-              <p>
-                You don&apos;t need Stripe set up to start — the code accrues your earnings the
-                whole time. When you connect Stripe Connect, anything that&apos;s accrued since we
-                started gets transferred to you at that point. If you&apos;re already connected when
-                a sale happens, your cut transfers at the time of that sale. Until then it&apos;s
-                simply held for you (I see a &ldquo;held&rdquo; balance on my side; you&apos;ll see
-                it on your dashboard).
-              </p>
-              <p>
-                Mechanically: I minted the code before you even had an account, so the moment you
-                sign up with your email it links to you automatically, and I finalize it on my end.
-                Nothing to chase.
-              </p>
-            </More>
-
-            <div className="mt-4 flex flex-wrap gap-2 text-sm">
-              <Link
-                href="/referrals/dashboard"
-                className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 font-medium text-amber-200 hover:bg-amber-500/20"
-              >
-                Your earnings dashboard →
-              </Link>
-              <Link
-                href="/partners/calculator"
-                className="rounded-lg border border-zinc-700 px-4 py-2 text-zinc-200 hover:bg-zinc-800"
-              >
-                Potential earnings calculator
-              </Link>
-            </div>
-            <p className="mt-3 text-xs text-zinc-500">
-              (The dashboard fills in once you&apos;ve signed in with the email this is set up for —
-              it shows signups, what&apos;s held, and what&apos;s been paid.)
-            </p>
-          </div>
-        </section>
-
-        {/* Paterson — the specific, timely ask. Added 2026-08-13.
-            ⚠️ HONESTY RULES FOR THIS SECTION, same standard as the rest of the page:
-            the reply count is stated as ZERO because it is zero. Recruiting someone into an
-            unproven experiment without saying so poisons it if it fails — and he would find out
-            from the silence anyway. The one thing asked of him (write the messages himself) is
-            stated as a rule rather than a preference, because a person's name on words they did
-            not write is the failure the whole approach is built to avoid. */}
-        <section className="mx-auto max-w-3xl px-6 pt-10 pb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            The Paterson thing — if you want it
-          </h2>
-          <div className="mt-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.05] p-6">
-            <p className="text-sm leading-relaxed text-zinc-300">
-              You mentioned liking delivered.menu, and that helping small restaurant owners appeals
-              to you. There are <span className="font-semibold text-white">12 restaurants in
-              Paterson</span> that have no website at all — just a Google listing — and each one now
-              has a working ordering page built from their own menu photos.
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-300">
-              They&apos;re already live on a domain with your city&apos;s name on it:
-            </p>
-            <a
-              href="https://paterson-restaurants.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 block rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-sm text-emerald-300 hover:border-emerald-500/40"
-            >
-              paterson-restaurants.com
-            </a>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-              Search every dish across all twelve kitchens, order where you can, call the rest
-              direct. Nothing is claimed yet — first owner to claim their page wins the domain
-              featuring.
-            </p>
-
-            <h3 className="mt-6 text-sm font-semibold text-white">What I&apos;d actually be asking</h3>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-300">
-              Pick five. Open each page and read it like the owner would. Find one true thing —
-              their hours are missing a day, the prices came through wrong, they serve something
-              nobody could find online — and text them about that one thing. Five, by hand, in an
-              afternoon lull.
-            </p>
-
-            <div className="mt-4 rounded-lg border border-amber-500/25 bg-amber-500/[0.05] p-4">
-              <p className="text-sm font-semibold text-amber-200">Two rules, and they matter</p>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-300">
-                <span className="text-white">You write the messages, not me.</span> The only reason
-                any of this works — if it works — is that a real person looked at their page and
-                noticed something true. The moment they&apos;re written for you and sent under your
-                name, it&apos;s a mail merge with extra steps, and an owner can smell that.
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-300">
-                <span className="text-white">Five, not fifty.</span> Blasting the list measures
-                something different and burns it.
-              </p>
-            </div>
-
-            <More label="Straight answer: does this work yet?">
-              <p>
-                <span className="text-zinc-200">No idea, and I want to be honest about that.</span>{' '}
-                I&apos;ve sent 15 of these myself and gotten <span className="text-zinc-200">zero
-                replies</span> so far. Ten more are queued. The windows are still open, so it&apos;s
-                genuinely undecided rather than quietly failing.
-              </p>
-              <p>
-                So this isn&apos;t &ldquo;come help with the thing that&apos;s working.&rdquo;
-                It&apos;s &ldquo;come help find out.&rdquo; If it&apos;s a dud, that&apos;s worth
-                knowing in an afternoon rather than after a month of building.
-              </p>
-              <p>
-                There&apos;s also a question only you can answer: whether this works when it
-                isn&apos;t me writing it. If it only lands because of how I write a text, it never
-                scales — and that&apos;s the most useful thing your five would tell us.
-              </p>
-            </More>
-
-            <More label="What you'd get, concretely">
-              <p>
-                Your code above already exists and is unclaimed. Any of these restaurants that
-                signs up under it is tied to you for the life of their account — you earn a share of
-                what QuickSites earns on their orders, not a one-off.
-              </p>
-              <p>
-                The restaurants pay nothing to keep the page. The money only ever comes from a
-                percentage of orders that actually happen, so nobody is being sold anything up
-                front. That&apos;s the whole pitch to them, and it happens to be true.
-              </p>
-            </More>
-
-            <More label="What you'd need from me">
-              <p>
-                An admin login so you can see the drafts and what&apos;s notable about each one —
-                there&apos;s a tool that flags things like &ldquo;prices came through blank&rdquo;
-                or &ldquo;hours are missing Tuesday&rdquo; so you&apos;re not reading raw menus.
-              </p>
-              <p>
-                Worth saying: admin access is broad — it sees more than the Paterson list. If
-                you&apos;d rather not have that, I can just send you the five pages and their
-                numbers.
-              </p>
-            </More>
-          </div>
-        </section>
-
+          </section>
         {/* The core seam */}
         <section className="mx-auto max-w-3xl px-6 pb-4">
           <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
@@ -474,6 +457,8 @@ export default function ForDanielPage() {
             </Card>
           </div>
         </section>
+
+        </Pitch>
 
         {/* Poke around + CTA */}
         <section className="mx-auto max-w-3xl px-6 pt-10 pb-20">

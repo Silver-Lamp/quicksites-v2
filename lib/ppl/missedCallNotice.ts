@@ -36,17 +36,37 @@ export type MissedCallSkip =
   | 'no_destination'
   | 'not_unanswered'
   | 'message_left'
-  | 'already_notified';
+  | 'already_notified'
+  | 'sweep';
 
 export type MissedCallDecision = { send: true; to: string } | { send: false; reason: MissedCallSkip };
 
 /** Twilio parent-call statuses that mean the call is over. Same set as parentCallEnd.ts. */
 const TERMINAL = new Set(['completed', 'busy', 'no-answer', 'canceled', 'failed']);
 
+/**
+ * ⚠️ A SWEEP IS NOT A LEAD (2026-10-12). Two numbers rang NINE of our tracking lines in 17
+ * seconds — every Vashon trade site in turn, a quarter-second apart. Each ring-out was decided
+ * on its own, so five real island businesses were texted "someone called, ring them back on
+ * <the robocaller>". Those were, at that point, the only missed-call texts this feature had ever
+ * sent. A caller that is working through our numbers is a dialer, and the number is not a payload
+ * anyone should return. The signal: how many OTHER of our lines the same caller rang in the last
+ * `SWEEP_WINDOW_MINUTES`. One other number can be a person with two sites to call; two or more
+ * within minutes is a sweep. Counted by the route (distinct `to_number`), decided here.
+ */
+export const SWEEP_WINDOW_MINUTES = 10;
+export const SWEEP_OTHER_NUMBERS_MIN = 2;
+
+export type MissedCallContext = {
+  /** Distinct OTHER tracking numbers this caller rang in the window. Omit when unknown. */
+  otherNumbersRungByCaller?: number;
+};
+
 /** Pure. Should the destination be texted "someone called and it rang out"? */
 export function missedCallDecision(
   row: MissedCallRow | null,
   parent: { status: string },
+  ctx: MissedCallContext = {},
 ): MissedCallDecision | { send: false; reason: 'call_not_over' | 'no_row' } {
   if (!row) return { send: false, reason: 'no_row' };
   if (!TERMINAL.has(parent.status.trim().toLowerCase())) return { send: false, reason: 'call_not_over' };
@@ -57,6 +77,7 @@ export function missedCallDecision(
   // The voicemail webhook claims its row synchronously before it texts; if it got there first
   // the business is being told "they left a message", which supersedes this.
   if (row.recording_url || row.voicemail_notified_at) return { send: false, reason: 'message_left' };
+  if ((ctx.otherNumbersRungByCaller ?? 0) >= SWEEP_OTHER_NUMBERS_MIN) return { send: false, reason: 'sweep' };
   return { send: true, to: row.forwarded_to };
 }
 

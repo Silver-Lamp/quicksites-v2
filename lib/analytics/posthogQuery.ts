@@ -24,10 +24,21 @@ export function posthogQueryUnavailableReason(): string | null {
   return null;
 }
 
-export async function posthogHogql(query: string, opts: { timeoutMs?: number } = {}): Promise<HogqlResult | null> {
-  if (!posthogQueryConfigured()) return null;
+/**
+ * Runs one HogQL query. A failure comes back as `{ ok: false, reason }` — HTTP status plus the
+ * first line of PostHog's error, or `timeout` — never a bare null, because "PostHog query
+ * failed" on a stored analysis (the first production call, 2026-10-13) told nobody whether the
+ * key was wrong, the query was wrong, or the network was slow.
+ */
+export async function posthogHogqlResult(
+  query: string,
+  opts: { timeoutMs?: number } = {},
+): Promise<{ ok: true; result: HogqlResult } | { ok: false; reason: string }> {
+  const unavailable = posthogQueryUnavailableReason();
+  if (unavailable) return { ok: false, reason: unavailable };
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), opts.timeoutMs ?? 12_000);
+  const timeoutMs = opts.timeoutMs ?? 12_000;
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
   try {
     const res = await fetch(`${HOST}/api/projects/${encodeURIComponent(PROJECT)}/query/`, {
       method: 'POST',
@@ -35,14 +46,23 @@ export async function posthogHogql(query: string, opts: { timeoutMs?: number } =
       body: JSON.stringify({ query: { kind: 'HogQLQuery', query } }),
       signal: ctl.signal,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const text = (await res.text().catch(() => '')).replace(/\s+/g, ' ').trim().slice(0, 160);
+      return { ok: false, reason: `PostHog HTTP ${res.status}${text ? `: ${text}` : ''}` };
+    }
     const j = (await res.json()) as { columns?: string[]; results?: unknown[][] };
-    return { columns: j.columns ?? [], results: j.results ?? [] };
-  } catch {
-    return null;
+    return { ok: true, result: { columns: j.columns ?? [], results: j.results ?? [] } };
+  } catch (e) {
+    const aborted = e instanceof Error && e.name === 'AbortError';
+    return { ok: false, reason: aborted ? `PostHog timeout after ${timeoutMs} ms` : `PostHog fetch failed: ${e instanceof Error ? e.message.slice(0, 120) : 'error'}` };
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function posthogHogql(query: string, opts: { timeoutMs?: number } = {}): Promise<HogqlResult | null> {
+  const r = await posthogHogqlResult(query, opts);
+  return r.ok ? r.result : null;
 }
 
 /** HogQL string literal: single quotes doubled, backslashes escaped. */

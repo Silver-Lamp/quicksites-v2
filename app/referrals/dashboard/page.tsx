@@ -19,10 +19,15 @@ export const metadata = { title: 'Referral earnings', robots: { index: false } }
 const fmt = (c: number, cur = 'USD') =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: cur }).format((c || 0) / 100);
 
+// Two plan shapes share this dashboard: an affiliate's `{rate, duration_months}` and a partner's
+// `{type:'order_fee_share', partner_share, residual_months}`. The second used to render as
+// "0% · lifetime" — a partner reading his own terms as zero is the kind of wrong a page must not be.
 const planLabel = (plan: any) => {
-  const rate = Math.round((Number(plan?.rate) || 0) * 100);
-  const months = Number(plan?.duration_months) || 0;
-  return `${rate}% · ${months === 0 ? 'lifetime' : `${months} months`}`;
+  const share = plan?.type === 'order_fee_share' ? Number(plan?.partner_share) : Number(plan?.rate);
+  const months = Number(plan?.type === 'order_fee_share' ? plan?.residual_months : plan?.duration_months) || 0;
+  const rate = Math.round((share || 0) * 100);
+  const what = plan?.type === 'order_fee_share' ? ' of the platform fee' : '';
+  return `${rate}%${what} · ${months === 0 ? 'lifetime' : `${months} months`}`;
 };
 
 export default async function ReferralDashboardPage() {

@@ -25,11 +25,19 @@ import SiteHeader from '@/components/site/site-header';
 // The two numbers the page states about his money come from the module that pays them, so the
 // page cannot drift from the ledger (lib/forDaniel/__tests__/forDaniel.test.ts pins it).
 import { PARTNER_FEE_SHARE, MAX_PLATFORM_FEE_PERCENT } from '@/lib/commerce/partner-terms';
+// The folded cards /for-sales and /spread-the-word use: one sentence per pitch, boxes inside,
+// native <details>, zero JS (owner, 2026-10-13: "simplify it as much as possible").
+import { Pitch, SubBox } from '@/components/for-rep/pitch';
 
 const partnerPct = Math.round(PARTNER_FEE_SHARE * 100);
 const feeCapPct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
 const CODE = 'rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-200';
 const LINK = 'text-amber-400 underline underline-offset-4 hover:text-amber-300';
+
+/** The prose inside an opened box. */
+function Body({ children }: { children: React.ReactNode }) {
+  return <div className="mx-auto max-w-3xl space-y-3 px-6 pb-4 pt-2 text-sm leading-relaxed text-zinc-400">{children}</div>;
+}
 
 export const metadata: Metadata = {
   title: 'ScaleUp Software × QuickSites — for Daniel',
@@ -108,205 +116,156 @@ export default function ForDanielPage() {
           </span>
           <h1 className="mt-6 text-4xl font-extrabold tracking-tight md:text-5xl">Hey Daniel 👋</h1>
           <p className="mt-4 text-lg leading-relaxed text-zinc-400">
-            One page for how the ScaleUp Software side works now, with the two live examples — a
-            sales rep in the UK, and the restaurant in Italy — and, further down, the DeckSketch
-            seams that were already running. Every card says whether a thing is{' '}
-            <span className="text-emerald-300">live</span> or{' '}
-            <span className="text-amber-300">next</span>; nothing on this page is a slide.
+            Four sentences. Open any of them for the gears. Every box says whether a thing is{' '}
+            <span className="text-emerald-300">live</span>, <span className="text-amber-300">next</span>{' '}
+            or <span className="text-sky-300">proposed</span>.
           </p>
         </section>
 
-        {/* ───────────── How it works now ───────────── */}
-        <section className="mx-auto max-w-3xl px-6 pb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            How it works now
-          </h2>
-          <div className="mt-4 space-y-4">
-            <Card title="ScaleUp Software is a white-label reseller on QuickSites" tag="live">
+        {/* ───────────── 1. How it works now ───────────── */}
+        <Pitch summary={`ScaleUp Software resells DeliveredMenu under your brand. Your code daniel keeps ${partnerPct}% of every order fee, for life.`} art="business">
+          <SubBox title="Your org and your dashboard" line="Live. A white-label reseller org, you as owner, four steps to finish — only the first is waiting on you.">
+            <Body>
               <p>
-                You have your own organisation on the platform — <code className={CODE}>scaleup-software</code> —
-                with you as its owner. On a reseller org, the client-facing surfaces carry your name and logo
-                instead of ours: the sign-in and join pages, the editor chrome, and the welcome, invite and
-                order emails. Your dashboard is{' '}
+                Your organisation on the platform is <code className={CODE}>scaleup-software</code>. On a reseller
+                org the client-facing surfaces carry your name and logo instead of ours: sign-in and join pages,
+                the editor chrome, and the welcome, invite and order emails. Dashboard:{' '}
                 <Link href="/partners/dashboard" className={LINK}>/partners/dashboard</Link>.
               </p>
-              <More label="The four steps on your dashboard, and what each is waiting on">
-                <p>
-                  <span className="text-zinc-200">1. Brand</span> — name, support email, logo, accent. Yours
-                  to save; it is the only step that is &ldquo;waiting on you&rdquo; today.
-                </p>
-                <p>
-                  <span className="text-zinc-200">2. Domain</span> — the address your restaurants sign in at,
-                  e.g. <code className={CODE}>app.scaleupsoftware.io</code>. The page gives you one DNS record;
-                  once it resolves, <code className={CODE}>/login</code>, <code className={CODE}>/join/daniel</code>{' '}
-                  and the editor render under your brand on that host, with no change on our side.
-                </p>
-                <p>
-                  <span className="text-zinc-200">3. Email domain</span> — optional. Register your sending
-                  domain and the welcome and order emails go out from it instead of ours.
-                </p>
-                <p>
-                  <span className="text-zinc-200">4. Payouts</span> — connect Stripe to receive your residuals.
-                  Until then, approved commissions are recorded and paid by hand; nothing is lost by waiting.
-                </p>
-              </More>
-            </Card>
-
-            <Card title={`Your code: daniel — ${partnerPct}% of every order fee, for life`} tag="live">
               <p>
-                It is the same code and the same link as before — <code className={CODE}>daniel</code>,{' '}
-                <code className={CODE}>www.quicksites.ai/?ref=daniel</code> — now tied to your account as a{' '}
-                <em>partner</em> code rather than an affiliate one. That is the top rate on the platform, and
-                it only went up: you keep {partnerPct}% of the platform fee on every order a merchant under
-                your code processes, lifetime; we keep the rest to run the thing. The fee itself is capped at{' '}
-                {feeCapPct}% of an order.
+                <span className="text-zinc-200">1. Brand</span> — name, support email, logo, accent. Waiting on you.{' '}
+                <span className="text-zinc-200">2. Domain</span> — the address your restaurants sign in at, e.g.{' '}
+                <code className={CODE}>app.scaleupsoftware.io</code>; one DNS record, and <code className={CODE}>/login</code>,{' '}
+                <code className={CODE}>/join/daniel</code> and the editor render under your brand there with no change on our side.{' '}
+                <span className="text-zinc-200">3. Email domain</span> — optional; emails go out from your domain.{' '}
+                <span className="text-zinc-200">4. Payouts</span> — connect Stripe; until then approved commissions are
+                recorded and paid by hand, nothing is lost by waiting.
               </p>
-              <More label="The money, in order">
-                <p>
-                  A customer orders from a restaurant&apos;s page → the restaurant is paid through Stripe →
-                  the platform fee (at most {feeCapPct}% of the order) is taken → {partnerPct}% of that fee is
-                  credited to your ledger the same day → paid out to your Stripe account on the next payout run,
-                  or recorded for manual payment until you connect one. The restaurant pays nothing to keep the
-                  page; the only money is a share of orders that actually happen.
-                </p>
-                <p>
-                  Your dashboard shows signups, what is accrued, what is held for the refund window, and what has
-                  been paid — live numbers, not a number on a page.
-                </p>
-              </More>
-            </Card>
-
-            <Card title="What you are reselling: DeliveredMenu" tag="live">
+            </Body>
+          </SubBox>
+          <SubBox title="Your code and the money" line={`Live. Same code, same link as before — now a partner code at the top rate: ${partnerPct}% of the platform fee, lifetime.`}>
+            <Body>
               <p>
-                An ordering page for a restaurant, built from its own menu — photos, a PDF, or the menu on
-                their current website — reachable at <code className={CODE}>&lt;name&gt;.delivered.menu</code> and
-                on their own domain if they want one. The owner confirms prices, &ldquo;Add to order&rdquo;
-                goes through Stripe, and a &ldquo;book a table&rdquo; button is the next thing being built (that
-                is the Italy story below). The site builder underneath is QuickSites; the product a restaurant
-                sees is DeliveredMenu, and under your org it is DeliveredMenu with your name on the chrome.
+                <code className={CODE}>daniel</code> · <code className={CODE}>www.quicksites.ai/?ref=daniel</code>. It only
+                went up: an affiliate code became a partner code tied to your account. The platform fee is capped
+                at {feeCapPct}% of an order; you keep {partnerPct}% of that fee on every order a merchant under your
+                code processes, for as long as their account lives.
               </p>
-            </Card>
-          </div>
-        </section>
-
-        {/* ───────────── Example: the UK rep ───────────── */}
-        <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            Example: a sales rep in the UK
-          </h2>
-          <div className="mt-4 space-y-4">
-            <Card title="What the rep does" tag="live">
               <p>
-                The rep gets an unlisted page of their own — <code className={CODE}>/for-&lt;name&gt;</code> — with a
-                live table of the restaurants in their city that have a site but take no orders online, and a
-                &ldquo;sweep where I am&rdquo; button that finds more. From a row they press{' '}
-                <em>Build their ordering page</em>, which makes the DeliveredMenu page from the restaurant&apos;s
-                own published menu, and <em>Text them</em>, which opens a message pointing at the page. They
-                walk in, have lunch, drop a card. The restaurant owner claims the page from the link on it and
-                it goes live.
+                In order: a customer orders from a restaurant&apos;s page → the restaurant is paid through Stripe →
+                the platform fee is taken → {partnerPct}% of it is credited to your ledger the same day → paid out on
+                the next run, or held for you until you connect Stripe. The restaurant pays nothing to keep the page;
+                the only money is a share of orders that actually happen. Your dashboard shows signups, accrued, held
+                and paid — live numbers.
               </p>
-              <More label="What is held to a rule on that page">
-                <p>
-                  Every printed or prefilled sentence is checked against a forbidden list — no ranking promises,
-                  no &ldquo;24/7&rdquo;, no guarantee, no printed price. The rep writes the message; the page
-                  only prefills a starting point. A menu that cannot be read from the restaurant&apos;s own
-                  material is not invented: the page is built with an empty menu and says so.
-                </p>
-              </More>
-            </Card>
-
-            <Card title="How the rep is paid — through you" tag="live, minted by Sandon for now">
+            </Body>
+          </SubBox>
+          <SubBox title="What DeliveredMenu is" line="Live. An ordering page built from a restaurant's own menu, at <name>.delivered.menu or their own domain.">
+            <Body>
               <p>
-                The rep has their own code, created as a child of yours and <em>owned by you</em>. Every
-                restaurant the rep signs up is recorded against the rep&apos;s code, and the {partnerPct}% of the
-                order fee it earns lands on <em>your</em> ledger, not the rep&apos;s. You pay the rep from your
-                share on whatever terms you agree with them; we never pay the rep directly and never set their
-                rate. Your dashboard shows which code brought which restaurant, so the arithmetic is yours to
-                do and easy to check.
+                Built from photos, a PDF, or the menu on their current website. The owner confirms prices,
+                &ldquo;Add to order&rdquo; goes through Stripe, and &ldquo;book a table&rdquo; is the next thing being
+                built (the Italy story below). The builder underneath is QuickSites; what a restaurant sees is
+                DeliveredMenu, and under your org it is DeliveredMenu with your name on the chrome.
               </p>
-              <More label="What is next on this, honestly">
-                <p>
-                  <span className="text-amber-300">Next:</span> an &ldquo;Add a rep&rdquo; control on your
-                  dashboard that mints a rep&apos;s code and page yourself. Today Sandon mints them on request —
-                  send a name, an email and a city. <span className="text-amber-300">Next:</span> the
-                  restaurant pages and claim pages a rep builds carry your brand (today they show no brand, and
-                  only the sign-in, join and editor chrome are yours). Both are being built; neither is needed
-                  for the rep to start.
-                </p>
-              </More>
-            </Card>
-          </div>
-        </section>
+            </Body>
+          </SubBox>
+        </Pitch>
 
-        {/* ───────────── Example: Italy ───────────── */}
-        <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            Example: the restaurant in Italy
-          </h2>
-          <div className="mt-4 space-y-4">
-            <Card title="The shape: table booking as a DeliveredMenu capability, resold under your brand" tag="proposed · nothing built yet">
+        {/* ───────────── 2. The UK rep ───────────── */}
+        <Pitch summary="A rep in the UK walks restaurants, builds their ordering page, and every order they bring lands on your ledger." art="lunch">
+          <SubBox title="What the rep does" line="Live. Their own unlisted page, a live table of restaurants that take no orders online, build and text from a row.">
+            <Body>
               <p>
-                The owner wants a booking page his customers use, a phone screen where he adds a booking in
-                seconds and a cancellation frees the table, and later to sell it to other restaurants. Sandon
-                chose <em>Option B</em>: build booking into DeliveredMenu — so every restaurant site gets
-                &ldquo;book a table&rdquo; next to &ldquo;order&rdquo; and &ldquo;call&rdquo; — and license it
-                to him white-label through an org exactly like yours. Option A (a standalone build he owns,
-                EU-hosted) stays in the proposal as the pricier alternative.
+                The rep gets <code className={CODE}>/for-&lt;name&gt;</code>: the restaurants in their city that have a
+                site but take no orders online, and a &ldquo;sweep where I am&rdquo; button that finds more. From a row
+                they press <em>Build their ordering page</em> (made from the restaurant&apos;s own published menu) and{' '}
+                <em>Text them</em> (a message pointing at it). They walk in, have lunch, drop a card. The owner claims
+                the page from the link on it and it goes live.
               </p>
-              <More label="The steps, and who pays whom">
-                <p>
-                  The proposal is in steps, each with its own price and timeline: booking first, then his floor
-                  plan (drawing the room, placing tables, bookings on a table — a tool we build, which is why it
-                  is its own step), then a food-cost calculator, then the white-label SaaS to resell, with
-                  analytics and staff shifts after that. The build steps are paid through you on Upwork. Once
-                  restaurants are on it they pay a monthly subscription, billed under the reseller&apos;s brand
-                  and shared with us — the larger share to the reseller.
-                </p>
-                <p>
-                  Prices and the exact split live on the proposal page, which is passphrase-protected and
-                  Sandon&apos;s to set; this page deliberately does not repeat them. Two things it does say
-                  plainly: the data is hosted in the United States with a GDPR data-processing agreement to be
-                  put in place before launch, and a &ldquo;lifetime&rdquo; price for hosted software is an
-                  obligation with no end date, so we proposed a subscription or a one-time price plus a small
-                  yearly fee.
-                </p>
-              </More>
-            </Card>
-
-            <Card title="How this differs from your order-fee share" tag="read this one">
               <p>
-                Your {partnerPct}% is a share of the <em>per-order platform fee</em> on DeliveredMenu orders,
-                and it is unchanged. A booking is not an order and carries no fee, so the Italy product earns
-                through a <em>monthly subscription</em> with its own split. They are two separate terms on two
-                separate kinds of money; neither changes the other.
+                Every printed or prefilled sentence is held to a forbidden list — no ranking promises, no 24/7, no
+                guarantee, no printed price. The rep writes the message; the page only prefills a start. A menu that
+                cannot be read from the restaurant&apos;s own material is not invented.
               </p>
-            </Card>
-
-            <Card title="What exists today, so the quote is honest" tag="live">
+            </Body>
+          </SubBox>
+          <SubBox title="How the rep is paid — through you" line="Live, minted by Sandon for now. The rep's code is a child of yours and owned by you; you pay the rep.">
+            <Body>
               <p>
-                QuickSites already has a scheduler with slot math and a database rule that two bookings cannot
-                overlap on one table — used on two sites, with zero bookings ever taken, so it is a schema, not
-                a product. Three hundred restaurant sites carry a menu. There is no floor plan, no food-cost
-                model, no staff scheduler and no Italian-language layer yet; those are the steps, priced as
-                builds. DeckSketch was asked whether its 2D editor could carry the floor plan and answered that
-                we should build our own, which the quote already assumed.
+                Every restaurant the rep signs up is recorded against the rep&apos;s code, and the {partnerPct}% it
+                earns lands on <em>your</em> ledger, not theirs. You pay the rep from your share on whatever terms you
+                agree; we never pay the rep directly and never set their rate. The dashboard shows which code brought
+                which restaurant, so the arithmetic is yours and easy to check.
               </p>
-            </Card>
-          </div>
-        </section>
+              <p>
+                <span className="text-amber-300">Next:</span> an &ldquo;Add a rep&rdquo; control on your dashboard
+                that mints the code and the page yourself (today: send Sandon a name, an email and a city).{' '}
+                <span className="text-amber-300">Next:</span> the restaurant pages and claim pages a rep builds carry
+                your brand (today only the sign-in, join and editor chrome are yours). Neither is needed for a rep to
+                start.
+              </p>
+            </Body>
+          </SubBox>
+        </Pitch>
 
-        {/* ───────────── DeckSketch (unchanged) ───────────── */}
-        <section className="mx-auto max-w-3xl px-6 pb-2 pt-10">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            DeckSketch × QuickSites — the seams already running
-          </h2>
-          <p className="mt-3 text-sm leading-relaxed text-zinc-500">
-            A separate relationship from the reseller one above, unchanged by it: every website we build for a
-            deck builder is a live front door for DeckSketch&apos;s estimating engine, and our outreach engine
-            puts DeckSketch in front of builders who have never heard of it. The clean-split rules below still
-            hold — neither product owns the other&apos;s customer.
-          </p>
-        </section>
+        {/* ───────────── 3. Italy ───────────── */}
+        <Pitch summary="The restaurant in Italy: table booking built into DeliveredMenu, resold under your brand — proposed, nothing built yet." art="business">
+          <SubBox title="The shape, and who pays whom" line="Proposed · nothing built yet. Option B recommended; Option A (he owns it, EU-hosted) stays in as the pricier alternative.">
+            <Body>
+              <p>
+                He wants a booking page his customers use, a phone screen where he adds a booking in seconds and a
+                cancellation frees the table, and later to sell it to other restaurants. Sandon chose <em>Option B</em>:
+                build booking into DeliveredMenu — every restaurant site gets &ldquo;book a table&rdquo; next to
+                &ldquo;order&rdquo; and &ldquo;call&rdquo; — and license it to him white-label through an org exactly
+                like yours.
+              </p>
+              <p>
+                The proposal is in steps, each priced and timed on its own: booking first, then his floor plan
+                (drawing the room, placing tables, bookings on a table — a tool we build, so its own step), then a
+                food-cost calculator, then the white-label SaaS to resell, with analytics and staff shifts after. The
+                build steps are paid through you on Upwork. Once restaurants are on it they pay a monthly subscription,
+                billed under the reseller&apos;s brand and shared with us — the larger share to the reseller. Prices and
+                the exact split live on the proposal page (passphrase-protected, Sandon&apos;s to set); this page does
+                not repeat them. Data is US-hosted with a GDPR data-processing agreement to be put in place before
+                launch; a &ldquo;lifetime&rdquo; price for hosted software is an obligation with no end date, so we
+                proposed a subscription or a one-time price plus a small yearly fee.
+              </p>
+            </Body>
+          </SubBox>
+          <SubBox title="How this differs from your order-fee share" line="Read this one. Two separate terms on two separate kinds of money.">
+            <Body>
+              <p>
+                Your {partnerPct}% is a share of the <em>per-order platform fee</em> on DeliveredMenu orders, unchanged.
+                A booking is not an order and carries no fee, so the Italy product earns through a <em>monthly
+                subscription</em> with its own split. Neither changes the other.
+              </p>
+            </Body>
+          </SubBox>
+          <SubBox title="What exists today, so the quote is honest" line="Live. A scheduler with a no-overlap rule and zero bookings ever; 300 restaurant sites with a menu; no floor plan, food cost, shifts or Italian yet.">
+            <Body>
+              <p>
+                QuickSites already has a scheduler with slot math and a database rule that two bookings cannot overlap
+                on one table — used on two sites, with zero bookings ever taken, so it is a schema, not a product.
+                Three hundred restaurant sites carry a menu. There is no floor plan, no food-cost model, no staff
+                scheduler and no Italian-language layer; those are the steps, priced as builds. DeckSketch was asked
+                whether its 2D editor could carry the floor plan and said build our own, which the quote already
+                assumed.
+              </p>
+            </Body>
+          </SubBox>
+        </Pitch>
+
+        {/* ───────────── 4. DeckSketch ───────────── */}
+        <Pitch summary="DeckSketch × QuickSites: the seams already running, unchanged by any of the above." art="business">
+          <section className="mx-auto max-w-3xl px-6 pb-2 pt-4">
+            <p className="text-sm leading-relaxed text-zinc-500">
+              A separate relationship from the reseller one: every website we build for a deck builder is a live
+              front door for DeckSketch&apos;s estimating engine, and our outreach engine puts DeckSketch in front of
+              builders who have never heard of it. The clean-split rules below still hold — neither product owns the
+              other&apos;s customer.
+            </p>
+          </section>
         {/* The core seam */}
         <section className="mx-auto max-w-3xl px-6 pb-4">
           <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
@@ -498,6 +457,8 @@ export default function ForDanielPage() {
             </Card>
           </div>
         </section>
+
+        </Pitch>
 
         {/* Poke around + CTA */}
         <section className="mx-auto max-w-3xl px-6 pt-10 pb-20">

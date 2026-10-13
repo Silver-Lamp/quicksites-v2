@@ -31,12 +31,20 @@ describe('/for-daniel', () => {
   it('says what is live and what is next, and does not call the unbuilt things live', () => {
     expect(page).toMatch(/Add a rep/);
     expect(page).toMatch(/minted by Sandon for now/);
-    expect(page).toMatch(/proposed · nothing built yet/);
+    expect(page).toMatch(/nothing built yet/i);
     expect(page).toMatch(/zero bookings ever/);
   });
 
+  // The shape /for-sales and /spread-the-word use: four sentences, everything else folded.
+  it('is four folded pitches with boxes inside, sharing the pitch components', () => {
+    expect(page).toMatch(/from '@\/components\/for-rep\/pitch'/);
+    expect(page.match(/<Pitch summary=/g)?.length).toBe(4);
+    expect((page.match(/<SubBox title=/g)?.length ?? 0)).toBeGreaterThanOrEqual(7);
+    expect(page.match(/<\/Pitch>/g)?.length).toBe(4);
+  });
+
   it('separates the order-fee share from the Italy subscription, and repeats no proposal price', () => {
-    expect(page).toMatch(/two separate terms/);
+    expect(page).toMatch(/two separate terms/i);
     expect(page).not.toMatch(/€\s?\d/);
     expect(page).not.toMatch(/70\s?\/\s?30|70%|30%/);
   });

@@ -29,6 +29,16 @@ export function Pitch({ summary, art, children }: { summary: string; art: PitchA
 /** A box inside a pitch: title + one line, opens to the vertical's own section. */
 export function SubPitch({ k, children }: { k: keyof typeof BUSINESS_SUBPITCHES; children: React.ReactNode }) {
   const c = BUSINESS_SUBPITCHES[k];
+  return <SubBox title={c.title} line={c.line}>{children}</SubBox>;
+}
+
+/**
+ * The same folded box with free copy, for pages whose sub-boxes are not the sales verticals
+ * (/for-daniel, 2026-10-13: "simplify it as much as possible with opening for more info, very
+ * similar to spread-the-word and for-sales"). One component, one look.
+ */
+export function SubBox({ title, line, children }: { title: string; line: string; children: React.ReactNode }) {
+  const c = { title, line };
   return (
     <details className="group/sub mx-auto max-w-3xl px-6 pt-3">
       {/* `list-none` as well as the webkit marker rule: a block-display summary still paints the

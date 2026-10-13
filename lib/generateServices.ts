@@ -90,6 +90,11 @@ const SERVICE_NAMES: Partial<Record<IndustryKey, string[]>> = {
   custom_apparel: ['Design Consult', 'Embroidery', 'Screen Printing', 'Bulk Orders', 'Rush Services'],
   author: ['Signed Paperbacks', 'eBooks', 'Audiobooks', 'Poster Prints', 'Apparel & Merch'],
 
+  // Added 2026-10-13 when lib/industries/contactInterests.ts found these three trades falling
+  // through to the generic list below (a windshield site offering "Consulting / Upgrades").
+  windshield_repair: ['Windshield Replacement', 'Rock Chip Repair', 'Side & Rear Glass', 'ADAS Camera Recalibration', 'Mobile Service'],
+  treehouse_builder: ['Treehouse Design', 'Custom Treehouse Build', 'Platforms & Decks', 'Safety Inspection & Repairs', 'Consultation'],
+  real_estate_agency: ['Buying a Home', 'Selling a Home', 'Renting', 'Home Valuation', 'Property Management'],
   other: ['Consulting', 'Installation', 'Support', 'Upgrades', 'Maintenance'],
 };
 

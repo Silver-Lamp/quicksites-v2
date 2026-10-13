@@ -18,6 +18,7 @@ import AudioBlock from '@/components/admin/templates/render-blocks/audio';
 import RenderGallery from '@/components/admin/templates/render-blocks/gallery';
 import RenderReviews from '@/components/admin/templates/render-blocks/reviews';
 import RenderLocation from '@/components/admin/templates/render-blocks/location';
+import RenderPerfectLoopsPlayer from '@/components/admin/templates/render-blocks/perfect-loops-player';
 
 const CASES: Array<[string, React.ComponentType<any>, Record<string, unknown>]> = [
   ['video', VideoBlock, {}],
@@ -27,6 +28,9 @@ const CASES: Array<[string, React.ComponentType<any>, Record<string, unknown>]> 
   ['reviews', RenderReviews, { reviews: [] }],
   // Shipped its "Add your address and phone number…" hint on a public page (2026-10-10).
   ['location', RenderLocation, { show_map: false }],
+  // An iframe to nowhere is the audio bug again; a non-HJ embed URL must also stay silent.
+  ['perfect_loops_player', RenderPerfectLoopsPlayer, { embed_url: '' }],
+  ['perfect_loops_player (foreign host)', RenderPerfectLoopsPlayer, { embed_url: 'https://evil.example/embed' }],
 ];
 
 describe('public: silence', () => {

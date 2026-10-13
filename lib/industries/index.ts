@@ -59,6 +59,7 @@ export type IndustryKey =
   | 'print_on_demand'
   | 'custom_apparel'
   | 'author'
+  | 'musician'
   | 'personal'
   | 'faith'
   | 'auto_dealer'
@@ -126,6 +127,9 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'print_on_demand',      label: 'Print-on-Demand' },
   { key: 'custom_apparel',       label: 'Custom Apparel' },
   { key: 'author',               label: 'Author' },
+  // Perfect Loops artists (crosstalk/contracts/artist-profile.md, 2026-10-13): a page that plays
+  // their music, lists shows and releases, and links where they already are.
+  { key: 'musician',             label: 'Musician / Band' },
   { key: 'personal',             label: 'Personal / About Me' },
   { key: 'faith',                label: 'Church / Faith Community' },
   { key: 'auto_dealer',          label: 'Auto Dealer' },
@@ -192,6 +196,7 @@ export const INDUSTRY_HINTS: Partial<Record<string, string>> = {
   'Junk Removal': 'Same-day hauling, volume pricing, recycling/donation focus.',
   'Retail - Boutique': 'Curated apparel & accessories, limited drops, styling, lookbooks.',
   'Personal / About Me': 'Who you are and what you’re about — a warm, audio-forward personal page that can speak in your own voice.',
+  'Musician / Band': 'Your music where people can play it, upcoming shows, releases, and links to everywhere you already are.',
   'Church / Faith Community': 'Service times, upcoming events, a welcoming word, and a message you can hear — plus an easy way to give and plan a visit.',
   'Auto Dealer': 'Browsable inventory with photos, price & mileage, an audio walkaround for each car, and one-tap “ask about this one”.',
 };
@@ -232,6 +237,8 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   if (x.includes('paint')) return 'painting';
   if (x.includes('church') || x.includes('faith') || x.includes('ministry') || x.includes('ministries') || x.includes('worship') || x.includes('congregation') || x.includes('parish') || x.includes('synagogue') || x.includes('mosque') || x.includes('temple')) return 'faith';
   if (x.includes('about me') || x.includes('about.me') || x.includes('personal brand') || x.includes('personal site')) return 'personal';
+  // Word-bounded: "band" must not match "husband", "dj" must not match "adjust".
+  if (/\b(musician|band|singer|songwriter|rapper|dj|producer)\b/.test(x)) return 'musician';
   if (x.includes('dome') || x.includes('geodesic')) return 'dome_builder';
   if (x.includes('deck') || x.includes('pergola')) return 'deck_builder';
   // Estimator trades (checked before the generic roof/contract fallbacks below)

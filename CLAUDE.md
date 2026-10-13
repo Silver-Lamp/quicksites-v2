@@ -1066,6 +1066,30 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   any "commission sales"/call-sheet/domain-rental text, and a non-lifetime plan. A file-based
   `opengraph-image` needs `metadataBase` on the page: with ~100 custom domains on the project,
   Next otherwise resolves it on one of them (it read `lebanon-towing.com` live, same day).
+- **Musician sites + the HiveJournal artist handoff (2026-10-13)**: HJ's Perfect Loops artists
+  get a QuickSites site from their own HJ dashboard. Contract (the single source of truth):
+  **`crosstalk/contracts/artist-profile.md`** (AGREED; HJ owner-approved, QS accepted the
+  redlines). Pieces: a `musician` industry (`lib/industries`, hint, `\b(musician|band|…)\b`
+  heuristic, themes/backdrop/mood/starter name) whose scaffold is **hero → `perfect_loops_player`
+  → `selected_work` "Releases" → `events` "Shows" → `gallery` → contact**, every list seeded
+  EMPTY (⚠️ `events`' default content carries a placeholder "Weekly gathering" — a show we made
+  up is a false claim about where a real person will be); the new block
+  `perfect_loops_player` (`render-blocks/perfect-loops-player.tsx`: HJ's per-artist iframe,
+  labelled "Player by HiveJournal", a "Listen on Perfect Loops" button on `fan_link_url` with
+  `?via=site` and **never `?ref=`** — the fan link carries the artist's affiliate ref server-side
+  — plus their platform links; **only `hivejournal.com` may be framed**, enforced at render AND
+  at the endpoint, silent in public when empty); and the inbound
+  **`POST /api/partner/hj/artist-site`** (`lib/partners/artistSite.ts`): `X-Partner-Id:
+  hivejournal` + `X-Partner-Signature` = hex HMAC-SHA256 of the raw body with
+  `PARTNER_QUICKSITES_SECRET`, fail-closed 503 without the secret, 30/hr, zod-validated to the
+  contract shape, idempotent on the artist slug (`data.meta.hj_handoff.artist_slug`), builds an
+  operator-owned draft with **`claim_source='operator_draft'`** (what the public pre-claim render
+  and the claim RPC already accept; the claim then publishes via `activateClaimedSite`) and
+  returns `{template_id, preview_url, claim_url, expires_at}` with the claim link **minted
+  here**. ⚠️ HJ POSTs only for a SIGNED artist who claimed their HJ page — never a pitched one.
+  The contract's `shows` block is the existing `events` block titled "Shows" (venue + city →
+  `location`, ticket → `cta_link`); no new block was needed. Tests:
+  `lib/partners/__tests__/artistSite.test.ts`, `lib/builder/__tests__/musicianScaffold.test.ts`.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

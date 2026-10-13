@@ -1581,6 +1581,27 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // HiveJournal Perfect Loops player for one artist (crosstalk/contracts/artist-profile.md).
+  // The embed is per ARTIST, labelled HiveJournal on the page; `fan_link_url` is the one link
+  // every "play my loops" button uses (it carries the artist's affiliate ref server-side, so
+  // QS never appends ?ref=). Both URLs stay lenient `''` so a fresh block validates; the
+  // renderer shows nothing in public until an embed URL is set, and a hint in the editor.
+  perfect_loops_player: {
+    label: 'Perfect Loops player',
+    icon: '🔁',
+    schema: z.object({
+      title: z.string().optional().default('Listen'),
+      artist_name: z.string().optional().default(''),
+      embed_url: z.string().optional().default(''),
+      fan_link_url: z.string().optional().default(''),
+      /** Where the artist already is: Bandcamp, Spotify, Instagram… rendered as a link row. */
+      links: z
+        .array(z.object({ platform: z.string().optional().default(''), url: z.string().optional().default('') }))
+        .optional()
+        .default([]),
+    }),
+  },
+
   // Photo gallery — a responsive image grid with click-to-enlarge lightbox. The block
   // nearly every visual business needs (photographers, restaurants, salons, real estate,
   // contractors' before/after). Emits ImageGallery JSON-LD.

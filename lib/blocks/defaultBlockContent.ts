@@ -389,6 +389,13 @@ export const DEFAULT_BLOCK_CONTENT = {
     layout: 'list',
     items: [],
   },
+  perfect_loops_player: {
+    title: 'Listen',
+    artist_name: '',
+    embed_url: '',
+    fan_link_url: '',
+    links: [],
+  },
   gallery: {
     title: 'Gallery',
     columns: 3,

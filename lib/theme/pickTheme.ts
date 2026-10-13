@@ -27,7 +27,7 @@ const INDUSTRY_CATEGORY: Partial<Record<IndustryKey, ThemeCategory>> = {
   retail_electronics: 'playful', online_reseller: 'playful', etsy_style: 'playful', collectibles: 'playful',
   art_supplies: 'playful', antiques_vintage: 'playful',
   // editorial
-  photography: 'editorial', author: 'editorial',
+  photography: 'editorial', author: 'editorial', musician: 'editorial',
 };
 
 const W_BASE = 1;

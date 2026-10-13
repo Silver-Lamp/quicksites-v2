@@ -9,6 +9,7 @@ import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { generateServices } from '@/lib/generateServices';
+import { contactInterestsFor } from '@/lib/industries/contactInterests';
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
 import { isPersonIndustry } from '@/lib/sites/personSite';
 import { defaultBackdropFor } from '@/lib/theme/backdrops';
@@ -158,7 +159,12 @@ export function buildIndustryStarter(opts: {
   const base: any = createEmptyTemplate(businessName || label);
 
   // Industry services from the catalog (names are enough for the renderer).
-  const serviceNames = generateServices({ industryKey }).map((s) => s.name);
+  // ⚠️ Only for industries whose contact question IS "which service" (lib/industries/
+  // contactInterests.ts). Seeding the catalog's `other` fallback for a band or a person put
+  // "Consulting / Installation / Upgrades" into `data.services`, which the contact form reads
+  // first and offered to the House Band's visitors (2026-10-13).
+  const interests = contactInterestsFor(industryKey);
+  const serviceNames = interests.mode === 'services' ? generateServices({ industryKey }).map((s) => s.name) : [];
 
   // Varied, industry-appropriate hero copy so two sites don't read identically.
   const copy = pickHeroCopy({ industryKey, label, businessName });

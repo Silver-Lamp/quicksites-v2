@@ -6,6 +6,7 @@ import { formatUsPhone, telHref } from '@/lib/phone/formatUs';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import { defaultContactHeading, isPersonTemplate } from '@/lib/sites/personSite';
+import { contactInterestsFor } from '@/lib/industries/contactInterests';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
@@ -71,7 +72,21 @@ export default function ContactFormRender({
     (block as any)?.content?.services ?? (block as any)?.content?.items
   );
 
-  const allServices = dbServices.length ? dbServices : blockServices;
+  // ⚠️ WHICH QUESTION THE DROPDOWN ASKS IS DECIDED PER INDUSTRY (lib/industries/contactInterests.ts).
+  // For an `options` industry (a band) the template-level services are ignored — they were only
+  // ever the catalog's generic fallback — and the block's own list is the owner's override.
+  const interestIndustry = String((t as any)?.data?.meta?.industry ?? (t as any)?.industry ?? '').toLowerCase();
+  const interests = contactInterestsFor(interestIndustry);
+  const allServices =
+    interests.mode === 'options'
+      ? blockServices.length
+        ? blockServices
+        : interests.options
+      : dbServices.length
+        ? dbServices
+        : blockServices;
+  const pickerLabel = interests.mode === 'hide' ? "I'm Interested In:" : interests.label;
+  const pickerPlaceholder = interests.mode === 'hide' ? 'Select a service' : interests.placeholder;
 
   // Case-insensitive subset filter if author chose a subset in block content
   const includesSet = new Set(norm(includedSubset).map((s) => s.toLowerCase()));
@@ -144,7 +159,7 @@ export default function ContactFormRender({
     (t as any)?.data?.meta?.industry ?? (t as any)?.industry ?? '',
   ).toLowerCase();
   const hideServicePicker =
-    industryKey === 'restaurant' || isPersonTemplate((t as any)?.data ?? t);
+    interests.mode === 'hide' || industryKey === 'restaurant' || isPersonTemplate((t as any)?.data ?? t);
 
   // site slug for email subject/logs
   const siteSlug =
@@ -413,9 +428,7 @@ Service: ${formData.service || 'N/A'}
                   required question with no true answer does not just clutter the form, it BLOCKS
                   the only way to contact the business. See `hideServicePicker`. */}
               <div className={(services.length === 0 || hideServicePicker) && !isEditor ? 'hidden' : undefined}>
-                <label className="block font-semibold mb-1">
-                  I&apos;m Interested In:
-                </label>
+                <label className="block font-semibold mb-1">{pickerLabel}</label>
                 {services.length === 0 ? (
                   isEditor ? (
                     <div className="text-red-500 text-sm italic bg-red-900/10 border border-red-500/30 rounded px-3 py-2">
@@ -433,7 +446,7 @@ Service: ${formData.service || 'N/A'}
                     /* ⚠️ NEVER required. A contact form that cannot be submitted is worse than one
                        missing a field, and this one is the only way to reach the business. */
                   >
-                    <option value="">Select a service</option>
+                    <option value="">{pickerPlaceholder}</option>
                     {services.map((s) => (
                       <option key={s} value={s}>
                         {s}

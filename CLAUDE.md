@@ -1090,6 +1090,20 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   The contract's `shows` block is the existing `events` block titled "Shows" (venue + city →
   `location`, ticket → `cta_link`); no new block was needed. Tests:
   `lib/partners/__tests__/artistSite.test.ts`, `lib/builder/__tests__/musicianScaffold.test.ts`.
+  ⚠️ **THE CONTACT FORM'S DROPDOWN IS DECIDED PER INDUSTRY, AND A NEW INDUSTRY MUST DECIDE
+  (2026-10-13).** The House Band page asked a band's visitors *"I'm Interested In: Select a
+  service"* and offered **Consulting / Installation / Support / Upgrades / Maintenance** — the
+  catalog's `other` fallback, which the scaffold wrote into `data.services` for every industry
+  without a `SERVICE_NAMES` entry and the contact form reads first. **Seven industries** were in
+  that state. `lib/industries/contactInterests.ts#contactInterestsFor` is now the one decision:
+  `services` (a trade: its real names), `options` (a non-trade with a real question — a band gets
+  *"What's this about?" → Book us for a show / Press / Collaboration / License a track*), or
+  `hide` (a person, a restaurant, a directory, a lemonade stand). The scaffold seeds
+  template-level services only in `services` mode; the renderer takes label, placeholder and
+  options from it (the block's own list is the owner's override). `contactInterests.test.ts`
+  walks every `INDUSTRIES` key and fails on any that would fall through to the generic list —
+  so adding an industry forces the decision. Three trades gained real names the same day
+  (`windshield_repair`, `treehouse_builder`, `real_estate_agency`).
   ⚠️ **THE FIRST REAL SIGNED POST 500'D, AND FOUR CHECKS HAD SAID GREEN (2026-10-13 19:19 UTC).**
   The URL allow-list helpers were defined in the block renderer — a `'use client'` file — and
   the server route imported them from there. Next gives a server module **client references**

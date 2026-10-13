@@ -257,9 +257,12 @@ export default function FooterRender({
   // from a résumé they rendered as "Business: Silver Zhao · Phone: — · Map unavailable".
   // Columns of em-dashes announcing everything we don't know about someone. A personal site
   // keeps the links and the contact it actually has, and drops the storefront furniture.
+  // `musician` is a person too (2026-10-13): the first artist draft rendered "Company Info /
+  // Find Us" under a band — the same em-dash furniture, one industry over.
+  const PERSON_INDUSTRIES = new Set(['personal', 'musician']);
   const isPersonal =
-    (typeof db.industry === 'string' && db.industry === 'personal') ||
-    (typeof meta.industry === 'string' && meta.industry === 'personal') ||
+    (typeof db.industry === 'string' && PERSON_INDUSTRIES.has(db.industry)) ||
+    (typeof meta.industry === 'string' && PERSON_INDUSTRIES.has(meta.industry)) ||
     (typeof meta.site_type === 'string' && meta.site_type === 'personal');
 
   // A site WE built from a public listing, which the business has not claimed. `claimed` and

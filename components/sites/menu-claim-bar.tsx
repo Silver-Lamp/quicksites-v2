@@ -20,8 +20,12 @@ export default function MenuClaimBar({
   token: string;
   /** The business's name, so the bar reads "Is this {name}?" instead of the generic prompt. */
   businessName?: string | null;
-  /** Where the draft came from: a public listing (the default) or the person's own post. */
-  builtFrom?: 'listing' | 'post';
+  /**
+   * Where the draft came from: a public listing (the default), the person's own post, or a
+   * HiveJournal Perfect Loops handoff (`hj` — the artist asked for this site from their own HJ
+   * dashboard, so "we built it from your public listing" would be false).
+   */
+  builtFrom?: 'listing' | 'post' | 'hj';
   /** Order-intents logged on this draft — escalates the pitch to "N people tried to order". */
   demandCount?: number;
   /**
@@ -93,15 +97,23 @@ export default function MenuClaimBar({
             ) : (
               <>
                 <span className="font-semibold text-amber-300">
-                  {name ? `Is this ${name}?` : isFood ? 'Is this your restaurant?' : 'Is this your business?'}
+                  {builtFrom === 'hj'
+                    ? 'Your Perfect Loops website is ready.'
+                    : name
+                      ? `Is this ${name}?`
+                      : isFood
+                        ? 'Is this your restaurant?'
+                        : 'Is this your business?'}
                 </span>{' '}
                 <span className="text-neutral-300">
                   {/* ⚠️ "take online orders" is a FOOD promise. On an auto shop it offers something
                       the page cannot do and the owner does not want — the same wrongness as the
                       "Is this your restaurant?" heading above it. */}
-                  {builtFrom === 'post'
-                    ? 'We built it from your own post and photos so people could find what you have. Claim it to edit'
-                    : 'We built it from your public listing so customers could find you. Claim it to edit'}
+                  {builtFrom === 'hj'
+                    ? 'We built it from your artist profile when you asked for it on HiveJournal. Claim it to edit'
+                    : builtFrom === 'post'
+                      ? 'We built it from your own post and photos so people could find what you have. Claim it to edit'
+                      : 'We built it from your public listing so customers could find you. Claim it to edit'}
                   {isFood ? ', take online orders' : ''}, and go live —
                 </span>{' '}
                 {/* ⚠️ ANSWERS "AND THEN WHAT DOES IT COST?", which is the first thing an owner

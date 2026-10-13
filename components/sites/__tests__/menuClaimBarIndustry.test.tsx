@@ -17,6 +17,16 @@ it('a page built from the owner\'s POST starts compact: a small claim pill, no s
   expect(screen.queryByText(/We built it from/)).toBeNull();
   expect(screen.queryByRole('button', { name: /minimize/i })).toBeNull();
 });
+// The first live artist draft (2026-10-13) said "We built it from your public listing" to a band
+// that had asked for the site from its own HiveJournal dashboard.
+it('a HiveJournal handoff says the artist asked for it, never "from your public listing"', () => {
+  render(<MenuClaimBar templateId="t" token="x" isFood={false} builtFrom="hj" />);
+  expect(screen.getByText(/Your Perfect Loops website is ready/)).toBeTruthy();
+  expect(screen.getByText(/when you asked for it on HiveJournal/)).toBeTruthy();
+  expect(screen.queryByText(/from your public listing/)).toBeNull();
+  expect(screen.queryByText(/Is this your business/)).toBeNull();
+});
+
 it('a listing-import page keeps the full bar by default', () => {
   render(<MenuClaimBar templateId="t" token="x" isFood builtFrom="listing" />);
   expect(screen.getByText(/We built it from your public listing/)).toBeTruthy();

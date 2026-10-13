@@ -768,7 +768,9 @@ export default async function SitePreviewPage({
           businessName={claimBusinessName}
           demandCount={demandCount}
           isFood={isFoodSite}
-          builtFrom={(normalized as any)?.data?.meta?.built_from_post ? 'post' : 'listing'}
+          builtFrom={
+            (normalized as any)?.data?.meta?.hj_handoff ? 'hj' : (normalized as any)?.data?.meta?.built_from_post ? 'post' : 'listing'
+          }
         />
       )}
       {/* Operator jump-to-editor. `admin` only ever fires on the canonical host (auth

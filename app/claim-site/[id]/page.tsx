@@ -112,6 +112,7 @@ export default async function ClaimSitePage({
       urlLabel={siteUrl.replace(/^https?:\/\//, '')}
       competition={!!competition}
       isFood={isMenuSite}
+      builtFrom={(tpl as any)?.data?.meta?.hj_handoff ? 'hj' : (tpl as any)?.data?.meta?.built_from_post ? 'post' : 'listing'}
       brandName={brand.orgId ? brand.name : null}
       brandLogoUrl={brand.logoUrl}
       contactEmail={contactEmail}

@@ -63,10 +63,15 @@ describe('assembleArtistTemplate — only what the profile says', () => {
   const blocks: any[] = tpl.data.pages[0].blocks;
   const types = blocks.map((b) => b.type);
 
-  it('is the musician scaffold with the player filled and an About block after it', () => {
+  it('is the musician scaffold with the player filled and ONE About block after it, with no stacked title', () => {
     expect(types[0]).toBe('hero');
     expect(types[1]).toBe('perfect_loops_player');
     expect(types[2]).toBe('story');
+    // `blocks` and `content_blocks` are one array; the first live draft carried About twice.
+    expect(types.filter((t) => t === 'story')).toHaveLength(1);
+    expect(tpl.data.pages[0].content_blocks.filter((b: any) => b.type === 'story')).toHaveLength(1);
+    expect(blocks[2].content.title).toBe('');
+    expect(blocks[2].content.sections[0].heading).toBe(`About ${PROFILE.name}`);
     const player = blocks[1].content;
     expect(player.embed_url).toBe(PROFILE.player_embed_url);
     expect(player.fan_link_url).toBe(PROFILE.fan_link_url);

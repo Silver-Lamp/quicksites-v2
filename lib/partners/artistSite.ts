@@ -69,6 +69,11 @@ export function signPartnerBody(rawBody: string, secret: string): string {
 export function assembleArtistTemplate(p: ArtistProfile) {
   const tpl: any = buildIndustryStarter({ businessName: p.name, industryKey: 'musician' });
   const firstLine = p.bio.split(/(?<=[.!?])\s+/)[0]?.trim() ?? '';
+  // ⚠️ `blocks` and `content_blocks` are the SAME array on a scaffolded page (industryScaffold
+  // builds `{ content_blocks: blocks, blocks }`). Walking both keys and inserting into each put
+  // the About block in twice, and the first live House Band draft rendered it twice. Insert
+  // once per distinct array; walk both keys only for in-place edits, which are idempotent.
+  const inserted = new Set<unknown[]>();
   for (const pg of tpl.data?.pages ?? []) {
     for (const key of ['blocks', 'content_blocks'] as const) {
       if (!Array.isArray(pg[key])) continue;
@@ -88,9 +93,12 @@ export function assembleArtistTemplate(p: ArtistProfile) {
         }
       }
       // Their bio, in their words, as an About block after the player. Only when there is one.
-      if (p.bio) {
+      // No block title: the section heading "About <name>" is the only heading, so the page does
+      // not read "About / About The Band" stacked.
+      if (p.bio && !inserted.has(pg[key])) {
+        inserted.add(pg[key]);
         const about: any = createDefaultBlock('story');
-        about.content = { ...(about.content ?? {}), title: 'About', sections: [{ heading: `About ${p.name}`, body: p.bio, image_url: '', cta_text: '', cta_link: '' }] };
+        about.content = { ...(about.content ?? {}), title: '', sections: [{ heading: `About ${p.name}`, body: p.bio, image_url: '', cta_text: '', cta_link: '' }] };
         const playerIdx = pg[key].findIndex((b: any) => b?.type === 'perfect_loops_player');
         pg[key].splice(playerIdx >= 0 ? playerIdx + 1 : 1, 0, about);
       }

@@ -22,9 +22,12 @@ export default function ClaimSiteHero({
   demandCount = 0,
   competition = false,
   isFood = true,
+  builtFrom = 'listing',
 }: {
   /** Restaurants get the menu / ordering / take-rate pitch; every other trade gets the listing / quote pitch. */
   isFood?: boolean;
+  /** `hj`: a Perfect Loops artist asked for this site from their HJ dashboard — not a listing we found. */
+  builtFrom?: 'listing' | 'post' | 'hj';
   name: string;
   /** What the iframe and "Open full preview" show — the site's real public address, never an editor surface. */
   previewHref: string;
@@ -89,10 +92,17 @@ export default function ClaimSiteHero({
               : ' Free hosting; we only earn a small fee when you sell. Here it is:'}
           </>
         ) : (
+          builtFrom === 'hj' ? (
+            <>
+              Your Perfect Loops website — built from your artist profile when you asked for it on HiveJournal.
+              Free to keep on its own address; your own .com is the one thing we charge for. Here it is:
+            </>
+          ) : (
           <>
             We built it from your public listing — name, phone, address and hours. Free to keep on its own
             address; your own .com is the one thing we charge for. Here it is:
           </>
+          )
         )}
       </p>
 

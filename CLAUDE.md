@@ -341,7 +341,17 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   claimed on `missed_call_notified_at`, outcome in `missed_call_notify_result`, `20260876`).
   The email says *"texted them"* only on a confirmed send. Madrona Electric was re-pointed the
   same day: the owner dialled it from an ordinary phone and got voicemail, so the §11e test was
-  passed before writing it off. ⚠️ Still open and
+  passed before writing it off. ⚠️ **A SWEEP IS NOT A LEAD (2026-10-12, fixed 10-13).** Two
+  numbers rang NINE of our tracking lines in 17 seconds — every `vashon-<trade>.com` in turn —
+  and because each ring-out was decided alone, **five real island businesses were texted "ring
+  them back on <the robocaller>"**: at that point the only missed-call texts the feature had ever
+  sent, found by the per-call analysis the next morning. `missedCallDecision` now takes
+  `otherNumbersRungByCaller` (distinct other `to_number`s from the same caller in the last
+  `SWEEP_WINDOW_MINUTES`, counted by the status route) and returns `sweep` at
+  `SWEEP_OTHER_NUMBERS_MIN` (2); the skip is recorded on the row so the alert and
+  `/admin/call-logs` say "not texted — a sweep". An unreadable count is zero: a DB hiccup fails
+  toward texting, never toward silence. The 8 s settle plus ring time means the sweep is already
+  visible by the time any one call is decided. ⚠️ Still open and
   **not** a code question: the page asserts a company that does not exist. The two honest shapes
   are a **directory** (our own dome-cohort rule: *"a directory is not a business"*) or a site that
   names its real renter — and the mismatch exists **only in the unpaid state**, since all 11

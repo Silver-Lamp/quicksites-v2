@@ -132,6 +132,11 @@ export function missedCallSuffix(row: CallRow): string {
   const r = row.missed_call_notify_result ?? null;
   if (r?.business_sms === true) return ' · texted them the caller’s number';
   if (r?.skipped === 'opted_out') return ' · not texted (they opted out)';
+  // The caller rang several of our lines within minutes: a dialer, not a lead (2026-10-12).
+  if (r?.skipped === 'sweep') {
+    const n = typeof r.other_numbers_rung === 'number' ? r.other_numbers_rung : null;
+    return ` · not texted — this caller rang ${n != null ? `${n} other` : 'several'} of our lines within minutes (a sweep, not a lead)`;
+  }
   return ' · tried to text them the caller’s number — not confirmed';
 }
 

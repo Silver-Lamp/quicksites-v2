@@ -22,7 +22,7 @@ import { after } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyTwilioWebhook, xmlResponse, rejectedTwiml, HANGUP_TWIML } from '@/lib/twilio/verifyWebhook';
 import { parentEndWrite } from '@/lib/ppl/parentCallEnd';
-import { missedCallDecision, MISSED_CALL_SETTLE_MS, type MissedCallRow } from '@/lib/ppl/missedCallNotice';
+import { missedCallDecision, MISSED_CALL_SETTLE_MS, SWEEP_WINDOW_MINUTES, type MissedCallRow } from '@/lib/ppl/missedCallNotice';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { isOptedOut } from '@/lib/ppl/forwardNotice';
 import { missedCallSmsText } from '@/lib/ppl/voicemail';
@@ -75,12 +75,46 @@ async function notifyMissedCall(callSid: string, campaignId: string, parentStatu
     // Re-read AFTER the settle: the row may have gained a recording since the request began.
     const { data } = await admin
       .from('call_logs')
-      .select('from_number, custom_domain, handling, call_status, call_duration, forwarded_to, recording_url, voicemail_notified_at, missed_call_notified_at')
+      .select('from_number, to_number, created_at, custom_domain, handling, call_status, call_duration, forwarded_to, recording_url, voicemail_notified_at, missed_call_notified_at')
       .eq('call_sid', callSid)
       .maybeSingle();
-    const row = (data ?? null) as (MissedCallRow & { from_number: string | null; custom_domain: string | null }) | null;
-    const decision = missedCallDecision(row, { status: parentStatus });
-    if (!decision.send) return;
+    const row = (data ?? null) as
+      | (MissedCallRow & { from_number: string | null; to_number: string | null; created_at: string | null; custom_domain: string | null })
+      | null;
+
+    // How many OTHER of our lines this caller rang in the window — the sweep signal
+    // (lib/ppl/missedCallNotice.ts). Counted before deciding; unreadable counts as zero, so a
+    // database hiccup fails toward texting the business, never toward silence.
+    let otherNumbersRungByCaller = 0;
+    if (row?.from_number && row.to_number) {
+      const since = new Date(Date.now() - SWEEP_WINDOW_MINUTES * 60_000).toISOString();
+      const { data: others } = await admin
+        .from('call_logs')
+        .select('to_number')
+        .eq('from_number', row.from_number)
+        .neq('to_number', row.to_number)
+        .gte('created_at', since)
+        .limit(50);
+      otherNumbersRungByCaller = new Set(((others ?? []) as { to_number: string | null }[]).map((o) => o.to_number).filter(Boolean)).size;
+    }
+
+    const decision = missedCallDecision(row, { status: parentStatus }, { otherNumbersRungByCaller });
+    if (!decision.send) {
+      // A sweep is recorded on the row so the alert email and /admin/call-logs can say the
+      // business was deliberately not texted, and why. Other skips leave no mark, as before.
+      if (decision.reason === 'sweep') {
+        await admin
+          .from('call_logs')
+          .update({
+            missed_call_notified_at: new Date().toISOString(),
+            missed_call_notify_result: { business_sms: false, skipped: 'sweep', other_numbers_rung: otherNumbersRungByCaller },
+          })
+          .eq('call_sid', callSid)
+          .is('missed_call_notified_at', null)
+          .then(() => undefined, () => undefined);
+      }
+      return;
+    }
 
     // Claim before sending — a concurrent retry loses the race rather than texting twice.
     const { data: claimed } = await admin

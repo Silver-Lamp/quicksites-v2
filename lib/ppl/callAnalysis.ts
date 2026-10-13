@@ -25,7 +25,7 @@
 import { classifyDial } from '@/lib/ppl/forwardHealth';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
-import { posthogHogql, posthogQueryUnavailableReason, hogqlString } from '@/lib/analytics/posthogQuery';
+import { posthogHogqlResult, posthogQueryUnavailableReason, hogqlString } from '@/lib/analytics/posthogQuery';
 import { industryLabelFor } from '@/lib/ppl/voicemailVerdict';
 
 export type AnalysisRead = 'customer' | 'vendor_or_sales' | 'robocall' | 'wrong_number' | 'own_business' | 'operator_test' | 'unknown';
@@ -290,9 +290,12 @@ export async function gatherCallFacts(db: Db, row: CallLogForAnalysis): Promise<
       `properties.$geoip_country_code, properties.$device_type, properties.$referrer, properties.$el_text from events ` +
       `where properties.$current_url like ${hogqlString(`%${host}%`)} and timestamp >= toDateTime(${hogqlString(from)}) ` +
       `and timestamp <= toDateTime(${hogqlString(to)}) and event in ('$pageview', '$pageleave', '$autocapture') order by timestamp limit 60`;
-    const res = await posthogHogql(q);
-    if (!res) visit.unavailable = 'PostHog query failed';
-    else visit = { ...visit, events: visitEventsFromRows(res.results, callAt) };
+    // 25 s, not the helper's 12: PostHog's query endpoint was slow enough from Vercel to miss
+    // the default on the first production call, and a timeout reads as "no visit data" to the
+    // model. The cron has a 70 s budget for the whole pass; one call rarely needs two queries.
+    const res = await posthogHogqlResult(q, { timeoutMs: 25_000 });
+    if (!res.ok) visit.unavailable = res.reason;
+    else visit = { ...visit, events: visitEventsFromRows(res.result.results, callAt) };
   }
 
   const vmResult = row.voicemail_notify_result ?? null;

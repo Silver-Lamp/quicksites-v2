@@ -9,7 +9,7 @@
 // voicemail webhook.
 import fs from 'node:fs';
 import path from 'node:path';
-import { missedCallDecision, MISSED_CALL_SETTLE_MS, type MissedCallRow } from '@/lib/ppl/missedCallNotice';
+import { missedCallDecision, MISSED_CALL_SETTLE_MS, SWEEP_OTHER_NUMBERS_MIN, SWEEP_WINDOW_MINUTES, type MissedCallRow } from '@/lib/ppl/missedCallNotice';
 import { missedCallSuffix, handlingLabel, type CallRow } from '@/lib/ppl/callAlert';
 import { stripComments } from '@/test/stripComments';
 
@@ -61,6 +61,19 @@ describe('missedCallDecision', () => {
     expect(missedCallDecision(null, { status: 'completed' })).toEqual({ send: false, reason: 'no_row' });
   });
 
+  // 2026-10-12: two numbers rang nine of our lines in 17 s and five Vashon businesses were
+  // texted a robocaller's number. The count of OTHER lines the caller rang is the signal.
+  it('does not text the business when the caller is sweeping our numbers', () => {
+    expect(missedCallDecision(row(), { status: 'completed' }, { otherNumbersRungByCaller: SWEEP_OTHER_NUMBERS_MIN })).toEqual({ send: false, reason: 'sweep' });
+    expect(missedCallDecision(row(), { status: 'completed' }, { otherNumbersRungByCaller: 7 })).toEqual({ send: false, reason: 'sweep' });
+    // One other number is a person with two sites to call, not a dialer.
+    expect(missedCallDecision(row(), { status: 'completed' }, { otherNumbersRungByCaller: 1 })).toEqual({ send: true, to: '+14259029422' });
+    // Unknown count fails toward texting, never toward silence.
+    expect(missedCallDecision(row(), { status: 'completed' }, {})).toEqual({ send: true, to: '+14259029422' });
+    expect(SWEEP_OTHER_NUMBERS_MIN).toBe(2);
+    expect(SWEEP_WINDOW_MINUTES).toBeGreaterThanOrEqual(5);
+  });
+
   it('settles long enough for the voicemail claim to land, and not so long the lead goes cold', () => {
     expect(MISSED_CALL_SETTLE_MS).toBeGreaterThanOrEqual(5_000);
     expect(MISSED_CALL_SETTLE_MS).toBeLessThanOrEqual(20_000);
@@ -90,6 +103,15 @@ describe('the status route wires it correctly', () => {
   it('records the outcome, not just the attempt', () => {
     expect(src).toMatch(/missed_call_notify_result: result/);
     expect(src).toMatch(/business_sms: true/);
+  });
+
+  it('counts the other lines the caller rang in the window and passes it to the decision; a sweep is recorded on the row', () => {
+    expect(src).toMatch(/\.neq\('to_number', row\.to_number\)/);
+    expect(src).toMatch(/SWEEP_WINDOW_MINUTES \* 60_000/);
+    expect(src).toMatch(/missedCallDecision\(row, \{ status: parentStatus \}, \{ otherNumbersRungByCaller \}\)/);
+    expect(src).toMatch(/skipped: 'sweep', other_numbers_rung: otherNumbersRungByCaller/);
+    // The count query runs BEFORE the decision, not after a claim.
+    expect(src.indexOf("neq('to_number'")).toBeLessThan(src.indexOf('missedCallDecision(row'));
   });
 
   it('still never upserts — a status callback must not mint a row the entry route refused', () => {

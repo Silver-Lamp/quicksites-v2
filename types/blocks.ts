@@ -87,6 +87,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   route_optimizer: 'interactive', // PorchHearth nearest-neighbor stop ordering ($0, straight-line)
   events: 'content', // upcoming + recurring schedule (service times, classes, gatherings)
   gallery: 'content', // responsive photo grid + lightbox (every visual business)
+  perfect_loops_player: 'content', // HiveJournal Perfect Loops embed for one artist (labelled HJ)
   before_after: 'interactive', // draggable before/after reveal (transformation trades)
 
   /* ───────── ElectInfo (candidate) blocks ───────── */

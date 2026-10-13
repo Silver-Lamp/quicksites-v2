@@ -112,6 +112,9 @@ export const industryPresets: Record<string, SiteTheme> = {
   // --- Author / writer (literary, book-forward) ---
   author: { fontFamily: 'serif', accentColor: 'indigo-600', borderRadius: 'sm', glow: [], darkMode: 'dark' },
 
+  // --- Musician / band (player-forward, dark stage) ---
+  musician: { fontFamily: 'sans', accentColor: 'indigo-600', borderRadius: 'md', glow: [], darkMode: 'dark' },
+
   // --- Fallback ---
   personal: warm('rose-500'), // a warm, human "about me" page
   faith: warm('violet-600', 'serif'), // warm + reverent — church/faith community

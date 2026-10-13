@@ -94,6 +94,7 @@ export const INDUSTRY_FONT_MOOD: Partial<Record<IndustryKey, FontMood>> = {
   author: 'editorial',
   photography: 'editorial',
   personal: 'editorial',
+  musician: 'editorial',
 
   // ── modern
   fitness: 'modern',

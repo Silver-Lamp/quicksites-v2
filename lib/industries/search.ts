@@ -36,6 +36,7 @@ export type IndustryMatch = {
  * and the person concludes we do not support their trade.
  */
 export const INDUSTRY_ALIASES: Partial<Record<IndustryKey, string[]>> = {
+  musician: ['band', 'singer', 'songwriter', 'artist', 'dj', 'music'],
   hvac: ['ac', 'air conditioning', 'heating', 'furnace', 'cooling', 'heat pump'],
   plumbing: ['plumber', 'drain', 'pipes', 'water heater', 'leak'],
   electrical: ['electrician', 'wiring', 'panel', 'lighting install'],

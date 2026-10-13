@@ -91,6 +91,8 @@ const INDUSTRY_DEFAULTS: Record<string, BackdropStyle> = {
   author: 'paper',
   photography: 'paper',
   art: 'paper',
+  // A stage, not a page: soft light behind the player.
+  musician: 'aurora',
   // Technical + trades — a faint grid suggests drawings and precision.
   deck_builder: 'grid',
   construction: 'grid',

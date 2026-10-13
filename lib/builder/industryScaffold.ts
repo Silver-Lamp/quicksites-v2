@@ -454,6 +454,45 @@ export function buildIndustryStarter(opts: {
     };
 
     blocks = [hero, bio, voiceAbout, askMe, cloneNudge, contact];
+  } else if (industryKey === 'musician') {
+    // Musician / band (crosstalk/contracts/artist-profile.md, 2026-10-13): the music where
+    // people can play it, then releases, shows, photos, contact. No services, FAQ or
+    // testimonials — an artist page that "responds within the hour" is the invented-promise
+    // class under a real name. ⚠️ EVERY LIST IS SEEDED EMPTY, including `events`, whose default
+    // content carries a placeholder "Weekly gathering": a show we made up is a false claim about
+    // where a real person will be. The player renders nothing publicly until HJ's embed URL is
+    // set (the HJ handoff fills it; a self-serve musician pastes it).
+    const who = businessName || label;
+    setIfPresent(hero.content, 'headline', who);
+    setIfPresent(hero.content, 'subheadline', 'Music, shows, and where to listen.');
+    setIfPresent(hero.content, 'cta_text', 'Listen');
+    setIfPresent(hero.content, 'cta_link', '#listen');
+
+    const player: any = createDefaultBlock('perfect_loops_player');
+    const releases: any = createDefaultBlock('selected_work');
+    releases.content = { ...(releases.content ?? {}), title: 'Releases', layout: 'grid', items: [] };
+    const shows: any = createDefaultBlock('events');
+    shows.content = { ...(shows.content ?? {}), title: 'Shows', events: [] };
+    const photos: any = createDefaultBlock('gallery');
+    photos.content = { ...(photos.content ?? {}), title: 'Photos', images: [] };
+
+    const musicNav = [
+      { label: 'Listen', href: '#listen', appearance: 'default' },
+      { label: 'Releases', href: '#selected_work', appearance: 'default' },
+      { label: 'Shows', href: '#events', appearance: 'default' },
+      { label: 'Photos', href: '#gallery', appearance: 'default' },
+      { label: 'Contact', href: '#contact', appearance: 'default' },
+    ];
+    const headerBlk: any = (base as any)?.data?.headerBlock ?? (base as any)?.headerBlock;
+    if (headerBlk?.content && Array.isArray(headerBlk.content.nav_items)) {
+      headerBlk.content.nav_items = musicNav.map((l) => ({ ...l }));
+    }
+    const footerBlk: any = (base as any)?.data?.footerBlock ?? (base as any)?.footerBlock;
+    if (footerBlk?.content && Array.isArray(footerBlk.content.links)) {
+      footerBlk.content.links = musicNav.map((l) => ({ ...l }));
+    }
+
+    blocks = [hero, player, releases, shows, photos, contact];
   } else if (industryKey === 'faith') {
     // Church / faith community: what a visitor needs, in order — service times, a
     // welcoming word, a message they can HEAR (owner-voice via About That), an easy way
@@ -822,7 +861,10 @@ export function buildIndustryStarter(opts: {
     !FOOD_INDUSTRIES.has(industryKey) &&
     !isLemonadeStand &&
     industryKey !== 'personal' &&
-    industryKey !== 'faith'
+    industryKey !== 'faith' &&
+    // "We're a local musician / band team dedicated to quality work" under a real artist's
+    // name — and only on the themes the rng happened to pick (caught as a flaky test).
+    industryKey !== 'musician'
   ) {
     const bn = businessName || label;
     const aboutCol: any = createDefaultBlock('text');

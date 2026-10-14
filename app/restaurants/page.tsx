@@ -63,8 +63,8 @@ export default function RestaurantsPage() {
               glow stays on top of it so the vertical keeps its warm identity. Decorative, alt empty. */}
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={HEROES.pass} alt="" className="h-full w-full object-cover object-center opacity-45" fetchPriority="high" />
-            <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/70 via-zinc-950/75 to-zinc-950" />
+            <img src={HEROES.pass} alt="" className="h-full w-full object-cover object-center opacity-65" fetchPriority="high" />
+            <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/60 via-zinc-950/60 to-zinc-950" />
             <div className="absolute -top-20 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-amber-500/15 blur-3xl" />
           </div>
           <div className="mx-auto max-w-5xl">
@@ -146,8 +146,8 @@ export default function RestaurantsPage() {
           {/* The dining room after close: your menu, your customers, no middleman. */}
           <div aria-hidden className="pointer-events-none absolute inset-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={HEROES.room} alt="" className="h-full w-full object-cover object-center opacity-35" loading="lazy" />
-            <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/70 to-zinc-950/90" />
+            <img src={HEROES.room} alt="" className="h-full w-full object-cover object-center opacity-60" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/65 via-zinc-950/55 to-zinc-950/85" />
           </div>
           <div className="relative mx-auto max-w-4xl px-6 py-20 text-center">
             <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">

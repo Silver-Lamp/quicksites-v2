@@ -47,8 +47,26 @@ describe('/for-daniel', () => {
   it('says what is live and what is next, and does not call the unbuilt things live', () => {
     expect(page).toMatch(/Add a rep/);
     expect(page).toMatch(/minted by Sandon for now/);
-    expect(page).toMatch(/nothing built yet/i);
-    expect(page).toMatch(/zero bookings ever/);
+    // 2026-10-14: the Italy Step 1 demo is built (QS #1198/#1199/#1206 + HJ's floor plan), so the
+    // card says "live (demo)" and names what is NOT in it; the old "nothing built yet" would now be
+    // the stale claim.
+    expect(page).toMatch(/live \(demo\)/i);
+    expect(page).not.toMatch(/nothing built yet|zero bookings ever/i);
+    expect(page).toMatch(/trattoria-del-borgo-demo/);
+    expect(page).toMatch(/Not yet: SMS, euro billing, his own brand/);
+  });
+
+  // Owner via HJ, 2026-10-14: the five-minute demo walkthrough lives here. Scrubbed: no
+  // passphrase, no euro amount, no third party; the reseed line names the script so the evening
+  // is never empty on a pitch.
+  it('carries the demo walkthrough: seven beats, the Italian lines, the don\'t-promise list, no passphrase', () => {
+    expect(page).toMatch(/Showing the restaurant demo: five minutes/);
+    expect(page).toMatch(/Dati di esempio/);
+    expect(page).toMatch(/seed-italy-demo --apply --bookings/);
+    expect(page).toMatch(/Photos with people are refused on purpose/);
+    expect(page).toMatch(/raise the price of guanciale/); // never a euro figure
+    expect(page).not.toMatch(/passphrase[^.]{0,40}\b(is|:)\s*[A-Za-z0-9]{4,}/i);
+    expect((page.match(/<strong>[^<]+<\/strong> \(\d:\d\d\)/g) ?? []).length).toBe(7);
   });
 
   // Owner, 2026-10-13: every tool reachable from his page; auth-only tools send a signed-out

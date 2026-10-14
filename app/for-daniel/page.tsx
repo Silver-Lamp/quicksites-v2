@@ -8,8 +8,9 @@
 //   2. Example: a UK sales rep — the rep page, the build/text flow, and that the rep's code is
 //      OWNED BY DANIEL so its orders land on his ledger and he pays the rep.
 //   3. Example: the Italy restaurant — Option B (booking as a DeliveredMenu capability, resold
-//      white-label), the steps, who pays whom, and that the subscription split is a SEPARATE term
-//      from his order-fee share.
+//      white-label), the steps, who pays whom, that the subscription split is a SEPARATE term
+//      from his order-fee share, what the Step 1 DEMO built (live 2026-10-14), and the five-minute
+//      walkthrough for showing it (HJ wrote it for Daniel; Sandon asked for it here).
 //   4. DeckSketch — the seams already running, unchanged (a separate relationship).
 //
 // Honesty rules: every card is tagged live / next / proposed; the two numbers about his money
@@ -241,8 +242,8 @@ export default function ForDanielPage() {
         </Pitch>
 
         {/* ───────────── 3. Italy ───────────── */}
-        <Pitch summary="The restaurant in Italy: table booking built into DeliveredMenu, resold under your brand — proposed, nothing built yet." art="business">
-          <SubBox title="The shape, and who pays whom" line="Proposed · nothing built yet. Option B recommended; Option A (he owns it, EU-hosted) stays in as the pricier alternative.">
+        <Pitch summary="The restaurant in Italy: table booking built into DeliveredMenu, resold under your brand — the Step 1 demo is live (demo); production is next, on the prospect's yes." art="business">
+          <SubBox title="The shape, and who pays whom" line="Live (demo) · production next. Option B — booking as a DeliveredMenu capability, licensed to you white-label; Option A (he owns it, EU-hosted) stays in as the pricier alternative.">
             <Body>
               <p>
                 He wants a booking page his customers use, a phone screen where he adds a booking in seconds and a
@@ -252,10 +253,9 @@ export default function ForDanielPage() {
                 like yours.
               </p>
               <p>
-                The proposal is in steps, each priced and timed on its own: booking first, then his floor plan
-                (drawing the room, placing tables, bookings on a table — a tool we build, so its own step), then a
-                food-cost calculator, then the white-label SaaS to resell, with analytics and staff shifts after. The
-                build steps are paid through you on Upwork. Once restaurants are on it they pay a monthly subscription,
+                The proposal is in steps, each priced and timed on its own: booking first, then his floor plan,
+                then a food-cost calculator, then the white-label SaaS to resell, with analytics and staff shifts after.
+                The build steps are paid through you on Upwork. Once restaurants are on it they pay a monthly subscription,
                 billed under the reseller&apos;s brand and shared with us — the larger share to the reseller. Prices and
                 the exact split live on the proposal page (passphrase-protected, Sandon&apos;s to set); this page does
                 not repeat them. Data is US-hosted with a GDPR data-processing agreement to be put in place before
@@ -273,16 +273,88 @@ export default function ForDanielPage() {
               </p>
             </Body>
           </SubBox>
-          <SubBox title="What exists today, so the quote is honest" line="Live. A scheduler with a no-overlap rule and zero bookings ever; 300 restaurant sites with a menu; no floor plan, food cost, shifts or Italian yet.">
+          <SubBox title="What is built, so the pitch is honest" line="Live (demo), 14 Oct. Guest booking in Italian, the owner's phone page, the floor plan, photo-to-floor-plan and food cost — all on one fictional trattoria. Not yet: SMS, euro billing, his own brand.">
             <Body>
               <p>
-                QuickSites already has a scheduler with slot math and a database rule that two bookings cannot overlap
-                on one table — used on two sites, with zero bookings ever taken, so it is a schema, not a product.
-                Three hundred restaurant sites carry a menu. There is no floor plan, no food-cost model, no staff
-                scheduler and no Italian-language layer; those are the steps, priced as builds. DeckSketch was asked
-                whether its 2D editor could carry the floor plan and said build our own, which the quote already
-                assumed.
+                On <code className={CODE}>quicksites.ai/sites/trattoria-del-borgo-demo</code> a guest picks a day, a party
+                size and a time (only open times are offered, in Italian), and gets a table; two bookings cannot overlap on
+                one table — the database refuses the second, not the app. The owner&apos;s phone page lists tonight and
+                tomorrow, adds a phone booking, marks a party seated, and a cancellation frees the table that second. The
+                floor plan (where each table sits in the room), a photo-of-the-empty-room step that proposes tables for the
+                owner to confirm, and the food-cost calculator run on the partner&apos;s side and read the same bookings
+                live, so a web booking lands on the plan without anyone retyping it.
               </p>
+              <p>
+                Deliberately not in the demo, and not to promise yet: SMS confirmations (email works today), euro billing,
+                his own brand, domain and emails (after a yes), the floor plan synced across devices (it saves per device
+                for now), the GDPR data agreement (before launch), and analytics, supplier charts and staff shifts (a later
+                step). Everything runs on a fictional restaurant, so nothing clicked in a demo touches a real guest.
+              </p>
+            </Body>
+          </SubBox>
+          <SubBox title="Showing the restaurant demo: five minutes" line="Live (demo). Three tabs, seven beats, the Italian lines to say, and what not to promise. Ask Sandon for the passphrase and to refresh the sample bookings the day before.">
+            <Body>
+              <p className="font-medium text-zinc-300">Before the call</p>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>
+                  Tab 1, the proposal: <code className={CODE}>hivejournal.com/for-italy</code> (passphrase from Sandon).
+                </li>
+                <li>
+                  Tab 2, the guest booking site: <code className={CODE}>quicksites.ai/sites/trattoria-del-borgo-demo</code>
+                </li>
+                <li>
+                  Tab 3, the owner&apos;s floor plan and food cost: <code className={CODE}>hivejournal.com/for-italy/demo</code>{' '}
+                  (same passphrase), in Italiano, on &ldquo;Ristorante demo collegato&rdquo;.
+                </li>
+                <li>
+                  Ask Sandon to refresh the sample bookings the day before (one command on our side:{' '}
+                  <code className={CODE}>seed-italy-demo --apply --bookings</code>), so the evening isn&apos;t empty.
+                </li>
+                <li>For the photo step, have a photo of an <em>empty</em> dining room ready. Photos with people are refused on purpose.</li>
+              </ul>
+              <p className="font-medium text-zinc-300">The walkthrough</p>
+              <ol className="list-decimal space-y-2 pl-5">
+                <li>
+                  <strong>Start from his problem</strong> (0:30). Say: <em>«Un cliente chiama: un tavolo per quattro stasera. E tu stai
+                  cucinando.»</em> — a guest calls for a table for four tonight, and you&apos;re cooking.
+                </li>
+                <li>
+                  <strong>Book as a guest</strong> (1:00). Tab 2: tomorrow, 4 people, 20:00. All in Italian, only open times offered.
+                  Say: <em>«Questo è quello che vede il tuo cliente. Niente telefonate.»</em>
+                </li>
+                <li>
+                  <strong>Watch it land on the floor plan</strong> (1:00). Tab 3, Pianta della sala → Domani → 20:00: the table is
+                  now orange; tap it for the details. Say: <em>«La prenotazione è già sulla tua sala. Sul telefono.»</em>
+                </li>
+                <li>
+                  <strong>Take a phone booking</strong> (0:45). Tap a free table, name, Prenota. Try the same table again: &ldquo;already
+                  booked&rdquo;; six people on a two-seat table: &ldquo;too small&rdquo;. &ldquo;Trova un tavolo&rdquo; picks the
+                  smallest free table. Optional: Segna al tavolo (seated) / Annulla prenotazione.
+                </li>
+                <li>
+                  <strong>Draw the room from a photo</strong> (1:00). Switch to &ldquo;Dati di esempio&rdquo; first — in connected
+                  mode a confirmed photo creates real tables on the shared demo restaurant. Disegna la sala → Dalla foto → the
+                  empty-room photo (about 15 s); it proposes tables, flags what it is unsure of, asks for seats it cannot see;
+                  Usa questa pianta, then drag into place. Say: <em>«Una foto della sala vuota, e la pianta è quasi fatta.
+                  Controlli tu.»</em>
+                </li>
+                <li>
+                  <strong>Food cost</strong> (0:45). Food cost → Spaghetti alla carbonara: cost per portion and food-cost
+                  percentage. Ingredienti → raise the price of guanciale → back to Piatti: the cost jumps and the badge changes;
+                  show the suggested price. Say: <em>«Il fornitore aumenta il guanciale: vedi subito quanto ti costa ogni
+                  piatto.»</em>
+                </li>
+                <li>
+                  <strong>Close on the two options</strong> (0:30). Tab 1, &ldquo;Due modi di lavorare insieme&rdquo;. Ask for:
+                  opening hours, tables and seats, logo, a product name.
+                </li>
+              </ol>
+              <p className="font-medium text-zinc-300">If something looks off</p>
+              <ul className="list-disc space-y-1 pl-5">
+                <li>&ldquo;Non prende prenotazioni&rdquo; = outside opening hours (use 19:00–22:00). &ldquo;Chiuso&rdquo; on a Monday = closed Mondays.</li>
+                <li>An empty plan = refresh the sample bookings, or use &ldquo;Dati di esempio&rdquo;.</li>
+                <li>A photo refused = people visible, or not a room. &ldquo;Ripristina la demo&rdquo; resets the sample data.</li>
+              </ul>
             </Body>
           </SubBox>
         </Pitch>

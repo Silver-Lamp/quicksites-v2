@@ -115,6 +115,11 @@ describe('routes', () => {
     expect(src).toMatch(/checkBookingPartner\(req, `\$\{req\.nextUrl\.pathname\}\$\{req\.nextUrl\.search\}`\)/);
     const partnerShape = src.slice(src.indexOf('partner\n        ? {'), src.indexOf(': b,'));
     expect(partnerShape).not.toMatch(/guest_phone|guest_email|notes/);
+    // The day's windows ride along (HJ asked, 2026-10-14) so the plan offers our slots, not a guess;
+    // a closed date must answer [] rather than the weekday's windows.
+    expect(src).toMatch(/const closed = site\.settings\.closedDates\.includes\(date\)/);
+    expect(src).toMatch(/closed \? \[\] : site\.settings\.windows\[weekdayOf\(date, site\.settings\.tz\)\]/);
+    expect(src).toMatch(/slot_minutes: site\.settings\.slotMinutes/);
   });
   it('the write routes are owner-gated, a partner signs the RAW body, and a bad signature never falls through to the session gate', () => {
     for (const p of ['app/api/booking/[templateId]/phone/route.ts', 'app/api/booking/[templateId]/cancel/route.ts']) {

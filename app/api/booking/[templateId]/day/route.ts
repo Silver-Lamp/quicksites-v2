@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 import { checkBookingPartner } from '@/lib/booking/partnerAuth';
 import { listBookingsForDay, loadBookingSite, loadTables } from '@/lib/booking/db';
+import { weekdayOf } from '@/lib/booking/slots';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,11 +31,20 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ templateId:
   const site = await loadBookingSite(templateId);
   if (!site) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   const [tables, bookings] = await Promise.all([loadTables(templateId), listBookingsForDay(templateId, date, site.settings.tz)]);
+  // The day's opening windows (restaurant-local "HH:MM", same spelling as the hours block), so a
+  // partner offers exactly our slots instead of guessing and being told 400. A closed date or a
+  // weekday with no window → [].
+  const closed = site.settings.closedDates.includes(date);
+  const windows = closed ? [] : site.settings.windows[weekdayOf(date, site.settings.tz)] ?? [];
   return NextResponse.json({
     ok: true,
     date,
     tz: site.settings.tz,
+    closed,
+    windows,
+    slot_minutes: site.settings.slotMinutes,
     seating_minutes: site.settings.seatingMinutes,
+    max_party: site.settings.maxParty,
     tables: tables.map((t) => ({ id: t.id, label: t.label, seats: t.seats })),
     bookings: bookings.map((b) =>
       partner

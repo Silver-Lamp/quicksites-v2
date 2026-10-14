@@ -28,6 +28,11 @@ import { PARTNER_FEE_SHARE, MAX_PLATFORM_FEE_PERCENT, AFFILIATE_MAX_FEE_SHARE, Q
 // The folded cards /for-sales and /spread-the-word use: one sentence per pitch, boxes inside,
 // native <details>, zero JS (owner, 2026-10-13: "simplify it as much as possible").
 import { Pitch, SubBox } from '@/components/for-rep/pitch';
+import ToolsCard from './tools';
+
+// The tools card reads the session cookie (signed in → the tool; signed out → sign in, then the
+// tool) and lists his reps from the database, so the page is rendered per request.
+export const dynamic = 'force-dynamic';
 
 const partnerPct = Math.round(PARTNER_FEE_SHARE * 100);
 const feeCapPct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
@@ -126,6 +131,9 @@ export default function ForDanielPage() {
             or <span className="text-sky-300">proposed</span>.
           </p>
         </section>
+
+        {/* His tools, first — signed in they open; signed out they ask him to sign in and come back. */}
+        <ToolsCard />
 
         {/* ───────────── 1. How it works now ───────────── */}
         <Pitch summary={`ScaleUp Software resells DeliveredMenu under your brand. Your code daniel keeps ${partnerPct}% of every order fee, for life.`} art="business">

@@ -167,6 +167,14 @@ const NAV_ADMIN: NavItem[] = [
     icon: <Users size={18} />,
     adminOnly: true,
   },
+  /* Hourly reps' logged time (lib/rep/hours.ts): review, pay outside, mark paid. */
+  {
+    type: 'item',
+    label: 'Rep hours',
+    href: '/admin/rep-hours',
+    icon: <DollarSign size={18} />,
+    adminOnly: true,
+  },
   {
     type: 'item',
     label: 'Domain Costs',

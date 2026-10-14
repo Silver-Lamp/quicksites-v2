@@ -14,6 +14,7 @@
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
 import { filterItems, nearestAvailableFrom } from '@/lib/menu/cityMenuIndex';
+import { isSearching, visibleItems, MENU_FINDER_PREVIEW_CAP } from '@/lib/menu/menuFinderView';
 
 type Item = {
   id: string;
@@ -203,6 +204,19 @@ export default function MenuFinderBlock({
   }, [results]);
 
   const byRestaurant = claimedGroups;
+
+  // Five dishes per kitchen while browsing, a tap for the rest; every match while searching
+  // (lib/menu/menuFinderView.ts). Expansion is per restaurant and only matters while browsing.
+  const searching = isSearching({ query: q, tags: picked, openOnly });
+  const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
+  const toggleExpanded = React.useCallback((name: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }, []);
 
   /**
    * Real restaurants in this city that we do NOT host, fetched only on a genuine zero result.
@@ -469,7 +483,9 @@ export default function MenuFinderBlock({
           </div>
         ) : (
           <>
-          {byRestaurant.map(([name, r]) => (
+          {byRestaurant.map(([name, r]) => {
+            const view = visibleItems(r.items, { searching, expanded: expanded.has(name) });
+            return (
             <div key={name}>
               <div className="flex items-baseline gap-2">
                 <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-base font-semibold text-foreground hover:underline">
@@ -479,9 +495,12 @@ export default function MenuFinderBlock({
                 {r.openNow === true && <span className="text-xs font-medium text-emerald-600">open now</span>}
                 {r.openNow === false && <span className="text-xs text-muted-foreground">closed</span>}
                 {r.openNow === null && <span className="text-xs text-muted-foreground">hours unknown</span>}
+                {!searching && r.items.length > MENU_FINDER_PREVIEW_CAP && (
+                  <span className="ml-auto text-xs text-muted-foreground">{r.items.length} dishes</span>
+                )}
               </div>
               <ul className="mt-2 divide-y divide-border">
-                {r.items.map((i) => (
+                {view.shown.map((i) => (
                   <li key={i.id} className="flex items-start justify-between gap-4 py-2">
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-foreground">{i.name}</div>
@@ -497,8 +516,27 @@ export default function MenuFinderBlock({
                   </li>
                 ))}
               </ul>
+              {view.hidden > 0 && (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(name)}
+                  className="mt-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-foreground transition hover:border-amber-500/50"
+                >
+                  Show {view.hidden} more
+                </button>
+              )}
+              {!searching && view.hidden === 0 && expanded.has(name) && r.items.length > MENU_FINDER_PREVIEW_CAP && (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(name)}
+                  className="mt-2 text-xs text-muted-foreground underline underline-offset-4"
+                >
+                  Show fewer
+                </button>
+              )}
             </div>
-          ))}
+            );
+          })}
 
           {/*
             ⚠️ UNCLAIMED KITCHENS — a real menu, transcribed from the restaurant's own public
@@ -528,7 +566,9 @@ export default function MenuFinderBlock({
                 kitchens above confirmed theirs. Call these to check what&rsquo;s on today.
               </p>
               <div className="mt-4 space-y-5">
-                {unclaimedGroups.map(([name, r]) => (
+                {unclaimedGroups.map(([name, r]) => {
+                  const view = visibleItems(r.items, { searching, expanded: expanded.has(name) });
+                  return (
                   <div key={name}>
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                       <a
@@ -555,21 +595,35 @@ export default function MenuFinderBlock({
                       {r.openNow === null && <span className="text-xs text-muted-foreground">hours unknown</span>}
                     </div>
                     <ul className="mt-1.5 text-sm text-muted-foreground">
-                      {r.items.slice(0, 4).map((i) => (
+                      {view.shown.map((i) => (
                         <li key={i.id} className="py-0.5">
                           {i.name}
                           {/* ⚠️ No price at all here, not even a dimmed one. On a page nobody has
                               claimed, a number beside a dish reads as a quote from the restaurant. */}
                         </li>
                       ))}
-                      {r.items.length > 4 && (
-                        <li className="py-0.5 text-xs text-muted-foreground">
-                          +{r.items.length - 4} more on their menu
-                        </li>
-                      )}
                     </ul>
+                    {view.hidden > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(name)}
+                        className="mt-1.5 text-xs font-medium text-foreground underline underline-offset-4"
+                      >
+                        +{view.hidden} more on their menu
+                      </button>
+                    )}
+                    {!searching && view.hidden === 0 && expanded.has(name) && r.items.length > MENU_FINDER_PREVIEW_CAP && (
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(name)}
+                        className="mt-1.5 text-xs text-muted-foreground underline underline-offset-4"
+                      >
+                        Show fewer
+                      </button>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

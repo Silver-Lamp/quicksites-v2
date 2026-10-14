@@ -523,17 +523,6 @@ export default function ForDanielPage() {
               </span>
             </li>
           </ul>
-
-          <div className="mt-10 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-6 text-center">
-            <p className="text-lg font-semibold text-white">Where I want your take</p>
-            <p className="mt-1 text-sm text-zinc-400">
-              The two big DeckSketch-side calls are (1) whether to lean into the non-deck trades as
-              a real product surface, not just an API, and (2) the installed-vs-materials pricing
-              default. Both change how aggressively QuickSites can push builders at DeckSketch.
-              Let&apos;s pick a time and go through it.
-            </p>
-            <p className="mt-3 text-sm font-medium text-amber-300">— Sandon</p>
-          </div>
         </section>
       </div>
     </>

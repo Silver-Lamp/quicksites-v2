@@ -68,5 +68,7 @@ describe('/for-daniel', () => {
   it('names no third party and carries none of the stale story', () => {
     expect(page).not.toMatch(/Ugo|Testa/);
     expect(page).not.toMatch(/unclaimed|before you even had an account|Paterson/);
+    // Owner, 2026-10-13: the closing "Where I want your take" ask is gone.
+    expect(page).not.toMatch(/Where I want your take/);
   });
 });

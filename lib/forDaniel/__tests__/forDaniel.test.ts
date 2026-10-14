@@ -51,6 +51,22 @@ describe('/for-daniel', () => {
     expect(page).toMatch(/zero bookings ever/);
   });
 
+  // Owner, 2026-10-13: every tool reachable from his page; auth-only tools send a signed-out
+  // visitor to sign in and back, never straight to a page that would redirect anyway.
+  it('mounts the tools card, which gates auth-only tools on the session and lists his reps', () => {
+    expect(page).toMatch(/<ToolsCard \/>/);
+    expect(page).toMatch(/export const dynamic = 'force-dynamic'/);
+    const tools = stripComments(fs.readFileSync(path.join(process.cwd(), 'app/for-daniel/tools.tsx'), 'utf8'));
+    expect(tools).toMatch(/t\.auth && !signedIn \? signInHref\(t\.href\) : t\.href/);
+    expect(tools).toMatch(/href: '\/partners\/dashboard', auth: true/);
+    expect(tools).toMatch(/href: '\/referrals\/dashboard', auth: true/);
+    expect(tools).toMatch(/href: '\/tools\/route-planner', auth: false/);
+    expect(tools).toMatch(/listReps\(ownerId, \[PARTNER_CODE\]\)/);
+    expect(tools).toMatch(/is_anonymous/); // a guest session is not "signed in"
+    // The dashboard's reps card carries the anchor the "Add a rep" tool points at.
+    expect(stripComments(fs.readFileSync(path.join(process.cwd(), 'app/partners/dashboard/reps.tsx'), 'utf8'))).toMatch(/id="reps"/);
+  });
+
   // The shape /for-sales and /spread-the-word use: four sentences, everything else folded.
   it('is four folded pitches with boxes inside, sharing the pitch components', () => {
     expect(page).toMatch(/from '@\/components\/for-rep\/pitch'/);

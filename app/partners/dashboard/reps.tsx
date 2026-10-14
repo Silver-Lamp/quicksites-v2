@@ -68,7 +68,7 @@ export default function RepsCard() {
   }
 
   return (
-    <div className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+    <div id="reps" className="mt-8 scroll-mt-24 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
       <div className="text-sm font-medium">Your reps</div>
       <p className="mb-3 mt-1 text-xs text-zinc-400">
         Add a rep and hand them their page. Everything a rep brings in is recorded against their code and paid to

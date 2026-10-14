@@ -224,8 +224,8 @@ export default async function DeliveredDirectoryPage() {
             the (garbled) shop signs small and dark on the right. Decorative: alt is empty. */}
         <div aria-hidden className="pointer-events-none absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={HEROES.street} alt="" className="h-full w-full object-cover object-center opacity-60" fetchPriority="high" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/35" />
+          <img src={HEROES.street} alt="" className="h-full w-full object-cover object-center opacity-80" fetchPriority="high" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-background/15" />
           <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
         </div>
         <div className="relative mx-auto max-w-6xl px-6 py-16 sm:py-24">
@@ -260,7 +260,7 @@ export default async function DeliveredDirectoryPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
           <div className="absolute bottom-4 left-5 right-5 sm:bottom-5 sm:left-6">
             <div className="text-xs font-semibold uppercase tracking-widest text-amber-400">Kitchens taking orders</div>
-            <div className="mt-1 text-lg font-semibold text-foreground sm:text-xl">Every cuisine, ordered straight from the kitchen that cooks it.</div>
+            <div className="mt-1 text-lg font-semibold text-foreground sm:text-xl">Ordered straight from the kitchen that cooks it.</div>
           </div>
         </div>
       </section>

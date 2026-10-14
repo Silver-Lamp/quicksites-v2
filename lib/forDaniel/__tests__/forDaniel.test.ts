@@ -57,12 +57,15 @@ describe('/for-daniel', () => {
     expect(page).toMatch(/<ToolsCard \/>/);
     expect(page).toMatch(/export const dynamic = 'force-dynamic'/);
     const tools = stripComments(fs.readFileSync(path.join(process.cwd(), 'app/for-daniel/tools.tsx'), 'utf8'));
-    expect(tools).toMatch(/t\.auth && !signedIn \? signInHref\(t\.href\) : t\.href/);
     expect(tools).toMatch(/href: '\/partners\/dashboard', auth: true/);
     expect(tools).toMatch(/href: '\/referrals\/dashboard', auth: true/);
     expect(tools).toMatch(/href: '\/tools\/route-planner', auth: false/);
-    expect(tools).toMatch(/listReps\(ownerId, \[PARTNER_CODE\]\)/);
-    expect(tools).toMatch(/is_anonymous/); // a guest session is not "signed in"
+    expect(tools).toMatch(/<ToolsCard tools=\{TOOLS\} code=\{PARTNER_CODE\} reps \/>/);
+    // The gating lives once, in the shared card.
+    const card = stripComments(fs.readFileSync(path.join(process.cwd(), 'components/for-rep/tools-card.tsx'), 'utf8'));
+    expect(card).toMatch(/t\.auth && !signedIn \? signInHref\(t\.href\) : t\.href/);
+    expect(card).toMatch(/listReps\(ownerId, \[code\]\)/);
+    expect(card).toMatch(/is_anonymous/); // a guest session is not "signed in"
     // The dashboard's reps card carries the anchor the "Add a rep" tool points at.
     expect(stripComments(fs.readFileSync(path.join(process.cwd(), 'app/partners/dashboard/reps.tsx'), 'utf8'))).toMatch(/id="reps"/);
   });

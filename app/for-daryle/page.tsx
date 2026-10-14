@@ -9,6 +9,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
+import { Pitch } from '@/components/for-rep/pitch';
+import ToolsCard from './tools';
+
 import NetworkScenarios from '@/components/commissions/network-scenarios';
 import RoleLadderTool from '@/components/admin/role-ladder-tool';
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE, QS_FEE_SHARE, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
@@ -17,6 +20,8 @@ const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
 const keepPct = Math.round(PARTNER_FEE_SHARE * 100);
 const qsPct = Math.round(QS_FEE_SHARE * 100);
 const residualLabel = RESIDUAL_MONTHS > 0 ? `for ${RESIDUAL_MONTHS} months` : 'for life';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'QuickSites — for Daryle',
@@ -101,11 +106,12 @@ export default function ForDarylePage() {
           </p>
         </section>
 
+        {/* Their tools: signed in they open; signed out they ask to sign in and come back. */}
+        <ToolsCard />
+
         {/* Why a processor cares */}
+        <Pitch summary="Why a payment company would want this: new online volume from merchants they already have, on their own rails." art="business">
         <section className="mx-auto max-w-3xl px-6 pb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            Why a payment company would want this
-          </h2>
           <div className="mt-4 space-y-4">
             <Card
               title="New processing volume from merchants they already have"
@@ -206,12 +212,11 @@ export default function ForDarylePage() {
             </Card>
           </div>
         </section>
+        </Pitch>
 
         {/* What it pays at network scale — the question from the 2026-09-30 call */}
+        <Pitch summary="What it pays at your scale: depth costs money, width does not." art="business">
         <section className="mx-auto max-w-3xl px-6 pt-10 pb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            What it pays, at your scale
-          </h2>
           <p className="mt-3 text-sm leading-relaxed text-zinc-400">
             You asked how much your people can make. Move the sliders — these run the same
             allocator the payment path runs, so nothing here is a rate the system would refuse
@@ -230,12 +235,11 @@ export default function ForDarylePage() {
             been paid to anyone: the mechanism is built and live, the ledger is empty.
           </p>
         </section>
+        </Pitch>
 
         {/* The chain itself — who is in it, what each is called, what they earn */}
+        <Pitch summary="Every rung of the chain, and what each takes home." art="business">
         <section className="mx-auto max-w-3xl px-6 pt-6 pb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            Every rung, and what it takes home
-          </h2>
           <p className="mt-3 text-sm leading-relaxed text-zinc-400">
             The same numbers, laid out as the chain rather than as a total — what each level is
             called, what they are responsible for, and what reaches them. Names in the example
@@ -245,12 +249,11 @@ export default function ForDarylePage() {
             <RoleLadderTool maxFeePercent={MAX_PLATFORM_FEE_PERCENT} audience="partner" />
           </div>
         </section>
+        </Pitch>
 
         {/* The Stripe question */}
+        <Pitch summary="“But we’re not going to run it on Stripe” — correct: the money path is an adapter; Stripe is the reference, not the dependency." art="business">
         <section className="mx-auto max-w-3xl px-6 pt-10 pb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            &ldquo;But we&apos;re not going to run it on Stripe&rdquo; — correct
-          </h2>
           <div className="mt-4">
             <Card
               title="Their rails, not ours"
@@ -290,12 +293,11 @@ export default function ForDarylePage() {
             </Card>
           </div>
         </section>
+        </Pitch>
 
         {/* Where Daryle fits */}
+        <Pitch summary="Where you come in: introduce a processor, earn on their whole book for as long as those merchants sell." art="lunch">
         <section className="mx-auto max-w-3xl px-6 pt-10 pb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            Where you come in
-          </h2>
           <div className="mt-4">
             <Card
               title="You make the introductions"
@@ -332,38 +334,10 @@ export default function ForDarylePage() {
             </Card>
           </div>
         </section>
+        </Pitch>
 
         {/* Links + CTA */}
         <section className="mx-auto max-w-3xl px-6 pt-10 pb-20">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            Poke around
-          </h2>
-          <ul className="mt-4 space-y-2 text-sm">
-            <li>
-              <Link href="/" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
-                The homepage
-              </Link>{' '}
-              <span className="text-zinc-500">— build a site as a guest, no account, see the product in 2 minutes</span>
-            </li>
-            <li>
-              <Link href="/partners" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
-                /partners
-              </Link>{' '}
-              <span className="text-zinc-500">— the white-label program a processor would join</span>
-            </li>
-            <li>
-              <Link href="/partners/calculator" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
-                /partners/calculator
-              </Link>{' '}
-              <span className="text-zinc-500">— drag the sliders, see the earnings curves at book scale</span>
-            </li>
-            <li>
-              <Link href="/compare" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
-                /compare
-              </Link>{' '}
-              <span className="text-zinc-500">— honest feature chart vs Duda / GoHighLevel</span>
-            </li>
-          </ul>
 
           <div className="mt-10 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] p-6 text-center">
             <p className="text-lg font-semibold text-white">Got someone in mind?</p>

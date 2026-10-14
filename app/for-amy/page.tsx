@@ -39,6 +39,9 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
+import { Pitch } from '@/components/for-rep/pitch';
+import ToolsCard from './tools';
+
 import { pageRequiresPin, pagePinCookie, verifyPagePinGrant } from '@/lib/auth/pagePin';
 import ScenarioLab from '@/components/commissions/scenario-lab';
 import RoleLadderTool from '@/components/admin/role-ladder-tool';
@@ -361,11 +364,12 @@ export default async function ForAmyPage({
           </p>
         </section>
 
+        {/* Their tools: signed in they open; signed out they ask to sign in and come back. */}
+        <ToolsCard />
+
         {/* The answer */}
+        <Pitch summary={`Yes, you get an override: ${recruitPct}% of net on every payment from anyone you recruited — settled in August, now in writing.`} art="business">
         <section className="mx-auto max-w-3xl px-6 pb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            The rate
-          </h2>
           <div className="mt-4 space-y-3">
             <Card
               title={`${recruitPct}% of net, on every payment, for anyone you recruited`}
@@ -434,12 +438,11 @@ export default async function ForAmyPage({
             </Card>
           </div>
         </section>
+        </Pitch>
 
         {/* The second rail: commerce platform fees */}
+        <Pitch summary="The other rail — online orders, not just rentals: the mechanism is built and the rate is still zero, on purpose." art="lunch">
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            The other rail — online orders, not just rentals
-          </h2>
           <p className="mt-2 text-sm text-zinc-500">
             Two different things earn money here, and your override works on both.
           </p>
@@ -528,12 +531,11 @@ export default async function ForAmyPage({
             </Card>
           </div>
         </section>
+        </Pitch>
 
         {/* Run the numbers */}
+        <Pitch summary="Run the numbers: what a rental and an order actually pay you, with the constants the software uses." art="business">
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            Run the numbers
-          </h2>
           <p className="mt-2 text-sm text-zinc-500">
             ⚠️ Your commerce rate isn&rsquo;t set, so these are the <em>shapes</em>, not an offer. I
             want you to see the arithmetic before we pick a number, so the number we pick makes
@@ -662,12 +664,11 @@ export default async function ForAmyPage({
             </Card>
           </div>
         </section>
+        </Pitch>
 
         {/* Move the sliders yourself */}
+        <Pitch summary="Move the sliders yourself: one level between you and the sale, and the whole chain." art="business">
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            Move it yourself
-          </h2>
           <p className="mt-2 text-sm text-zinc-500">
             The tables above are fixed examples. These sliders are the same arithmetic, live — so
             you can go find the rate you think is fair and see what it does to my side before we
@@ -715,12 +716,11 @@ export default async function ForAmyPage({
             </div>
           </div>
         </section>
+        </Pitch>
 
         {/* The caveat she didn't ask about */}
+        <Pitch summary="The part you didn’t ask about: it runs while you manage the account, and two levels down pays you nothing yet." art="business">
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            The part you didn&rsquo;t ask about, which you should know now
-          </h2>
           <p className="mt-2 text-sm text-zinc-500">
             Better you hear this from me today than work it out for yourself in six months.
           </p>
@@ -827,12 +827,11 @@ export default async function ForAmyPage({
             </Card>
           </div>
         </section>
+        </Pitch>
 
         {/* Straight talk */}
+        <Pitch summary="Straight talk — what’s real and what isn’t yet: nothing has paid anyone anything, on either rail." art="business">
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">
-            Straight talk — what&rsquo;s real and what isn&rsquo;t yet
-          </h2>
           <p className="mt-2 text-sm text-zinc-500">
             You&rsquo;d be building on this, so you get the whole picture rather than the brochure.
           </p>
@@ -887,6 +886,7 @@ export default async function ForAmyPage({
             </Card>
           </div>
         </section>
+        </Pitch>
 
         <section className="mx-auto max-w-3xl px-6 pb-20 pt-6">
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">

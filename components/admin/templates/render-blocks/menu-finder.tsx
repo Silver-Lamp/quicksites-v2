@@ -282,25 +282,37 @@ export default function MenuFinderBlock({
 
   return (
     <section className="mx-auto w-full max-w-5xl px-6 py-10">
-      <h2 className="text-2xl font-bold">{title}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {feed
-          ? `${total} dishes across ${feed.restaurants.length} kitchens${feed.city ? ` in ${feed.city}` : ''}.`
-          : 'Search every dish on the menus we have.'}
-      </p>
+      {/* The search is the page's product, so it gets its own panel (owner, 2026-10-14: "make it
+          stand out a lot more as its own div to draw the eye"). Amber accent as alpha tints over
+          the semantic tokens — reads on a light or a dark site, nothing hard-coded. */}
+      <div className="relative overflow-hidden rounded-3xl border-2 border-amber-500/50 bg-card p-6 shadow-2xl shadow-amber-500/15 ring-1 ring-amber-500/20 sm:p-8">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_120%_at_50%_0%,rgba(245,158,11,0.18),transparent_70%)]" />
+        <div className="relative">
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-500">Search the menus</div>
+          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-card-foreground sm:text-4xl">{title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {feed
+              ? `${total} dishes across ${feed.restaurants.length} kitchens${feed.city ? ` in ${feed.city}` : ''}.`
+              : 'Search every dish on the menus we have.'}
+          </p>
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Tacos, noodles, something vegan…"
-          className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-base text-foreground placeholder:text-muted-foreground outline-none focus:border-amber-400/60"
-        />
-        <label className="flex shrink-0 items-center gap-2 text-sm text-foreground">
-          <input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} className="h-4 w-4" />
-          Open now
-        </label>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full">
+              <span aria-hidden className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl">🔍</span>
+              <input
+                type="search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Tacos, noodles, something vegan…"
+                className="w-full rounded-2xl border-2 border-amber-500/40 bg-background py-4 pl-12 pr-4 text-lg text-foreground shadow-inner placeholder:text-muted-foreground outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-500/25"
+              />
+            </div>
+            <label className="flex shrink-0 items-center gap-2 rounded-full border border-border bg-muted px-4 py-3 text-sm font-medium text-foreground">
+              <input type="checkbox" checked={openOnly} onChange={(e) => setOpenOnly(e.target.checked)} className="h-4 w-4 accent-amber-500" />
+              Open now
+            </label>
+          </div>
+        </div>
       </div>
 
       {picked.length > 0 && (

@@ -47,6 +47,8 @@ export type BuildFromSiteInput = {
   /** Google's name for the business — used only when the site yields none. */
   fallbackName?: string | null;
   fallbackPhone?: string | null;
+  /** The reseller org this draft belongs to (a partner's rep built it); stamped at insert. */
+  orgId?: string | null;
 };
 
 export type BuildFromSiteResult = {
@@ -137,6 +139,7 @@ export async function buildDraftFromSite(input: BuildFromSiteInput): Promise<Bui
       business_name: tpl.business_name,
       owner_id: input.operatorId,
       claim_source: 'listing_import',
+      ...(input.orgId ? { org_id: input.orgId } : {}),
     };
     const { data, error } = await supabaseAdmin.from('templates').insert(row).select('id, slug').single();
     if (!error && data) {

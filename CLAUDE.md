@@ -1053,6 +1053,24 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   **private DM**, never a public reply (a bearer credential), and we never post cold into a group.
   Tests: `lib/outreach/__tests__/buildDraftFromPost.test.ts` (block allowlist, dated prices, DM
   held to the claim-postcard forbidden list).
+- **Partner-managed reps (2026-10-13, built for ScaleUp Software / Daniel)**: a reseller mints a
+  rep's code from **"Your reps" on `/partners/dashboard`** (`app/partners/dashboard/reps.tsx` →
+  `GET/POST /api/partners/reps`, `requirePartner()`, 10/hr) and hands them **`/for/<code>`**
+  (`app/for/[code]/page.tsx`): the dynamic `/for-abdou` — unlisted, noindex, a brand strip
+  naming the reseller org, the live restaurants table for the rep's city with build + text, and
+  a grant minted for that code only. ⚠️ **The rep's code is OWNED BY THE PARTNER** (owner's
+  choice): `owner_id` = the partner, `label` = the rep's name, `owner_email` = the rep's email,
+  `parent_code` = the partner's code, `plan` = the partner's plan verbatim, `rep_city/rep_region`
+  (`20260883`) = where they walk. Orders the rep brings land on the partner's ledger with the
+  rep's code recorded; the partner pays the rep. The direct-pay alternative (rep owns the code +
+  Stripe) is a different row shape set up by the operator. A rep-built draft is **stamped with
+  the partner's `org_id` at INSERT** (`orgIdForCode` → `buildDraftFromListing/FromSite({ orgId })`
+  — `templates` refuses direct UPDATEs, so it cannot be added later), which is what lets the
+  claim page / claim bar carry the reseller's brand (next). ⚠️ **"Plan today's stops"**
+  (`lib/rep/repRoute.ts`): the walk-in rows → the existing `/tools/route-planner?stops=…`
+  deep link (PorchHearth's nearest-neighbour seam, `crosstalk/contracts/route-optimize.md`,
+  ≤20 stops; coordinates when the sweep stored them, else the address). Tests:
+  `lib/partners/__tests__/repCodes.test.ts`, `lib/rep/__tests__/repRoute.test.ts`.
 - **`/spread-the-word` — the public referral page (2026-10-11)**: `/for-sales` is the brief for
   people recruited to SELL (calls, the domain rental, territories) and reads like a job; the
   owner wanted a shareable version that is "just about telling people about it and helping

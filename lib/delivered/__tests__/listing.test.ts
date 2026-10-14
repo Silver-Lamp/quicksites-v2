@@ -69,6 +69,17 @@ describe('the apex page', () => {
     expect(src).toMatch(/classifyListing\(/);
     expect(src).toMatch(/rankUnclaimed\(/);
   });
+  it('carries the spread-the-word lunch sentence by import, linked absolutely (the menu host rewrites relative paths)', () => {
+    expect(src).toMatch(/FOR_SALES_PITCHES\.lunch/);
+    expect(src).not.toMatch(/Know of a great lunch spot/); // imported, never retyped
+    expect(src).toMatch(/https:\/\/www\.quicksites\.ai\/spread-the-word/);
+    expect(src).not.toMatch(/href=["']\/spread-the-word/);
+  });
+  it('passes the client ShowMore only serializable props — a function prop took the apex down', () => {
+    const showMore = src.slice(src.indexOf('<ShowMore'), src.indexOf('>', src.indexOf('<ShowMore')));
+    expect(showMore).not.toMatch(/=>/);
+    expect(showMore).toMatch(/moreLabel="/);
+  });
   it('an unclaimed card never says Order online', () => {
     const unclaimedCard = src.slice(src.indexOf("kind === 'unclaimed'"), src.indexOf("kind === 'unclaimed'") + 400);
     expect(unclaimedCard).not.toMatch(/Order online/);

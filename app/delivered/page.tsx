@@ -38,6 +38,16 @@ import { menuSiteUrl, MENU_BASE_DOMAIN } from '@/lib/menu/deliveredMenu';
 import { isOpenAt } from '@/lib/menu/cityMenuIndex';
 import { classifyListing, hoursOf, isCityPortal, rankUnclaimed, UNCLAIMED_INITIAL, type ListingKind, type ListingRow } from '@/lib/delivered/listing';
 import ShowMore from '@/components/delivered/show-more';
+import PitchArt from '@/components/for-rep/pitch-art';
+import { FOR_SALES_PITCHES } from '@/lib/sales/forSalesPitches';
+
+/**
+ * "Know of a great lunch spot?" — the /spread-the-word concept, above the fold here (owner,
+ * 2026-10-14). The SENTENCE is imported, never retyped, so the two pages cannot drift; the link
+ * is ABSOLUTE because this page serves on the delivered.menu host, where middleware rewrites a
+ * relative `/spread-the-word` to a site path.
+ */
+const SPREAD_THE_WORD_URL = 'https://www.quicksites.ai/spread-the-word';
 
 /**
  * The owner's Midjourney heroes for delivered.menu (2026-10-14, via HiveJournal's relay; the
@@ -222,6 +232,24 @@ export default async function DeliveredDirectoryPage() {
               </span>
             )}
           </p>
+
+          {/* Know a great lunch spot? One frosted card, the same sentence as /spread-the-word,
+              one button. It sits inside the hero so it is above the fold on a phone without
+              pushing the page's own headline down. */}
+          <a
+            href={SPREAD_THE_WORD_URL}
+            className="group mt-8 flex max-w-xl items-center gap-4 rounded-2xl border border-amber-500/40 bg-card/70 p-4 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/15 backdrop-blur transition hover:border-amber-400 hover:bg-card/90"
+          >
+            <span className="hidden shrink-0 sm:block [&>svg]:h-16 [&>svg]:w-16">
+              <PitchArt kind="lunch" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-base font-semibold leading-snug text-card-foreground">{FOR_SALES_PITCHES.lunch}</span>
+              <span className="mt-1 block text-sm font-medium text-amber-500 transition group-hover:text-amber-400">
+                Tell us about them <span className="inline-block transition group-hover:translate-x-0.5">→</span>
+              </span>
+            </span>
+          </a>
         </div>
       </header>
 
@@ -254,7 +282,7 @@ export default async function DeliveredDirectoryPage() {
               {claimed.map((r) => (
                 <Card key={r.slug} r={r} kind="claimed" now={now} />
               ))}
-              <ShowMore initial={UNCLAIMED_INITIAL} label={(n) => `Show ${n} more unclaimed kitchens`}>
+              <ShowMore initial={UNCLAIMED_INITIAL} moreLabel="more unclaimed kitchens">
                 {unclaimed.map((r) => (
                   <Card key={r.slug} r={r} kind="unclaimed" now={now} />
                 ))}

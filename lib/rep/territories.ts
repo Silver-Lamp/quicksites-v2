@@ -11,6 +11,7 @@ export type RepTerritory = { city: string; region: string; label: string };
 
 export const REP_TERRITORIES: Record<string, RepTerritory> = {
   abdou: { city: 'Vashon', region: 'WA', label: 'Vashon Island' },
+  craig: { city: 'Vashon', region: 'WA', label: 'Vashon Island' },
   amber: { city: 'Vashon', region: 'WA', label: 'Vashon Island' },
   ryan: { city: 'Renton', region: 'WA', label: 'Renton' },
 };

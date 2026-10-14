@@ -47,10 +47,28 @@ type Row = {
   data: any;
 };
 
+/**
+ * The owner's Midjourney heroes for delivered.menu (2026-10-14, via HiveJournal's relay; the
+ * PNG originals live in crosstalk/assets/delivered-menu-heroes). No people in any of them.
+ * Served as sized WebP from public/ so `verify:assets` fails the build if one goes missing.
+ * ⚠️ `street` carries text-SHAPED garble on the shop signs (not words — "PARODA"-ish); it sits
+ * under a scrim with the headline over the left half so the signs stay small and dark. If the
+ * owner re-rolls it, swap the file and nothing else changes.
+ */
+const HEROES = {
+  street: '/delivered/heroes/street-blue-hour.webp', // diner homepage: a row of neighbourhood kitchens at blue hour
+  bag: '/delivered/heroes/bag-on-doorstep.webp', // "it arrives": a takeaway bag under a porch light
+  table: '/delivered/heroes/table-from-above.webp', // listing banner: many cuisines, one table
+} as const;
+
 export const metadata: Metadata = {
   title: 'Order from local restaurants — delivered.menu',
   description: 'Browse local restaurants and order online. Every site built and hosted on delivered.menu.',
+  // Absolute on purpose: a bare path would resolve against metadataBase, which this project has
+  // ~100 custom domains to pick wrongly from (the /spread-the-word lesson).
+  openGraph: { images: [`https://www.quicksites.ai${HEROES.street}`] },
 };
+
 
 function safeParse(x: any) {
   if (typeof x !== 'string') return x ?? {};
@@ -201,8 +219,16 @@ export default async function DeliveredDirectoryPage() {
         className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(245,158,11,0.14),transparent_70%)]"
       />
 
-      <header className="relative border-b border-border">
-        <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+      <header className="relative overflow-hidden border-b border-border">
+        {/* The street at blue hour, behind a scrim that keeps the headline legible on the left and
+            the (garbled) shop signs small and dark on the right. Decorative: alt is empty. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={HEROES.street} alt="" className="h-full w-full object-cover object-center opacity-60" fetchPriority="high" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/35" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
+        </div>
+        <div className="relative mx-auto max-w-6xl px-6 py-16 sm:py-24">
           <div className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-500">{brand}</div>
           <h1 className="mt-4 max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-6xl">
             Order straight from the kitchen.
@@ -225,7 +251,21 @@ export default async function DeliveredDirectoryPage() {
         </div>
       </header>
 
-      <section className="relative mx-auto max-w-6xl px-6 py-14">
+      {/* Listing banner: one table, several cuisines — what a directory of kitchens looks like
+          before any single restaurant is named. No count, no claim; the honest count is below. */}
+      <section className="relative mx-auto max-w-6xl px-6 pt-10">
+        <div className="relative h-40 overflow-hidden rounded-2xl border border-border sm:h-52">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={HEROES.table} alt="" className="h-full w-full object-cover object-center" loading="lazy" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
+          <div className="absolute bottom-4 left-5 right-5 sm:bottom-5 sm:left-6">
+            <div className="text-xs font-semibold uppercase tracking-widest text-amber-400">Kitchens taking orders</div>
+            <div className="mt-1 text-lg font-semibold text-foreground sm:text-xl">Every cuisine, ordered straight from the kitchen that cooks it.</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative mx-auto max-w-6xl px-6 py-10">
         {rows.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {rows.map((r) => (
@@ -282,6 +322,35 @@ export default async function DeliveredDirectoryPage() {
           </div>
         </section>
       )}
+
+      {/* How it works, for a diner: three steps beside the bag on the doorstep. Each step is
+          something the product does today — find, order direct, collect or get it brought. */}
+      <section className="relative border-t border-border">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-14 md:grid-cols-2 md:items-center">
+          <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={HEROES.bag} alt="" className="h-full w-full object-cover" loading="lazy" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold text-foreground sm:text-3xl">How it works</h2>
+            <ol className="mt-6 space-y-5">
+              {[
+                ['Find a kitchen', 'Browse the restaurants here, or open one straight from its own address.'],
+                ['Order direct', 'The menu is the restaurant’s own. Your order goes to their kitchen, not through an app that takes a cut.'],
+                ['It arrives', 'Pick it up, or have it brought over where the restaurant offers that. Either way, they got the whole order.'],
+              ].map(([title, body], i) => (
+                <li key={title} className="flex gap-4">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-sm font-bold text-zinc-950">{i + 1}</span>
+                  <div>
+                    <div className="font-semibold text-foreground">{title}</div>
+                    <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </section>
 
       <footer className="relative border-t border-border px-6 py-12 text-center">
         <p className="text-sm text-muted-foreground">

@@ -25,6 +25,18 @@ export const metadata = marketingOg({
 
 const MAILTO = 'mailto:restaurants@quicksites.ai?subject=My%20restaurant%20website';
 
+/**
+ * The owner's Midjourney heroes (2026-10-14; originals in crosstalk/assets/delivered-menu-heroes,
+ * sized WebP in public/ so `verify:assets` guards them). No people in either. `pass` is the
+ * kitchen pass with order tickets on the rail — "orders straight to your kitchen"; `room` is a
+ * small dining room after close — "your menu, your customers, no middleman". The chalkboard in
+ * `room` is illegible pseudo-handwriting, texture at this size, under a scrim.
+ */
+const HEROES = {
+  pass: '/delivered/heroes/kitchen-pass.webp',
+  room: '/delivered/heroes/dining-room-after-close.webp',
+} as const;
+
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 text-left">
@@ -46,11 +58,16 @@ export default function RestaurantsPage() {
       */}
       <PageBackdrop poolKey="restaurant" fallback="wash" intensity={90} className="min-h-screen bg-zinc-950 text-white">
         {/* Hero */}
-        <section className="relative mx-auto max-w-5xl px-6 pt-16 pb-12 text-center">
-          {/* Amber glow — the restaurant vertical keeps its warm identity, not sky. */}
+        <section className="relative overflow-hidden px-6 pt-16 pb-12 text-center">
+          {/* The kitchen pass behind the hero, under a scrim heavy enough for the headline; the amber
+              glow stays on top of it so the vertical keeps its warm identity. Decorative, alt empty. */}
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={HEROES.pass} alt="" className="h-full w-full object-cover object-center opacity-45" fetchPriority="high" />
+            <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/70 via-zinc-950/75 to-zinc-950" />
             <div className="absolute -top-20 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-amber-500/15 blur-3xl" />
           </div>
+          <div className="mx-auto max-w-5xl">
           <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
             For restaurants
           </span>
@@ -80,6 +97,7 @@ export default function RestaurantsPage() {
             </a>
           </div>
           <p className="mt-4 text-sm text-zinc-500">Takes about a minute. No credit card. Nothing to install.</p>
+          </div>
         </section>
 
         {/* Built from your listing */}
@@ -124,8 +142,14 @@ export default function RestaurantsPage() {
         </section>
 
         {/* The model */}
-        <section className="border-t border-zinc-800/70 bg-zinc-950/60">
-          <div className="mx-auto max-w-4xl px-6 py-16 text-center">
+        <section className="relative overflow-hidden border-t border-zinc-800/70 bg-zinc-950/60">
+          {/* The dining room after close: your menu, your customers, no middleman. */}
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={HEROES.room} alt="" className="h-full w-full object-cover object-center opacity-35" loading="lazy" />
+            <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/70 to-zinc-950/90" />
+          </div>
+          <div className="relative mx-auto max-w-4xl px-6 py-20 text-center">
             <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
               The honest part
             </span>

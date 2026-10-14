@@ -88,6 +88,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   events: 'content', // upcoming + recurring schedule (service times, classes, gatherings)
   gallery: 'content', // responsive photo grid + lightbox (every visual business)
   perfect_loops_player: 'content', // HiveJournal Perfect Loops embed for one artist (labelled HJ)
+  table_booking: 'interactive', // restaurant table booking (lib/booking/*; date → party → time → name)
   before_after: 'interactive', // draggable before/after reveal (transformation trades)
 
   /* ───────── ElectInfo (candidate) blocks ───────── */

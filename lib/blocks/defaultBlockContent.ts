@@ -396,6 +396,10 @@ export const DEFAULT_BLOCK_CONTENT = {
     fan_link_url: '',
     links: [],
   },
+  table_booking: {
+    title: '',
+    intro: '',
+  },
   gallery: {
     title: 'Gallery',
     columns: 3,

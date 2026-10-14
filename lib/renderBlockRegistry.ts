@@ -181,6 +181,7 @@ export const DYNAMIC_RENDERERS: Record<
   gallery: () => import('@/components/admin/templates/render-blocks/gallery'),
   selected_work: () => import('@/components/admin/templates/render-blocks/selected-work'),
   perfect_loops_player: () => import('@/components/admin/templates/render-blocks/perfect-loops-player'),
+  table_booking: () => import('@/components/admin/templates/render-blocks/table-booking'),
   before_after: () => import('@/components/admin/templates/render-blocks/before-after'),
   service_offer: () => import('@/components/admin/templates/render-blocks/service-offer'),
   scheduler: async () => {

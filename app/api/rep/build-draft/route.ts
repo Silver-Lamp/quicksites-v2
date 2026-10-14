@@ -16,6 +16,7 @@ import { repBuildLinks, REP_BUILDS_PER_DAY } from '@/lib/rep/repBuild';
 import { codeIsUsable } from '@/lib/referrals/codes';
 import { requireUser } from '@/lib/auth/requireUser';
 import { codeForMember } from '@/lib/rep/memberCode';
+import { orgIdForCode } from '@/lib/partners/repCodes';
 import { resolveOperatorId } from '@/lib/outreach/defaultOperator';
 import { getProspect, markProspectBuilt } from '@/lib/outreach/prospects';
 import { buildDraftFromListing, BuildDraftError } from '@/lib/outreach/buildDraftFromListing';
@@ -91,12 +92,15 @@ export async function POST(req: Request) {
   // ordering draft from the menu it already published (lib/outreach/buildDraftFromSite.ts), not
   // from listing photos. Still only a parked prospect by id, and only one with a website of its
   // own; the route never scrapes a URL the rep typed.
+  // A partner's rep built this → the draft belongs to the partner's reseller org, so its claim
+  // page and claim bar carry that brand (lib/partners/repCodes.ts). A platform code → null.
+  const orgId = await orgIdForCode(code).catch(() => null);
   const mode = body.mode === 'from_site' ? 'from_site' : 'listing';
   if (mode === 'from_site') {
     if (p.industry_key !== 'restaurant') return NextResponse.json({ error: 'not_a_restaurant' }, { status: 400 });
     if (!p.website) return NextResponse.json({ error: 'no_website' }, { status: 400 });
     try {
-      const built = await buildDraftFromSite({ website: p.website, operatorId, fallbackName: p.business_name, fallbackPhone: p.phone });
+      const built = await buildDraftFromSite({ website: p.website, operatorId, fallbackName: p.business_name, fallbackPhone: p.phone, orgId });
       await markProspectBuilt(prospectId, built.id);
       return NextResponse.json({
         ok: true,
@@ -116,7 +120,7 @@ export async function POST(req: Request) {
 
   try {
     const listing = await listingForProspect(p);
-    const built = await buildDraftFromListing({ listing, operatorId, industryKey: (p.industry_key as any) || undefined });
+    const built = await buildDraftFromListing({ listing, operatorId, industryKey: (p.industry_key as any) || undefined, orgId });
     await markProspectBuilt(prospectId, built.id);
     const hasMenu = built.summary.menuItems > 0;
     return NextResponse.json({

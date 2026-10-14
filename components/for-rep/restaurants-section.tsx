@@ -12,6 +12,7 @@
 import Link from 'next/link';
 import { loadRestaurantsFor } from '@/lib/rep/repRestaurants';
 import { territoryFor } from '@/lib/rep/territories';
+import { restaurantsRouteUrl, routableStops } from '@/lib/rep/repRoute';
 import { breakEvenOrders } from '@/lib/compare/toast';
 import RestaurantTable from '@/components/for-rep/restaurant-table';
 import SweepHere from '@/components/for-rep/sweep-here';
@@ -39,8 +40,22 @@ export const SECTION_COPY = {
   elsewhere: 'Somewhere else today?',
 } as const;
 
-export default async function RestaurantsSection({ code, repName, token, prominent = false }: { code: string | null; repName: string; token: string | null; /** The main event: a larger title, placed right under the page's opening. */ prominent?: boolean }) {
-  const territory = territoryFor(code);
+export default async function RestaurantsSection({
+  code,
+  repName,
+  token,
+  prominent = false,
+  territory: territoryOverride,
+}: {
+  code: string | null;
+  repName: string;
+  token: string | null;
+  /** The main event: a larger title, placed right under the page's opening. */
+  prominent?: boolean;
+  /** A partner-minted rep's city from the database (lib/partners/repCodes.ts); the hand-typed map is the fallback. */
+  territory?: { city: string; region: string; label: string } | null;
+}) {
+  const territory = territoryOverride !== undefined ? territoryOverride : territoryFor(code);
   const menuHost = process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null;
   const data = territory ? await loadRestaurantsFor({ city: territory.city, region: territory.region, code, menuHost }) : null;
   const place = territory?.label ?? null;
@@ -99,7 +114,20 @@ export default async function RestaurantsSection({ code, repName, token, promine
             </div>
           </div>
           {data.rows.length > 0 ? (
-            <RestaurantTable rows={data.rows} token={token ?? ''} repName={repName} readOnly={!token} />
+            <>
+              {/* PorchHearth's efficient-routing seam, already ours behind /tools/route-planner
+                  (crosstalk/contracts/route-optimize.md): the day's walk-ins in an efficient order
+                  with a Maps link. Only the rows worth a visit, only when there are two or more. */}
+              {restaurantsRouteUrl(data.rows) ? (
+                <p className="mt-4 text-sm">
+                  <Link href={restaurantsRouteUrl(data.rows)!} className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 font-semibold text-emerald-200 hover:bg-emerald-500/20">
+                    🗺️ Plan today&apos;s stops
+                  </Link>
+                  <span className="ml-3 text-xs text-zinc-500">{routableStops(data.rows).length} restaurants worth a visit, in an efficient order with a Maps link.</span>
+                </p>
+              ) : null}
+              <RestaurantTable rows={data.rows} token={token ?? ''} repName={repName} readOnly={!token} />
+            </>
           ) : (
             <p className="mt-4 text-sm text-zinc-400">Nobody has swept {place} for restaurants yet — press the button below and it fills in.</p>
           )}

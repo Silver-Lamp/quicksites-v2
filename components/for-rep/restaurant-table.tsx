@@ -30,6 +30,10 @@ export type RestaurantTableRow = {
   textedAt?: string | null;
   dmAt?: string | null;
   cardLine?: string | null;
+  /** Where it is (lib/rep/repRoute.ts plans the day's stops from these; coordinates skip geocoding). */
+  address?: string | null;
+  lat?: number | null;
+  lon?: number | null;
 };
 
 type Built = { previewUrl: string; claimUrl: string; evolveUrl?: string | null; menuItems?: number; menuSource?: string; droppedItems?: number; droppedPrices?: number; alreadyBuilt?: boolean };

@@ -35,6 +35,11 @@ export type BuildDraftInput = {
   operatorId: string;
   /** Force an industry; otherwise derived from the listing categories. */
   industryKey?: IndustryKey;
+  /**
+   * The reseller org this draft belongs to (a partner's rep built it), stamped at INSERT —
+   * `templates` refuses direct UPDATEs, and the claim page / claim bar read the brand from here.
+   */
+  orgId?: string | null;
 };
 
 export type BuildDraftResult = {
@@ -123,6 +128,7 @@ export async function buildDraftFromListing(input: BuildDraftInput): Promise<Bui
       business_name: tpl.business_name,
       owner_id: input.operatorId,
       claim_source: 'listing_import',
+      ...(input.orgId ? { org_id: input.orgId } : {}),
     };
     const { data, error } = await supabaseAdmin.from('templates').insert(row).select('id, slug').single();
     if (!error && data) {

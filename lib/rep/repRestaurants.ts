@@ -35,7 +35,7 @@ function hostOf(url: string | null): string {
 export async function loadRestaurantsFor(input: { city: string; region?: string | null; code?: string | null; menuHost?: string | null; base?: string }): Promise<RepRestaurantsResult> {
   let q = supabaseAdmin
     .from('outreach_prospects')
-    .select('id, business_name, phone, website, rating, review_count, ordering_platform, ordering_checked_at, template_id, categories, last_seen_at')
+    .select('id, business_name, phone, website, rating, review_count, ordering_platform, ordering_checked_at, template_id, categories, last_seen_at, address, address_lat, address_lon')
     .ilike('city', input.city.trim())
     .eq('industry_key', 'restaurant')
     .not('website', 'is', null)
@@ -43,7 +43,7 @@ export async function loadRestaurantsFor(input: { city: string; region?: string 
     .limit(300);
   if (input.region) q = q.ilike('region', input.region.trim());
   const { data } = await q;
-  type R = RestaurantRow & { categories: string[] | null; last_seen_at: string | null };
+  type R = RestaurantRow & { categories: string[] | null; last_seen_at: string | null; address: string | null; address_lat: number | null; address_lon: number | null };
   const base = ((data ?? []) as unknown as R[]).filter((r) => (r.business_name ?? '').trim() && looksLikeFoodBusiness(r.categories));
   const templateIds = base.map((r) => r.template_id).filter((id): id is string => !!id);
   const slugById = new Map<string, string>();
@@ -73,6 +73,9 @@ export async function loadRestaurantsFor(input: { city: string; region?: string 
       previewUrl: links?.previewUrl ?? null,
       claimUrl: links?.claimUrl ?? null,
       evolveUrl: links?.evolveUrl ?? null,
+      address: r.address ?? null,
+      lat: typeof r.address_lat === 'number' ? r.address_lat : null,
+      lon: typeof r.address_lon === 'number' ? r.address_lon : null,
     };
   };
   const rows: RestaurantTableRow[] = [

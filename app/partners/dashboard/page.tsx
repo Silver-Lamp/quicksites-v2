@@ -10,6 +10,7 @@ import { PARTNER_FEE_SHARE, MAX_PLATFORM_FEE_PERCENT, RESIDUAL_MONTHS } from '@/
 import { getPartnerStats } from '@/lib/commerce/partnerStats';
 import { JoinButton, CopyLink, ConnectPayouts } from './client';
 import WhiteLabelChecklist from './white-label';
+import RepsCard from './reps';
 
 export const dynamic = 'force-dynamic';
 
@@ -141,6 +142,9 @@ export default async function PartnerDashboard() {
 
         {/* White-label activation — self-serve (docs/WHITE_LABEL_PLAN.md slice 4) */}
         <WhiteLabelChecklist />
+
+        {/* Partner-managed reps (lib/partners/repCodes.ts): mint a code + page, see who brought what. */}
+        <RepsCard />
 
         {/* Per-merchant earnings */}
         <div className="mt-8">

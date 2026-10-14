@@ -1,6 +1,7 @@
 // app/delivered/page.tsx
 //
-// The delivered.menu apex: a directory of restaurants you can actually order from.
+// The delivered.menu apex: a directory of restaurants you can actually order from — and, since
+// 2026-10-14, the kitchens we have built sites for that nobody has claimed yet, chipped as such.
 // Middleware rewrites `delivered.menu/` here.
 //
 // ⚠️ TWO THINGS THIS PAGE GOT WRONG, BOTH WORTH KNOWING BEFORE EDITING.
@@ -16,10 +17,10 @@
 //    dishonesty as the invented menus stripped off real restaurants in §4b — smaller, but
 //    the same shape, and pointed at diners instead of owners.
 //
-//    So the rule is now POSITIVE EVIDENCE: a real `menu` block with real items, and not a
-//    starter/demo/directory. If that yields nothing, the page says so. An empty directory
-//    is a fact about the business, not a bug to paper over — and "0 restaurants" is
-//    recoverable, whereas a diner who taps through to a demo and finds no food is not.
+//    So the rule is POSITIVE EVIDENCE (lib/delivered/listing.ts): a real `menu` block with real
+//    items, and not a starter/demo/directory. Claimed and unclaimed are two kinds, never one
+//    sorted list, and the page no longer COUNTS kitchens taking orders (owner, 2026-10-14) — one
+//    chip per card says which is which instead.
 //
 // 2. IT FLASHED THE WRONG THEME. It was styled with literal light utilities plus `dark:`
 //    variants. `app/providers.tsx` puts `data-theme="dark"` on a wrapper at SSR but the
@@ -35,17 +36,8 @@ import type { Metadata } from 'next';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { menuSiteUrl, MENU_BASE_DOMAIN } from '@/lib/menu/deliveredMenu';
 import { isOpenAt } from '@/lib/menu/cityMenuIndex';
-import { readMenuSections, isPlaceholderOnly } from '@/lib/menu/menuBlocks';
-
-type Row = {
-  slug: string | null;
-  business_name: string | null;
-  industry: string | null;
-  industry_label: string | null;
-  hero_url: string | null;
-  logo_url: string | null;
-  data: any;
-};
+import { classifyListing, hoursOf, isCityPortal, rankUnclaimed, UNCLAIMED_INITIAL, type ListingKind, type ListingRow } from '@/lib/delivered/listing';
+import ShowMore from '@/components/delivered/show-more';
 
 /**
  * The owner's Midjourney heroes for delivered.menu (2026-10-14, via HiveJournal's relay; the
@@ -69,51 +61,6 @@ export const metadata: Metadata = {
   openGraph: { images: [`https://www.quicksites.ai${HEROES.street}`] },
 };
 
-
-function safeParse(x: any) {
-  if (typeof x !== 'string') return x ?? {};
-  try {
-    return JSON.parse(x);
-  } catch {
-    return {};
-  }
-}
-
-/** Blocks from whichever shape this row uses — the fleet carries both. */
-function blocksOf(data: any): any[] {
-  const page = safeParse(data)?.pages?.[0] ?? {};
-  return [...(page.content_blocks ?? []), ...(page.blocks ?? [])];
-}
-
-const blockTypes = (data: any) => new Set(blocksOf(data).map((b) => b?.type));
-
-/**
- * Can a diner actually order here?
- *
- * Positive evidence only. A `menu` block whose items are all scaffold placeholders is a
- * template wearing a restaurant's clothes, so `isPlaceholderOnly` is part of the test —
- * the same helper that stopped us shipping invented menus onto real businesses.
- */
-function isOrderableRestaurant(r: Row): boolean {
-  const meta = safeParse(r.data)?.meta ?? {};
-  if (meta.is_starter || meta.is_demo) return false; // a demo is not a restaurant
-  const types = blockTypes(r.data);
-  if (types.has('restaurants_directory')) return false; // a directory is not a restaurant
-  if (!types.has('menu')) return false;
-  const sections = readMenuSections(safeParse(r.data));
-  return sections.length > 0 && !isPlaceholderOnly(sections);
-}
-
-/** A city cohort page — real and useful, but listed as a city, never as a restaurant. */
-function isCityPortal(r: Row): boolean {
-  return blockTypes(r.data).has('restaurants_directory');
-}
-
-function hoursOf(data: any): any | null {
-  for (const b of blocksOf(data)) if (b?.type === 'hours') return b.content ?? b.props ?? null;
-  return null;
-}
-
 function prettifySlug(slug: string | null): string {
   return (slug ?? '')
     .split('-')
@@ -122,7 +69,7 @@ function prettifySlug(slug: string | null): string {
     .join(' ');
 }
 
-function Card({ r, now }: { r: Row; now: Date }) {
+function Card({ r, kind, now }: { r: ListingRow; kind: ListingKind; now: Date }) {
   const name = r.business_name?.trim() || prettifySlug(r.slug) || 'Restaurant';
   const img = r.hero_url || r.logo_url || null;
   const openNow = isOpenAt(hoursOf(r.data), now);
@@ -162,20 +109,42 @@ function Card({ r, now }: { r: Row; now: Date }) {
             {openNow ? 'Open now' : 'Closed'}
           </span>
         )}
+
+        {/* Claimed vs unclaimed, on every card. An unclaimed kitchen's menu came from its own
+            public listing, post or site; nobody has confirmed those prices, so the card offers
+            the menu, never an order. The chip says why the two kinds look different. */}
+        {kind === 'claimed' ? (
+          <span className="absolute right-3 top-3 rounded-full bg-emerald-500 px-2.5 py-1 text-xs font-semibold text-emerald-950 shadow" title="The restaurant has claimed this site and takes orders here.">
+            Claimed
+          </span>
+        ) : (
+          <span
+            className="absolute right-3 top-3 rounded-full bg-zinc-900/80 px-2.5 py-1 text-xs font-semibold text-zinc-200 ring-1 ring-white/15 backdrop-blur"
+            title="We built this from the restaurant's public listing. Nobody has claimed it yet, so prices are unconfirmed — call to check."
+          >
+            Unclaimed
+          </span>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-4">
         <div className="text-base font-semibold text-card-foreground">{name}</div>
         {r.industry_label && <div className="mt-0.5 text-xs text-muted-foreground">{r.industry_label}</div>}
-        <div className="mt-3 text-sm font-medium text-amber-500 transition group-hover:text-amber-400">
-          Order online <span className="inline-block transition group-hover:translate-x-0.5">→</span>
-        </div>
+        {kind === 'unclaimed' ? (
+          <div className="mt-3 text-sm font-medium text-muted-foreground transition group-hover:text-foreground">
+            View menu <span className="inline-block transition group-hover:translate-x-0.5">→</span>
+          </div>
+        ) : (
+          <div className="mt-3 text-sm font-medium text-amber-500 transition group-hover:text-amber-400">
+            Order online <span className="inline-block transition group-hover:translate-x-0.5">→</span>
+          </div>
+        )}
       </div>
     </a>
   );
 }
 
-function CityCard({ r }: { r: Row }) {
+function CityCard({ r }: { r: ListingRow }) {
   const name = r.business_name?.trim() || prettifySlug(r.slug) || 'City';
   return (
     <a
@@ -191,22 +160,34 @@ function CityCard({ r }: { r: Row }) {
 export default async function DeliveredDirectoryPage() {
   const now = new Date();
 
-  const { data } = await supabaseAdmin
-    .from('templates')
-    .select('slug, business_name, industry, industry_label, hero_url, logo_url, data')
-    .eq('is_site', true)
-    .eq('published', true)
-    .eq('archived', false)
-    // NO is_version filter — deliberately. `is_version` does NOT reliably mean "version
-    // snapshot": on the live fleet 50 of 66 published sites carry is_version=true, so
-    // filtering on false excluded 76% of real sites. `is_site && published && !archived` is
-    // what actually identifies a live site. (Verified zero duplicate slugs across that set.)
-    .order('updated_at', { ascending: false })
-    .limit(200);
+  const [{ data }, { data: ops }] = await Promise.all([
+    supabaseAdmin
+      .from('templates')
+      .select('slug, business_name, industry, industry_label, hero_url, logo_url, data, claim_source, owner_id, published, is_site')
+      .eq('archived', false)
+      // Live sites, plus the operator-built pre-claim drafts (the same two claim sources the
+      // menu host itself will render to the public). NO is_version filter — deliberately.
+      // `is_version` does NOT reliably mean "version snapshot": on the live fleet 50 of 66
+      // published sites carry is_version=true, so filtering on false excluded 76% of real
+      // sites. `is_site && published && !archived` is what identifies a live site.
+      .or('and(is_site.eq.true,published.eq.true),claim_source.in.(listing_import,operator_draft)')
+      .order('updated_at', { ascending: false })
+      .limit(600),
+    supabaseAdmin.from('admin_users').select('user_id'),
+  ]);
 
-  const all: Row[] = (data as Row[]) ?? [];
-  const rows = all.filter((r) => !!r.slug && isOrderableRestaurant(r));
-  const cities = all.filter((r) => !!r.slug && isCityPortal(r));
+  const operatorIds = new Set(((ops ?? []) as Array<{ user_id: string }>).map((o) => o.user_id));
+  const all: ListingRow[] = (data as ListingRow[]) ?? [];
+  const claimed: ListingRow[] = [];
+  const unclaimedRaw: ListingRow[] = [];
+  for (const r of all) {
+    const kind = classifyListing(r, operatorIds);
+    if (kind === 'claimed') claimed.push(r);
+    else if (kind === 'unclaimed') unclaimedRaw.push(r);
+  }
+  const unclaimed = rankUnclaimed(unclaimedRaw);
+  const cities = all.filter((r) => !!r.slug && !!r.is_site && !!r.published && isCityPortal(r));
+  const any = claimed.length + unclaimed.length > 0;
 
   const brand = MENU_BASE_DOMAIN || 'delivered.menu';
 
@@ -235,43 +216,51 @@ export default async function DeliveredDirectoryPage() {
           </h1>
           <p className="mt-5 max-w-xl text-lg text-muted-foreground">
             Real menus from local spots — order online in a couple of taps.{' '}
-            {rows.length > 0 && (
+            {any && (
               <span className="text-foreground">
                 No apps, no markups, no middleman taking a third of the bill.
               </span>
             )}
           </p>
-
-          {rows.length > 0 && (
-            <div className="mt-7 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-sm font-medium text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              {rows.length} restaurant{rows.length === 1 ? '' : 's'} taking orders
-            </div>
-          )}
         </div>
       </header>
 
       {/* Listing banner: one table, several cuisines — what a directory of kitchens looks like
-          before any single restaurant is named. No count, no claim; the honest count is below. */}
+          before any single restaurant is named. No count, no claim. */}
       <section className="relative mx-auto max-w-6xl px-6 pt-10">
         <div className="relative h-40 overflow-hidden rounded-2xl border border-border sm:h-52">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={HEROES.table} alt="" className="h-full w-full object-cover object-center" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
           <div className="absolute bottom-4 left-5 right-5 sm:bottom-5 sm:left-6">
-            <div className="text-xs font-semibold uppercase tracking-widest text-amber-400">Kitchens taking orders</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-amber-400">Local kitchens</div>
             <div className="mt-1 text-lg font-semibold text-foreground sm:text-xl">Ordered straight from the kitchen that cooks it.</div>
           </div>
         </div>
       </section>
 
       <section className="relative mx-auto max-w-6xl px-6 py-10">
-        {rows.length > 0 ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {rows.map((r) => (
-              <Card key={r.slug} r={r} now={now} />
-            ))}
-          </div>
+        {any ? (
+          <>
+            {unclaimed.length > 0 && (
+              <p className="mb-5 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Claimed</span> kitchens take orders here.{' '}
+                <span className="font-medium text-foreground">Unclaimed</span> ones are sites we built from a
+                restaurant&rsquo;s own public listing — the menu is theirs, the prices are unconfirmed, and the
+                kitchen hasn&rsquo;t taken the site over yet. Call to check before you count on it.
+              </p>
+            )}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {claimed.map((r) => (
+                <Card key={r.slug} r={r} kind="claimed" now={now} />
+              ))}
+              <ShowMore initial={UNCLAIMED_INITIAL} label={(n) => `Show ${n} more unclaimed kitchens`}>
+                {unclaimed.map((r) => (
+                  <Card key={r.slug} r={r} kind="unclaimed" now={now} />
+                ))}
+              </ShowMore>
+            </div>
+          </>
         ) : (
           /* The honest empty state. It used to say "2 restaurants taking orders" while
              listing a directory page and a demo; saying "none yet" is both true and, for a
@@ -279,7 +268,7 @@ export default async function DeliveredDirectoryPage() {
           <div className="rounded-2xl border border-border bg-card p-10 sm:p-14">
             <div className="text-4xl">🍜</div>
             <h2 className="mt-5 text-2xl font-semibold text-card-foreground">
-              No kitchens taking orders here yet.
+              No kitchens here yet.
             </h2>
             <p className="mt-3 max-w-lg text-muted-foreground">
               We build free ordering sites for local restaurants — the ones with no website, or a
@@ -310,7 +299,7 @@ export default async function DeliveredDirectoryPage() {
 
       {/* Cities also belong on a populated page — they're how someone finds the next town
           over, and they are honestly labelled as cities rather than counted as restaurants. */}
-      {rows.length > 0 && cities.length > 0 && (
+      {any && cities.length > 0 && (
         <section className="relative mx-auto max-w-6xl px-6 pb-14">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
             Browse by city

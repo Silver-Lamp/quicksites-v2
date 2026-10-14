@@ -39,7 +39,7 @@ Customers → Bookings).
 |---|---|---|
 | `GET …/availability?date=&party=` | public, 120/h/IP | free times for the party, each with the table it would get |
 | `POST …/book` | public, 12/h/IP | **re-derives the slot from today's availability** (a tampered start, a table too small, a time outside the windows → `invalid`); the exclusion constraint answers a race with `taken` (409) |
-| `GET …/day?date=` | owner/admin session, **or** HiveJournal (`X-Partner-Id: hivejournal`, HMAC-SHA256 hex over `pathname + search` in `X-Partner-Signature`, shared `PARTNER_QUICKSITES_SECRET`) | the day's tables + bookings. **The partner shape carries no guest phone, email or notes** — a floor plan needs seats, not contact details |
+| `GET …/day?date=` | owner/admin session, **or** HiveJournal (`X-Partner-Id: hivejournal`, HMAC-SHA256 hex over `pathname + search` in `X-Partner-Signature`, shared `PARTNER_QUICKSITES_SECRET`) | the day's tables + bookings, plus `tz`, `closed`, `windows: [{open,close}]` for that date (`[]` when closed), `slot_minutes`, `seating_minutes`, `max_party`. **The partner shape carries no guest phone, email or notes** — a floor plan needs seats, not contact details |
 | `POST …/phone` | owner/admin, **or** HiveJournal (HMAC over the **raw body**) | `{date, time:'20:00', party, table_id?, name, phone?, notes?}` or the contract's `{table_id, party_size, starts_at, guest_name, guest_phone?}` — no lead time; a named table that is not free → `taken`; a partner gets the row back without phone/email |
 | `POST …/cancel` | owner/admin, **or** HiveJournal | `{booking_id}` cancels (the table reopens that second); `{booking_id, status:'seated'|'no_show'|'booked'}` marks |
 

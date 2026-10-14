@@ -24,13 +24,18 @@ import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 // The two numbers the page states about his money come from the module that pays them, so the
 // page cannot drift from the ledger (lib/forDaniel/__tests__/forDaniel.test.ts pins it).
-import { PARTNER_FEE_SHARE, MAX_PLATFORM_FEE_PERCENT } from '@/lib/commerce/partner-terms';
+import { PARTNER_FEE_SHARE, MAX_PLATFORM_FEE_PERCENT, AFFILIATE_MAX_FEE_SHARE, QS_FEE_SHARE } from '@/lib/commerce/partner-terms';
 // The folded cards /for-sales and /spread-the-word use: one sentence per pitch, boxes inside,
 // native <details>, zero JS (owner, 2026-10-13: "simplify it as much as possible").
 import { Pitch, SubBox } from '@/components/for-rep/pitch';
 
 const partnerPct = Math.round(PARTNER_FEE_SHARE * 100);
 const feeCapPct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
+// The direct-pay route's two ceilings as configured today: a rep's own rate, and the override a
+// hub may take on a rep's sale (clampOverrideShare caps it at the house share). Read, not typed,
+// so the page cannot promise a split the ledger would refuse.
+const repMaxPct = Math.round(AFFILIATE_MAX_FEE_SHARE * 100);
+const overrideCapPct = Math.round(QS_FEE_SHARE * 100);
 const CODE = 'rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-200';
 const LINK = 'text-amber-400 underline underline-offset-4 hover:text-amber-300';
 
@@ -190,13 +195,31 @@ export default function ForDanielPage() {
               </p>
             </Body>
           </SubBox>
-          <SubBox title="How the rep is paid — through you" line="Live, minted by Sandon for now. The rep's code is a child of yours and owned by you; you pay the rep.">
+          <SubBox title="How the rep is paid — two ways, your call" line={`Live, minted by Sandon for now. Either the rep's code is owned by you and you pay them, or we pay the rep directly through Stripe; the two of you share the same ${partnerPct}% either way.`}>
             <Body>
               <p>
-                Every restaurant the rep signs up is recorded against the rep&apos;s code, and the {partnerPct}% it
-                earns lands on <em>your</em> ledger, not theirs. You pay the rep from your share on whatever terms you
-                agree; we never pay the rep directly and never set their rate. The dashboard shows which code brought
-                which restaurant, so the arithmetic is yours and easy to check.
+                <span className="text-zinc-200">Through you (the default).</span> The rep&apos;s code is a child of
+                yours and owned by you. Every restaurant the rep signs up is recorded against the rep&apos;s code, and
+                the {partnerPct}% it earns lands on <em>your</em> ledger, not theirs; you pay the rep from your share
+                on whatever terms you agree, and we never set their rate. The dashboard shows which code brought which
+                restaurant, so the arithmetic is yours and easy to check.
+              </p>
+              <p>
+                <span className="text-zinc-200">Or we pay the rep directly.</span> The same payout engine that pays
+                you can pay them: the rep gets their own code with their own rate, connects their own Stripe account,
+                and their cut is transferred on the same payout run as yours — nothing for you to move by hand, and
+                they see their own numbers on their own dashboard. Your cut on those orders is then an override on
+                their code. As configured today the rep&apos;s own rate can be up to {repMaxPct}% of the fee and your
+                override up to {overrideCapPct}% — together less than the {partnerPct}% you keep when it runs through
+                you, because an override is capped so it can never be funded out of the rep&apos;s own residual.
+                Raising that cap so the two of you share the full {partnerPct}% directly is a configuration decision
+                Sandon would make with you, not a build. Tell him the split and which way you want it; either can be
+                changed later without touching anything the rep sees.
+              </p>
+              <p>
+                One thing neither of you sets today: the per-order platform fee itself (capped at {feeCapPct}%, default
+                below that). The terms say a partner sets it; the control is{' '}
+                <span className="text-amber-300">next</span> on your dashboard. Until then, ask Sandon.
               </p>
               <p>
                 <span className="text-amber-300">Next:</span> an &ldquo;Add a rep&rdquo; control on your dashboard

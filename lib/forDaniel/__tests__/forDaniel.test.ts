@@ -28,6 +28,22 @@ describe('/for-daniel', () => {
     expect(page).toMatch(/\/partners\/dashboard/);
   });
 
+  // Owner, 2026-10-13: "since we have the ability to auto-pay that rep via stripe, let's make sure
+  // that Daniel is aware that we can if he wants." Both ways, his call; and the one thing neither
+  // of them sets today (the fee itself) is named as next, not implied.
+  it('offers both ways to pay the rep, and says who cannot set the fee yet', () => {
+    expect(page).toMatch(/Through you \(the default\)/);
+    expect(page).toMatch(/Or we pay the rep directly/);
+    expect(page).toMatch(/connects their own Stripe account/);
+    expect(page).toMatch(/neither of you sets today: the per-order platform fee/);
+    // The direct route's ceilings are derived from partner-terms, and the page does not claim the
+    // two of them share the full partner share directly (the override clamp forbids it today).
+    expect(page).toMatch(/\{repMaxPct\}%/);
+    expect(page).toMatch(/\{overrideCapPct\}%/);
+    expect(page).not.toMatch(/\b40%|\b20%/);
+    expect(page).not.toMatch(/still share the same/);
+  });
+
   it('says what is live and what is next, and does not call the unbuilt things live', () => {
     expect(page).toMatch(/Add a rep/);
     expect(page).toMatch(/minted by Sandon for now/);

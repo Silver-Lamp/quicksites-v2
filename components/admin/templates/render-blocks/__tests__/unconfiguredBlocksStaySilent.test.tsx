@@ -19,6 +19,7 @@ import RenderGallery from '@/components/admin/templates/render-blocks/gallery';
 import RenderReviews from '@/components/admin/templates/render-blocks/reviews';
 import RenderLocation from '@/components/admin/templates/render-blocks/location';
 import RenderPerfectLoopsPlayer from '@/components/admin/templates/render-blocks/perfect-loops-player';
+import RenderTableBooking from '@/components/admin/templates/render-blocks/table-booking';
 
 const CASES: Array<[string, React.ComponentType<any>, Record<string, unknown>]> = [
   ['video', VideoBlock, {}],
@@ -31,6 +32,8 @@ const CASES: Array<[string, React.ComponentType<any>, Record<string, unknown>]> 
   // An iframe to nowhere is the audio bug again; a non-HJ embed URL must also stay silent.
   ['perfect_loops_player', RenderPerfectLoopsPlayer, { embed_url: '' }],
   ['perfect_loops_player (foreign host)', RenderPerfectLoopsPlayer, { embed_url: 'https://evil.example/embed' }],
+  // A booking form under a restaurant's name with no bookable windows invites a table nobody can book.
+  ['table_booking', RenderTableBooking, {}],
 ];
 
 describe('public: silence', () => {

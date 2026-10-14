@@ -1071,6 +1071,15 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   deep link (PorchHearth's nearest-neighbour seam, `crosstalk/contracts/route-optimize.md`,
   ≤20 stops; coordinates when the sweep stored them, else the address). Tests:
   `lib/partners/__tests__/repCodes.test.ts`, `lib/rep/__tests__/repRoute.test.ts`.
+- **Table booking — the Italy demo (2026-10-14, demo-grade)**: a `table_booking` block (day →
+  guests → time → name) on a restaurant site, an owner phone page at `/merchant/bookings/<id>`,
+  Italian + English strings, tables in `restaurant_tables`, bookings in `table_bookings` where
+  an **exclusion constraint** (`20260884`) settles the double-booking race — the server
+  re-derives every slot from `lib/booking/slots.ts` and never trusts the client's. HiveJournal
+  builds the floor plan on top, reading `GET /api/booking/<id>/day` (owner session or HMAC over
+  path+query) — **the partner shape carries no guest phone/email**. Demo site
+  `/sites/trattoria-del-borgo-demo` (fictional; sample guests invented). The block is silent in
+  public until the site has bookable windows. Map: [`docs/ITALY_RESTAURANT_DEMO.md`](docs/ITALY_RESTAURANT_DEMO.md).
 - **`/spread-the-word` — the public referral page (2026-10-11)**: `/for-sales` is the brief for
   people recruited to SELL (calls, the domain rental, territories) and reads like a job; the
   owner wanted a shareable version that is "just about telling people about it and helping

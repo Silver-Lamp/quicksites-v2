@@ -136,6 +136,7 @@ const NAV_MERCHANT: NavItem[] = [
 
   { type: 'section', label: 'Customers' },
   { type: 'item', label: 'Customers', href: '/merchant/customers', icon: <Users size={18} /> },
+  { type: 'item', label: 'Bookings', href: '/merchant/bookings', icon: <Utensils size={18} /> },
   { type: 'item', label: 'Campaigns', href: '/merchant/campaigns', icon: <Megaphone size={18} /> },
   { type: 'item', label: 'Voice audio', href: '/merchant/audio', icon: <Mic size={18} /> },
 

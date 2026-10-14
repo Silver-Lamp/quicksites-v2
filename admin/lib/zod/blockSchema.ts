@@ -1581,6 +1581,20 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Table booking for a restaurant (lib/booking/*; the Italy demo, 2026-10-14). The rules
+  // (windows, seating length, party cap, locale) live on `data.meta.booking` with the site's
+  // `hours` block as the fallback; the tables live in `restaurant_tables`. The block itself
+  // carries only its words, so an empty one renders the widget as soon as the site has tables
+  // and windows, and nothing at all before.
+  table_booking: {
+    label: 'Table booking',
+    icon: '🍽️',
+    schema: z.object({
+      title: z.string().optional().default(''),
+      intro: z.string().optional().default(''),
+    }),
+  },
+
   // HiveJournal Perfect Loops player for one artist (crosstalk/contracts/artist-profile.md).
   // The embed is per ARTIST, labelled HiveJournal on the page; `fan_link_url` is the one link
   // every "play my loops" button uses (it carries the artist's affiliate ref server-side, so

@@ -85,6 +85,7 @@ export function isCityPortal(r: ListingRow): boolean {
 function realMenuItems(r: ListingRow): number {
   const meta = safeParse(r.data)?.meta ?? {};
   if (meta.is_starter || meta.is_demo) return 0; // a demo is not a restaurant
+  if (meta.is_simulation === true) return 0; // nor is a restaurant AI personas run for a day (lib/booking/simulation.ts)
   const types = blockTypes(r.data);
   if (types.has('restaurants_directory')) return 0; // a directory is not a restaurant
   if (!types.has('menu')) return 0;

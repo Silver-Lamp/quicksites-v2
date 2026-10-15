@@ -127,7 +127,8 @@ describe('routes', () => {
       expect(src).toMatch(/const raw = await req\.text\(\)/);
       expect(src).toMatch(/checkBookingPartner\(req, raw\)/);
       expect(src).toMatch(/if \(partnerCheck === 'bad_signature'\) return/);
-      expect(src).toMatch(/if \(partnerCheck !== 'ok'\) \{\s*const gate = await requireTemplateOwner\(templateId\)/);
+      // The partner branch checks the owner's link (lib/booking/partnerLink.ts); everyone else hits the session gate.
+      expect(src).toMatch(/if \(partnerCheck === 'ok'\) \{[^]*?isPartnerLinked\(templateId\)[^]*?\} else \{\s*const gate = await requireTemplateOwner\(templateId\)/);
       // Verify before parse: a body parsed first is a body that can differ from the one signed.
       expect(src.indexOf('checkBookingPartner(req, raw)')).toBeLessThan(src.indexOf('JSON.parse(raw'));
     }

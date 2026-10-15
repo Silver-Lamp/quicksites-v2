@@ -10,6 +10,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { loadBookingSite, loadTables } from '@/lib/booking/db';
 import { bookingStrings } from '@/lib/booking/i18n';
 import BookingsClient from '@/components/merchant/bookings-client';
+import ConnectHjCard from '@/components/merchant/connect-hj-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,10 @@ export default async function MerchantBookingsPage({ params }: { params: Promise
       </p>
       <div className="mt-6">
         <BookingsClient templateId={templateId} locale={site.settings.locale} tz={site.settings.tz} tables={tables.map((x) => ({ id: x.id, label: x.label, seats: x.seats }))} maxParty={Math.max(site.settings.maxParty, ...tables.map((x) => x.seats), 1)} />
+      </div>
+      {/* The owner-consented link to HiveJournal's floor plan + food cost (lib/booking/partnerLink.ts). */}
+      <div className="mt-8">
+        <ConnectHjCard templateId={templateId} />
       </div>
     </div>
   );

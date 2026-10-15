@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 import { checkBookingPartner } from '@/lib/booking/partnerAuth';
 import { listBookingsForDay, loadBookingSite, loadTables } from '@/lib/booking/db';
+import { isPartnerLinked } from '@/lib/booking/partnerLink';
 import { weekdayOf } from '@/lib/booking/slots';
 
 export const runtime = 'nodejs';
@@ -23,7 +24,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ templateId:
   const partnerCheck = checkBookingPartner(req, `${req.nextUrl.pathname}${req.nextUrl.search}`);
   if (partnerCheck === 'bad_signature') return NextResponse.json({ error: 'bad_signature' }, { status: 403 });
   const partner = partnerCheck === 'ok';
-  if (!partner) {
+  if (partner) {
+    // A partner reads only a template its OWNER linked (or the exempt demo) — lib/booking/partnerLink.ts.
+    if (!(await isPartnerLinked(templateId))) return NextResponse.json({ error: 'not_linked' }, { status: 403 });
+  } else {
     const gate = await requireTemplateOwner(templateId);
     if (!gate.ok) return gate.response;
   }

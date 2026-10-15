@@ -13,6 +13,7 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 import { checkBookingPartner } from '@/lib/booking/partnerAuth';
 import { createBooking, loadBookingSite, loadBookingsAround, loadTables } from '@/lib/booking/db';
+import { isPartnerLinked } from '@/lib/booking/partnerLink';
 import { computeSlots } from '@/lib/booking/slots';
 import { hasBookableWindows } from '@/lib/booking/settings';
 
@@ -27,7 +28,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ templateId
   const raw = await req.text();
   const partnerCheck = checkBookingPartner(req, raw);
   if (partnerCheck === 'bad_signature') return NextResponse.json({ error: 'bad_signature' }, { status: 403 });
-  if (partnerCheck !== 'ok') {
+  if (partnerCheck === 'ok') {
+    // A partner writes only to a template its OWNER linked (or the exempt demo) — lib/booking/partnerLink.ts.
+    if (!(await isPartnerLinked(templateId))) return NextResponse.json({ error: 'not_linked' }, { status: 403 });
+  } else {
     const gate = await requireTemplateOwner(templateId);
     if (!gate.ok) return gate.response;
   }

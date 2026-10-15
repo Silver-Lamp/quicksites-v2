@@ -87,7 +87,7 @@ describe('the for-craig page', () => {
     expect(page).not.toMatch(/\b35%/);
   });
   it('shows the hours log only when the option is on, and names the two payment paths honestly', () => {
-    expect(page).toMatch(/\{hourlyOn && \(\s*<section[^]*?<HoursLog token=\{repToken\} repName=\{NAME\} \/>/);
+    expect(page).toMatch(/<RepHoursSection code=\{CODE\} repName=\{NAME\} token=\{repToken\} \/>/); // renders only while the option is on
     expect(page).toMatch(/Stripe or Venmo/);
     expect(page).toMatch(/never paid anyone/);
     expect(page).not.toMatch(/guarantee|rank on Google|page one|licensed/i);

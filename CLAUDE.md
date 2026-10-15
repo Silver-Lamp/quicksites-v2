@@ -351,7 +351,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `SWEEP_OTHER_NUMBERS_MIN` (2); the skip is recorded on the row so the alert and
   `/admin/call-logs` say "not texted — a sweep". An unreadable count is zero: a DB hiccup fails
   toward texting, never toward silence. The 8 s settle plus ring time means the sweep is already
-  visible by the time any one call is decided. ⚠️ Still open and
+  visible by the time any one call is decided.
+  ⚠️ **A KNOWN LEAD-GEN NUMBER IS SCREENED, NOT FORWARDED (2026-10-15, owner: "if we detect an
+  Angie's lead call can we not forward?").** `caller_screens` (`20260887`) + `lib/ppl/callerScreen*.ts`:
+  the entry route checks the list FIRST (before PPL — a screened call must never become a charged
+  lead), best-effort (any error falls through to a normal forward), and a screened caller hears
+  that the line doesn't connect sales calls and is offered voicemail, which the normal pipeline
+  transcribes, judges and relays — a wrongly screened customer still gets through by message.
+  Onto the list two ways, **never the model alone**: a person (Screen/Unscreen on `/admin/call-logs`)
+  or a voicemail judged `not_lead` whose transcript NAMES a vendor (deterministic patterns —
+  "over at Angie", HomeAdvisor, Thumbtack…; "Hi, this is Angie, my sink is leaking" is a customer
+  and a test pins it). Lifted, never deleted. `handling='screened'` in the log and the alert.
+  ⚠️ Still open and
   **not** a code question: the page asserts a company that does not exist. The two honest shapes
   are a **directory** (our own dome-cohort rule: *"a directory is not a business"*) or a site that
   names its real renter — and the mismatch exists **only in the unpaid state**, since all 11

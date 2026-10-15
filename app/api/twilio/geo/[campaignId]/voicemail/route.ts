@@ -35,6 +35,8 @@ import { judgeVoicemail, decideVoicemailRelay, industryLabelFor, type VerdictRes
 import { sendSms } from '@/lib/sms/sendSms';
 import { getSenderProfile } from '@/lib/outreach/senderProfile';
 import { isOptedOut } from '@/lib/ppl/forwardNotice';
+import { shouldAutoScreen } from '@/lib/ppl/callerScreen';
+import { screenNumber } from '@/lib/ppl/callerScreenDb';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -115,6 +117,20 @@ export async function POST(req: Request, ctx: { params: Promise<{ campaignId: st
         })
         .eq('call_sid', callSid)
         .then(() => undefined, () => undefined);
+    }
+    // 2b) A vendor that NAMED ITSELF and was judged not a lead goes on the caller-screen list
+    // (lib/ppl/callerScreen.ts): its next call to any of our numbers is offered voicemail instead
+    // of the business. Deterministic keyword match + the verdict, never the verdict alone — a
+    // customer called Angie is not Angi. Best-effort: never blocks the relay decision below.
+    const vendor = shouldAutoScreen({ verdict: verdict?.verdict ?? null, transcript });
+    if (vendor && callerPhone) {
+      const { data: me } = await admin.from('call_logs').select('id').eq('call_sid', callSid).maybeSingle();
+      await screenNumber({
+        number: callerPhone,
+        reason: 'vendor_voicemail',
+        evidence: `${vendor.vendor} — "${(transcript ?? '').slice(0, 200)}"`,
+        sourceCallId: (me as { id?: string } | null)?.id ?? null,
+      }).catch(() => undefined);
     }
     const relay = decideVoicemailRelay({ speech, verdict: verdict?.verdict ?? null });
 

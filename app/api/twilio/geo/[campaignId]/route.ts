@@ -18,6 +18,8 @@ import { cascadeGreetingTwiml } from '@/lib/ppl/cascade';
 import { voicemailFirstPromptTwiml, voicemailGreetingUrl } from '@/lib/ppl/voicemail';
 import { cascadeEnabled } from '@/lib/ppl/cascadeFlag';
 import { connectingAnnouncement } from '@/lib/ppl/forwardAnnounce';
+import { screenPromptTwiml } from '@/lib/ppl/callerScreen';
+import { activeScreen } from '@/lib/ppl/callerScreenDb';
 import { KEY_TO_LABEL } from '@/lib/industries';
 
 export const runtime = 'nodejs';
@@ -83,6 +85,23 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
       /* logging is best-effort — never block forwarding */
     }
   };
+
+  // ⚠️ SCREENED CALLERS ARE NOT BRIDGED (lib/ppl/callerScreen.ts; owner, 2026-10-15). A number on
+  // the list — a lead-gen vendor that named itself on a voicemail, or one a person screened —
+  // hears that this line doesn't connect sales calls and is offered voicemail, which the normal
+  // pipeline transcribes, judges and relays. So a wrongly screened customer still reaches the
+  // business, by message. Checked first, ahead of PPL (a screened call must not become a charged
+  // lead) — and BEST-EFFORT: any error here falls through to normal forwarding, because a DB
+  // hiccup must never silence a possible customer.
+  try {
+    const screen = await activeScreen(searchParams.get('From'));
+    if (screen) {
+      await logCall({ forwarded_to: null, handling: 'screened' });
+      return xml(screenPromptTwiml({ recordActionUrl: `${base}/api/twilio/geo/${encodeURIComponent(campaignId)}/voicemail` }));
+    }
+  } catch {
+    /* fall through to the normal path */
+  }
 
   // Pay-per-call campaigns (docs/PPL_VERTICAL.md): the balance gate runs BEFORE the bridge, and
   // the bridged leg's outcome goes to the signed /api/twilio/ppl/complete callback, which bills.

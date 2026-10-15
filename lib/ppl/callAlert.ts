@@ -77,7 +77,8 @@ export function outcomeOf(row: CallRow): DialOutcome {
  * not by a test: every unit case used a forwarded call.
  */
 export function outcomeLine(row: CallRow): string | null {
-  if (row.handling === 'voicemail_first') return null;
+  // Neither dials, so neither has a dial outcome to report.
+  if (row.handling === 'voicemail_first' || row.handling === 'screened') return null;
   const outcome = outcomeOf(row);
   const dur = row.call_duration ? ` · ${row.call_duration}s` : '';
   return OUTCOME_LABEL[outcome] + dur;
@@ -101,6 +102,15 @@ export function handlingLabel(row: CallRow): string {
       const t = (row.voicemail_transcript ?? '').trim();
       if (row.voicemail_speech === 'speech' && t) return `${base} · they said: "${t.length > 160 ? `${t.slice(0, 157)}…` : t}"${verdictSuffix(row)}`;
       return base;
+    }
+    case 'screened': {
+      // A number on the caller-screen list (lib/ppl/callerScreen.ts): not bridged, offered
+      // voicemail. The message, if any, went through the normal judge-and-relay.
+      const base = 'Screened — a known sales/lead-gen number, not forwarded; offered voicemail';
+      if (row.voicemail_speech === 'no_speech') return `${base} · no speech on the recording`;
+      const t = (row.voicemail_transcript ?? '').trim();
+      if (row.voicemail_speech === 'speech' && t) return `${base} · they said: "${t.length > 160 ? `${t.slice(0, 157)}…` : t}"${verdictSuffix(row)}`;
+      return `${base} · no message left`;
     }
     case 'cascade':
       return 'Offered to the cascade pool';

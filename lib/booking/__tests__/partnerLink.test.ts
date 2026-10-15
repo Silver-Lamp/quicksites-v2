@@ -46,9 +46,12 @@ describe('the four partner routes answer only for a linked template', () => {
     const before = src.slice(Math.max(0, i - 400), i);
     expect(before).toMatch(/partnerCheck === 'ok'|partner\) \{/);
   });
-  it('the public guest routes (availability, book) do not need a link', () => {
+  it('the public guest routes do not need a link — book consults it only to lift the IP limit for a signed simulation call', () => {
     expect(read('app/api/booking/[templateId]/availability/route.ts')).not.toMatch(/isPartnerLinked/);
-    expect(read('app/api/booking/[templateId]/book/route.ts')).not.toMatch(/isPartnerLinked/);
+    const book = read('app/api/booking/[templateId]/book/route.ts');
+    expect((book.match(/isPartnerLinked\(/g) ?? []).length).toBe(1);
+    expect(book).toMatch(/const unthrottled = partnerCheck === 'ok' && simulation && \(await isPartnerLinked\(templateId\)\)/);
+    expect(book).not.toMatch(/'not_linked'/); // a guest is never refused for lack of a link
   });
 });
 

@@ -50,6 +50,8 @@ Customers → Bookings).
 
 **Linking (2026-10-15):** a partner signature alone no longer reads any template. `day`/`phone`/`cancel`/`tables` answer `403 not_linked` unless the owner linked the site (`lib/booking/partnerLink.ts`); the demo is exempt by its flags (`is_demo` + `demo_kind`), never by id. Owner UI: the "Floor plan & food cost (HiveJournal)" card on `/merchant/bookings/<id>`. Contract section "Linking" in `restaurant-floor-plan.md`.
 
+**Simulation sites (2026-10-15):** `data.meta.is_simulation = true` (`lib/booking/simulation.ts`) marks a restaurant AI personas run for a day on HJ's side. Separate from `is_demo` (a sim must be owner-linked like a real site). Changes exactly three things: no booking emails; a partner-signed `/book` on a sim+linked site skips the per-IP guest limit (`source` stays `web`, slot still re-derived, 409 still answers a race); excluded from the delivered.menu directory and published with `meta.noindex`. Sim site `trattoria-simulazione` (operator-owned, daily lunch + dinner, 8 tables). Contract section "Simulation sites".
+
 Partner auth lives in `lib/booking/partnerAuth.ts`: a request without `X-Partner-Id` goes to the session gate; a partner header with a bad signature is refused and **never** downgraded to the session check. Verify before parse on the POSTs.
 
 ## Rules worth keeping

@@ -1,10 +1,11 @@
-// /api/admin/rep-hours — the owner's side of the hours log.
-//   GET                                   → every code with an hourly arrangement: rows + summary
-//   POST { ids: [...], paid_via, note? }  → marks those rows paid now (the money moves outside: Stripe or Venmo)
-//   POST { ids: [...], unpay: true }      → clears a mistaken mark
+// /api/admin/rep-hours — the payer's side of the hours log, and the per-rep hourly config.
+//   GET                                    → { reps: every code + its hourly config, codes: hourly-enabled codes with rows + summary }
+//   POST  { ids, paid_via, note? }         → marks those rows paid now (the money moves outside: Stripe or Venmo)
+//   POST  { ids, unpay: true }             → clears a mistaken mark
+//   PATCH { code, hourly_enabled, hourly_rate_cents, hourly_paid_by } → the option per rep (lib/rep/hours.ts#parseHourlyConfig)
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireUser';
-import { REP_HOURLY_RATES, summarizeHours, type HoursRow } from '@/lib/rep/hours';
+import { listRepHourlyConfigs, parseHourlyConfig, summarizeHours, type HoursRow } from '@/lib/rep/hours';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -15,14 +16,39 @@ const SELECT = 'id, code, worked_on, hours, note, created_at, paid_at, paid_via,
 export async function GET() {
   const gate = await requireAdmin();
   if (gate instanceof NextResponse) return gate;
-  const codes = Object.keys(REP_HOURLY_RATES);
-  const { data } = await supabaseAdmin.from('rep_hours').select(SELECT).in('code', codes).order('worked_on', { ascending: false }).limit(1000);
+  const reps = await listRepHourlyConfigs();
+  const hourly = reps.filter((r) => r.enabled && r.rateCents != null);
+  const codes = hourly.map((r) => r.code);
+  const { data } = codes.length ? await supabaseAdmin.from('rep_hours').select(SELECT).in('code', codes).order('worked_on', { ascending: false }).limit(1000) : { data: [] as any[] };
   const rows = ((data ?? []) as Array<HoursRow & { code: string }>).map((r) => ({ ...r, hours: Number(r.hours) }));
-  const byCode = codes.map((code) => {
-    const mine = rows.filter((r) => r.code === code);
-    return { code, rate_cents: REP_HOURLY_RATES[code], rows: mine, summary: summarizeHours(mine, REP_HOURLY_RATES[code]) };
+  const byCode = hourly.map((r) => {
+    const mine = rows.filter((x) => x.code === r.code);
+    return { code: r.code, label: r.label, rate_cents: r.rateCents as number, paid_by: r.paidBy, rows: mine, summary: summarizeHours(mine, r.rateCents as number) };
   });
-  return NextResponse.json({ ok: true, codes: byCode });
+  return NextResponse.json({ ok: true, reps, codes: byCode });
+}
+
+export async function PATCH(req: NextRequest) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+  let body: unknown = {};
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
+  }
+  const parsed = parseHourlyConfig(body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const { code, enabled, rateCents, paidBy } = parsed.value;
+  const { data, error } = await supabaseAdmin
+    .from('referral_codes')
+    .update({ hourly_enabled: enabled, hourly_rate_cents: rateCents, hourly_paid_by: paidBy })
+    .eq('code', code)
+    .select('code, hourly_enabled, hourly_rate_cents, hourly_paid_by')
+    .maybeSingle();
+  if (error) return NextResponse.json({ error: 'failed', detail: error.message }, { status: 500 });
+  if (!data) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  return NextResponse.json({ ok: true, rep: data });
 }
 
 export async function POST(req: NextRequest) {

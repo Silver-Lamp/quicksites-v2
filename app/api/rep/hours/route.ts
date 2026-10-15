@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 import { verifyRepActionToken } from '@/lib/rep/repActionToken';
-import { hourlyRateCents, parseHoursInput, summarizeHours, MAX_ENTRIES_PER_DAY, type HoursRow } from '@/lib/rep/hours';
+import { loadHourly, parseHoursInput, summarizeHours, MAX_ENTRIES_PER_DAY, type HoursRow } from '@/lib/rep/hours';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -18,14 +18,15 @@ export const dynamic = 'force-dynamic';
 
 const SELECT = 'id, worked_on, hours, note, created_at, paid_at, paid_via';
 
-async function gate(token: string | null): Promise<{ code: string; rate: number } | NextResponse> {
+/** The grant names the code; the code's row says whether hours are an option at all (hourly_enabled). */
+async function gate(token: string | null): Promise<{ code: string; rate: number; paidBy: string | null } | NextResponse> {
   const grant = verifyRepActionToken(token);
   if (!grant) return NextResponse.json({ error: 'bad_token' }, { status: 403 });
-  const rate = hourlyRateCents(grant.code);
-  if (rate == null) return NextResponse.json({ error: 'no_hourly_arrangement' }, { status: 403 });
+  const arr = await loadHourly(grant.code);
+  if (!arr.enabled || arr.rateCents == null) return NextResponse.json({ error: 'no_hourly_arrangement' }, { status: 403 });
   const { data } = await supabaseAdmin.from('referral_codes').select('code, status').eq('code', grant.code).maybeSingle();
   if (!data || (data as any).status === 'disabled') return NextResponse.json({ error: 'code_inactive' }, { status: 403 });
-  return { code: grant.code, rate };
+  return { code: grant.code, rate: arr.rateCents, paidBy: arr.paidBy };
 }
 
 async function list(code: string): Promise<HoursRow[]> {
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
   const g = await gate(req.nextUrl.searchParams.get('token'));
   if (g instanceof NextResponse) return g;
   const rows = await list(g.code);
-  return NextResponse.json({ ok: true, code: g.code, rate_cents: g.rate, rows, summary: summarizeHours(rows, g.rate) });
+  return NextResponse.json({ ok: true, code: g.code, rate_cents: g.rate, paid_by: g.paidBy, rows, summary: summarizeHours(rows, g.rate) });
 }
 
 export async function POST(req: NextRequest) {

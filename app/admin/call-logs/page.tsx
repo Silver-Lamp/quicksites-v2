@@ -13,6 +13,9 @@ import Link from 'next/link';
 import { classifyDial, type DialOutcome } from '@/lib/ppl/forwardHealth';
 import { analysisLine } from '@/lib/ppl/callAnalysis';
 import { formatUsPhone } from '@/lib/phone/formatUs';
+import { listScreens } from '@/lib/ppl/callerScreenDb';
+import { screenKey } from '@/lib/ppl/callerScreen';
+import ScreenNumberButton from '@/components/admin/screen-number-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +54,11 @@ export default async function CallLogsPage() {
     .limit(50);
 
   const rows = logs ?? [];
+  // Caller screens (lib/ppl/callerScreen.ts): a screened number is not forwarded, it is offered
+  // voicemail. Shown as a badge + a Screen/Unscreen button per row; the list is also summarised
+  // above the table so a screened customer complaint can be traced to a decision.
+  const screens = await listScreens().catch(() => []);
+  const active = new Map(screens.filter((s) => !s.released_at).map((s) => [s.number, s]));
   // Counted over what is on screen, and the heading says so — a summary whose scope is unstated
   // gets read as a fleet total.
   const tally = rows.reduce(
@@ -74,6 +82,13 @@ export default async function CallLogsPage() {
             {tally.in_progress > 0 ? ` · ${tally.in_progress} no outcome` : ''}
           </p>
         </div>
+
+        {active.size > 0 && (
+          <p className="text-xs text-zinc-400">
+            <span className="text-rose-300">{active.size} screened number{active.size === 1 ? '' : 's'}</span> — sent to voicemail instead of the business:{' '}
+            {[...active.values()].map((s) => `${formatUsPhone(s.number)} (${s.reason === 'vendor_voicemail' ? 'named a lead-gen vendor on a voicemail' : 'screened by hand'})`).join(' · ')}
+          </p>
+        )}
 
         <div className="rounded border border-zinc-700 bg-black/30 overflow-hidden">
           <table className="w-full text-sm">
@@ -100,7 +115,19 @@ export default async function CallLogsPage() {
                 return (
                   <Fragment key={log.call_sid ?? log.id}>
                   <tr className="border-t border-zinc-800 hover:bg-zinc-800/30">
-                    <td className="px-4 py-2 font-mono text-zinc-100">{log.from_number}</td>
+                    <td className="px-4 py-2 font-mono text-zinc-100">
+                      {log.from_number}
+                      {log.from_number ? (
+                        <span className="ml-2 inline-flex items-center gap-1 font-sans">
+                          {active.has(screenKey(log.from_number) ?? '') ? (
+                            <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[11px] text-rose-300" title={active.get(screenKey(log.from_number) ?? '')?.evidence ?? 'screened'}>
+                              screened
+                            </span>
+                          ) : null}
+                          <ScreenNumberButton number={log.from_number} callId={log.id} screened={active.has(screenKey(log.from_number) ?? '')} evidence={log.voicemail_summary ?? log.analysis_summary ?? null} />
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-2 font-mono text-zinc-100">{log.to_number}</td>
                     <td className="px-4 py-2 font-mono text-zinc-300">
                       {log.forwarded_to ? (

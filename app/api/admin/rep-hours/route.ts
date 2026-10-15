@@ -5,7 +5,8 @@
 //   PATCH { code, hourly_enabled, hourly_rate_cents, hourly_paid_by } → the option per rep (lib/rep/hours.ts#parseHourlyConfig)
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireUser';
-import { listRepHourlyConfigs, parseHourlyConfig, summarizeHours, type HoursRow } from '@/lib/rep/hours';
+import { parseHourlyConfig, summarizeHours, type HoursRow } from '@/lib/rep/hours';
+import { listRepHourlyConfigs } from '@/lib/rep/hoursDb';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';

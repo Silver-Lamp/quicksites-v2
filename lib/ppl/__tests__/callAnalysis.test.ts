@@ -88,7 +88,7 @@ const FACTS: CallFacts = {
     voicemail: { hasRecording: false, speech: null, transcript: null, verdict: null, verdictReason: null },
     businessTexted: true,
   },
-  caller: { areaCode: '904', priorCalls: { count: 0, domains: [], lastOutcome: null }, knownBusiness: null, isForwardTo: false, isOperator: null },
+  caller: { areaCode: '904', priorCalls: { count: 0, domains: [], lastOutcome: null, lastVoicemail: null, lastRead: null }, knownBusiness: null, isForwardTo: false, isOperator: null },
   site: { domain: 'vashon-landscaping.com', city: 'Vashon', region: 'WA', industry: 'Landscaping', campaignStatus: 'draft', rankStatus: 'unranked', rankPosition: null, ageDays: 4, gsc: { impressions: 0, clicks: 0 } },
   visit: {
     source: 'posthog',

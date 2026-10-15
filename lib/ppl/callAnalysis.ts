@@ -81,7 +81,20 @@ export type CallFacts = {
   caller: {
     areaCode: string | null;
     /** Earlier calls from the same number to any of our numbers. */
-    priorCalls: { count: number; domains: string[]; lastOutcome: string | null };
+    priorCalls: {
+      count: number;
+      domains: string[];
+      lastOutcome: string | null;
+      /**
+       * What this number SAID last time, when we have it: the most recent prior voicemail's
+       * verdict + summary, and the most recent prior stored read. ⚠️ Added 2026-10-15 because a
+       * number that left "Heidi from Angie, looking for contractors" on vashon-well-drilling one
+       * day and had a 200-second conversation with the business the next read as `unknown` —
+       * count and length alone say nothing about who a repeat caller is; their own words do.
+       */
+      lastVoicemail: { verdict: string; summary: string | null; domain: string | null } | null;
+      lastRead: { read: string; domain: string | null } | null;
+    };
     /** A business we hold a listing for, matched on the last ten digits. */
     knownBusiness: { name: string; city: string | null; industry: string | null } | null;
     /** The number is a campaign's own forward-to: the business ringing its own site. */
@@ -222,25 +235,31 @@ export async function gatherCallFacts(db: Db, row: CallLogForAnalysis): Promise<
 
   // Caller history and identity — on the last ten digits, the only spelling two tables share.
   const l10 = last10(row.from_number);
-  let priorCalls: CallFacts['caller']['priorCalls'] = { count: 0, domains: [], lastOutcome: null };
+  let priorCalls: CallFacts['caller']['priorCalls'] = { count: 0, domains: [], lastOutcome: null, lastVoicemail: null, lastRead: null };
   let knownBusiness: CallFacts['caller']['knownBusiness'] = null;
   let isForwardTo = false;
   if (l10.length === 10 && row.from_number) {
     const prior = (
       await db
         .from('call_logs')
-        .select('custom_domain, call_status, call_duration, created_at')
+        .select('custom_domain, call_status, call_duration, created_at, voicemail_verdict, voicemail_summary, analysis')
         .eq('from_number', row.from_number)
         .neq('id', row.id)
         .lt('created_at', callAt)
         .order('created_at', { ascending: false })
         .limit(20)
-    ).data as { custom_domain: string | null; call_status: string | null; call_duration: number | null }[] | null;
+    ).data as
+      | { custom_domain: string | null; call_status: string | null; call_duration: number | null; voicemail_verdict: string | null; voicemail_summary: string | null; analysis: { read?: string } | null }[]
+      | null;
     if (prior?.length) {
+      const lastVm = prior.find((p) => !!p.voicemail_verdict);
+      const lastAn = prior.find((p) => typeof p.analysis?.read === 'string' && p.analysis.read !== 'unknown');
       priorCalls = {
         count: prior.length,
         domains: Array.from(new Set(prior.map((p) => p.custom_domain).filter((d): d is string => !!d))).slice(0, 6),
         lastOutcome: classifyDial(prior[0].call_status, prior[0].call_duration),
+        lastVoicemail: lastVm ? { verdict: lastVm.voicemail_verdict as string, summary: lastVm.voicemail_summary ?? null, domain: lastVm.custom_domain } : null,
+        lastRead: lastAn ? { read: lastAn.analysis!.read as string, domain: lastAn.custom_domain } : null,
       };
     }
     const biz = (
@@ -400,7 +419,7 @@ export function factsForModel(f: CallFacts): string {
     `Site: ${f.site.domain ?? 'unknown'} — a ${f.site.industry ?? 'local service'} site for ${[f.site.city, f.site.region].filter(Boolean).join(', ') || 'an unknown city'}; campaign status ${f.site.campaignStatus ?? '?'}; ${f.site.ageDays != null ? `${f.site.ageDays} days old` : 'age unknown'}; rank ${f.site.rankStatus ?? '?'}${f.site.rankPosition != null ? ` (position ${f.site.rankPosition})` : ''}; Search Console: ${gsc}.`,
     `Call: ${f.call.at} UTC; handling ${f.call.handling ?? '?'}${f.call.forwardedToName ? ` to ${f.call.forwardedToName}` : ''}; outcome ${outcome} (Twilio status ${f.call.status ?? '?'}${f.call.durationSec != null ? `, ${f.call.durationSec}s` : ''}); business texted afterwards: ${f.call.businessTexted ? 'yes' : 'no'}.`,
     `Voicemail: ${vm.hasRecording ? `recording present; speech ${vm.speech ?? 'unknown'}${vm.verdict ? `; judged ${vm.verdict} (${vm.verdictReason ?? ''})` : ''}${vm.transcript ? `; transcript: "${vm.transcript}"` : ''}` : 'none'}.`,
-    `Caller: area code ${f.caller.areaCode ?? 'unknown'}; prior calls from this number to our numbers: ${f.caller.priorCalls.count}${f.caller.priorCalls.count ? ` (sites: ${f.caller.priorCalls.domains.join(', ') || '?'}; last outcome ${f.caller.priorCalls.lastOutcome})` : ''}; ${f.caller.knownBusiness ? `the number belongs to a business we list: ${f.caller.knownBusiness.name}${f.caller.knownBusiness.city ? `, ${f.caller.knownBusiness.city}` : ''}` : 'not a business we list'}; ${f.caller.isForwardTo ? 'IS a campaign forward-to number (a business calling its own site)' : 'not a forward-to number'}; ${
+    `Caller: area code ${f.caller.areaCode ?? 'unknown'}; prior calls from this number to our numbers: ${f.caller.priorCalls.count}${f.caller.priorCalls.count ? ` (sites: ${f.caller.priorCalls.domains.join(', ') || '?'}; last outcome ${f.caller.priorCalls.lastOutcome}${f.caller.priorCalls.lastVoicemail ? `; their most recent voicemail to us was judged ${f.caller.priorCalls.lastVoicemail.verdict}${f.caller.priorCalls.lastVoicemail.summary ? ` — "${f.caller.priorCalls.lastVoicemail.summary}"` : ''}` : ''}${f.caller.priorCalls.lastRead ? `; our most recent read of this number: ${f.caller.priorCalls.lastRead.read}` : ''})` : ''}; ${f.caller.knownBusiness ? `the number belongs to a business we list: ${f.caller.knownBusiness.name}${f.caller.knownBusiness.city ? `, ${f.caller.knownBusiness.city}` : ''}` : 'not a business we list'}; ${f.caller.isForwardTo ? 'IS a campaign forward-to number (a business calling its own site)' : 'not a forward-to number'}; ${
       f.caller.isOperator === null ? 'no operator phone list is configured' : f.caller.isOperator ? 'IS the operator\'s own phone' : 'not the operator\'s phone'
     }.`,
     visitLines,

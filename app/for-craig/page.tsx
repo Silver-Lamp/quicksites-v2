@@ -16,7 +16,7 @@ import SiteHeader from '@/components/site/site-header';
 import { MAX_PLATFORM_FEE_PERCENT } from '@/lib/commerce/partner-terms';
 import { mintRepActionToken } from '@/lib/rep/repActionToken';
 import { repBuildLinks } from '@/lib/rep/repBuild';
-import { hourlyRateCents, moneyFromCents } from '@/lib/rep/hours';
+import { loadHourly, moneyFromCents } from '@/lib/rep/hours';
 import { loadCityNoSite, loadCitySites, streetOf, tradeLabel } from '@/lib/rep/islandNoSite';
 import { signInHref } from '@/lib/auth/authLinks';
 import NoSiteTable, { type NoSiteRow as TableRow } from '@/components/for-rep/no-site-table';
@@ -32,8 +32,6 @@ const NAME = 'Craig';
 
 const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
 const codePct = Math.round(CODE_RATE * 100);
-const rateCents = hourlyRateCents(CODE) ?? 0;
-const hourly = moneyFromCents(rateCents);
 
 /** Worked example — derived, never typed. */
 const EX_ORDERS = 3000;
@@ -87,7 +85,11 @@ function Card({ title, tag, tone = 'zinc', children }: { title: string; tag?: st
 }
 
 export default async function ForCraigPage() {
-  const [island, sites] = await Promise.all([loadCityNoSite('Vashon', 'WA'), loadCitySites('vashon')]);
+  const [island, sites, hourlyArr] = await Promise.all([loadCityNoSite('Vashon', 'WA'), loadCitySites('vashon'), loadHourly(CODE)]);
+  // The hourly arrangement is a per-rep option on the code row (lib/rep/hours.ts); the page reads it,
+  // never types it. If it is ever switched off, the rate card and the log disappear together.
+  const hourlyOn = hourlyArr.enabled && hourlyArr.rateCents != null;
+  const hourly = hourlyOn ? moneyFromCents(hourlyArr.rateCents as number) : null;
   const repToken = mintRepActionToken(CODE);
   const menuHost = process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || null;
   const tableRows: TableRow[] = island.rows.map((r) => {
@@ -131,9 +133,15 @@ export default async function ForCraigPage() {
         {/* The deal, in three lines */}
         <section className="mx-auto max-w-3xl px-6 pb-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Card title="Your time" tag={`${hourly}/hr`} tone="amber">
-              Log the hours below. Paid by Sandon, by Stripe or Venmo, whichever you prefer — not by the system.
-            </Card>
+            {hourlyOn ? (
+              <Card title="Your time" tag={`${hourly}/hr`} tone="amber">
+                Log the hours below. Paid by Sandon, by Stripe or Venmo, whichever you prefer — not by the system.
+              </Card>
+            ) : (
+              <Card title="Your time" tag="commission only" tone="zinc">
+                No hourly arrangement is switched on for your code right now; the share below is the pay.
+              </Card>
+            )}
             <Card title="Your share" tag={`${codePct}% of the fee, for life`} tone="emerald">
               Any business that signs up through your flyer, link or code <code className="rounded bg-zinc-800 px-1 text-xs text-emerald-200">{CODE}</code> is tied to you from then on.
             </Card>
@@ -143,10 +151,12 @@ export default async function ForCraigPage() {
           </div>
         </section>
 
-        {/* Hours */}
-        <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
-          <HoursLog token={repToken} repName={NAME} />
-        </section>
+        {/* Hours — only when the option is on for this code */}
+        {hourlyOn && (
+          <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
+            <HoursLog token={repToken} repName={NAME} />
+          </section>
+        )}
 
         {/* What to say */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">

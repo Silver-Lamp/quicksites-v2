@@ -1,14 +1,65 @@
 'use client';
 
-// /admin/rep-hours — the owner's side of a rep's hours log (lib/rep/hours.ts): every hourly rep,
-// their open rows, one button to mark a selection paid after the money has moved (Stripe or Venmo).
+// /admin/rep-hours — hourly pay as a per-rep option (lib/rep/hours.ts): every rep code with its
+// config (on/off, rate, who pays), and for the hourly ones their logged rows with one button to
+// mark a selection paid after the money has moved (Stripe or Venmo).
 import * as React from 'react';
-import { moneyFromCents, type HoursRow, type HoursSummary } from '@/lib/rep/hours';
+import { HOURLY_PAID_BY, PAID_BY_LABEL, moneyFromCents, type HoursRow, type HoursSummary, type HourlyPaidBy, type RepConfigRow } from '@/lib/rep/hours';
 
-type CodeFeed = { code: string; rate_cents: number; rows: Array<HoursRow & { code: string; paid_note?: string | null }>; summary: HoursSummary };
+type CodeFeed = { code: string; label: string | null; rate_cents: number; paid_by: string | null; rows: Array<HoursRow & { code: string; paid_note?: string | null }>; summary: HoursSummary };
+
+const inputCls = 'rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-foreground';
+
+function RepConfigEditor({ rep, onSaved }: { rep: RepConfigRow; onSaved: () => void }) {
+  const [enabled, setEnabled] = React.useState(rep.enabled);
+  const [rate, setRate] = React.useState(rep.rateCents != null ? String(rep.rateCents / 100) : '');
+  const [paidBy, setPaidBy] = React.useState<HourlyPaidBy | ''>(rep.paidBy ?? '');
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+  const dirty = enabled !== rep.enabled || (rate === '' ? null : Math.round(Number(rate) * 100)) !== rep.rateCents || (paidBy || null) !== rep.paidBy;
+  async function save() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await fetch('/api/admin/rep-hours', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code: rep.code, hourly_enabled: enabled, hourly_rate_cents: rate === '' ? null : Math.round(Number(rate) * 100), hourly_paid_by: paidBy || null }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) setErr(j?.error === 'enabled_needs_rate_and_payer' ? 'Turning hourly on needs a rate and who pays.' : j?.error ?? 'failed');
+      else onSaved();
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <tr className="border-t border-border">
+      <td className="px-3 py-2 font-mono text-sm text-card-foreground">{rep.code}</td>
+      <td className="px-3 py-2 text-sm text-muted-foreground">{rep.label || rep.ownerEmail || '—'}{rep.parentCode ? <span className="ml-1 text-xs">(rep of {rep.parentCode})</span> : null}</td>
+      <td className="px-3 py-2"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-4 w-4 accent-amber-500" /></td>
+      <td className="px-3 py-2"><span className="text-sm text-muted-foreground">$</span><input value={rate} onChange={(e) => setRate(e.target.value.replace(/[^0-9.]/g, ''))} placeholder="—" className={`${inputCls} ml-1 w-20`} inputMode="decimal" /><span className="ml-1 text-xs text-muted-foreground">/hr</span></td>
+      <td className="px-3 py-2">
+        <select value={paidBy} onChange={(e) => setPaidBy(e.target.value as HourlyPaidBy | '')} className={inputCls}>
+          <option value="">—</option>
+          {HOURLY_PAID_BY.map((p) => (
+            <option key={p} value={p}>{PAID_BY_LABEL[p]}</option>
+          ))}
+        </select>
+      </td>
+      <td className="px-3 py-2">
+        <button type="button" disabled={!dirty || busy} onClick={save} className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-zinc-950 disabled:opacity-40">
+          Save
+        </button>
+        {err && <div className="mt-1 text-xs text-rose-400">{err}</div>}
+      </td>
+    </tr>
+  );
+}
 
 export default function RepHoursAdminPage() {
-  const [codes, setCodes] = React.useState<CodeFeed[] | null>(null);
+  const [reps, setReps] = React.useState<RepConfigRow[] | null>(null);
+  const [codes, setCodes] = React.useState<CodeFeed[]>([]);
   const [sel, setSel] = React.useState<Set<string>>(() => new Set());
   const [via, setVia] = React.useState<'stripe' | 'venmo' | 'other'>('venmo');
   const [note, setNote] = React.useState('');
@@ -22,6 +73,7 @@ export default function RepHoursAdminPage() {
       setErr(j?.error ?? 'failed');
       return;
     }
+    setReps(j.reps ?? []);
     setCodes(j.codes ?? []);
     setSel(new Set());
   }, []);
@@ -51,23 +103,48 @@ export default function RepHoursAdminPage() {
     });
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-semibold text-foreground">Rep hours</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        What each hourly rep logged from their page. Pay the open rows outside (Stripe or Venmo), then tick them and mark paid so their page shows it.
+        Hourly pay is an option per rep. Turn it on with a rate and who pays; the rep then gets a hours log on their page. Pay open rows outside (Stripe or Venmo), tick them and mark paid so their page shows it.
       </p>
       {err && <p className="mt-3 text-sm text-rose-400">{err}</p>}
-      {codes === null ? (
-        <p className="mt-6 text-sm text-muted-foreground">…</p>
-      ) : codes.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">No hourly reps configured (lib/rep/hours.ts).</p>
+
+      <h2 className="mt-8 text-lg font-semibold text-foreground">Reps</h2>
+      {reps === null ? (
+        <p className="mt-3 text-sm text-muted-foreground">…</p>
+      ) : (
+        <div className="mt-3 overflow-x-auto rounded-xl border border-border bg-card">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide text-muted-foreground">
+                <th className="px-3 py-2">Code</th>
+                <th className="px-3 py-2">Who</th>
+                <th className="px-3 py-2">Hourly</th>
+                <th className="px-3 py-2">Rate</th>
+                <th className="px-3 py-2">Who pays</th>
+                <th className="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {reps.map((r) => (
+                <RepConfigEditor key={`${r.code}:${r.enabled}:${r.rateCents}:${r.paidBy}`} rep={r} onSaved={load} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <h2 className="mt-10 text-lg font-semibold text-foreground">Logged hours</h2>
+      {codes.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">No rep is on hourly pay yet.</p>
       ) : (
         codes.map((c) => (
-          <section key={c.code} className="mt-8">
+          <section key={c.code} className="mt-6">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <h2 className="text-lg font-semibold text-foreground">
-                {c.code} <span className="text-sm font-normal text-muted-foreground">· {moneyFromCents(c.rate_cents)}/hr</span>
-              </h2>
+              <h3 className="text-base font-semibold text-foreground">
+                {c.label || c.code} <span className="text-sm font-normal text-muted-foreground">· {c.code} · {moneyFromCents(c.rate_cents)}/hr · paid by {c.paid_by ? PAID_BY_LABEL[c.paid_by as HourlyPaidBy] : '—'}</span>
+              </h3>
               <div className="text-sm text-muted-foreground">
                 {c.summary.hoursTotal} h logged · <span className="text-amber-400">{moneyFromCents(c.summary.owedCents)} open</span> · <span className="text-emerald-400">{moneyFromCents(c.summary.paidCents)} paid</span>
               </div>
@@ -90,20 +167,25 @@ export default function RepHoursAdminPage() {
           </section>
         ))
       )}
-      <div className="mt-8 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
-        <select value={via} onChange={(e) => setVia(e.target.value as any)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
-          <option value="venmo">Venmo</option>
-          <option value="stripe">Stripe</option>
-          <option value="other">Other</option>
-        </select>
-        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="note (optional)" maxLength={200} className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground" />
-        <button type="button" disabled={busy || !sel.size} onClick={() => act(false)} className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50">
-          Mark {sel.size || ''} paid
-        </button>
-        <button type="button" disabled={busy || !sel.size} onClick={() => act(true)} className="text-sm text-muted-foreground underline underline-offset-4 disabled:opacity-50">
-          Undo mark
-        </button>
-      </div>
+      {codes.length > 0 && (
+        <div className="mt-8 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
+          <select value={via} onChange={(e) => setVia(e.target.value as any)} className={inputCls}>
+            <option value="venmo">Venmo</option>
+            <option value="stripe">Stripe</option>
+            <option value="other">Other</option>
+          </select>
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="note (optional)" maxLength={200} className={`${inputCls} min-w-0 flex-1`} />
+          <button type="button" disabled={busy || !sel.size} onClick={() => act(false)} className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50">
+            Mark {sel.size || ''} paid
+          </button>
+          <button type="button" disabled={busy || !sel.size} onClick={() => act(true)} className="text-sm text-muted-foreground underline underline-offset-4 disabled:opacity-50">
+            Undo mark
+          </button>
+        </div>
+      )}
+      <p className="mt-6 text-xs text-muted-foreground">
+        Next: post hourly positions (the same shape as an Internships listing) and share them on LinkedIn or Craigslist; a posting would create a code with hourly on, so a hire lands here already configured.
+      </p>
     </div>
   );
 }

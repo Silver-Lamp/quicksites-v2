@@ -136,19 +136,19 @@ export const FOOD_ICONS: Record<string, FoodIcon> = {
   salad: {
     label: 'Salad',
     emoji: '🥗',
-    terms: ['salad', 'greens', 'slaw', 'coleslaw'],
+    terms: ['insalata', 'salad', 'greens', 'slaw', 'coleslaw'],
     path: `<path ${S} d="M3.5 12.5h17a8.5 8.5 0 0 1-17 0z"/><path ${S} d="M8 12.5c-.5-2.5.8-4.6 3-5.2M13 12.5c.6-2.2 2.3-3.4 4.2-3.3"/>`,
   },
   soup: {
     label: 'Soup',
     emoji: '🍲',
-    terms: ['soup', 'chowder', 'bisque', 'stew', 'chili', 'pho', 'ramen'],
+    terms: ['zuppa', 'minestrone', 'ribollita', 'soup', 'chowder', 'bisque', 'stew', 'chili', 'pho', 'ramen'],
     path: `<path ${S} d="M3.5 11.5h17a8.5 8.5 0 0 1-17 0z"/><path ${S} d="M9 7.5c0-1 1-1.4 1-2.4M13 7.5c0-1 1-1.4 1-2.4"/><path ${S} d="M2.5 20.5h19"/>`,
   },
   pasta: {
     label: 'Pasta',
     emoji: '🍝',
-    terms: ['pasta', 'spaghetti', 'linguine', 'penne', 'lasagna', 'noodles', 'alfredo', 'carbonara'],
+    terms: ['spaghetti', 'tagliatelle', 'pappardelle', 'pici', 'ravioli', 'lasagna', 'lasagne', 'gnocchi', 'penne', 'rigatoni', 'fettuccine', 'linguine', 'carbonara', 'tortellini', 'pasta', 'spaghetti', 'linguine', 'penne', 'lasagna', 'noodles', 'alfredo', 'carbonara'],
     path: `<path ${S} d="M3.5 13h17a8.5 8.5 0 0 1-17 0z"/><path ${S} d="M7 13c.6-3 2.6-4.6 5-4.6s4.4 1.6 5 4.6"/><path ${S} d="M2.5 20.5h19"/>`,
   },
   sushi: {
@@ -161,21 +161,21 @@ export const FOOD_ICONS: Record<string, FoodIcon> = {
     ingredient: true,
     label: 'Chicken',
     emoji: '🍗',
-    terms: ['chicken', 'wings', 'drumstick', 'nuggets', 'tenders'],
+    terms: ['pollo', 'chicken', 'wings', 'drumstick', 'nuggets', 'tenders'],
     path: `<path ${S} d="M14.5 4.5a5 5 0 0 1 3.5 8.5l-5.5 5.5-3-3 5.5-5.5"/><path ${S} d="M9.5 15.5 6 19l-2-2 3.5-3.5z"/>`,
   },
   fish: {
     ingredient: true,
     label: 'Fish',
     emoji: '🐟',
-    terms: ['fish', 'salmon', 'cod', 'tilapia', 'halibut', 'tuna'],
+    terms: ['branzino', 'baccala', 'orata', 'calamari', 'fish', 'salmon', 'cod', 'tilapia', 'halibut', 'tuna'],
     path: `<path ${S} d="M3 12c3-4 6.5-6 10-6s6.5 2 8 6c-1.5 4-4.5 6-8 6s-7-2-10-6z"/><path ${S} d="M16.5 12h.01"/>`,
   },
   steak: {
     ingredient: true,
     label: 'Steak',
     emoji: '🥩',
-    terms: ['steak', 'ribeye', 'sirloin', 'brisket', 'ribs', 'barbecue', 'bbq'],
+    terms: ['bistecca', 'tagliata', 'fiorentina', 'steak', 'ribeye', 'sirloin', 'brisket', 'ribs', 'barbecue', 'bbq'],
     path: `<path ${S} d="M4.5 10c1.5-3.5 5-5.5 9-5.5 3 0 5.5 2 5.5 5s-2 5-5 6-5.5 3-8 3-2.5-4-1.5-8.5z"/><path ${S} d="M14.5 9.5h.01"/>`,
   },
   egg: {
@@ -194,13 +194,13 @@ export const FOOD_ICONS: Record<string, FoodIcon> = {
   bread: {
     label: 'Bread',
     emoji: '🥖',
-    terms: ['bread', 'baguette', 'roll', 'rolls', 'toast', 'biscuit', 'bagel', 'croissant'],
+    terms: ['bruschetta', 'bruschette', 'focaccia', 'bread', 'baguette', 'roll', 'rolls', 'toast', 'biscuit', 'bagel', 'croissant'],
     path: `<path ${S} d="M5 16.5 16.5 5A3.5 3.5 0 0 1 19 11L7.5 22.5z" transform="translate(0,-2)"/><path ${S} d="M9 10.5l1.5 1.5M11.5 8l1.5 1.5M14 5.5 15.5 7"/>`,
   },
   cake: {
     label: 'Cake',
     emoji: '🍰',
-    terms: ['cake', 'cheesecake', 'pie', 'tart', 'brownie', 'dessert'],
+    terms: ['tiramisu', 'panna cotta', 'cannoli', 'crostata', 'cake', 'cheesecake', 'pie', 'tart', 'brownie', 'dessert'],
     path: `<path ${S} d="M4 20.5v-7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7z"/><path ${S} d="M4 15.5c1.4 1.2 2.9 1.2 4.3 0s2.9-1.2 4.3 0 2.9 1.2 4.3 0l3.1-.1"/><path ${S} d="M12 11.5V8"/>`,
   },
   cookie: {
@@ -212,7 +212,7 @@ export const FOOD_ICONS: Record<string, FoodIcon> = {
   icecream: {
     label: 'Ice cream',
     emoji: '🍦',
-    terms: ['ice cream', 'gelato', 'sundae', 'soft serve', 'popsicle', 'sorbet'],
+    terms: ['gelato', 'ice cream', 'sundae', 'soft serve', 'popsicle', 'sorbet'],
     path: `<path ${S} d="M8 10.5a4 4 0 1 1 8 0z"/><path ${S} d="M7.5 10.5h9L12 21z"/>`,
   },
   donut: {
@@ -279,7 +279,8 @@ export function matchFoodIcon(
   tags?: string[] | null,
   opts: { prefer?: 'dish' | 'ingredient' } = {},
 ): string | null {
-  const haystack = ` ${String(name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+  // Diacritics folded first (tiramisù → tiramisu, crème → creme): an Italian menu is the common case now.
+  const haystack = ` ${String(name ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
   if (haystack.trim().length < 2) return null;
 
   let best: { key: string; len: number; dish: boolean } | null = null;

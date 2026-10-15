@@ -52,6 +52,8 @@ Customers → Bookings).
 
 **Simulation sites (2026-10-15):** `data.meta.is_simulation = true` (`lib/booking/simulation.ts`) marks a restaurant AI personas run for a day on HJ's side. Separate from `is_demo` (a sim must be owner-linked like a real site). Changes exactly three things: no booking emails; a partner-signed `/book` on a sim+linked site skips the per-IP guest limit (`source` stays `web`, slot still re-derived, 409 still answers a race); excluded from the delivered.menu directory and published with `meta.noindex`. Sim site `trattoria-simulazione` (operator-owned, daily lunch + dinner, 8 tables). Contract section "Simulation sites".
 
+| `GET …/menu` · `POST …/menu/icons` | owner/admin, **or** HiveJournal (linked) | the menu grouped by its own sections with each dish's delivered.menu icon key + the icon dictionary (`lib/menu/menuIconFeed.ts`); icon lookup for arbitrary names (ingredients). `null` = draw nothing. For HJ's food-cost planner (owner, 2026-10-15) |
+
 Partner auth lives in `lib/booking/partnerAuth.ts`: a request without `X-Partner-Id` goes to the session gate; a partner header with a bad signature is refused and **never** downgraded to the session check. Verify before parse on the POSTs.
 
 ## Rules worth keeping

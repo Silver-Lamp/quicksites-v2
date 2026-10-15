@@ -3,6 +3,7 @@
 
 import type { Block } from '@/types/blocks';
 import { formatUsPhone, telHref } from '@/lib/phone/formatUs';
+import { formatPhoneInput, phoneMaxLength, phonePlaceholder, phoneRegionForSite, phoneValidationError } from '@/lib/phone/region';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import { defaultContactHeading, isPersonTemplate } from '@/lib/sites/personSite';
@@ -145,8 +146,16 @@ export default function ContactFormRender({
     ) ?? ''
   );
 
+  // ⚠️ Format the RAW value, not its digits. `formatUsPhone` returns its input unchanged when it
+  // is not a US number, so passing `phoneDigits` turned `+39 0577 000000` into "390577000000"
+  // on the Italian demo — true digits, unreadable, and the footer beside it showed the real thing.
   const phoneDigits = phoneRaw.replace(/\D/g, '');
-  const displayPhone = phoneDigits ? fmtPhone(phoneDigits) : '';
+  const displayPhone = phoneDigits ? fmtPhone(phoneRaw.trim()) : '';
+
+  // ⚠️ WHICH PHONE FORMAT THE VISITOR IS ASKED FOR IS DECIDED BY THE SITE (lib/phone/region.ts).
+  // This form used to format every keystroke into "(555) 123-4567" and refuse anything else, so an
+  // Italian restaurant's guests could not leave a number at all.
+  const phoneRegion = phoneRegionForSite(t);
 
   // ⚠️ Person sites get "Get in Touch". A one-person portfolio headed "Contact Us" is wrong about
   // who is on the page, not merely unfashionable. See lib/sites/personSite.ts.
@@ -196,9 +205,6 @@ export default function ContactFormRender({
     setSubmitError(null);
   };
 
-  const isValidPhone = (phone: string) =>
-    /^\(\d{3}\) \d{3}-\d{4}$/.test(phone);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -219,8 +225,8 @@ export default function ContactFormRender({
         'Please provide either an email or phone number.';
     if (formData.email && !isValidEmail(formData.email))
       nextErrors.email = 'Email format is invalid.';
-    if (formData.phone && !isValidPhone(formData.phone))
-      nextErrors.phone = 'Phone number must be in US format.';
+    const phoneError = phoneValidationError(formData.phone, phoneRegion);
+    if (phoneError) nextErrors.phone = phoneError;
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -399,13 +405,13 @@ Service: ${formData.service || 'N/A'}
                 <input
                   type="tel"
                   name="phone"
-                  inputMode="numeric"
-                  placeholder="(555) 123-4567"
-                  maxLength={14}
+                  inputMode="tel"
+                  placeholder={phonePlaceholder(phoneRegion)}
+                  maxLength={phoneMaxLength(phoneRegion)}
                   className={inputClass(!!errors.phone || !!errors.contact)}
                   value={formData.phone}
                   onChange={(e) =>
-                    setFormData({ ...formData, phone: fmtPhone(e.target.value) })
+                    setFormData({ ...formData, phone: formatPhoneInput(e.target.value, phoneRegion, fmtPhone) })
                   }
                 />
                 {(errors.phone || errors.contact) && (

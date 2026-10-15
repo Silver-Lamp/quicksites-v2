@@ -44,6 +44,12 @@ Customers → Bookings).
 | `POST …/cancel` | owner/admin, **or** HiveJournal | `{booking_id}` cancels (the table reopens that second); `{booking_id, status:'seated'|'no_show'|'booked'}` marks |
 | `GET/POST …/tables` | owner/admin, **or** HiveJournal | GET lists active tables. POST `{tables:[{ref, label, seats}]}` creates them (≤40; `seats` REQUIRED 1–40 — a table the photo could not count is filled by the owner, never defaulted) and answers `{ref, id, label, seats, existing}` in the caller's order; **an existing label is the same table** (its id back, `existing:true`, seats untouched). The step that turns HJ's plan-from-image proposal into rows after the owner confirms. `lib/booking/tablesInput.ts` |
 
+| `GET/POST …/link` | owner/admin session | GET the link state; POST mints a one-time code (15 min, single use) + the HJ connect URL. A guest-build session gets `needs_signup` |
+| `POST …/link/verify` | HiveJournal only (raw-body HMAC) | `{code, partner_ref}` → consumes the code, links the template; 404/410/409 otherwise |
+| `POST …/unlink` | owner session **or** HiveJournal | ends the link (kept as history, never deleted) |
+
+**Linking (2026-10-15):** a partner signature alone no longer reads any template. `day`/`phone`/`cancel`/`tables` answer `403 not_linked` unless the owner linked the site (`lib/booking/partnerLink.ts`); the demo is exempt by its flags (`is_demo` + `demo_kind`), never by id. Owner UI: the "Floor plan & food cost (HiveJournal)" card on `/merchant/bookings/<id>`. Contract section "Linking" in `restaurant-floor-plan.md`.
+
 Partner auth lives in `lib/booking/partnerAuth.ts`: a request without `X-Partner-Id` goes to the session gate; a partner header with a bad signature is refused and **never** downgraded to the session check. Verify before parse on the POSTs.
 
 ## Rules worth keeping

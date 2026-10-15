@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 import { checkBookingPartner } from '@/lib/booking/partnerAuth';
 import { parseTablesInput } from '@/lib/booking/tablesInput';
+import { isPartnerLinked } from '@/lib/booking/partnerLink';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -28,7 +29,10 @@ export const dynamic = 'force-dynamic';
 async function gate(req: NextRequest, templateId: string, signedInput: string): Promise<NextResponse | null> {
   const partnerCheck = checkBookingPartner(req, signedInput);
   if (partnerCheck === 'bad_signature') return NextResponse.json({ error: 'bad_signature' }, { status: 403 });
-  if (partnerCheck === 'ok') return null;
+  if (partnerCheck === 'ok') {
+    // A partner touches only a template its OWNER linked (or the exempt demo) — lib/booking/partnerLink.ts.
+    return (await isPartnerLinked(templateId)) ? null : NextResponse.json({ error: 'not_linked' }, { status: 403 });
+  }
   const g = await requireTemplateOwner(templateId);
   return g.ok ? null : g.response;
 }

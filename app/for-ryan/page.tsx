@@ -6,6 +6,9 @@
 // Each card expands (native <details>, no JS) into deeper mechanics + a worked example.
 import Link from 'next/link';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import RepHoursSection from '@/components/for-rep/rep-hours-section';
+import NoSiteSection from '@/components/for-rep/no-site-section';
+import { territoryFor } from '@/lib/rep/territories';
 import OtherVerticals from '@/components/for-rep/other-verticals';
 import { mintRepActionToken } from '@/lib/rep/repActionToken';
 
@@ -121,6 +124,9 @@ function Path({
   );
 }
 
+// Live reads (hours option, the no-website list, the restaurants section) — render per request.
+export const dynamic = 'force-dynamic';
+
 export default async function ForRyanPage() {
   const repToken = mintRepActionToken(CODE);
   return (
@@ -162,7 +168,9 @@ export default async function ForRyanPage() {
 
         {/* THE MAIN EVENT (owner, 2026-10-10): restaurants first — walk in, have lunch, drop a
             card. Everything else on the page sits under "Our other verticals". */}
+        <RepHoursSection code={CODE} repName="Ryan" token={repToken} />
         <RestaurantsSection code={CODE} repName="Ryan" token={repToken} prominent />
+        <NoSiteSection code={CODE} repName="Ryan" token={repToken} territory={territoryFor(CODE)} />
         <OtherVerticals />
 
         {/* Your referral code — the no-effort option */}

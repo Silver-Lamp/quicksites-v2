@@ -13,6 +13,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import SiteHeader from '@/components/site/site-header';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import RepHoursSection from '@/components/for-rep/rep-hours-section';
+import NoSiteSection from '@/components/for-rep/no-site-section';
 import { mintRepActionToken } from '@/lib/rep/repActionToken';
 import { repProfile, repLinks } from '@/lib/partners/repCodes';
 import { getPartnerOrg } from '@/lib/partners/whiteLabel';
@@ -70,7 +72,9 @@ export default async function RepPage({ params }: { params: Promise<{ code: stri
           </p>
         </section>
 
+        <RepHoursSection code={rep.code} repName={first} token={token} />
         <RestaurantsSection code={rep.code} repName={first} token={token} prominent territory={territory} />
+        <NoSiteSection code={rep.code} repName={first} token={token} territory={territory} />
 
         <section className="mx-auto max-w-3xl px-6 pb-20 pt-8">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 text-sm leading-relaxed text-zinc-400">

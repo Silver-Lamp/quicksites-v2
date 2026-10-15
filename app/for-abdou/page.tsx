@@ -24,6 +24,7 @@ import { mintRepActionToken } from '@/lib/rep/repActionToken';
 import { repBuildLinks } from '@/lib/rep/repBuild';
 import NoSiteTable, { type NoSiteRow as TableRow } from '@/components/for-rep/no-site-table';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import RepHoursSection from '@/components/for-rep/rep-hours-section';
 import OtherVerticals from '@/components/for-rep/other-verticals';
 
 // The island list is read live: a re-sweep changes it, and a date on the section says how
@@ -242,6 +243,7 @@ export default async function ForAbdouPage() {
 
         {/* THE MAIN EVENT (owner, 2026-10-10): restaurants first — walk in, have lunch, drop a
             card. Everything else on the page sits under "Our other verticals". */}
+        <RepHoursSection code={CODE} repName="Abdou" token={repToken} />
         <RestaurantsSection code={CODE} repName="Abdou" token={repToken} prominent />
         <OtherVerticals />
 

@@ -22,7 +22,7 @@ import { loadCityNoSite, loadCitySites, streetOf, tradeLabel } from '@/lib/rep/i
 import { signInHref } from '@/lib/auth/authLinks';
 import NoSiteTable, { type NoSiteRow as TableRow } from '@/components/for-rep/no-site-table';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
-import HoursLog from '@/components/for-rep/hours-log';
+import RepHoursSection from '@/components/for-rep/rep-hours-section';
 
 export const dynamic = 'force-dynamic';
 
@@ -152,12 +152,8 @@ export default async function ForCraigPage() {
           </div>
         </section>
 
-        {/* Hours — only when the option is on for this code */}
-        {hourlyOn && (
-          <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
-            <HoursLog token={repToken} repName={NAME} />
-          </section>
-        )}
+        {/* Hours — the shared section renders only while the code's hourly option is on */}
+        <RepHoursSection code={CODE} repName={NAME} token={repToken} />
 
         {/* What to say */}
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-8">

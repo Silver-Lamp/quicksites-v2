@@ -18,6 +18,9 @@
 import type { Metadata } from 'next';
 import SiteHeader from '@/components/site/site-header';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import RepHoursSection from '@/components/for-rep/rep-hours-section';
+import NoSiteSection from '@/components/for-rep/no-site-section';
+import { territoryFor } from '@/lib/rep/territories';
 import { mintRepActionToken } from '@/lib/rep/repActionToken';
 
 export const metadata: Metadata = {
@@ -68,6 +71,9 @@ function Card({ title, tag, tone = 'zinc', children }: { title: string; tag?: st
     </div>
   );
 }
+
+// Live reads (hours option, the no-website list, the restaurants section) — render per request.
+export const dynamic = 'force-dynamic';
 
 export default async function ForAmberPage() {
   const repToken = mintRepActionToken(REF_CODE);
@@ -262,7 +268,9 @@ export default async function ForAmberPage() {
 
         {/* What is real */}
         {/* Restaurants: walk in, have lunch, drop a card (components/for-rep/restaurants-section.tsx). */}
+        <RepHoursSection code={REF_CODE} repName="Amber" token={repToken} />
         <RestaurantsSection code={REF_CODE} repName="Amber" token={repToken} />
+        <NoSiteSection code={REF_CODE} repName="Amber" token={repToken} territory={territoryFor(REF_CODE)} />
 
         <section className="mx-auto max-w-3xl px-6 pb-4 pt-6">
           <h2 className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">What's real and what isn't, side by side</h2>

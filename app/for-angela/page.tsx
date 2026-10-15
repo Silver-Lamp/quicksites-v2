@@ -10,6 +10,9 @@
 // to be real, so the page says what has and has not happened rather than what could.
 import Link from 'next/link';
 import RestaurantsSection from '@/components/for-rep/restaurants-section';
+import RepHoursSection from '@/components/for-rep/rep-hours-section';
+import NoSiteSection from '@/components/for-rep/no-site-section';
+import { territoryFor } from '@/lib/rep/territories';
 import OtherVerticals from '@/components/for-rep/other-verticals';
 import { mintRepActionToken } from '@/lib/rep/repActionToken';
 import type { Metadata } from 'next';
@@ -99,6 +102,9 @@ function Card({
 
 const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
+// Live reads (hours option, the no-website list, the restaurants section) — render per request.
+export const dynamic = 'force-dynamic';
+
 export default async function ForAngelaPage() {
   const repToken = mintRepActionToken(CODE);
   return (
@@ -132,7 +138,9 @@ export default async function ForAngelaPage() {
 
         {/* THE MAIN EVENT (owner, 2026-10-10): restaurants first — walk in, have lunch, drop a
             card. Everything else on the page sits under "Our other verticals". */}
+        <RepHoursSection code={CODE} repName="Angela" token={repToken} />
         <RestaurantsSection code={CODE} repName="Angela" token={repToken} prominent />
+        <NoSiteSection code={CODE} repName="Angela" token={repToken} territory={territoryFor(CODE)} />
         <OtherVerticals />
 
         {/* The one-liner */}

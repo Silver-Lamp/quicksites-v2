@@ -52,6 +52,9 @@ describe('iconsForNames — the ingredient reading by default', () => {
     expect(r.matches[2].icon_key).toBe('cheese');
     expect(r.matches[3]).toEqual({ name: '', icon_key: null });
     expect(iconsForNames([{ name: 'Strawberry Juice', prefer: 'dish' }]).matches[0].icon_key).toBe('juice');
+    // Italian ingredient words (a carbonara's shopping list), added 2026-10-15 after the first live read drew nothing for them.
+    const it = iconsForNames([{ name: 'Uova' }, { name: 'Pecorino romano' }, { name: 'Pomodori San Marzano' }, { name: 'Formaggi misti' }, { name: 'Funghi porcini' }]).matches.map((m) => m.icon_key);
+    expect(it).toEqual(['egg', 'cheese', 'veg', 'cheese', 'veg']);
   });
 });
 

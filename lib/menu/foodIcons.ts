@@ -182,7 +182,7 @@ export const FOOD_ICONS: Record<string, FoodIcon> = {
     ingredient: true,
     label: 'Eggs',
     emoji: '🍳',
-    terms: ['egg', 'eggs', 'omelet', 'omelette', 'frittata', 'scramble', 'benedict'],
+    terms: ['uovo', 'uova', 'egg', 'eggs', 'omelet', 'omelette', 'frittata', 'scramble', 'benedict'],
     path: `<path ${S} d="M12 3.5c3.5 0 6.5 5 6.5 9a6.5 6.5 0 0 1-13 0c0-4 3-9 6.5-9z"/><path ${S} d="M12 9.5a3 3 0 1 0 .01 0"/>`,
   },
   pancakes: {
@@ -246,7 +246,7 @@ export const FOOD_ICONS: Record<string, FoodIcon> = {
     ingredient: true,
     label: 'Vegetarian',
     emoji: '🥦',
-    terms: ['vegetable', 'veggie', 'broccoli', 'tofu'],
+    terms: ['pomodoro', 'pomodori', 'verdure', 'funghi', 'carciofi', 'spinaci', 'zucchine', 'melanzane', 'vegetable', 'veggie', 'broccoli', 'tofu'],
     path: `<path ${S} d="M12 21v-7"/><path ${S} d="M8.5 14a3.5 3.5 0 0 1-1-6.6A3.5 3.5 0 0 1 14 5.6a3.5 3.5 0 0 1 1.5 8.4z"/>`,
   },
   bowl: {
@@ -259,7 +259,7 @@ export const FOOD_ICONS: Record<string, FoodIcon> = {
     ingredient: true,
     label: 'Cheese',
     emoji: '🧀',
-    terms: ['cheese', 'mac and cheese', 'nachos', 'queso'],
+    terms: ['formaggio', 'formaggi', 'pecorino', 'parmigiano', 'mozzarella', 'burrata', 'ricotta', 'gorgonzola', 'cheese', 'mac and cheese', 'nachos', 'queso'],
     path: `<path ${S} d="M3.5 12 13 5.5 20.5 12z"/><path ${S} d="M3.5 12v5.5h17V12"/><path ${S} d="M8 15h.01M13 14.5h.01M17 15.5h.01"/>`,
   },
 };

@@ -10,7 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 import { verifyRepActionToken } from '@/lib/rep/repActionToken';
-import { loadHourly, parseHoursInput, summarizeHours, MAX_ENTRIES_PER_DAY, type HoursRow } from '@/lib/rep/hours';
+import { parseHoursInput, summarizeHours, MAX_ENTRIES_PER_DAY, type HoursRow } from '@/lib/rep/hours';
+import { loadHourly } from '@/lib/rep/hoursDb';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';

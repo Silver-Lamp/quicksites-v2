@@ -55,6 +55,19 @@ describe('summarizeHours', () => {
   });
 });
 
+describe('the client boundary', () => {
+  it('lib/rep/hours.ts (imported by client components) never imports Supabase; the DB reads live in hoursDb.ts', () => {
+    const pure = read('lib/rep/hours.ts');
+    expect(pure).not.toMatch(/@\/lib\/supabase|supabaseAdmin|createClient\(/);
+    expect(read('lib/rep/hoursDb.ts')).toMatch(/supabaseAdmin/);
+    for (const p of ['components/for-rep/hours-log.tsx', 'app/admin/rep-hours/page.tsx']) {
+      const src = read(p);
+      expect(src).toMatch(/^'use client';/);
+      expect(src).not.toMatch(/hoursDb/);
+    }
+  });
+});
+
 describe('the migration', () => {
   it('defaults every rep to commission-only and switches craig on with a rate and a payer', () => {
     const sql = fs.readFileSync(path.join(process.cwd(), 'supabase/migrations/20260886_referral_codes_hourly.sql'), 'utf8');

@@ -7,8 +7,11 @@
 // never stored on a logged row: a page derives the figure from the row so it cannot drift from
 // what is paid, and `rep_hours` keeps hours only, so changing a rate later does not rewrite what
 // was agreed on the day.
-import { supabaseAdmin } from '@/lib/supabase/admin';
-
+//
+// ⚠️ PURE — NO SERVER IMPORTS. This module is imported by CLIENT components (hours-log.tsx, the
+// admin page). The DB reads live in lib/rep/hoursDb.ts: on 2026-10-14 (#1209) a `supabaseAdmin`
+// import here went into the browser bundle, threw at module init, and both pages collapsed to
+// Next's client-error screen after a perfectly good server render. Pinned by hours.test.ts.
 export const HOURLY_PAID_BY = ['operator', 'partner'] as const;
 export type HourlyPaidBy = (typeof HOURLY_PAID_BY)[number];
 export const PAID_BY_LABEL: Record<HourlyPaidBy, string> = { operator: 'QuickSites (Sandon)', partner: 'The partner who owns the rep' };
@@ -36,37 +39,7 @@ export function parseHourlyConfig(body: unknown): { ok: true; value: { code: str
   return { ok: true, value: { code, enabled, rateCents, paidBy } };
 }
 
-type Row = { code: string; hourly_enabled: boolean | null; hourly_rate_cents: number | null; hourly_paid_by: string | null };
-
-function fromRow(r: Row): HourlyArrangement {
-  const paidBy = HOURLY_PAID_BY.includes(r.hourly_paid_by as HourlyPaidBy) ? (r.hourly_paid_by as HourlyPaidBy) : null;
-  return { code: r.code, enabled: !!r.hourly_enabled, rateCents: r.hourly_rate_cents ?? null, paidBy };
-}
-
-/** One rep's arrangement; `enabled` is false for a code that does not exist. */
-export async function loadHourly(code: string): Promise<HourlyArrangement> {
-  const c = code.trim().toLowerCase();
-  const { data } = await supabaseAdmin.from('referral_codes').select('code, hourly_enabled, hourly_rate_cents, hourly_paid_by').eq('code', c).maybeSingle();
-  return data ? fromRow(data as Row) : { code: c, enabled: false, rateCents: null, paidBy: null };
-}
-
 export type RepConfigRow = HourlyArrangement & { label: string | null; ownerType: string | null; ownerEmail: string | null; parentCode: string | null; status: string | null };
-
-/** Every rep code with its hourly config, for the admin table. */
-export async function listRepHourlyConfigs(): Promise<RepConfigRow[]> {
-  const { data } = await supabaseAdmin
-    .from('referral_codes')
-    .select('code, label, owner_type, owner_email, parent_code, status, hourly_enabled, hourly_rate_cents, hourly_paid_by')
-    .order('created_at');
-  return ((data ?? []) as Array<Row & { label: string | null; owner_type: string | null; owner_email: string | null; parent_code: string | null; status: string | null }>).map((r) => ({
-    ...fromRow(r),
-    label: r.label,
-    ownerType: r.owner_type,
-    ownerEmail: r.owner_email,
-    parentCode: r.parent_code,
-    status: r.status,
-  }));
-}
 
 export type HoursInput = { workedOn: string; hours: number; note: string | null };
 

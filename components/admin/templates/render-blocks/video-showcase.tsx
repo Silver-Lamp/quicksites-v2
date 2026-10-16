@@ -6,24 +6,21 @@
 // played, pulled up over the bottom of the block above (the hero) so the row reads as part of
 // the opening rather than a section further down. Built for the B Hard commercials (owner,
 // 2026-10-16: "overlaid on the header slightly tilted until played, and an h2 of 'Ok, now
-// that's new!'").
+// that's new!'"). The cards themselves are `components/sites/media-cards.tsx`, shared with the
+// hero's `media_split` layout — which is now the standard way to get this look; this block
+// remains for a row of videos placed anywhere else on a page.
 //
 // ⚠️ EMPTY RENDERS NOTHING IN PUBLIC (the products_grid / video rule): a showcase with no
 // videos is an editor hint, never a row of empty black cards on a live site.
-//
-// ⚠️ Posters are load-bearing: `preload="none"` with a poster means nothing downloads until a
-// tap — these files are 8–15 MB each. Without a poster we fall back to `metadata` so the player
-// is not a black rectangle. `playsInline` so iOS does not take the screen over on play.
 
 import * as React from 'react';
 import type { Block } from '@/types/blocks';
 import { isEditorContext } from '@/lib/editor/isEditorContext';
+import { MediaCards } from '@/components/sites/media-cards';
+import type { HeroMediaItem } from '@/lib/sites/heroMedia';
 
 type Item = { url: string; poster?: string; caption?: string };
 type Props = { block?: Block; content?: Block['content']; template?: unknown; previewOnly?: boolean };
-
-/** Tailwind class names must appear literally for the JIT scan — keep this array spelled out. */
-const TILTS = ['-rotate-3', 'rotate-2', '-rotate-2'] as const;
 
 export function readShowcaseVideos(content: unknown): Item[] {
   const c = (content ?? {}) as { videos?: unknown };
@@ -41,7 +38,6 @@ export function readShowcaseVideos(content: unknown): Item[] {
 export default function RenderVideoShowcase({ block, content, previewOnly }: Props) {
   const c: any = content ?? block?.content ?? {};
   const videos = readShowcaseVideos(c);
-  const [playing, setPlaying] = React.useState<Record<number, boolean>>({});
 
   if (!videos.length) {
     if (!isEditorContext(previewOnly)) return null;
@@ -56,35 +52,8 @@ export default function RenderVideoShowcase({ block, content, previewOnly }: Pro
   const overlap = c.overlap !== false;
   const heading = typeof c.heading === 'string' ? c.heading.trim() : '';
   const hero = c.hero && typeof c.hero === 'object' && typeof c.hero.headline === 'string' && c.hero.headline.trim() ? c.hero : null;
-
-  const phones = (
-    <div className={`flex flex-col items-center gap-8 sm:flex-row sm:items-start sm:justify-center ${hero ? '' : 'mx-auto max-w-4xl'}`}>
-      {videos.map((v, i) => {
-          const tilted = tilt && !playing[i];
-          return (
-            <figure key={`${v.url}-${i}`} className="w-full max-w-[300px]">
-              <div
-                data-tilted={tilted ? '1' : '0'}
-                className={`overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-border transition-transform duration-500 ease-out ${tilted ? TILTS[i % TILTS.length] : 'rotate-0'}`}
-              >
-                <video
-                  controls
-                  playsInline
-                  preload={v.poster ? 'none' : 'metadata'}
-                  poster={v.poster}
-                  className="aspect-[9/16] w-full bg-black object-contain"
-                  onPlay={() => setPlaying((p) => ({ ...p, [i]: true }))}
-                  onEnded={() => setPlaying((p) => ({ ...p, [i]: false }))}
-                >
-                  <source src={v.url} />
-                </video>
-              </div>
-              {v.caption ? <figcaption className="mt-3 text-center text-sm text-muted-foreground">{v.caption}</figcaption> : null}
-            </figure>
-          );
-        })}
-    </div>
-  );
+  const items: HeroMediaItem[] = videos.map((v) => ({ kind: 'video', ...v }));
+  const phones = <div className={hero ? '' : 'mx-auto max-w-4xl'}><MediaCards items={items} tilt={tilt} /></div>;
 
   if (hero) {
     const img = typeof hero.image_url === 'string' && /^https?:\/\//.test(hero.image_url.trim()) ? hero.image_url.trim() : '';

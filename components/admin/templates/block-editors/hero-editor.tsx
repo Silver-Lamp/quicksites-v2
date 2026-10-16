@@ -62,7 +62,8 @@ function toCanonicalHeroProps(local: any, template?: any) {
     | 'inline'
     | 'background'
     | 'full_bleed'
-    | 'natural_height';
+    | 'natural_height'
+    | 'media_split';
 
   const overlay = local?.overlay_level ?? local?.overlay ?? 'soft';
 
@@ -185,6 +186,7 @@ function pickMostEdited(propsRaw: any, contentRaw: any, template?: any) {
 const selectDark =
   'w-full rounded-md border border-white/10 bg-neutral-950 px-2 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500';
 const rangeDark = 'w-full accent-violet-500';
+const inputDark = 'mt-1 w-full rounded-md border border-white/15 bg-neutral-900 px-2 py-1.5 text-sm text-white placeholder:text-white/40';
 
 /* ───────────────── site type quick-picks ───────────────── */
 const SITE_TYPES = [
@@ -1526,6 +1528,46 @@ export default function HeroEditor({
                 </div>
               )}
 
+              {/* Media cards — the tilted phone-shaped videos/photos beside the headline in the
+                  "Media split" layout (owner, 2026-10-16). Shown whenever that layout is picked, or
+                  in advanced mode so the cards can be prepared before switching. Empty = the hero
+                  renders inline; nothing is guessed from other blocks. */}
+              {((local?.layout_mode || local?.layout) === 'media_split' || mode === 'advanced') && (
+                <div className="rounded border border-white/10 bg-neutral-900 p-3 mt-3 space-y-3" data-hero-media-editor>
+                  <div className="text-sm font-medium">Media cards (Media split layout)</div>
+                  <p className="text-xs text-white/60">Up to three videos or photos, shown as tilted cards beside the headline. A video needs a poster image or it starts as a black box.</p>
+                  <div>
+                    <label className="text-xs text-neutral-300">Heading over the cards (optional)</label>
+                    <input
+                      className={inputDark}
+                      value={local?.media_heading ?? ''}
+                      onChange={(e) => { update('media_heading', e.target.value as any); bumpPreview(); }}
+                      placeholder="Ok, now that’s new!"
+                    />
+                  </div>
+                  {[0, 1, 2].map((i) => {
+                    const items: any[] = Array.isArray(local?.media) ? local.media : [];
+                    const it = items[i] ?? {};
+                    const setItem = (patch: Record<string, string>) => {
+                      const next = [0, 1, 2].map((j) => (j === i ? { ...(items[j] ?? {}), ...patch } : items[j])).filter((m) => m && typeof m.url === 'string' && m.url.trim());
+                      update('media', next as any);
+                      bumpPreview();
+                    };
+                    return (
+                      <div key={i} className="grid grid-cols-1 gap-2 rounded border border-white/10 p-2 sm:grid-cols-[6rem_1fr_1fr_1fr]">
+                        <select className={selectDark} value={it.kind ?? 'video'} onChange={(e) => setItem({ kind: e.target.value })}>
+                          <option value="video">Video</option>
+                          <option value="image">Photo</option>
+                        </select>
+                        <input className={inputDark} value={it.url ?? ''} onChange={(e) => setItem({ url: e.target.value })} placeholder={`Card ${i + 1} URL (https://…)`} />
+                        <input className={inputDark} value={it.poster ?? ''} onChange={(e) => setItem({ poster: e.target.value })} placeholder="Poster image URL (video)" />
+                        <input className={inputDark} value={it.caption ?? ''} onChange={(e) => setItem({ caption: e.target.value })} placeholder="Caption" />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Advanced: layout & framing (content is the always-visible section above) */}
               {mode === 'advanced' && (
                 <div className="rounded border border-white/10 bg-neutral-900 p-3 mt-3 space-y-3">
@@ -1570,6 +1612,7 @@ export default function HeroEditor({
                         <option value="background">Image as Background</option>
                         <option value="full_bleed">Full-Bleed Image</option>
                         <option value="natural_height">Natural Height</option>
+                        <option value="media_split">Media split — small image, tilted videos/photos</option>
                       </select>
                     </div>
                     <div>

@@ -13,7 +13,12 @@ const ACCENTS = Object.keys(ACCENT_HSL);
 const FONT_PAIR_IDS = Object.keys(FONT_PAIRINGS);
 
 export const RHYTHMS = ['plain', 'banded'] as const;
-export const HERO_MODES = ['inline', 'full_bleed', 'background'] as const;
+// `media_split` is offered only when the hero carries media (lib/sites/heroMedia.ts#heroHasMedia);
+// the renderer falls back to inline without it, which would make a shuffle change nothing.
+export const HERO_MODES = ['inline', 'full_bleed', 'background', 'media_split'] as const;
+export function heroModesFor(hasMedia: boolean): readonly (typeof HERO_MODES)[number][] {
+  return hasMedia ? HERO_MODES : HERO_MODES.filter((m) => m !== 'media_split');
+}
 export const FEATURE_VARIANTS = ['grid', 'cards', 'rows'] as const;
 
 /** Pick a random element of `pool`, avoiding `avoid` when the pool has alternatives. */
@@ -40,8 +45,9 @@ export function pickFontPair(avoid?: string | null, rng: () => number = Math.ran
 }
 
 /** Map a theme's heroLayout onto the render-wired hero block layout_mode. */
-export function heroModeFromLayout(heroLayout?: string | null): (typeof HERO_MODES)[number] {
+export function heroModeFromLayout(heroLayout?: string | null, hasMedia = false): (typeof HERO_MODES)[number] {
   if (heroLayout === 'full_bleed') return 'full_bleed';
   if (heroLayout === 'split') return 'background';
+  if (heroLayout === 'media_split') return hasMedia ? 'media_split' : 'inline';
   return 'inline';
 }

@@ -93,6 +93,8 @@ export const DEFAULT_BLOCK_CONTENT = {
     cta_link: '#contact',
     image_url: '',
     layout_mode: 'inline',
+    media: [],
+    media_heading: '',
     blur_amount: 0,
     image_position: 'center',
     parallax_enabled: false,

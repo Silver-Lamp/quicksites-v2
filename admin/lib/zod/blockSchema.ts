@@ -552,8 +552,26 @@ export const blockContentSchemaMap = {
             'full_height',
             'full_width_height',
             'cover',
+            // Small image + headline + CTA beside up to three tilted phone-shaped media cards
+            // (owner, 2026-10-16: "make it one of the default hero layouts for sites that have
+            // images or videos"). Falls back to inline when `media` is empty.
+            'media_split',
           ])
           .default('inline'),
+        /** The cards for `media_split`: up to three videos or images. Nothing is guessed from other blocks. */
+        media: z
+          .array(
+            z.object({
+              kind: z.enum(['image', 'video']).optional(),
+              url: z.string().url(),
+              poster: z.union([z.string().url(), z.literal('')]).optional(),
+              caption: z.string().optional(),
+            }),
+          )
+          .max(3)
+          .optional(),
+        /** Eyebrow over the cards in `media_split` ("Ok, now that's new!"). */
+        media_heading: z.string().optional(),
         mobile_layout_mode: z
           .enum([
             'inline',

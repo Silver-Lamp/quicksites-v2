@@ -34,7 +34,7 @@ import { cookies } from 'next/headers';
 import AbBeacon from '@/components/home/ab-beacon';
 import SiteLangSetter from '@/components/sites/site-lang-setter';
 import { siteLocale } from '@/lib/sites/siteLocale';
-import { AB_PREVIEW_MARK, applySiteVariantB, forcedVariant, pickSiteVariant, previewPathVariant, siteAbCookie, siteExperimentId } from '@/lib/ab/siteAb';
+import { AB_PREVIEW_MARK, applySiteVariantB, forcedVariant, pickSiteVariant, previewPathVariant, previewRedirectTarget, siteAbCookie, siteExperimentId } from '@/lib/ab/siteAb';
 import { getSiteAb } from '@/lib/ab/siteAbDb';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
@@ -631,10 +631,9 @@ export default async function SitePreviewPage({
     if (test?.enabled && test.b) {
       // `/a` and `/b` → `?ab=A` / `?ab=B` (only when no page has that slug).
       const shortcut = previewPathVariant(rest, ((normalized as any)?.pages ?? []).map((pg: any) => String(pg?.slug ?? '')));
-      // ⚠️ The target is the visitor's OWN address for the home page — `/` on bhard.store, `/sites/bhard`
-      // on the platform. The first cut wrote `/sites/<slug>` and bhard.store/b landed on
-      // bhard.store/sites/bhard?ab=B (served, but the wrong URL in the bar; the canonical lesson).
-      if (shortcut) redirect(`${await publicPathFromHeaders(String(siteRow.slug), [])}?ab=${shortcut}`);
+      // ⚠️ The target is the visitor's OWN home address — `/` on bhard.store, `/sites/bhard` on the
+      // platform — derived from the path they requested minus the shortcut (lib/ab/siteAb.ts).
+      if (shortcut) redirect(previewRedirectTarget(await publicPathFromHeaders(String(siteRow.slug), rest), shortcut));
       const forced = forcedVariant(sp.ab);
       const experiment = siteExperimentId(siteRow.template_id);
       if (forced) {

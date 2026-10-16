@@ -90,6 +90,19 @@ export function previewPathVariant(segments: readonly string[] | undefined, page
   return seg.toUpperCase() as AbVariant;
 }
 
+/**
+ * Where `/a` or `/b` sends the visitor: the SAME address minus that last segment, plus `?ab=`.
+ * `publicPathFor` answers "what path did the visitor request" — `/b` on bhard.store,
+ * `/sites/bhard/b` on the platform — so the home is that path with the shortcut stripped. The two
+ * earlier cuts sent bhard.store/b to `/sites/bhard?ab=B` (our routing table) and to `/b?ab=B`
+ * (the request itself, so the shortcut re-fired).
+ */
+export function previewRedirectTarget(requestedPublicPath: string, variant: AbVariant): string {
+  const p = String(requestedPublicPath || '/').trim().replace(/\/+$/, '');
+  const home = p.replace(/\/[ab]$/i, '') || '/';
+  return `${home}?ab=${variant}`;
+}
+
 /** The root stamp for a forced view carries a third field so the client records nothing. */
 export const AB_PREVIEW_MARK = 'preview';
 

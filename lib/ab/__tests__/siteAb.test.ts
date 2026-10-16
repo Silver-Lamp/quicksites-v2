@@ -2,7 +2,7 @@
 // two public routes (both must make the same decision, and never on a draft/preview).
 import fs from 'node:fs';
 import path from 'node:path';
-import { AB_PREVIEW_MARK, applySiteVariantB, forcedVariant, parseSiteAb, pickSiteVariant, previewPathVariant, siteAbCookie, siteExperimentId, templateIdFromExperiment } from '@/lib/ab/siteAb';
+import { AB_PREVIEW_MARK, applySiteVariantB, forcedVariant, parseSiteAb, pickSiteVariant, previewPathVariant, previewRedirectTarget, siteAbCookie, siteExperimentId, templateIdFromExperiment } from '@/lib/ab/siteAb';
 
 const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), 'utf8');
 const ID = 'c66caf39-7460-4352-bbb4-4657efd97f2b';
@@ -102,8 +102,13 @@ describe('preview by URL (owner: "see the a/b versions via url")', () => {
     expect(read('lib/ab/client.ts')).toMatch(/if \(mark === 'preview'\) return null/);
     // The /a /b redirect goes to the visitor's own home address, never a hard-coded platform path.
     const sitesSrc = read('app/sites/[slug]/[[...rest]]/page.tsx');
-    expect(sitesSrc).toMatch(/if \(shortcut\) redirect\(`\$\{await publicPathFromHeaders\(String\(siteRow\.slug\), \[\]\)\}\?ab=\$\{shortcut\}`\)/);
+    expect(sitesSrc).toMatch(/if \(shortcut\) redirect\(previewRedirectTarget\(await publicPathFromHeaders\(String\(siteRow\.slug\), rest\), shortcut\)\)/);
     expect(sitesSrc).not.toMatch(/redirect\(`\/sites\/\$\{encodeURIComponent\(String\(siteRow\.slug\)\)\}\?ab=/);
+    // The requested path minus the shortcut: on the domain `/`, on the platform `/sites/<slug>`.
+    expect(previewRedirectTarget('/b', 'B')).toBe('/?ab=B');
+    expect(previewRedirectTarget('/sites/bhard/b', 'B')).toBe('/sites/bhard?ab=B');
+    expect(previewRedirectTarget('/sites/bhard/A/', 'A')).toBe('/sites/bhard?ab=A');
+    expect(previewRedirectTarget('/', 'A')).toBe('/?ab=A');
     expect(AB_PREVIEW_MARK).toBe('preview');
   });
 });

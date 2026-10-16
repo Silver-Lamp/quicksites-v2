@@ -23,7 +23,7 @@ export type ThemeLayout = {
   rhythm: 'plain' | 'banded';                    // alternate section backgrounds
   density: 'tight' | 'normal' | 'airy';          // vertical padding scale
   sectionWidth: 'narrow' | 'default' | 'wide';   // default container width
-  heroLayout: 'inline' | 'full_bleed' | 'split'; // preferred hero shape
+  heroLayout: 'inline' | 'full_bleed' | 'split' | 'media_split'; // preferred hero shape (media_split needs hero media; else inline)
   featureVariant: 'grid' | 'rows' | 'cards';     // services/features rendering
 };
 
@@ -31,7 +31,8 @@ const LAYOUT_BY_CATEGORY: Record<ThemeCategory, ThemeLayout> = {
   rugged:       { rhythm: 'banded', density: 'tight',  sectionWidth: 'wide',    heroLayout: 'full_bleed', featureVariant: 'rows' },
   warm:         { rhythm: 'banded', density: 'normal', sectionWidth: 'default', heroLayout: 'split',      featureVariant: 'cards' },
   professional: { rhythm: 'plain',  density: 'normal', sectionWidth: 'default', heroLayout: 'split',      featureVariant: 'grid' },
-  playful:      { rhythm: 'banded', density: 'airy',   sectionWidth: 'wide',    heroLayout: 'full_bleed', featureVariant: 'grid' },
+  // media_split = the B Hard header (small image + tilted media cards); a site with no hero media renders inline.
+  playful:      { rhythm: 'banded', density: 'airy',   sectionWidth: 'wide',    heroLayout: 'media_split', featureVariant: 'grid' },
   neon:         { rhythm: 'banded', density: 'normal', sectionWidth: 'wide',    heroLayout: 'full_bleed', featureVariant: 'cards' },
   editorial:    { rhythm: 'plain',  density: 'airy',   sectionWidth: 'narrow',  heroLayout: 'inline',     featureVariant: 'rows' },
 };

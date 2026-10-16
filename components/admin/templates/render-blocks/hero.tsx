@@ -7,6 +7,8 @@ import SectionShell from '@/components/ui/section-shell';
 import PainterlyBackdrop from '@/components/site/painterly-backdrop';
 import { heroBackdropFor } from '@/lib/sites/heroBackdrop';
 import { deriveCtaAction, resolveHeroCta, phoneFromSite } from '@/lib/sites/heroCta';
+import { parseHeroMedia } from '@/lib/sites/heroMedia';
+import { MediaCards } from '@/components/sites/media-cards';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
@@ -351,6 +353,44 @@ export default function HeroRender({
         </div>
       )
     ) : null;
+
+  // Media split — small image + headline + CTA beside up to three tilted media cards (the B Hard
+  // header, 2026-10-16, made a standard layout). Without media it falls through to inline; the
+  // editor shows a hint there rather than a one-column hero pretending to be two.
+  const mediaItems = activeLayoutMode === 'media_split' ? parseHeroMedia(safeContent) : [];
+  if (activeLayoutMode === 'media_split' && mediaItems.length) {
+    const mediaHeading = typeof (safeContent as any)?.media_heading === 'string' ? (safeContent as any).media_heading.trim() : '';
+    return (
+      <section key={renderKey} data-hero-layout="media_split" data-device={device || 'auto'} className={`relative px-4 py-10 sm:py-14 ${textPrimary}`}>
+        {showDebug && <DebugOverlay>{`[HeroBlock]\nLayout: media_split`}</DebugOverlay>}
+        <div className={`mx-auto grid max-w-6xl items-center gap-10 ${isNarrow ? '' : 'md:grid-cols-2'}`}>
+          <div className={isNarrow ? 'text-center' : 'text-center md:text-left'}>
+            {hasImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={image_url}
+                alt={headline || 'Hero image'}
+                className={`mb-6 w-full max-w-[260px] rounded-xl ${isNarrow ? 'mx-auto' : 'mx-auto md:mx-0'}`}
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+            )}
+            {!hide_headline && headline && (
+              <h1 {...displayAttr} className={`${titleSize} font-bold mb-4 ${textPrimary}`}>{headline}</h1>
+            )}
+            {!hide_subheadline && subheadline && (
+              <p {...leadAttr} className={`${subSize} mb-6 ${textSecondary}`}>{subheadline}</p>
+            )}
+            {CtaEl}
+            <PhoneLine />
+          </div>
+          <div>
+            {mediaHeading ? <h2 className={`mb-5 text-center text-2xl font-bold tracking-tight sm:text-3xl ${textPrimary}`}>{mediaHeading}</h2> : null}
+            <MediaCards items={mediaItems} />
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   // Natural height
   if (activeLayoutMode === 'natural_height' && hasImage) {

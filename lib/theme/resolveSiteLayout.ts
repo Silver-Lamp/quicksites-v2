@@ -18,7 +18,7 @@ export function resolveSiteLayout(template: any): ThemeLayout | null {
   const sectionWidth: ThemeLayout['sectionWidth'] =
     layout.sectionWidth === 'narrow' || layout.sectionWidth === 'wide' ? layout.sectionWidth : 'default';
   const heroLayout: ThemeLayout['heroLayout'] =
-    layout.heroLayout === 'full_bleed' || layout.heroLayout === 'split' ? layout.heroLayout : 'inline';
+    layout.heroLayout === 'full_bleed' || layout.heroLayout === 'split' || layout.heroLayout === 'media_split' ? layout.heroLayout : 'inline';
   const featureVariant: ThemeLayout['featureVariant'] =
     layout.featureVariant === 'rows' || layout.featureVariant === 'cards' ? layout.featureVariant : 'grid';
   return { rhythm, density, sectionWidth, heroLayout, featureVariant };

@@ -28,6 +28,8 @@ import {
   FEATURE_VARIANTS,
 } from '@/lib/theme/shuffleOptions';
 import { shuffleAllData, withBlockStyles as withBlockStylesShared } from '@/lib/theme/shuffleTemplate';
+import { heroModesFor } from '@/lib/theme/shuffleOptions';
+import { heroHasMedia } from '@/lib/sites/heroMedia';
 
 import type { Template } from '@/types/template';
 import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
@@ -433,7 +435,8 @@ useEffect(() => {
     const theme = baseTheme();
     const rhythm = pickDistinct(RHYTHMS, theme?.layout?.rhythm ?? null);
     const featureVariant = pickDistinct(FEATURE_VARIANTS, theme?.layout?.featureVariant ?? null);
-    const heroMode = pickDistinct(HERO_MODES, null);
+    // Media split only when the hero carries media — otherwise it renders inline and the shuffle changes nothing.
+    const heroMode = pickDistinct(heroModesFor(heroHasMedia(cur.data)), null);
     const nextTheme = { ...theme, layout: { ...(theme.layout ?? {}), rhythm, featureVariant } };
     let data = { ...(cur.data ?? {}), meta: { ...((cur.data ?? {}).meta ?? {}), theme: nextTheme } };
     data = withBlockStyles(data, [

@@ -573,7 +573,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   black rectangle (`preload="none"`, no poster); portrait now renders centred at phone width with
   the poster as its first frame. The footer gained owner toggles `show_find_us` / `show_map`
   (block content, absent = shown; off also skips the geocode) — an online-only product has no
-  "where". Pinned by `videoPortraitFooterToggles.test.ts`. **New block `video_showcase`** (same
+  "where". Pinned by `videoPortraitFooterToggles.test.ts`. **The B Hard header is now a standard HERO layout — `layout_mode: 'media_split'`**
+  (owner, 2026-10-16: "one of the default hero layouts for sites that have images or videos"):
+  small image + h1 + CTA beside up to three tilted phone-shaped cards (`hero.media[]`, video or
+  image, `media_heading` as the eyebrow), cards shared with `video_showcase` via
+  `components/sites/media-cards.tsx`, parser `lib/sites/heroMedia.ts`. Without media it renders
+  inline (never an empty second column); Shuffle offers it only when the hero has media
+  (`heroModesFor`); the `playful` curated theme prefers it. Pinned by `heroMediaSplit.test.tsx`. **New block `video_showcase`** (same
   day): up to three portrait videos tilted like phones on a table until one plays, pulled up
   over the hero's bottom edge, with an optional h2 — empty renders nothing in public
   (`videoShowcase.test.tsx`). ⚠️ **Validate a script-seeded block against

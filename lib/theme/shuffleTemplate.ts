@@ -10,6 +10,7 @@
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
 import { toStampedTheme, type CuratedTheme } from '@/lib/theme/curatedThemes';
 import { heroModeFromLayout } from '@/lib/theme/shuffleOptions';
+import { heroHasMedia } from '@/lib/sites/heroMedia';
 
 export type BlockStyleChange = { type: string; field: string; value: string };
 
@@ -75,7 +76,7 @@ export function shuffleAllData(
     meta: { ...(cur.meta ?? {}), theme: stamped },
   };
   next = withBlockStyles(next, [
-    { type: 'hero', field: 'layout_mode', value: heroModeFromLayout(stamped?.layout?.heroLayout) },
+    { type: 'hero', field: 'layout_mode', value: heroModeFromLayout(stamped?.layout?.heroLayout, heroHasMedia(cur)) },
     { type: 'services', field: 'variant', value: stamped?.layout?.featureVariant ?? 'grid' },
   ]);
 

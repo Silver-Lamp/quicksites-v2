@@ -1259,6 +1259,17 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 
 - Duplicate/legacy files were purged (2026-07-04): `lib/create-default-block-RESOLVE-DUP.ts`, `lib/blocks/_likely-remove_*`, `vercel.json.bak`, `page-v0.tsx`, and the dead `app/examples/blocks-demo` page (rendered a retired-vertical block through a removed renderer) are gone. If you see a reference to any of them, it's stale.
 - `app/api/deploy-webhook/route.ts` is effectively disabled (commented).
+- **⚠️ EVERY TENANT CONTACT FORM FAILED FOR 3½ MONTHS AND NOTHING ALARMED (found 2026-10-16).**
+  `contact-form.tsx` inserted into `form_submissions` with the anon key and then `.select()`ed the
+  new row. Migration `20260627` (correctly) left anon INSERT + UPDATE and made SELECT admin-only,
+  so PostgREST refused the returning read as *"new row violates row-level security policy"* — the
+  insert itself never ran (the error aborts the statement), the visitor saw "There was a problem
+  submitting the form", and the table's last row stayed dated **2026-04-08** while ~100 published
+  sites carried the form. Nothing counted zero submissions as a signal (the `nav_events` shape,
+  one table over). Found by replaying the exact anon call while answering where B Hard's leads
+  should go. Fix: insert WITHOUT a returning select, id minted client-side
+  (`contactFormSubmit.test.ts`). ⚠️ The Platform Inbox (`/admin/inbox`) reads `contact_messages`
+  — QuickSites' own `/contact` form — NOT `form_submissions`; tenant leads have **no admin UI**.
 - **`public.nav_events` is empty and unused (2026-10-11).** Its only writer, `/api/log-event`, inserted
   with the anon-key client into a table the 2026-07 RLS hardening closed, so it recorded zero rows
   in its life while three admin nav menus kept calling it. Route and callers removed

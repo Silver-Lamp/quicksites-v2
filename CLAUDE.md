@@ -364,6 +364,14 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `own_business` as defence in depth. Checked after the screen list, before the PPL gate.
   `POST /api/admin/ppl/text-business` lets an operator text a campaign's forward-to from the
   server (Twilio creds are not local). Pinned by `lib/ppl/__tests__/ownNumberCall.test.ts`.
+  **And after EVERY call the business took, it is texted the caller's number** (owner, same
+  day: "text them the number as well") — `lib/ppl/connectedCallNotice.ts` (pure decision:
+  `connected` or `brief`, forwards only, never the own-number case; copy says site · number ·
+  time · length and why their phone shows our line) run from the after-dial route in `after()`,
+  claimed on `call_logs.connected_notified_at` (`20260892`), STOP honoured, outcome in
+  `connected_notify_result`. Three texts now exist per call shape — taken → this one; rang out →
+  the missed-call text; message left → the voicemail text — and each is one row column, so a
+  call gets at most one of each.
   ⚠️ **A KNOWN LEAD-GEN NUMBER IS SCREENED, NOT FORWARDED (2026-10-15, owner: "if we detect an
   Angie's lead call can we not forward?").** `caller_screens` (`20260887`) + `lib/ppl/callerScreen*.ts`:
   the entry route checks the list FIRST (before PPL — a screened call must never become a charged

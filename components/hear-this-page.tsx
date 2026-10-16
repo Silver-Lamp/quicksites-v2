@@ -41,7 +41,9 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
   // form's "Telefono" field. A pill nobody can see past is not a feature.
   const [fieldFocused, setFieldFocused] = React.useState(false);
   // A site's owner switched the pill off (`meta.hear_this_page: false`, stamped on the renderer root).
-  const [siteOff, setSiteOff] = React.useState(false);
+  // null = not yet checked. The pill renders NOTHING until the mount check has run — it used to
+  // show for 1.5 s and then vanish on sites that switched it off (owner saw the flash, 2026-10-16).
+  const [siteOff, setSiteOff] = React.useState<boolean | null>(null);
 
   // Collapse + un-dismiss on navigation; recompute the grounded URL (origin+pathname,
   // no query string) so each page narrates itself. Then detect an owner embed once the
@@ -50,8 +52,10 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
     setOpen(false);
     setDismissed(false);
     setOwnerVoiceOnPage(false);
-    setSiteOff(false);
     if (typeof window === 'undefined') return;
+    // The renderer stamps the site's opt-out on its root in the server HTML, so it is readable
+    // at mount — no need to wait for the 1.5 s owner-embed detection.
+    setSiteOff(!!document.querySelector(`[${HEAR_THIS_PAGE_SITE_ATTR}="off"]`));
     setPageUrl(window.location.origin + window.location.pathname);
     const detect = () => {
       const hosts = Array.from(document.querySelectorAll('[data-about-that-embed]'));
@@ -92,7 +96,7 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
   if (typeof window !== 'undefined' && window.parent !== window) return null;
 
   if (ownerVoiceOnPage) return null;
-  if (siteOff) return null;
+  if (siteOff !== false) return null;
   if (dismissed) return null;
   if (fieldFocused && !open) return null;
 

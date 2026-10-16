@@ -568,7 +568,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   on a live site for anyone who added one from the palette before filling it in. `gallery` and
   `reviews` had the opposite fault, returning `null` even in the editor, which is why nobody
   ever filled them. All five now follow the two-sided rule via `isEditorContext`, pinned by
-  `unconfiguredBlocksStaySilent.test.ts`. ⚠️ **`reviews`' default content had NEVER validated** —
+  `unconfiguredBlocksStaySilent.test.ts`. **`video` gained `poster` / `orientation` / `title`
+  (2026-10-16, the B Hard commercials)**: a 9:16 phone commercial at `max-w-full` was a 1,300 px
+  black rectangle (`preload="none"`, no poster); portrait now renders centred at phone width with
+  the poster as its first frame. The footer gained owner toggles `show_find_us` / `show_map`
+  (block content, absent = shown; off also skips the geocode) — an online-only product has no
+  "where". Pinned by `videoPortraitFooterToggles.test.ts`.
+  ⚠️ **`reviews`' default content had NEVER validated** —
   it carried one placeholder row at `rating: 0` against a schema requiring `min(1)`, invisible
   because the block was seeded nowhere; the same two-contradicting-decisions shape as the
   testimonial `.min(1)` bug (#1084), caught the same way by the scaffold sweep. Now `[]`.

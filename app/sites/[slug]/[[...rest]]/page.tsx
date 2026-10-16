@@ -19,6 +19,7 @@ import {
   PUBLIC_PATH_HEADER,
   absoluteUrl,
   canonicalOriginFromMeta,
+  pathOnNominatedOrigin,
   publicPathFor,
   stripHomeSegment,
 } from '@/lib/seo/canonicalUrl';
@@ -473,8 +474,9 @@ export async function generateMetadata({
     pageSlug,
     // The page's own public URL — `generatePageMetadata` appends nothing when the base already
     // resolves the page, so pass it whole rather than a base to be joined with a page slug.
+    // On the nominated host the page lives at its site-relative path — never under `/sites/<slug>`.
     baseUrl: canonicalOrigin
-      ? absoluteUrl(canonicalOrigin, await publicPathFromHeaders(siteRow.slug ?? slug, rest))
+      ? absoluteUrl(canonicalOrigin, pathOnNominatedOrigin(await publicPathFromHeaders(siteRow.slug ?? slug, rest), siteRow.slug ?? slug))
       : await publicUrlFromHeaders(siteRow.slug ?? slug, rest),
     canonicalIsExact: true,
   });

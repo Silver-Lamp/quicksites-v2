@@ -57,6 +57,24 @@ export function publicPathFor(args: {
   return normalizePath(`/sites/${slug}${tail ? `/${tail}` : ''}`);
 }
 
+/**
+ * The path a page has on a host of its OWN (a custom domain or a nominated canonical origin).
+ *
+ * ⚠️ `publicPathFor` answers "what path did the visitor request", and on the platform host that
+ * is `/sites/<slug>/…`. Joining THAT to a nominated origin produced canonicals like
+ * `https://www.bremerton-towing.com/sites/bremerton-towing` on every platform copy of every
+ * custom-domain site (found on the B Hard publish, 2026-10-16) — a URL that happens to serve 200,
+ * i.e. a fourth duplicate of the home page rather than the one address the nomination exists to
+ * name. On the custom host the same page lives at `/`, so the platform prefix comes off.
+ */
+export function pathOnNominatedOrigin(publicPath: string, slug: string): string {
+  const p = normalizePath(publicPath);
+  const prefix = `/sites/${slug}`;
+  if (p === prefix) return '/';
+  if (p.startsWith(`${prefix}/`)) return normalizePath(p.slice(prefix.length));
+  return p;
+}
+
 /** Join an origin and a public path into an absolute URL. No trailing slash except at the root. */
 export function absoluteUrl(origin: string, path: string): string {
   const base = origin.replace(/\/+$/, '');

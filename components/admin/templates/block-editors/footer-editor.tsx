@@ -307,6 +307,30 @@ export default function FooterEditor({
               </p>
             </div>
 
+            {/* Find Us column — the map and the whole column can be switched off (block content).
+                An online-only product has no "where", and a map of nothing is editor furniture. */}
+            <div className="space-y-2 rounded-lg border border-white/10 p-3">
+              <h4 className="text-sm font-medium text-white/80">Find Us column</h4>
+              <label className="flex items-center gap-2 text-sm text-white/80">
+                <input
+                  type="checkbox"
+                  checked={content.show_find_us !== false}
+                  onChange={(e) => update('show_find_us', e.target.checked)}
+                />
+                Show the “Find Us” column (map + social links)
+              </label>
+              <label className={`flex items-center gap-2 text-sm ${content.show_find_us === false ? 'text-white/40' : 'text-white/80'}`}>
+                <input
+                  type="checkbox"
+                  checked={content.show_map !== false}
+                  disabled={content.show_find_us === false}
+                  onChange={(e) => update('show_map', e.target.checked)}
+                />
+                Show the map
+              </label>
+              <p className="text-xs text-white/50">Off for online-only businesses or anyone who would rather not show a location.</p>
+            </div>
+
             {/* Social Links — writes into data.meta.social (site-wide) */}
             <div className="space-y-3 rounded-lg border border-white/10 p-3">
               <h4 className="text-sm font-medium text-white/80">Follow Us (Social)</h4>

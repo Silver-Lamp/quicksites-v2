@@ -58,7 +58,7 @@ export const DEFAULT_BLOCK_CONTENT = {
 
   image: { url: 'https://placehold.co/800x400', alt: '' },
 
-  video: { url: 'https://example.com/video.mp4', caption: '' },
+  video: { url: 'https://example.com/video.mp4', caption: '', poster: '', orientation: 'landscape', title: '' },
 
   audio: { url: 'https://example.com/audio.mp3', title: '', provider: 'suno' },
 

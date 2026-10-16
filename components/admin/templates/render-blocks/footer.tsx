@@ -333,12 +333,17 @@ export default function FooterRender({
   const lat = Number.isFinite(latMeta) ? latMeta : latDb;
   const lon = Number.isFinite(lonMeta) ? lonMeta : lonDb;
 
+  // Owner toggles (block content, 2026-10-16): the whole "Find Us" column, or just its map.
+  // Absent means shown, so every existing footer is unchanged. Off → no geocode either.
+  const showFindUs = final?.show_find_us !== false;
+  const showMap = showFindUs && final?.show_map !== false;
+
   const hasCoords = Number.isFinite(lat) && Number.isFinite(lon);
-  const geocoded = useGeocode(hasCoords ? null : fullAddressForGeocode);
+  const geocoded = useGeocode(hasCoords ? null : showMap ? fullAddressForGeocode : null);
 
   // Final, strictly validated center
   const coords = hasCoords ? [lat as number, lon as number] : geocoded;
-  const centerOk = isValidLatLng(coords);
+  const centerOk = showMap && isValidLatLng(coords);
 
   const bgColor = 'bg-card';
   const textColor = 'text-card-foreground';
@@ -538,12 +543,12 @@ export default function FooterRender({
             exists and then shows them an empty box. With the map and the socials both gated
             above, this column can be genuinely empty — so hide the whole thing rather than
             leave "Find Us" hovering over blank space. */}
-        <div className={`space-y-3 ${!centerOk && !socials.length && !showEditorHints ? 'hidden' : ''}`}>
+        <div className={`space-y-3 ${!showFindUs || (!centerOk && !socials.length && !showEditorHints) ? 'hidden' : ''}`}>
           <h3 className={`text-base font-semibold ${headingColor}`}>{isPersonal ? cs.elsewhere : cs.findUs}</h3>
           {/* No map on a personal page: "Map unavailable" is a 180px box announcing that we
               don't know where someone lives — and on an About-Me page we have no business
               asking. */}
-          <div className={`rounded-md overflow-hidden border border-border ${isPersonal ? 'hidden' : ''}`}>
+          <div className={`rounded-md overflow-hidden border border-border ${isPersonal || !showMap ? 'hidden' : ''}`}>
             {centerOk ? (
               <LeafletMap
                 center={coords as [number, number]}

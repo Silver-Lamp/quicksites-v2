@@ -309,6 +309,9 @@ const FooterContent = z.preprocess(
     .object({
       logo_url: z.string().optional(),
       links: z.array(LinkSchema).default([]),
+      /** Owner toggles (2026-10-16): hide the map alone, or the whole "Find Us" column (map + socials). Absent = shown. */
+      show_map: z.boolean().optional(),
+      show_find_us: z.boolean().optional(),
     })
     .passthrough()
 );
@@ -834,6 +837,11 @@ export const blockContentSchemaMap = {
     schema: z.object({
       url: z.string().url('Video URL must be valid'),
       caption: z.string().optional(),
+      /** A frame shown before play — without one a preload="none" player is a black box. */
+      poster: z.union([z.string().url(), z.literal('')]).optional(),
+      /** Portrait (9:16, a phone commercial) renders centred at phone width; landscape is the old full-width player. */
+      orientation: z.enum(['landscape', 'portrait']).optional(),
+      title: z.string().optional(),
     }),
   },
 

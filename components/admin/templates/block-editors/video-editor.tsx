@@ -28,6 +28,31 @@ export default function VideoEditor({ block, onSave, onClose, errors = {}, templ
         onChange={(v) => setContent({ ...content, caption: v })}
         error={fieldErrors['content.caption']}
       />
+      <BlockField
+        type="text"
+        label="Title (optional)"
+        value={(content as any).title || ''}
+        onChange={(v) => setContent({ ...content, title: v } as typeof content)}
+        error={fieldErrors['content.title']}
+      />
+      <BlockField
+        type="text"
+        label="Poster image URL (the frame shown before play)"
+        value={(content as any).poster || ''}
+        onChange={(v) => setContent({ ...content, poster: v } as typeof content)}
+        error={fieldErrors['content.poster']}
+      />
+      <label className="block text-sm">
+        <span className="mb-1 block text-white/80">Orientation</span>
+        <select
+          className="w-full rounded border border-white/10 bg-neutral-900 px-3 py-2 text-white"
+          value={(content as any).orientation === 'portrait' ? 'portrait' : 'landscape'}
+          onChange={(e) => setContent({ ...content, orientation: e.target.value } as typeof content)}
+        >
+          <option value="landscape">Landscape — full width</option>
+          <option value="portrait">Portrait — phone-shaped, centred</option>
+        </select>
+      </label>
 
       <div className="flex justify-end gap-2 pt-4">
         <button onClick={onClose} className="px-4 py-2 bg-gray-700 text-white rounded">

@@ -727,7 +727,10 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `siteAb.test.ts` source-guards it — a test on one route only would have left the custom domain,
   i.e. the live site, on A), never on a draft or preview snapshot; the renderer stamps
   `data-qs-ab="<experiment>|<variant>"` on its root and `lib/ab/client.ts#readActiveAb` reads it
-  (homepage: `window.__qsAb`). Cookies are set only by the beacon route on the first exposure;
+  (homepage: `window.__qsAb`). ⚠️ **The renderer's site object carries the pages TWICE** —
+  `pages` and `data.pages`, one array by reference until a clone splits them — and the block tree
+  is read from `data.pages`; the first live B on bhard.store stamped B, set the cookie and rendered
+  A (#1232). Patch every copy. Cookies are set only by the beacon route on the first exposure;
   pages read and never write. Conversions: `cta_click` (hero button), `form_submitted` (contact
   form), `guest_build_started` / `signup_click` (homepage). Edited on **`/admin/ab`** (Growth →
   A/B tests; a site's test at `?template=<id>`, reached from the editor's **🧪 A/B** button).
@@ -1154,6 +1157,16 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   can read it; the phone format is the site's (`lib/phone/region.ts`); the demo is noindex by the
   `demo_kind` flag. The sim site's nav had been seeded in English — a scratch seed that skips the
   nav relabel ships English chrome under an Italian name; the demo seed shows the relabel.
+  **HJ's re-run (2026-10-16, #1233) found four more**: the pill sat on a time CHIP (a `<button>`,
+  so the text-field focus-hide never fired — now anything focused inside a `<form>` hides it);
+  the pill's labels were English at first paint (locale read only in the 1.5 s detect pass — now
+  read at mount too); **`<html lang>` was the app's `en`** on every site (the root layout sets it;
+  screen readers chose an English voice and Chrome offered to translate — `app/host` sets it in
+  its before-paint inline script + `SiteThemeSetter lang`, `/sites/[slug]` mounts
+  `SiteLangSetter`); and the contact form's chrome ("Name: / Submit") was English with no
+  label→input links — it now reads `chromeStrings(siteLocale(site))` with `htmlFor`/`id`. The
+  stamp on the renderer root was never enough for the document language: assistive tech reads
+  `<html>`.
 - **`/spread-the-word` — the public referral page (2026-10-11)**: `/for-sales` is the brief for
   people recruited to SELL (calls, the domain rental, territories) and reads like a job; the
   owner wanted a shareable version that is "just about telling people about it and helping

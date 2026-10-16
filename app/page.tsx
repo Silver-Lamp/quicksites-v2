@@ -13,6 +13,10 @@ import SiteFlyThrough from '@/components/home/site-fly-through';
 // the server→client boundary is a client-reference proxy, and slice(0, proxy) is slice(0, NaN).
 import { FLY_COUNT } from '@/lib/home/flyThrough';
 import { getShowcaseData } from '@/lib/home/getShowcaseData';
+import { cookies } from 'next/headers';
+import AbBeacon from '@/components/home/ab-beacon';
+import { AB_COOKIE, parseHomepageAb, pickVariant } from '@/lib/ab/homepage';
+import { getHomepageAb } from '@/lib/ab/homepageDb';
 import { marketingOg } from '@/lib/marketingOg';
 
 export const dynamic = 'force-dynamic';
@@ -60,9 +64,16 @@ async function ShowcaseSSR() {
   return <SiteShowcase initialData={initial} />;
 }
 
-export default function Page() {
+export default async function Page() {
+  // Homepage A/B (lib/ab/homepage.ts): the variant comes from the sticky cookie, or a fresh
+  // draw; the page never writes cookies — the beacon's route sets it on the first exposure.
+  const abSettings = await getHomepageAb().catch(() => parseHomepageAb(null));
+  const abCookie = (await cookies()).get(AB_COOKIE)?.value ?? null;
+  const picked = pickVariant(abSettings, abCookie);
+  const ab = abSettings.enabled ? { variant: picked.variant, b: abSettings.b } : null;
   return (
     <>
+      {ab ? <AbBeacon variant={picked.variant} assigned={picked.assigned} /> : null}
       {/*
         Organization JSON-LD — the entity record for a branded-query ranking problem.
         Search Console shows average position 12.3 for "quicksites", our OWN name, on 663
@@ -76,6 +87,7 @@ export default function Page() {
         dangerouslySetInnerHTML={{ __html: organizationSchemaJson() }}
       />
     <HomeClient
+      ab={ab}
       heroLayer={
         <Suspense fallback={null}>
           <FlyThroughSSR />

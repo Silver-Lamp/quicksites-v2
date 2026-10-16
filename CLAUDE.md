@@ -573,7 +573,14 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   black rectangle (`preload="none"`, no poster); portrait now renders centred at phone width with
   the poster as its first frame. The footer gained owner toggles `show_find_us` / `show_map`
   (block content, absent = shown; off also skips the geocode) — an online-only product has no
-  "where". Pinned by `videoPortraitFooterToggles.test.ts`.
+  "where". Pinned by `videoPortraitFooterToggles.test.ts`. **New block `video_showcase`** (same
+  day): up to three portrait videos tilted like phones on a table until one plays, pulled up
+  over the hero's bottom edge, with an optional h2 — empty renders nothing in public
+  (`videoShowcase.test.tsx`). ⚠️ **Validate a script-seeded block against
+  `blockContentSchemaMap` before INSERT**: the B Hard hero was seeded with `layout_mode:
+  'split'` (not in the enum); the editor flagged it and the owner's next save normalised the
+  block, DROPPING it from `content_blocks` (the copy the renderer reads) and emptying its
+  words — the live hero vanished with no error anywhere but the editor banner.
   ⚠️ **`reviews`' default content had NEVER validated** —
   it carried one placeholder row at `rating: 0` against a schema requiring `min(1)`, invisible
   because the block was seeded nowhere; the same two-contradicting-decisions shape as the

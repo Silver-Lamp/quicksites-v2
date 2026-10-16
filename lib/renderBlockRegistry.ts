@@ -112,6 +112,7 @@ export const DYNAMIC_RENDERERS: Record<
   text: () => import('@/components/admin/templates/render-blocks/text'),
   image: () => import('@/components/admin/templates/render-blocks/image'),
   video: () => import('@/components/admin/templates/render-blocks/video'),
+  video_showcase: () => import('@/components/admin/templates/render-blocks/video-showcase'),
   audio: () => import('@/components/admin/templates/render-blocks/audio'),
   quote: () => import('@/components/admin/templates/render-blocks/quote'),
   button: () => import('@/components/admin/templates/render-blocks/button'),

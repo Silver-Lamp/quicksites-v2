@@ -845,6 +845,33 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  /**
+   * Up to three portrait videos shown together — tilted like a stack of phones until one is
+   * played, optionally overlapping the bottom of the block above (the hero). Owner ask on the
+   * B Hard commercials (2026-10-16): "overlaid on the header, slightly tilted until played".
+   */
+  video_showcase: {
+    label: 'Video showcase',
+    icon: '🎞️',
+    schema: z.object({
+      heading: z.string().optional(),
+      videos: z
+        .array(
+          z.object({
+            url: z.string().url('Video URL must be valid'),
+            poster: z.union([z.string().url(), z.literal('')]).optional(),
+            caption: z.string().optional(),
+          }),
+        )
+        .max(3)
+        .default([]),
+      /** Tilt each card a few degrees until it plays. Default on. */
+      tilt: z.boolean().optional(),
+      /** Pull the row up over the block above. Default on. */
+      overlap: z.boolean().optional(),
+    }),
+  },
+
   footer: { label: 'Footer', icon: '🏠', schema: FooterContent },
   header: { label: 'Header', icon: '🏠', schema: HeaderContent },
 

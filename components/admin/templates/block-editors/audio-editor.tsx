@@ -25,9 +25,12 @@ export default function AudioEditor({ block, onSave, onClose, errors = {}, templ
         label="Provider"
         value={content.provider ?? 'spotify'}
         onChange={(v) => setContent({ ...content, provider: v as any })}
-        options={['spotify', 'soundcloud', 'suno']}
+        options={['spotify', 'soundcloud', 'suno', 'file']}
         error={fieldErrors['content.provider']}
       />
+      <p className="-mt-2 text-xs text-muted-foreground">
+        “file” = a direct audio file (mp3, m4a, wav…) played in the browser’s own player. The others are embed URLs.
+      </p>
 
       <BlockField
         type="text"
@@ -43,6 +46,14 @@ export default function AudioEditor({ block, onSave, onClose, errors = {}, templ
         value={content.title || ''}
         onChange={(v) => setContent({ ...content, title: v })}
         error={fieldErrors['content.title']}
+      />
+
+      <BlockField
+        type="text"
+        label="Caption (optional, one line under the title)"
+        value={content.caption || ''}
+        onChange={(v) => setContent({ ...content, caption: v })}
+        error={fieldErrors['content.caption']}
       />
 
       <div className="flex justify-end gap-2 pt-4">

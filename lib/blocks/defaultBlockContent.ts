@@ -63,7 +63,10 @@ export const DEFAULT_BLOCK_CONTENT = {
   // Empty on purpose: renders nothing in public until the owner adds a video (editor shows a hint).
   video_showcase: { heading: '', videos: [], tilt: true, overlap: true },
 
-  audio: { url: 'https://example.com/audio.mp3', title: '', provider: 'suno' },
+  // ⚠️ Empty, not a placeholder: 'https://example.com/audio.mp3' used to ship as an iframe to
+  // nowhere (and, with the `file` player, would ship a dead player) on every live site that added
+  // the block before filling it in. Empty renders nothing in public and a hint in the editor.
+  audio: { url: '', title: '', provider: 'file' },
 
   // Empty: a default quote + named attribution is a fabricated statement by a named person.
   quote: { text: '', attribution: '' },

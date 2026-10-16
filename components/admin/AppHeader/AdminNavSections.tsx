@@ -457,6 +457,7 @@ const NAV_ADMIN: NavItem[] = [
       { label: 'New', href: '/admin/inbox?status=new' },
       { label: 'Contacted', href: '/admin/inbox?status=contacted' },
       { label: 'Archived', href: '/admin/inbox?status=archived' },
+      { label: 'Site forms', href: '/admin/inbox/site-forms' },
     ],
   },
 

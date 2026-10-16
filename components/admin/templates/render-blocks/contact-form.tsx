@@ -235,26 +235,33 @@ export default function ContactFormRender({
 
     setSubmitting(true);
 
-    const { data, error: insertError } = await supabase
-      .from('form_submissions')
-      .insert([
-        {
-          name: formData.name,
-          email: formData.email || null,
-          phone: formData.phone || null,
-          service: formData.service || null,
-          site_slug: siteSlug,
-        },
-      ])
-      .select()
-      .single();
+    // ⚠️ INSERT WITHOUT A RETURNING SELECT. `form_submissions` lets anon INSERT and UPDATE but
+    // only admins SELECT (migration 20260627 — the PII leak it closed was anon READ). PostgREST
+    // runs `.select()` after an insert as a read of the new row, which that policy refuses, and
+    // reports it as "new row violates row-level security policy" — so from 2026-06-27 to
+    // 2026-10-16 EVERY tenant contact form failed with "There was a problem submitting the form"
+    // while the table's last row stayed dated April. Found by replaying this exact call with the
+    // anon key while answering an unrelated question about where B Hard's leads should go.
+    // The id is minted here so the email route and the status update can still name the row.
+    const submissionId = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const { error: insertError } = await supabase.from('form_submissions').insert([
+      {
+        id: submissionId,
+        name: formData.name,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        service: formData.service || null,
+        site_slug: siteSlug,
+      },
+    ]);
 
-    if (insertError || !data) {
+    if (insertError) {
       console.error('Insert error:', insertError);
       setSubmitError('There was a problem submitting the form. Please try again.');
       setSubmitting(false);
       return;
     }
+    const data = { id: submissionId };
 
     let emailStatus = 'pending';
     let emailResponseId: string | null = null;

@@ -149,6 +149,7 @@ export default async function AdminInboxPage({
           </p>
         </div>
         <div className="flex gap-2">
+          <Link href="/admin/inbox/site-forms"><Button variant="outline">Site forms</Button></Link>
           <Link href="/pricing"><Button variant="outline">Pricing</Button></Link>
           <Link href="/contact"><Button>New message</Button></Link>
         </div>

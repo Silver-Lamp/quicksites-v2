@@ -37,7 +37,8 @@ export type MissedCallSkip =
   | 'not_unanswered'
   | 'message_left'
   | 'already_notified'
-  | 'sweep';
+  | 'sweep'
+  | 'own_business';
 
 export type MissedCallDecision = { send: true; to: string } | { send: false; reason: MissedCallSkip };
 
@@ -60,6 +61,8 @@ export const SWEEP_OTHER_NUMBERS_MIN = 2;
 export type MissedCallContext = {
   /** Distinct OTHER tracking numbers this caller rang in the window. Omit when unknown. */
   otherNumbersRungByCaller?: number;
+  /** The caller IS the destination (last ten digits). Never text a business to ring itself (2026-10-16). */
+  callerIsForwardTo?: boolean;
 };
 
 /** Pure. Should the destination be texted "someone called and it rang out"? */
@@ -77,6 +80,7 @@ export function missedCallDecision(
   // The voicemail webhook claims its row synchronously before it texts; if it got there first
   // the business is being told "they left a message", which supersedes this.
   if (row.recording_url || row.voicemail_notified_at) return { send: false, reason: 'message_left' };
+  if (ctx.callerIsForwardTo) return { send: false, reason: 'own_business' };
   if ((ctx.otherNumbersRungByCaller ?? 0) >= SWEEP_OTHER_NUMBERS_MIN) return { send: false, reason: 'sweep' };
   return { send: true, to: row.forwarded_to };
 }

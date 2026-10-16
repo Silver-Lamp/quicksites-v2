@@ -6,7 +6,7 @@
 // forwarded leg's status/duration lands via /api/twilio-callback (which retains our
 // geo_campaign_id since it doesn't set that column).
 
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
@@ -21,6 +21,8 @@ import { connectingAnnouncement } from '@/lib/ppl/forwardAnnounce';
 import { screenPromptTwiml } from '@/lib/ppl/callerScreen';
 import { activeScreen } from '@/lib/ppl/callerScreenDb';
 import { KEY_TO_LABEL } from '@/lib/industries';
+import { isOwnBusinessCaller, ownBusinessSmsBody, ownBusinessTwiml, type LastCaller } from '@/lib/ppl/ownNumberCall';
+import { sendSms } from '@/lib/sms/sendSms';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -101,6 +103,34 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
     }
   } catch {
     /* fall through to the normal path */
+  }
+
+  // ⚠️ THE BUSINESS CALLING ITS OWN LINE IS NOT BRIDGED TO ITSELF (lib/ppl/ownNumberCall.ts;
+  // renton-towing.com, 2026-10-16: V'Z Towing rang their tracking number back after a real call,
+  // four times, were forwarded to their own busy phone, and were texted "ring them back on" their
+  // own number — twice). The line says what it is and gives them the last caller, by voice and
+  // by text. Best-effort lookups; a failure still answers, it just answers without a number.
+  if (campaign?.forward_to && isOwnBusinessCaller(searchParams.get('From'), campaign.forward_to)) {
+    let lastCaller: LastCaller | null = null;
+    try {
+      const { data: prev } = await admin
+        .from('call_logs')
+        .select('from_number, created_at')
+        .eq('geo_campaign_id', campaignId)
+        .neq('call_sid', callSid ?? '')
+        .gte('created_at', new Date(Date.now() - 7 * 86_400_000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(20);
+      const other = ((prev ?? []) as { from_number: string | null; created_at: string | null }[]).find((r) => r.from_number && !isOwnBusinessCaller(r.from_number, campaign.forward_to));
+      if (other?.from_number) lastCaller = { number: other.from_number, at: other.created_at ?? new Date() };
+    } catch {
+      /* answer without a number */
+    }
+    const args = { domain: campaign.domain ?? 'your QuickSites', lastCaller };
+    await logCall({ forwarded_to: null, handling: 'own_business' });
+    const body = ownBusinessSmsBody(args);
+    if (body) after(async () => { await sendSms(campaign.forward_to!, body).catch(() => undefined); });
+    return xml(ownBusinessTwiml(args));
   }
 
   // Pay-per-call campaigns (docs/PPL_VERTICAL.md): the balance gate runs BEFORE the bridge, and

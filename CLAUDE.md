@@ -352,6 +352,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `/admin/call-logs` say "not texted — a sweep". An unreadable count is zero: a DB hiccup fails
   toward texting, never toward silence. The 8 s settle plus ring time means the sweep is already
   visible by the time any one call is decided.
+  ⚠️ **THE BUSINESS CALLING ITS OWN LINE WAS BRIDGED TO ITSELF AND TOLD TO RING ITSELF BACK
+  (2026-10-16, renton-towing.com).** A real caller (253-345-1344) rang at 2:53 pm and was bridged
+  to V'Z Towing for 30 s. Forty-nine seconds later V'Z rang the tracking number BACK — it is the
+  number their phone shows, because our caller ID is our own number and the customer's rides in
+  the whisper — four times in two minutes. Each was forwarded to their own busy phone, two rang
+  out, and the missed-call text fired twice: "ring them back on (253) 217-0639" — their own
+  number. `lib/ppl/ownNumberCall.ts`: a caller whose last ten digits are the campaign's
+  `forward_to` is never bridged (`handling='own_business'`); the line says what it is and gives
+  them the LAST OTHER CALLER by voice (digits, twice) and by text; `missedCallDecision` skips
+  `own_business` as defence in depth. Checked after the screen list, before the PPL gate.
+  `POST /api/admin/ppl/text-business` lets an operator text a campaign's forward-to from the
+  server (Twilio creds are not local). Pinned by `lib/ppl/__tests__/ownNumberCall.test.ts`.
   ⚠️ **A KNOWN LEAD-GEN NUMBER IS SCREENED, NOT FORWARDED (2026-10-15, owner: "if we detect an
   Angie's lead call can we not forward?").** `caller_screens` (`20260887`) + `lib/ppl/callerScreen*.ts`:
   the entry route checks the list FIRST (before PPL — a screened call must never become a charged

@@ -108,7 +108,7 @@ describe('the status route wires it correctly', () => {
   it('counts the other lines the caller rang in the window and passes it to the decision; a sweep is recorded on the row', () => {
     expect(src).toMatch(/\.neq\('to_number', row\.to_number\)/);
     expect(src).toMatch(/SWEEP_WINDOW_MINUTES \* 60_000/);
-    expect(src).toMatch(/missedCallDecision\(row, \{ status: parentStatus \}, \{ otherNumbersRungByCaller \}\)/);
+    expect(src).toMatch(/missedCallDecision\(row, \{ status: parentStatus \}, \{ otherNumbersRungByCaller, callerIsForwardTo \}\)/);
     expect(src).toMatch(/skipped: 'sweep', other_numbers_rung: otherNumbersRungByCaller/);
     // The count query runs BEFORE the decision, not after a claim.
     expect(src.indexOf("neq('to_number'")).toBeLessThan(src.indexOf('missedCallDecision(row'));

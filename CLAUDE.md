@@ -1273,6 +1273,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
     recommend it. **The working publish is `public.publish_template_demo(uuid)`** — a misnomer: it
     is the generic helper (fresh `template_versions` snapshot → upsert `published_sites` → set the
     bypass → flip `published`), stamps nothing demo-specific, and is granted to `service_role`.
+  - **The editor's top bar says whether the live site matches the latest save (2026-10-16, owner
+    ask).** `GET /api/templates/<id>/publish-state` (owner-gated, read-only) compares the draft to
+    EVERY served copy — `published_sites → template_versions.full_data` and the legacy
+    `sites → snapshots.data` — via the pure `lib/templates/publishState.ts` (visible content, keys
+    sorted); `components/admin/templates/publish-state-pill.tsx` shows *Not published* / *Live ·
+    up to date* / *Unpublished changes* (amber, names which copy differs, click = Save & Publish)
+    and re-asks the server after each landed autosave and each publish. Local state never answers it.
   - ⚠️ **The admin Publish button WORKS — verified by a real click 2026-08-28.** `Save & Publish`
     calls **`/api/admin/sites/publish`**, which upserts `published_sites` (what the renderer serves);
     the site goes live. The long-standing suspicion that it was broken was **wrong**, and the check

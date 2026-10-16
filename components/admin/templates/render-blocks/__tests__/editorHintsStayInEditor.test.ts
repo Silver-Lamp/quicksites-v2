@@ -65,7 +65,8 @@ describe('footer editor hints are gated to the editor', () => {
 
   it('does not print an em-dash placeholder for a missing phone on a published page', () => {
     // The Phone row must be wrapped in a condition that includes the hint gate.
-    const at = body.indexOf('<div className={subText}>Phone</div>');
+    // The heading is the site's-language string (lib/sites/siteLocale.ts), not a literal.
+    const at = body.indexOf('<div className={subText}>{cs.phone}</div>');
     expect(at).toBeGreaterThan(-1);
     expect(body.slice(Math.max(0, at - 200), at)).toContain('showEditorHints');
   });

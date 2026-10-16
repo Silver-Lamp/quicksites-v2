@@ -8,6 +8,7 @@ import SiteScreensaver from '@/components/sites/site-screensaver';
 import SiteMascot from '@/components/sites/site-mascot';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { resolveSiteLayout } from '@/lib/theme/resolveSiteLayout';
+import { SITE_LOCALE_ATTR, siteLocale } from '@/lib/sites/siteLocale';
 import { blockMass } from '@/lib/theme/blockMass';
 import type { Template } from '@/types/template';
 import {
@@ -89,6 +90,11 @@ export default function SiteRenderer({
       )}
       data-editor-chrome={editorChrome ? '1' : undefined} // ← NEW
       data-base-url={baseUrl || undefined}                // ← NEW
+      // The site's language, for chrome mounted OUTSIDE this tree (the "Hear this page" pill in
+      // the root layout) and for assistive tech: the root layout says lang="en" for the app, and
+      // an Italian site's words are not English. See lib/sites/siteLocale.ts.
+      lang={siteLocale(site)}
+      {...{ [SITE_LOCALE_ATTR]: siteLocale(site) }}
       // The curated theme has carried a `density` for as long as `rhythm` has, and nothing ever
       // read it — every site got identical spacing whichever personality it was stamped with.
       // Surfacing it here makes the field mean something without touching a single block.

@@ -27,6 +27,7 @@ import { buildPersonSchema, personIdentityFromTemplate, personSchemaEnabled } fr
 import CartPageClient from '@/components/cart/CartPageClient';
 import { cartShellForSlug } from '@/lib/payments/venmoForHost';
 import SiteThemeShell from '@/components/sites/site-theme-shell';
+import { isLinkExemptDemo } from '@/lib/booking/partnerLink';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
 import PreviewWatermark from '@/components/sites/preview-watermark';
@@ -497,6 +498,10 @@ export async function generateMetadata({
   // in a search index, competing with the one they chose, is a liability nobody asked us to create.
   // `meta.noindex` lets a site be publicly reachable without being publicly discoverable.
   if (meta?.noindex === true) return { ...md, icons: siteIcons, robots: { index: false, follow: false } };
+  // The table-booking DEMO is a fictional restaurant with invented guests; a search engine must
+  // never list it as a place to eat (HiveJournal's UX sweep, 2026-10-15). Same flag the partner
+  // routes use to exempt it from the owner-link check — never a slug.
+  if (isLinkExemptDemo({ meta })) return { ...md, icons: siteIcons, robots: { index: false, follow: false } };
 
   // ⚠️ A SITE PUBLISHED BY AN UNVERIFIED GUEST IS VISIBLE BUT NOT INDEXABLE, and that asymmetry is
   // the entire reason publishing-before-confirming is safe to offer.

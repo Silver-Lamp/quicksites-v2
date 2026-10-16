@@ -973,6 +973,15 @@ export const blockContentSchemaMap = {
     schema: z.object({
       title: z.string().min(1),
       services: z.array(z.string()).optional(),
+      /** `email_only` = one styled email field + button (notify-me); asks for nothing else. lib/forms/contactFormMode.ts */
+      mode: z.enum(['full', 'email_only']).optional(),
+      /** email_only: one line under the title. */
+      description: z.string().optional(),
+      button_text: z.string().optional(),
+      placeholder: z.string().optional(),
+      success_message: z.string().optional(),
+      /** email_only: small print under the field (what the address is used for). */
+      note: z.string().optional(),
     }),
   },
 

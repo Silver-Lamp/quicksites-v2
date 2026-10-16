@@ -15,6 +15,15 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
 
   // Content-editable: title
   const [title, setTitle] = useState(formBlock.content?.title || 'Contact Us');
+  // Simplified (email-only) mode + its copy. lib/forms/contactFormMode.ts
+  const c0: any = formBlock.content ?? {};
+  const [emailOnly, setEmailOnly] = useState<boolean>(c0.mode === 'email_only');
+  const [description, setDescription] = useState<string>(c0.description || '');
+  const [buttonText, setButtonText] = useState<string>(c0.button_text || '');
+  const [placeholder, setPlaceholder] = useState<string>(c0.placeholder || '');
+  const [successMessage, setSuccessMessage] = useState<string>(c0.success_message || '');
+  const [note, setNote] = useState<string>(c0.note || '');
+  const fieldCls = 'w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent';
 
   // DB-backed (read-only in editor)
   const dbEmail = ((template as any)?.contact_email || '').trim();
@@ -83,6 +92,28 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
         />
       </div>
 
+      {/* Simplified mode: one email field, nothing else asked */}
+      <div className="space-y-2 rounded-md border border-neutral-800 p-3">
+        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-neutral-200">
+          <input type="checkbox" className="form-checkbox accent-purple-600" checked={emailOnly} onChange={(e) => setEmailOnly(e.target.checked)} />
+          Email only (simplified)
+        </label>
+        <p className="text-xs text-neutral-400">
+          One styled email field and a button — no name, phone or service picker. For “notify me” / waitlist sign-ups.
+        </p>
+        {emailOnly ? (
+          <div className="grid grid-cols-1 gap-2 pt-1">
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className={fieldCls} placeholder="One line under the title (optional)" />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <input type="text" value={buttonText} onChange={(e) => setButtonText(e.target.value)} className={fieldCls} placeholder="Button text (default: Notify me)" />
+              <input type="text" value={placeholder} onChange={(e) => setPlaceholder(e.target.value)} className={fieldCls} placeholder="Field placeholder (default: you@example.com)" />
+            </div>
+            <input type="text" value={successMessage} onChange={(e) => setSuccessMessage(e.target.value)} className={fieldCls} placeholder="Success message (default: Thanks — you’re on the list.)" />
+            <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className={fieldCls} placeholder="Small print under the field, e.g. what the address is used for (optional)" />
+          </div>
+        ) : null}
+      </div>
+
       {/* Notification Email (read-only from DB) */}
       <div className="space-y-1.5">
         <label htmlFor="notify-email" className="block text-sm font-medium text-neutral-200">
@@ -118,8 +149,8 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
         </div>
       </div>
 
-      {/* Included Services (subset of DB services) */}
-      <div className="space-y-2">
+      {/* Included Services (subset of DB services) — not asked in email-only mode */}
+      <div className={emailOnly ? 'hidden' : 'space-y-2'}>
         <label className="block text-sm font-medium text-neutral-200">Included Services</label>
 
         {allAvailableServices.length > 0 ? (
@@ -178,7 +209,20 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
             onSave({
               ...formBlock,
               // ✅ Save only title + DB-backed services subset (no email in block JSON)
-              content: { title, services: sanitizedSubset },
+              content: {
+                title,
+                services: sanitizedSubset,
+                ...(emailOnly
+                  ? {
+                      mode: 'email_only',
+                      ...(description.trim() ? { description: description.trim() } : {}),
+                      ...(buttonText.trim() ? { button_text: buttonText.trim() } : {}),
+                      ...(placeholder.trim() ? { placeholder: placeholder.trim() } : {}),
+                      ...(successMessage.trim() ? { success_message: successMessage.trim() } : {}),
+                      ...(note.trim() ? { note: note.trim() } : {}),
+                    }
+                  : {}),
+              },
             });
           }}
           className="px-4 py-2 text-sm rounded-md bg-purple-600 text-white shadow

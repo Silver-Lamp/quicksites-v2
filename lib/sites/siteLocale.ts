@@ -45,6 +45,11 @@ const CHROME = {
     emailInvalid: 'Email format is invalid.',
     submitFailed: 'There was a problem sending the form. Please try again.',
     formNotSetUp: 'Sorry — this form isn’t set up to receive messages right now.',
+    // Email-only (notify-me) mode
+    emailRequired: 'Please enter your email.',
+    emailPlaceholder: 'you@example.com',
+    notifyMe: 'Notify me',
+    emailOnlyThanks: 'Thanks — you’re on the list.',
   },
   it: {
     quickLinks: 'Link rapidi',
@@ -69,6 +74,10 @@ const CHROME = {
     emailInvalid: 'Formato email non valido.',
     submitFailed: 'Si è verificato un problema nell’invio. Riprova.',
     formNotSetUp: 'Questo modulo non è ancora pronto a ricevere messaggi.',
+    emailRequired: 'Inserisci la tua email.',
+    emailPlaceholder: 'tu@esempio.it',
+    notifyMe: 'Avvisami',
+    emailOnlyThanks: 'Grazie, sei in lista.',
   },
 } as const;
 

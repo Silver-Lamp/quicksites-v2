@@ -1,0 +1,90 @@
+'use client';
+
+// components/admin/templates/render-blocks/video-showcase.tsx
+//
+// Up to three portrait videos shown together, tilted like phones laid on a table until one is
+// played, pulled up over the bottom of the block above (the hero) so the row reads as part of
+// the opening rather than a section further down. Built for the B Hard commercials (owner,
+// 2026-10-16: "overlaid on the header slightly tilted until played, and an h2 of 'Ok, now
+// that's new!'").
+//
+// ⚠️ EMPTY RENDERS NOTHING IN PUBLIC (the products_grid / video rule): a showcase with no
+// videos is an editor hint, never a row of empty black cards on a live site.
+//
+// ⚠️ Posters are load-bearing: `preload="none"` with a poster means nothing downloads until a
+// tap — these files are 8–15 MB each. Without a poster we fall back to `metadata` so the player
+// is not a black rectangle. `playsInline` so iOS does not take the screen over on play.
+
+import * as React from 'react';
+import type { Block } from '@/types/blocks';
+import { isEditorContext } from '@/lib/editor/isEditorContext';
+
+type Item = { url: string; poster?: string; caption?: string };
+type Props = { block?: Block; content?: Block['content']; template?: unknown; previewOnly?: boolean };
+
+/** Tailwind class names must appear literally for the JIT scan — keep this array spelled out. */
+const TILTS = ['-rotate-3', 'rotate-2', '-rotate-2'] as const;
+
+export function readShowcaseVideos(content: unknown): Item[] {
+  const c = (content ?? {}) as { videos?: unknown };
+  const list = Array.isArray(c.videos) ? c.videos : [];
+  return list
+    .filter((v: any): v is Item => !!v && typeof v.url === 'string' && /^https?:\/\//.test(v.url.trim()))
+    .slice(0, 3)
+    .map((v: any) => ({
+      url: String(v.url).trim(),
+      poster: typeof v.poster === 'string' && /^https?:\/\//.test(v.poster.trim()) ? v.poster.trim() : undefined,
+      caption: typeof v.caption === 'string' ? v.caption.trim() : undefined,
+    }));
+}
+
+export default function RenderVideoShowcase({ block, content, previewOnly }: Props) {
+  const c: any = content ?? block?.content ?? {};
+  const videos = readShowcaseVideos(c);
+  const [playing, setPlaying] = React.useState<Record<number, boolean>>({});
+
+  if (!videos.length) {
+    if (!isEditorContext(previewOnly)) return null;
+    return (
+      <div className="mb-4 rounded-lg border border-dashed border-border px-4 py-5 text-center text-sm text-muted-foreground">
+        Video showcase — add up to three portrait videos in this block&apos;s panel. Nothing shows on your live site until you do.
+      </div>
+    );
+  }
+
+  const tilt = c.tilt !== false;
+  const overlap = c.overlap !== false;
+  const heading = typeof c.heading === 'string' ? c.heading.trim() : '';
+
+  return (
+    <section data-video-showcase="1" className={`relative z-10 px-4 ${overlap ? '-mt-6 pb-10 sm:-mt-12' : 'py-10'}`}>
+      {heading ? <h2 className="mb-6 text-center text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{heading}</h2> : null}
+      <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 sm:flex-row sm:items-start sm:justify-center">
+        {videos.map((v, i) => {
+          const tilted = tilt && !playing[i];
+          return (
+            <figure key={`${v.url}-${i}`} className="w-full max-w-[300px]">
+              <div
+                data-tilted={tilted ? '1' : '0'}
+                className={`overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-border transition-transform duration-500 ease-out ${tilted ? TILTS[i % TILTS.length] : 'rotate-0'}`}
+              >
+                <video
+                  controls
+                  playsInline
+                  preload={v.poster ? 'none' : 'metadata'}
+                  poster={v.poster}
+                  className="aspect-[9/16] w-full bg-black object-contain"
+                  onPlay={() => setPlaying((p) => ({ ...p, [i]: true }))}
+                  onEnded={() => setPlaying((p) => ({ ...p, [i]: false }))}
+                >
+                  <source src={v.url} />
+                </video>
+              </div>
+              {v.caption ? <figcaption className="mt-3 text-center text-sm text-muted-foreground">{v.caption}</figcaption> : null}
+            </figure>
+          );
+        })}
+      </div>
+    </section>
+  );
+}

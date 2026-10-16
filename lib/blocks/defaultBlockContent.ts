@@ -60,6 +60,9 @@ export const DEFAULT_BLOCK_CONTENT = {
 
   video: { url: 'https://example.com/video.mp4', caption: '', poster: '', orientation: 'landscape', title: '' },
 
+  // Empty on purpose: renders nothing in public until the owner adds a video (editor shows a hint).
+  video_showcase: { heading: '', videos: [], tilt: true, overlap: true },
+
   audio: { url: 'https://example.com/audio.mp3', title: '', provider: 'suno' },
 
   // Empty: a default quote + named attribution is a fabricated statement by a named person.

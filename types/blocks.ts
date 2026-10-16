@@ -23,6 +23,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   image: 'content',
   selected_work: 'content',
   video: 'content',
+  video_showcase: 'content',
   audio: 'content',
   quote: 'content',
   button: 'interactive',

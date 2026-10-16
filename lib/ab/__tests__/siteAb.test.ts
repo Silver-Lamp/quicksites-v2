@@ -60,6 +60,14 @@ describe('applySiteVariantB', () => {
     expect(out.pages[1].blocks[0].content).toEqual({ headline: 'second page' });
     expect((data.pages[0].blocks[0].content as any).video_url).toBeUndefined(); // input untouched
   });
+  it('patches the renderer shape too — `pages` AND `data.pages` (the live miss on bhard.store)', () => {
+    const site = { pages: data.pages, data: { pages: JSON.parse(JSON.stringify(data.pages)), meta: {} } };
+    const out: any = applySiteVariantB(site, { video_url: 'https://x/v.mp4', layout_mode: 'full_bleed' });
+    expect(out.pages[0].blocks[0].content.layout_mode).toBe('full_bleed');
+    expect(out.data.pages[0].blocks[0].content.layout_mode).toBe('full_bleed');
+    expect(out.data.pages[0].content_blocks[0].content.video_url).toBe('https://x/v.mp4');
+    expect(out.data.meta).toEqual({});
+  });
   it('a video with no declared audio is flagged silent (the toggle must not appear)', () => {
     const out: any = applySiteVariantB(data, { video_url: 'https://x/v.mp4' });
     expect(out.pages[0].blocks[0].content.video_has_audio).toBe(false);

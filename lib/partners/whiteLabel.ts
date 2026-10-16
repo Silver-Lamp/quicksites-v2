@@ -11,6 +11,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { publicStorageUrl } from '@/lib/org/storageUrl';
 import { requireUser } from '@/lib/auth/requireUser';
 import { addProjectDomain, getProjectDomainConfig } from '@/lib/domains/vercel';
 import {
@@ -71,7 +72,10 @@ export async function getPartnerOrg(userId: string): Promise<PartnerOrg | null> 
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle();
-  return (data as PartnerOrg) ?? null;
+  if (!data) return null;
+  // Normalised on read: pre-2026-10-16 rows carry signed (expiring) storage URLs.
+  const org = data as PartnerOrg;
+  return { ...org, logo_url: publicStorageUrl(org.logo_url), dark_logo_url: publicStorageUrl(org.dark_logo_url), favicon_url: publicStorageUrl(org.favicon_url) };
 }
 
 export type BrandInput = {

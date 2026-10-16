@@ -2,6 +2,7 @@
 import { cookies, headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/supabase';
+import { publicStorageUrl } from '@/lib/org/storageUrl';
 
 export type Org = {
   id: string;
@@ -89,9 +90,10 @@ function normalize(row: any): Org {
     id: String(row.id),
     slug: String(row.slug),
     name: String(row.name),
-    logo_url: row.logo_url ?? null,
-    dark_logo_url: row.dark_logo_url ?? null,
-    favicon_url: row.favicon_url ?? null,
+    // Normalised on read: rows written before 2026-10-16 carry signed (expiring) storage URLs.
+    logo_url: publicStorageUrl(row.logo_url ?? null),
+    dark_logo_url: publicStorageUrl(row.dark_logo_url ?? null),
+    favicon_url: publicStorageUrl(row.favicon_url ?? null),
     theme_json: row.theme_json ?? {},
     support_email: row.support_email ?? null,
     support_url: row.support_url ?? null,

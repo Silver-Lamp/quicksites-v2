@@ -48,6 +48,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useBrand } from '@/app/providers';
+import { publicStorageUrl } from '@/lib/org/storageUrl';
 
 /* ---------------- Safe localStorage ---------------- */
 const safeLS = {
@@ -688,7 +689,8 @@ function BrandSwitcher({
             id: String(r.id),
             slug: String(r.slug),
             name: String(r.name),
-            logo_url: r.logo_url ?? null,
+            // Normalised on read: a signed storage URL in the row expires (the 2026-10-16 blank logos).
+            logo_url: publicStorageUrl(r.logo_url ?? null),
           }))
         );
       } else {

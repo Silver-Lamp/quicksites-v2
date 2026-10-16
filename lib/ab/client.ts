@@ -17,7 +17,9 @@ export function readActiveAb(): ActiveAb | null {
     const w = window as any;
     if (w.__qsAb?.experiment && (w.__qsAb.variant === 'A' || w.__qsAb.variant === 'B')) return w.__qsAb as ActiveAb;
     const stamp = document.querySelector(`[${AB_STAMP_ATTR}]`)?.getAttribute(AB_STAMP_ATTR) ?? '';
-    const [experiment, variant] = stamp.split('|');
+    const [experiment, variant, mark] = stamp.split('|');
+    // A forced view (`?ab=B`, `/b`) is a preview: the owner looking, not a visitor. Record nothing.
+    if (mark === 'preview') return null;
     if (experiment && (variant === 'A' || variant === 'B')) return { experiment, variant };
     const m = document.cookie.match(new RegExp(`(?:^|; )${AB_COOKIE}=(A|B)`));
     if (m) return { experiment: AB_EXPERIMENT, variant: m[1] as AbVariant };

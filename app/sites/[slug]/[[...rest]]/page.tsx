@@ -34,7 +34,7 @@ import { cookies } from 'next/headers';
 import AbBeacon from '@/components/home/ab-beacon';
 import SiteLangSetter from '@/components/sites/site-lang-setter';
 import { siteLocale } from '@/lib/sites/siteLocale';
-import { applySiteVariantB, pickSiteVariant, siteAbCookie, siteExperimentId } from '@/lib/ab/siteAb';
+import { AB_PREVIEW_MARK, applySiteVariantB, forcedVariant, pickSiteVariant, previewPathVariant, siteAbCookie, siteExperimentId } from '@/lib/ab/siteAb';
 import { getSiteAb } from '@/lib/ab/siteAbDb';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
@@ -629,12 +629,22 @@ export default async function SitePreviewPage({
   if (normalized && !isDraft && siteRow.template_id) {
     const test = await getSiteAb(siteRow.template_id).catch(() => null);
     if (test?.enabled && test.b) {
-      const cookieVal = (await cookies()).get(siteAbCookie(siteRow.template_id))?.value ?? null;
-      const picked = pickSiteVariant(test, cookieVal);
-      if (picked.variant === 'B') normalized = applySiteVariantB(normalized, test.b.hero);
+      // `/a` and `/b` → `?ab=A` / `?ab=B` (only when no page has that slug).
+      const shortcut = previewPathVariant(rest, ((normalized as any)?.pages ?? []).map((pg: any) => String(pg?.slug ?? '')));
+      if (shortcut) redirect(`/sites/${encodeURIComponent(String(siteRow.slug))}?ab=${shortcut}`);
+      const forced = forcedVariant(sp.ab);
       const experiment = siteExperimentId(siteRow.template_id);
-      abStamp = `${experiment}|${picked.variant}`;
-      abBeacon = <AbBeacon experiment={experiment} variant={picked.variant} assigned={picked.assigned} />;
+      if (forced) {
+        // A preview: the owner looking at one variant. Not counted, no cookie, no beacon.
+        if (forced === 'B') normalized = applySiteVariantB(normalized, test.b.hero);
+        abStamp = `${experiment}|${forced}|${AB_PREVIEW_MARK}`;
+      } else {
+        const cookieVal = (await cookies()).get(siteAbCookie(siteRow.template_id))?.value ?? null;
+        const picked = pickSiteVariant(test, cookieVal);
+        if (picked.variant === 'B') normalized = applySiteVariantB(normalized, test.b.hero);
+        abStamp = `${experiment}|${picked.variant}`;
+        abBeacon = <AbBeacon experiment={experiment} variant={picked.variant} assigned={picked.assigned} />;
+      }
     }
   }
 

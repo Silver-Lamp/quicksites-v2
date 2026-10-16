@@ -111,10 +111,13 @@ export default async function AbPage({ searchParams }: { searchParams: { templat
           <div>
             <h1 className="text-2xl font-semibold">A/B test — {t.business_name || t.template_name || templateId}</h1>
             <p className="text-sm text-muted-foreground">A is the home page as published. B is the same page with the hero swapped for what you set below. New visitors are split by the percentage and stay on their variant for 180 days. {t.published ? '' : 'This site is not published, so nobody will see B yet.'}</p>
+            <p className="mt-1 text-xs text-muted-foreground">See either one yourself with <code>?ab=A</code> / <code>?ab=B</code> on any page, or <code>/a</code> and <code>/b</code> on the site. Previews are not counted and set no cookie.</p>
           </div>
           <div className="flex gap-2">
             <Link href={`/admin/templates/${templateId}`}><Button variant="outline">Editor</Button></Link>
             {liveUrl ? <a href={liveUrl} target="_blank" rel="noreferrer"><Button variant="outline">Open site</Button></a> : null}
+            {liveUrl ? <a href={`${liveUrl}${liveUrl.includes('?') ? '&' : '?'}ab=A`} target="_blank" rel="noreferrer"><Button variant="outline">Preview A</Button></a> : null}
+            {liveUrl ? <a href={`${liveUrl}${liveUrl.includes('?') ? '&' : '?'}ab=B`} target="_blank" rel="noreferrer"><Button variant="outline">Preview B</Button></a> : null}
             <Link href="/admin/ab"><Button variant="ghost">All tests</Button></Link>
           </div>
         </div>

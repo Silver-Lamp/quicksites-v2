@@ -18,7 +18,7 @@ import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { cookies } from 'next/headers';
 import AbBeacon from '@/components/home/ab-beacon';
-import { applySiteVariantB, pickSiteVariant, siteAbCookie, siteExperimentId } from '@/lib/ab/siteAb';
+import { AB_PREVIEW_MARK, applySiteVariantB, forcedVariant, pickSiteVariant, previewPathVariant, siteAbCookie, siteExperimentId } from '@/lib/ab/siteAb';
 import { getSiteAb } from '@/lib/ab/siteAbDb';
 
 const QS_DEBUG = process.env.QSITES_DEBUG === '1';
@@ -289,12 +289,22 @@ export default async function HostSitePage({
   if (payload.templateId && !payload.isPreview) {
     const test = await getSiteAb(payload.templateId).catch(() => null);
     if (test?.enabled && test.b) {
-      const cookieVal = (await cookies()).get(siteAbCookie(payload.templateId))?.value ?? null;
-      const picked = pickSiteVariant(test, cookieVal);
-      if (picked.variant === 'B') site = applySiteVariantB(site, test.b.hero);
+      // `/a` and `/b` → `?ab=A` / `?ab=B` (only when no page has that slug).
+      const shortcut = previewPathVariant(params?.rest, ((site as any)?.pages ?? []).map((pg: any) => String(pg?.slug ?? '')));
+      if (shortcut) redirect(`/?ab=${shortcut}`);
+      const forced = forcedVariant(searchParams?.ab);
       const experiment = siteExperimentId(payload.templateId);
-      abStamp = `${experiment}|${picked.variant}`;
-      abBeacon = <AbBeacon experiment={experiment} variant={picked.variant} assigned={picked.assigned} />;
+      if (forced) {
+        // A preview: the owner looking at one variant. Not counted, no cookie, no beacon.
+        if (forced === 'B') site = applySiteVariantB(site, test.b.hero);
+        abStamp = `${experiment}|${forced}|${AB_PREVIEW_MARK}`;
+      } else {
+        const cookieVal = (await cookies()).get(siteAbCookie(payload.templateId))?.value ?? null;
+        const picked = pickSiteVariant(test, cookieVal);
+        if (picked.variant === 'B') site = applySiteVariantB(site, test.b.hero);
+        abStamp = `${experiment}|${picked.variant}`;
+        abBeacon = <AbBeacon experiment={experiment} variant={picked.variant} assigned={picked.assigned} />;
+      }
     }
   }
 

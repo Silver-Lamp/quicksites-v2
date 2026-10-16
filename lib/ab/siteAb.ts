@@ -66,6 +66,33 @@ export function parseSiteAb(templateId: string, row: unknown): SiteAbTest {
   };
 }
 
+/**
+ * `?ab=A` / `?ab=B` on any page of a site with a running test forces that variant for the view —
+ * a PREVIEW: not counted, no cookie set (owner, 2026-10-16: "see the a/b versions via url").
+ * Anything else → null (the normal cookie/draw decision).
+ */
+export function forcedVariant(param: unknown): AbVariant | null {
+  const v = Array.isArray(param) ? param[0] : param;
+  if (typeof v !== 'string') return null;
+  const u = v.trim().toUpperCase();
+  return u === 'A' || u === 'B' ? u : null;
+}
+
+/**
+ * `/a` and `/b` as shortcuts to `?ab=A` / `?ab=B`: only when the path is exactly that one
+ * segment AND the site has no page with that slug — a real page always wins over a shortcut.
+ */
+export function previewPathVariant(segments: readonly string[] | undefined, pageSlugs: readonly string[]): AbVariant | null {
+  if (!segments || segments.length !== 1) return null;
+  const seg = String(segments[0] ?? '').trim().toLowerCase();
+  if (seg !== 'a' && seg !== 'b') return null;
+  if (pageSlugs.some((s) => String(s ?? '').trim().toLowerCase() === seg)) return null;
+  return seg.toUpperCase() as AbVariant;
+}
+
+/** The root stamp for a forced view carries a third field so the client records nothing. */
+export const AB_PREVIEW_MARK = 'preview';
+
 export function pickSiteVariant(test: SiteAbTest, cookieValue: string | null | undefined, rng?: () => number) {
   const asSettings: HomepageAbSettings = { enabled: test.enabled, split_b: test.split_b, b: null };
   // pickVariant gates on `enabled` only through the settings object; B's presence is in `enabled`.

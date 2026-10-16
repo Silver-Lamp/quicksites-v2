@@ -8,6 +8,7 @@ import { ensureGuestSession } from '@/lib/auth/guestSession';
 import { INDUSTRIES, type IndustryKey } from '@/lib/industries';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import BrandLoader from '@/components/brand/BrandLoader';
+import { abEvent } from '@/lib/ab/client';
 
 function slugify(s: string): string {
   return s
@@ -83,6 +84,8 @@ export default function GuestStart({ initialIndustry }: { initialIndustry?: stri
     e.preventDefault();
     if (loading) return;
     setError(null);
+    // Homepage A/B conversion: the visitor asked for a site (no-op when the test is off).
+    abEvent('guest_build_started');
 
     if (mode === 'convert') return convert();
 

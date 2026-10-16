@@ -14,6 +14,9 @@ import useMediaQuery from '@/hooks/useMediaQuery';
 import SiteHeader from '@/components/site/site-header';
 import DefaultScreensaver from '@/components/brand/default-screensaver';
 import { useBrand } from '@/app/providers';
+import { abEvent } from '@/lib/ab/client';
+import type { AbVariant, HomepageAbB } from '@/lib/ab/homepage';
+import HeroVideoB from '@/components/home/hero-video-b';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import GuestStart from '@/components/home/guest-start';
 import HomeColorLab from '@/components/home/home-color-lab';
@@ -50,10 +53,13 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 export default function HomeClient({
   showcase,
   heroLayer,
+  ab = null,
 }: {
   showcase?: React.ReactNode;
   /** Decorative layer behind the hero — the showcase fly-through (SSR'd by app/page.tsx). */
   heroLayer?: React.ReactNode;
+  /** Homepage A/B (lib/ab/homepage.ts): null = test off / variant A as it always was. */
+  ab?: { variant: AbVariant; b: HomepageAbB | null } | null;
   /** ⚠️ `resellerSlot` was removed 2026-09-25 with the three partner sections. The reseller
    *  diagram now renders on /partners, where the audience for it is. Re-adding a slot here means
    *  re-adding the pitch — see docs/AUDIENCE_SPLIT_PLAN.md before you do. */
@@ -75,11 +81,13 @@ export default function HomeClient({
   // haven't set their own headline, and putting "QuickSites" on a reseller's homepage would
   // undo the entire point of white-labelling. Same guard as the motif character above.
   const heroHeadline =
+    (ab?.variant === 'B' && ab.b?.headline) ||
     brand.hero?.headline ||
     (showCharacter
       ? 'QuickSites — a site, a store, and a CRM. Built in.'
       : 'A site, a store, and a CRM. Built in.');
   const heroSubhead =
+    (ab?.variant === 'B' && ab.b?.subhead) ||
     brand.hero?.subhead ||
     'A powerful, efficient website builder with e-commerce built in — drag-and-drop pages, a product catalog, and Stripe-powered checkout. Every paid order builds a customer you can segment and email — all published to your own domain.';
 
@@ -125,7 +133,7 @@ export default function HomeClient({
         <main id="start" className="relative z-10 flex flex-col items-center px-6 pt-16 pb-12 text-center">
           {/* QuickSites motif hero background (default brand only). Scrimmed so the
               headline stays readable; fades into the page top + bottom. */}
-          {showCharacter && (
+          {showCharacter && !(ab?.variant === 'B' && ab.b) && (
             <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
               <div
                 className="absolute inset-0 bg-cover bg-center"
@@ -134,6 +142,9 @@ export default function HomeClient({
               <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-zinc-950/20 to-zinc-950" />
             </div>
           )}
+          {/* Variant B of the homepage A/B: a short looping video in place of the motif
+              background. Muted until the visitor asks for sound (audio-honesty standard). */}
+          {ab?.variant === 'B' && ab.b && <HeroVideoB b={ab.b} />}
           {/* Real sites flying out of the background toward the viewer (default brand only;
               decorative, aria-hidden, pointer-events-none — see site-fly-through.tsx). Rendered
               AFTER the motif background so it paints above the scrim and below the headline. */}
@@ -188,6 +199,7 @@ export default function HomeClient({
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
                   href={primaryHref}
+                  onClick={() => { if (ab) abEvent('cta_click'); }}
                   className="inline-block rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
                 >
                   {primaryLabel}

@@ -17,6 +17,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { PublishStatePill } from './publish-state-pill';
 
 type Props = {
   templateName: string;
@@ -100,6 +101,20 @@ export function TemplateEditorToolbar({
 
   // Archive state
   const [archiving, setArchiving] = React.useState(false);
+
+  // "Is what's live what I'm looking at?" — the pill re-asks the server after every landed
+  // autosave and after every publish (busy true → false). Local state never answers it.
+  const [publishStateKey, setPublishStateKey] = React.useState(0);
+  const prevAutosave = React.useRef(autosaveStatus);
+  const prevBusy = React.useRef(busy);
+  React.useEffect(() => {
+    if (autosaveStatus === 'saved' && prevAutosave.current !== 'saved') setPublishStateKey((k) => k + 1);
+    prevAutosave.current = autosaveStatus;
+  }, [autosaveStatus]);
+  React.useEffect(() => {
+    if (prevBusy.current && !busy) setPublishStateKey((k) => k + 1);
+    prevBusy.current = busy;
+  }, [busy]);
 
   const emitTitle = (name: string) => {
     if (typeof window === 'undefined') return;
@@ -318,6 +333,7 @@ export function TemplateEditorToolbar({
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
           {renderAutosaveBadge()}
+          <PublishStatePill templateId={currentId} refreshKey={publishStateKey} onPublishClick={onSaveAndPublish} />
 
           {/* Preview leads the action group: "what does this look like?" is the question an
               owner asks before Save or Publish, and until today the only answer for an

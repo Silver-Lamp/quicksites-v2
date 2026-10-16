@@ -581,6 +581,16 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   'split'` (not in the enum); the editor flagged it and the owner's next save normalised the
   block, DROPPING it from `content_blocks` (the copy the renderer reads) and emptying its
   words — the live hero vanished with no error anywhere but the editor banner.
+  **A UX scan of `/sites/bhard` (an agent, phone + desktop, 2026-10-16) fixed seven fleet-wide
+  things in one PR**: button text on an accent is chosen by WCAG contrast, not HSL lightness
+  (`lib/theme/accentHsl.ts` — white on lime-500 was 2.0:1; eight bright accents flip to dark);
+  at `/sites/<slug>` the header/footer's root-relative links left the site for the QuickSites
+  homepage (`lib/sites/platformBase.ts#rebaseSiteHref`, applied after mount); the hero CTA is
+  ≥44px; the FAQ title is an h2 with no stray `<hr>`; a name-only "Company Info" footer column is
+  hidden; the contact picker says "Select one" over an owner-typed list; `products_grid.note`
+  under a display-only gallery; Inter ships as a 75 KB latin woff2 before the 748 KB TTF; and a
+  site can switch the "Hear this page" pill off (`meta.hear_this_page: false`, stamped
+  `data-qs-hear-this-page="off"` on the renderer root for the pill to read).
   ⚠️ **`reviews`' default content had NEVER validated** —
   it carried one placeholder row at `rating: 0` against a schema requiring `min(1)`, invisible
   because the block was seeded nowhere; the same two-contradicting-decisions shape as the

@@ -9,6 +9,7 @@ import SiteMascot from '@/components/sites/site-mascot';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { resolveSiteLayout } from '@/lib/theme/resolveSiteLayout';
 import { SITE_LOCALE_ATTR, siteLocale } from '@/lib/sites/siteLocale';
+import { HEAR_THIS_PAGE_SITE_ATTR, siteHearThisPageOff } from '@/lib/hearThisPage/config';
 import { blockMass } from '@/lib/theme/blockMass';
 import type { Template } from '@/types/template';
 import {
@@ -95,6 +96,7 @@ export default function SiteRenderer({
       // an Italian site's words are not English. See lib/sites/siteLocale.ts.
       lang={siteLocale(site)}
       {...{ [SITE_LOCALE_ATTR]: siteLocale(site) }}
+      {...(siteHearThisPageOff(site) ? { [HEAR_THIS_PAGE_SITE_ATTR]: 'off' } : {})}
       // The curated theme has carried a `density` for as long as `rhythm` has, and nothing ever
       // read it — every site got identical spacing whichever personality it was stamped with.
       // Surfacing it here makes the field mean something without touching a single block.

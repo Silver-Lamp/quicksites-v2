@@ -2,6 +2,8 @@
 'use client';
 
 import { isEditorContext } from '@/lib/editor/isEditorContext';
+import { rebaseSiteHref } from '@/lib/sites/platformBase';
+import { usePlatformBase } from '@/lib/sites/usePlatformBase';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -188,8 +190,11 @@ export default function HeaderRender({
     [enableHeaderEdit]
   );
 
-  // Home link target = base of current host
-  const homeHref = '/';
+  // Home link target = base of current host — or the platform base when served at /sites/<slug>,
+  // where `/` is the QuickSites homepage, not this site (lib/sites/platformBase.ts).
+  const platformBase = usePlatformBase();
+  const homeHref = platformBase || '/';
+  const hrefFor = (h: string) => (previewOnly ? '#' : rebaseSiteHref(h, platformBase));
 
   return (
     <header
@@ -261,7 +266,7 @@ export default function HeaderRender({
             {nav.map((item, i) => (
               <Link
                 key={`${item.href}-${i}`}
-                href={previewOnly ? '#' : item.href}
+                href={hrefFor(item.href)}
                 className={linkBase + ' text-sm font-medium'}
                 {...maybePreventLink}
               >
@@ -310,7 +315,7 @@ export default function HeaderRender({
               nav.map((item, i) => (
                 <a
                   key={`${item.href}-${i}`}
-                  href={previewOnly ? '#' : item.href}
+                  href={hrefFor(item.href)}
                   className={`${linkBase} block rounded px-2 py-1.5`}
                   onClick={(e) => {
                     if (enableHeaderEdit || previewOnly) e.preventDefault();

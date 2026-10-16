@@ -4,6 +4,8 @@
 import dynamic from 'next/dynamic';
 import { formatUsPhone } from '@/lib/phone/formatUs';
 import { chromeStrings, siteLocale } from '@/lib/sites/siteLocale';
+import { rebaseSiteHref } from '@/lib/sites/platformBase';
+import { usePlatformBase } from '@/lib/sites/usePlatformBase';
 import Link from 'next/link';
 import { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import type { Block } from '@/types/blocks';
@@ -248,6 +250,8 @@ export default function FooterRender({
   // OUR column headings in the SITE's language — "Quick Links / Company Info / Find Us" stood
   // under an all-Italian page until HiveJournal's sweep (2026-10-15). lib/sites/siteLocale.ts.
   const cs = chromeStrings(siteLocale(template));
+  // At /sites/<slug> a root-relative link leaves the site (lib/sites/platformBase.ts).
+  const platformBase = usePlatformBase();
 
   const businessName =
     (typeof meta.business === 'string' && meta.business.trim()) ||
@@ -484,7 +488,7 @@ export default function FooterRender({
                 l.href.startsWith('/') ? (
                   <Link
                     key={`${l.href}-${i}`}
-                    href={previewOnly ? '#' : l.href}
+                    href={previewOnly ? '#' : rebaseSiteHref(l.href, platformBase)}
                     className={linkColor}
                     {...maybePreventLink}
                   >
@@ -493,7 +497,7 @@ export default function FooterRender({
                 ) : (
                   <a
                     key={`${l.href}-${i}`}
-                    href={previewOnly ? '#' : l.href}
+                    href={previewOnly ? '#' : rebaseSiteHref(l.href, platformBase)}
                     className={linkColor}
                     {...maybePreventLink}
                   >
@@ -508,7 +512,9 @@ export default function FooterRender({
         </div>
 
         {/* Company Info (read-only) — business sites only; see isPersonal above. */}
-        <div className={`space-y-3 ${isPersonal ? 'hidden' : ''}`}>
+        {/* A "Company Info" column holding only the business name repeats the header — the UX scan
+            (2026-10-16) called it template filler. It earns its place with an address or a phone. */}
+        <div className={`space-y-3 ${isPersonal || (!fullAddressForDisplay && !phone && !showEditorHints) ? 'hidden' : ''}`}>
           <h3 className={`text-base font-semibold ${headingColor}`}>{cs.companyInfo}</h3>
           {(fullAddressForDisplay || showEditorHints) && (
             <div className="whitespace-pre-line leading-relaxed">

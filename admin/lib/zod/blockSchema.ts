@@ -869,6 +869,21 @@ export const blockContentSchemaMap = {
       tilt: z.boolean().optional(),
       /** Pull the row up over the block above. Default on. */
       overlap: z.boolean().optional(),
+      /**
+       * HERO mode (owner, 2026-10-16: "merge the videos area up into the header, product shot a
+       * lot smaller"): when present the block IS the opening — small product image + h1 +
+       * subheadline + button beside the phones. `heading` then reads as the eyebrow over the phones.
+       */
+      hero: z
+        .object({
+          headline: z.string().min(1),
+          subheadline: z.string().optional(),
+          cta_text: z.string().optional(),
+          cta_link: z.string().optional(),
+          image_url: z.union([z.string().url(), z.literal('')]).optional(),
+          image_alt: z.string().optional(),
+        })
+        .optional(),
     }),
   },
 

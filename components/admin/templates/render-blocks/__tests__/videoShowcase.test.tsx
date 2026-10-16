@@ -64,6 +64,20 @@ describe('video_showcase', () => {
     expect(r[0].poster).toBeUndefined();
   });
 
+  it('hero mode: small product image + h1 + subheadline + 44px button beside the phones; heading becomes the eyebrow', () => {
+    const hero = { headline: 'B Hard', subheadline: 'Five tablets.', cta_text: 'Get notified', cta_link: '#contact', image_url: 'https://x.test/tin.webp' };
+    const { container } = render(<RenderVideoShowcase content={{ ...two, hero } as any} />);
+    expect(container.querySelector('section')?.getAttribute('data-video-showcase-hero')).toBe('1');
+    expect(container.querySelector('h1')?.textContent).toBe('B Hard');
+    expect(container.querySelector('h2')?.textContent).toBe('Ok, now that’s new!');
+    expect(container.querySelector('img')?.className).toMatch(/max-w-\[260px\]/);
+    const cta = container.querySelector('a[href="#contact"]');
+    expect(cta?.textContent).toBe('Get notified');
+    expect(cta?.className).toMatch(/min-h-\[44px\]/);
+    expect(container.querySelectorAll('video')).toHaveLength(2);
+    expect(container.querySelector('section')?.className).not.toMatch(/-mt-/);
+  });
+
   it('the default content validates and the schema caps at three videos', () => {
     const schema = (blockContentSchemaMap as any).video_showcase.schema;
     expect(schema.safeParse((DEFAULT_BLOCK_CONTENT as any).video_showcase).success).toBe(true);

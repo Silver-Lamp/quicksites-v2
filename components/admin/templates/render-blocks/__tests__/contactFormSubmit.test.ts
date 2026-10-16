@@ -23,6 +23,18 @@ describe('contact form submission under the form_submissions RLS policies', () =
     expect(src).toMatch(/id: submissionId/);
     expect(src).toMatch(/form_submission_id: data\.id/);
   });
+  it('derives the site slug from /sites/<slug> before the host (the host-only rule filed platform-path leads under "www")', () => {
+    expect(src).toMatch(/\/\^\\\/sites\\\/\(\[\^\/\?#\]\+\)\/\.exec\(window\.location\.pathname\)/);
+    expect(src.indexOf('fromPath')).toBeLessThan(src.indexOf("host.endsWith('.quicksites.ai')"));
+  });
+  it('never updates form_submissions from the browser; the email route records the fate with the service role', () => {
+    const insertAt = src.indexOf(".from('form_submissions')");
+    expect(src.indexOf(".from('form_submissions')", insertAt + 1)).toBe(-1);
+    const route = stripComments(fs.readFileSync(path.join(process.cwd(), 'app/api/send-contact-email/route.ts'), 'utf8'));
+    expect(route).toMatch(/from\('form_submissions'\)\.update\(\{ email_status, email_response_id, email_error \}\)\.eq\('id', submissionId\)/);
+    expect(route).toMatch(/await recordFate\(status, response_id, error\)/);
+    expect(route).toMatch(/SUPABASE_SERVICE_ROLE_KEY/);
+  });
   it('the migration still grants anon insert + update and admin-only select (the contract this form codes to)', () => {
     const mig = fs.readFileSync(path.join(process.cwd(), 'supabase/migrations/20260627_rls_logs_forms_batch.sql'), 'utf8');
     expect(mig).toMatch(/form_submissions_public_insert[\s\S]*for insert to anon, authenticated with check \(true\)/);

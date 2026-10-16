@@ -23,6 +23,7 @@ import { createClient } from '@supabase/supabase-js';
 import { verifyTwilioWebhook, xmlResponse, rejectedTwiml, HANGUP_TWIML } from '@/lib/twilio/verifyWebhook';
 import { parentEndWrite } from '@/lib/ppl/parentCallEnd';
 import { missedCallDecision, MISSED_CALL_SETTLE_MS, SWEEP_WINDOW_MINUTES, type MissedCallRow } from '@/lib/ppl/missedCallNotice';
+import { isOwnBusinessCaller } from '@/lib/ppl/ownNumberCall';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { isOptedOut } from '@/lib/ppl/forwardNotice';
 import { missedCallSmsText } from '@/lib/ppl/voicemail';
@@ -98,7 +99,8 @@ async function notifyMissedCall(callSid: string, campaignId: string, parentStatu
       otherNumbersRungByCaller = new Set(((others ?? []) as { to_number: string | null }[]).map((o) => o.to_number).filter(Boolean)).size;
     }
 
-    const decision = missedCallDecision(row, { status: parentStatus }, { otherNumbersRungByCaller });
+    const callerIsForwardTo = isOwnBusinessCaller(row?.from_number, row?.forwarded_to);
+    const decision = missedCallDecision(row, { status: parentStatus }, { otherNumbersRungByCaller, callerIsForwardTo });
     if (!decision.send) {
       // A sweep is recorded on the row so the alert email and /admin/call-logs can say the
       // business was deliberately not texted, and why. Other skips leave no mark, as before.

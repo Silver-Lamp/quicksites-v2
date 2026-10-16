@@ -2,7 +2,7 @@
 // two public routes (both must make the same decision, and never on a draft/preview).
 import fs from 'node:fs';
 import path from 'node:path';
-import { applySiteVariantB, parseSiteAb, pickSiteVariant, siteAbCookie, siteExperimentId, templateIdFromExperiment } from '@/lib/ab/siteAb';
+import { AB_PREVIEW_MARK, applySiteVariantB, forcedVariant, parseSiteAb, pickSiteVariant, previewPathVariant, siteAbCookie, siteExperimentId, templateIdFromExperiment } from '@/lib/ab/siteAb';
 
 const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), 'utf8');
 const ID = 'c66caf39-7460-4352-bbb4-4657efd97f2b';
@@ -72,6 +72,35 @@ describe('applySiteVariantB', () => {
     const out: any = applySiteVariantB(data, { video_url: 'https://x/v.mp4' });
     expect(out.pages[0].blocks[0].content.video_has_audio).toBe(false);
     expect(out.pages[0].blocks[0].content.layout_mode).toBe('background');
+  });
+});
+
+describe('preview by URL (owner: "see the a/b versions via url")', () => {
+  it('?ab= forces a variant; anything else is the normal decision', () => {
+    expect(forcedVariant('B')).toBe('B');
+    expect(forcedVariant('a')).toBe('A');
+    expect(forcedVariant(['b'])).toBe('B');
+    expect(forcedVariant('c')).toBeNull();
+    expect(forcedVariant(undefined)).toBeNull();
+  });
+  it('/a and /b are shortcuts only when the site has no page with that slug', () => {
+    expect(previewPathVariant(['b'], ['home', 'contact'])).toBe('B');
+    expect(previewPathVariant(['A'], [])).toBe('A');
+    expect(previewPathVariant(['b'], ['b'])).toBeNull(); // a real page wins
+    expect(previewPathVariant(['b', 'x'], [])).toBeNull();
+    expect(previewPathVariant(undefined, [])).toBeNull();
+    expect(previewPathVariant([], [])).toBeNull();
+  });
+  it('a forced view is stamped as a preview, mounts no beacon, and the client records nothing for it', () => {
+    for (const p of ['app/sites/[slug]/[[...rest]]/page.tsx', 'app/host/[[...rest]]/page.tsx']) {
+      const src = read(p);
+      const forcedBlock = src.slice(src.indexOf('if (forced) {'), src.indexOf('} else {', src.indexOf('if (forced) {')));
+      expect(forcedBlock).toMatch(/\$\{AB_PREVIEW_MARK\}/);
+      expect(forcedBlock).not.toMatch(/AbBeacon|cookies\(\)/);
+      expect(src).toMatch(/previewPathVariant\(/);
+    }
+    expect(read('lib/ab/client.ts')).toMatch(/if \(mark === 'preview'\) return null/);
+    expect(AB_PREVIEW_MARK).toBe('preview');
   });
 });
 

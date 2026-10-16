@@ -6,6 +6,7 @@ export const runtime = 'nodejs';
 import { notFound, redirect, permanentRedirect } from 'next/navigation';
 import { resolvePublicPath } from '@/lib/sites/redirects';
 import type { Metadata } from 'next';
+import type React from 'react';
 import { headers } from 'next/headers';
 import Script from 'next/script';
 
@@ -14,6 +15,10 @@ import SiteThemeSetter from '@/components/sites/site-theme-setter';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { cookies } from 'next/headers';
+import AbBeacon from '@/components/home/ab-beacon';
+import { applySiteVariantB, pickSiteVariant, siteAbCookie, siteExperimentId } from '@/lib/ab/siteAb';
+import { getSiteAb } from '@/lib/ab/siteAbDb';
 
 const QS_DEBUG = process.env.QSITES_DEBUG === '1';
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'quicksites.ai';
@@ -190,7 +195,7 @@ async function findSiteByHost(hostNoPort: string): Promise<SiteRow | null> {
 }
 
 /* ---------- data loader ---------- */
-async function loadSiteForRequest(previewSnapshotId?: string | null): Promise<{ site: RenderSite; host: string } | null> {
+async function loadSiteForRequest(previewSnapshotId?: string | null): Promise<{ site: RenderSite; host: string; templateId: string | null; isPreview: boolean } | null> {
   const h = await headers();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? '')
     .toLowerCase()
@@ -235,7 +240,7 @@ async function loadSiteForRequest(previewSnapshotId?: string | null): Promise<{ 
 
   if (!normalized) return null;
 
-  return { site: normalized, host: hostNoPort };
+  return { site: normalized, host: hostNoPort, templateId: siteRow.template_id ?? null, isPreview: Boolean(previewSnapshotId) };
 }
 
 /* ---------- metadata ---------- */
@@ -274,7 +279,23 @@ export default async function HostSitePage({
   const payload = await loadSiteForRequest(previewSnapshotId);
   if (!payload) return notFound();
 
-  const { site } = payload;
+  let { site } = payload;
+
+  // Per-site A/B (lib/ab/siteAb.ts) — the same decision as /sites/[slug]: cookie or a fresh
+  // draw, B swaps the hero. Never on a preview snapshot.
+  let abStamp: string | undefined;
+  let abBeacon: React.ReactNode = null;
+  if (payload.templateId && !payload.isPreview) {
+    const test = await getSiteAb(payload.templateId).catch(() => null);
+    if (test?.enabled && test.b) {
+      const cookieVal = (await cookies()).get(siteAbCookie(payload.templateId))?.value ?? null;
+      const picked = pickSiteVariant(test, cookieVal);
+      if (picked.variant === 'B') site = applySiteVariantB(site, test.b.hero);
+      const experiment = siteExperimentId(payload.templateId);
+      abStamp = `${experiment}|${picked.variant}`;
+      abBeacon = <AbBeacon experiment={experiment} variant={picked.variant} assigned={picked.assigned} />;
+    }
+  }
 
   // Redirects → page → reserved app path → 404. Before this, an unknown path rendered the home
   // page with a 200 (lib/sites/redirects.ts explains what that cost). Reserved paths keep their
@@ -312,10 +333,12 @@ export default async function HostSitePage({
         // Custom-domain public render — same visitor's-browser case as /sites/[slug].
         readOnly
       >
+        {abBeacon}
         <SiteRenderer
           site={site as any}
           page={pageSlug}
           baseUrl={baseUrl}
+          abStamp={abStamp}
           id="site-renderer-page"
           colorMode={colorMode}
           // No surface class here — the theme wrapper paints it, and a second opaque fill on

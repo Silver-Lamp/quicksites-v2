@@ -572,6 +572,10 @@ export const blockContentSchemaMap = {
           .optional(),
         /** Eyebrow over the cards in `media_split` ("Ok, now that's new!"). */
         media_heading: z.string().optional(),
+        /** A looping background video for `background` / `full_bleed` (muted; `image_url` is its poster). */
+        video_url: z.union([z.string().url(), z.literal('')]).optional(),
+        /** The clip carries audio the visitor may switch on (shows the tap-for-sound toggle). */
+        video_has_audio: z.boolean().optional(),
         mobile_layout_mode: z
           .enum([
             'inline',

@@ -161,7 +161,10 @@ export default function HomeClient({
           />
 
           <div className="flex items-center gap-3">
-            <Image src={logoSrc} width={40} height={40} alt={`${productName} logo`} className="rounded-full" />
+            {/* ⚠️ `unoptimized` for a remote logo: the org logo is a SIGNED Supabase URL (query
+                string + token) and Vercel's optimizer answers INVALID_IMAGE_OPTIMIZE_REQUEST (400)
+                for it, so the homepage showed the alt text "QuickSites logo" (owner, 2026-10-16). */}
+            <Image src={logoSrc} width={40} height={40} alt={`${productName} logo`} className="rounded-full" unoptimized={/^https?:\/\//.test(logoSrc)} />
             <span className="text-2xl font-bold tracking-tight">{productName}</span>
           </div>
 

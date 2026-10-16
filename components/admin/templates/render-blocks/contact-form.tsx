@@ -4,6 +4,7 @@
 import type { Block } from '@/types/blocks';
 import { formatUsPhone, telHref } from '@/lib/phone/formatUs';
 import { formatPhoneInput, phoneMaxLength, phonePlaceholder, phoneRegionForSite, phoneValidationError } from '@/lib/phone/region';
+import { abEvent } from '@/lib/ab/client';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import { defaultContactHeading, isPersonTemplate } from '@/lib/sites/personSite';
@@ -318,6 +319,7 @@ Service: ${formData.service || 'N/A'}
 
     setSubmitting(false);
     setSubmitted(true);
+    abEvent('form_submitted'); // per-site A/B conversion (no-op without an active test)
     setFormData({ name: '', email: '', phone: '', service: '' });
   };
 

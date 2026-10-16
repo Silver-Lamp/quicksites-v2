@@ -9,6 +9,8 @@ import { heroBackdropFor } from '@/lib/sites/heroBackdrop';
 import { deriveCtaAction, resolveHeroCta, phoneFromSite } from '@/lib/sites/heroCta';
 import { parseHeroMedia } from '@/lib/sites/heroMedia';
 import { MediaCards } from '@/components/sites/media-cards';
+import { HeroVideoLayer } from '@/components/sites/hero-video-layer';
+import { abEvent } from '@/lib/ab/client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
@@ -191,6 +193,8 @@ export default function HeroRender({
     contact_anchor_id,
     cta_show_phone_below,
     image_url,
+    video_url,
+    video_has_audio = false,
     layout_mode = 'inline',
     mobile_layout_mode = 'inline',
     mobile_crop_behavior = 'cover',
@@ -271,6 +275,9 @@ export default function HeroRender({
   // is where the painterly backdrop lives, so the apex hero silently opted out of its own theme.
   // The empty-string case was handled; the null case is the one the fleet actually has.
   const hasImage = typeof image_url === 'string' && image_url.trim() !== '';
+  // A looping background VIDEO behind the words (per-site A/B's variant B, 2026-10-16). Muted
+  // autoplay, the image as its poster, sound only on the visitor's tap (audio-honesty standard).
+  const hasVideo = typeof video_url === 'string' && /^https?:\/\//.test(video_url.trim());
   const blurPx = `${blur_amount}px`;
   const blurFilter = blur_amount > 0 ? `blur(${blurPx})` : 'none';
 
@@ -323,7 +330,7 @@ export default function HeroRender({
     ) : (
       <a
         href={href}
-        onClick={onClick}
+        onClick={(e) => { abEvent('cta_click'); onClick?.(e as any); }}
         /* min-h-[44px]: the thumb-size floor — the CTA measured 36px tall on a phone (UX scan, 2026-10-16). */
         className={`inline-flex min-h-[44px] items-center justify-center ${ctaSize} bg-primary hover:opacity-90 text-primary-foreground font-bold rounded-full transition`}
         aria-label={
@@ -426,7 +433,7 @@ export default function HeroRender({
   );
 
   // Full-bleed / Background
-  if ((activeLayoutMode === 'full_bleed' || activeLayoutMode === 'background') && hasImage) {
+  if ((activeLayoutMode === 'full_bleed' || activeLayoutMode === 'background') && (hasImage || hasVideo)) {
     if (activeLayoutMode === 'full_bleed') {
       return (
         <div
@@ -436,16 +443,20 @@ export default function HeroRender({
           data-device={device || 'auto'}
         >
           {showDebug && <DebugOverlay>{`[HeroBlock]\nLayout: full_bleed`}</DebugOverlay>}
-          <motion.div
-            className="absolute inset-0 bg-fixed"
-            style={{
-              y,
-              backgroundImage: `url(${image_url})`,
-              backgroundSize: 'cover',
-              backgroundPosition,
-              filter: blurFilter,
-            }}
-          />
+          {hasVideo ? (
+            <HeroVideoLayer src={video_url} poster={hasImage ? image_url : undefined} hasAudio={!!video_has_audio} blur={blurFilter} />
+          ) : (
+            <motion.div
+              className="absolute inset-0 bg-fixed"
+              style={{
+                y,
+                backgroundImage: `url(${image_url})`,
+                backgroundSize: 'cover',
+                backgroundPosition,
+                filter: blurFilter,
+              }}
+            />
+          )}
           {overlay_level !== 'none' && (
             <div className={`absolute inset-0 ${overlayClass(overlay_level as OverlayLevel, isDark)}`} />
           )}
@@ -464,15 +475,19 @@ export default function HeroRender({
         data-device={device || 'auto'}
       >
         {showDebug && <DebugOverlay>{`[HeroBlock]\nLayout: background`}</DebugOverlay>}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url(${image_url})`,
-            backgroundSize: 'cover',
-            backgroundPosition,
-            filter: blurFilter,
-          }}
-        />
+        {hasVideo ? (
+          <HeroVideoLayer src={video_url} poster={hasImage ? image_url : undefined} hasAudio={!!video_has_audio} blur={blurFilter} />
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url(${image_url})`,
+              backgroundSize: 'cover',
+              backgroundPosition,
+              filter: blurFilter,
+            }}
+          />
+        )}
         {overlay_level !== 'none' && (
           <div className={`absolute inset-0 ${overlayClass(overlay_level as OverlayLevel, isDark)}`} />
         )}

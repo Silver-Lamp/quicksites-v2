@@ -29,6 +29,11 @@ import CartPageClient from '@/components/cart/CartPageClient';
 import { cartShellForSlug } from '@/lib/payments/venmoForHost';
 import SiteThemeShell from '@/components/sites/site-theme-shell';
 import { isLinkExemptDemo } from '@/lib/booking/partnerLink';
+import type React from 'react';
+import { cookies } from 'next/headers';
+import AbBeacon from '@/components/home/ab-beacon';
+import { applySiteVariantB, pickSiteVariant, siteAbCookie, siteExperimentId } from '@/lib/ab/siteAb';
+import { getSiteAb } from '@/lib/ab/siteAbDb';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
 import PreviewWatermark from '@/components/sites/preview-watermark';
@@ -614,6 +619,23 @@ export default async function SitePreviewPage({
     }
   }
 
+  // Per-site A/B (lib/ab/siteAb.ts): on a PUBLISHED page with a running test, the variant comes
+  // from the sticky cookie or a fresh draw; B swaps the hero's content. The page never writes
+  // cookies — the beacon's route does, on the first exposure.
+  let abStamp: string | undefined;
+  let abBeacon: React.ReactNode = null;
+  if (normalized && !isDraft && siteRow.template_id) {
+    const test = await getSiteAb(siteRow.template_id).catch(() => null);
+    if (test?.enabled && test.b) {
+      const cookieVal = (await cookies()).get(siteAbCookie(siteRow.template_id))?.value ?? null;
+      const picked = pickSiteVariant(test, cookieVal);
+      if (picked.variant === 'B') normalized = applySiteVariantB(normalized, test.b.hero);
+      const experiment = siteExperimentId(siteRow.template_id);
+      abStamp = `${experiment}|${picked.variant}`;
+      abBeacon = <AbBeacon experiment={experiment} variant={picked.variant} assigned={picked.assigned} />;
+    }
+  }
+
   if (!normalized) return notFound();
 
   // Redirects → page → reserved app path → 404 (lib/sites/redirects.ts). Cart/checkout/thank-you
@@ -740,10 +762,12 @@ export default async function SitePreviewPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
         />
       )}
+      {abBeacon}
       <SiteRenderer
         site={normalized as any}
         page={pageSlug}
         baseUrl={baseUrl}
+        abStamp={abStamp}
         id="site-renderer-page"
         colorMode={colorMode}
         // ⚠️ DO NOT PAINT THE SURFACE HERE. This duplicated what SiteRenderer already applied

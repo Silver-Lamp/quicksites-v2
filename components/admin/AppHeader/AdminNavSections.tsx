@@ -218,7 +218,7 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'section', label: 'Growth', adminOnly: true },
   {
     type: 'item',
-    label: 'Homepage A/B',
+    label: 'A/B tests',
     href: '/admin/ab',
     icon: <Megaphone size={18} />,
     adminOnly: true,

@@ -23,6 +23,8 @@ type SiteRendererProps = {
   site: Template;
   page?: string;                 // page slug (optional; will default to first page)
   baseUrl?: string;              // optional, for absolute links/canonicals
+  /** Per-site A/B stamp `<experiment>|<variant>` for the root (lib/ab/siteAb.ts). */
+  abStamp?: string;
   id?: string;
   className?: string;
   colorMode?: 'light' | 'dark';
@@ -44,6 +46,7 @@ export default function SiteRenderer({
   colorMode = (site?.color_mode as 'light' | 'dark') ?? 'light',
   enableThemeWrapper = true,
   baseUrl,                       // ← NEW (already typed)
+  abStamp,
   editorChrome,                  // ← NEW
   serverData,
 }: SiteRendererProps) {
@@ -97,6 +100,8 @@ export default function SiteRenderer({
       lang={siteLocale(site)}
       {...{ [SITE_LOCALE_ATTR]: siteLocale(site) }}
       {...(siteHearThisPageOff(site) ? { [HEAR_THIS_PAGE_SITE_ATTR]: 'off' } : {})}
+      // Per-site A/B: `<experiment>|<variant>` so blocks (hero CTA, contact form) can report events.
+      {...(abStamp ? { 'data-qs-ab': abStamp } : {})}
       // The curated theme has carried a `density` for as long as `rhythm` has, and nothing ever
       // read it — every site got identical spacing whichever personality it was stamped with.
       // Surfacing it here makes the field mean something without touching a single block.

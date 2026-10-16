@@ -579,7 +579,14 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   image, `media_heading` as the eyebrow), cards shared with `video_showcase` via
   `components/sites/media-cards.tsx`, parser `lib/sites/heroMedia.ts`. Without media it renders
   inline (never an empty second column); Shuffle offers it only when the hero has media
-  (`heroModesFor`); the `playful` curated theme prefers it. Pinned by `heroMediaSplit.test.tsx`. **New block `video_showcase`** (same
+  (`heroModesFor`); the `playful` curated theme prefers it. Pinned by `heroMediaSplit.test.tsx`.
+  **The `audio` block plays a direct FILE (2026-10-16, the B Hard ad jingles)**: `provider:
+  'file'` (or a URL that plainly ends in mp3/m4a/wav/ogg) renders the browser's own
+  `<audio controls preload="metadata">` with title + caption — visible controls, never autoplay
+  (audio-honesty standard). ⚠️ Its palette default was `https://example.com/audio.mp3`, an iframe
+  to nowhere on every live site that added the block before filling it in — and with a file
+  player it would have been a dead player; now `url: ''` (schema accepts `''`), which renders
+  nothing in public (`audioFile.test.tsx`). **New block `video_showcase`** (same
   day): up to three portrait videos tilted like phones on a table until one plays, pulled up
   over the hero's bottom edge, with an optional h2 — empty renders nothing in public
   (`videoShowcase.test.tsx`). ⚠️ **Validate a script-seeded block against

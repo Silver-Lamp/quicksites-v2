@@ -100,6 +100,10 @@ describe('preview by URL (owner: "see the a/b versions via url")', () => {
       expect(src).toMatch(/previewPathVariant\(/);
     }
     expect(read('lib/ab/client.ts')).toMatch(/if \(mark === 'preview'\) return null/);
+    // The /a /b redirect goes to the visitor's own home address, never a hard-coded platform path.
+    const sitesSrc = read('app/sites/[slug]/[[...rest]]/page.tsx');
+    expect(sitesSrc).toMatch(/if \(shortcut\) redirect\(`\$\{await publicPathFromHeaders\(String\(siteRow\.slug\), \[\]\)\}\?ab=\$\{shortcut\}`\)/);
+    expect(sitesSrc).not.toMatch(/redirect\(`\/sites\/\$\{encodeURIComponent\(String\(siteRow\.slug\)\)\}\?ab=/);
     expect(AB_PREVIEW_MARK).toBe('preview');
   });
 });

@@ -631,7 +631,10 @@ export default async function SitePreviewPage({
     if (test?.enabled && test.b) {
       // `/a` and `/b` → `?ab=A` / `?ab=B` (only when no page has that slug).
       const shortcut = previewPathVariant(rest, ((normalized as any)?.pages ?? []).map((pg: any) => String(pg?.slug ?? '')));
-      if (shortcut) redirect(`/sites/${encodeURIComponent(String(siteRow.slug))}?ab=${shortcut}`);
+      // ⚠️ The target is the visitor's OWN address for the home page — `/` on bhard.store, `/sites/bhard`
+      // on the platform. The first cut wrote `/sites/<slug>` and bhard.store/b landed on
+      // bhard.store/sites/bhard?ab=B (served, but the wrong URL in the bar; the canonical lesson).
+      if (shortcut) redirect(`${await publicPathFromHeaders(String(siteRow.slug), [])}?ab=${shortcut}`);
       const forced = forcedVariant(sp.ab);
       const experiment = siteExperimentId(siteRow.template_id);
       if (forced) {

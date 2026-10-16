@@ -174,9 +174,15 @@ export default function ContactFormRender({
     interests.mode === 'hide' || industryKey === 'restaurant' || isPersonTemplate((t as any)?.data ?? t);
 
   // site slug for email subject/logs
+  // ⚠️ The slug names the SITE, and the email route derives the recipient from it. On the
+  // platform path (`www.quicksites.ai/sites/bhard`) the host-only rule returned "www" — the
+  // first label of the host — so the row was filed under a site that does not exist and the
+  // notify email went nowhere (live probe, 2026-10-16). Path first, then host.
   const siteSlug =
     typeof window !== 'undefined'
       ? (() => {
+          const fromPath = /^\/sites\/([^/?#]+)/.exec(window.location.pathname)?.[1];
+          if (fromPath) return decodeURIComponent(fromPath);
           const host = window.location.hostname.toLowerCase();
           if (host.endsWith('.quicksites.ai')) return host.split('.')[0];
           const parts = host.replace(/^www\./, '').split('.');
@@ -305,14 +311,10 @@ Service: ${formData.service || 'N/A'}
       emailError = err?.message || 'Unexpected exception';
     }
 
-    await supabase
-      .from('form_submissions')
-      .update({
-        email_status: emailStatus,
-        email_response_id: emailResponseId,
-        email_error: emailError,
-      })
-      .eq('id', data.id);
+    // The email's fate is recorded by /api/send-contact-email with the service role. An anon
+    // UPDATE here returned 204 and changed nothing (the admin-only SELECT policy governs the
+    // rows an UPDATE's WHERE reads) — measured 2026-10-16.
+    void emailStatus; void emailResponseId; void emailError;
 
     setSubmitting(false);
     setSubmitted(true);

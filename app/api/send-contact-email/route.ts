@@ -34,8 +34,24 @@ export async function POST(req: Request) {
   if (!site_slug || typeof site_slug !== 'string') {
     return NextResponse.json({ error: 'Missing site_slug' }, { status: 400 });
   }
+  // ⚠️ THE EMAIL'S FATE IS WRITTEN HERE, WITH THE SERVICE ROLE — never by the form. The form used
+  // to `update form_submissions` with the anon key after this call; that UPDATE returns 204 and
+  // changes NOTHING, because Postgres applies the SELECT policy (admin-only) to the rows an
+  // UPDATE's WHERE must read. Measured 2026-10-16: 204, row unchanged. So every lead read
+  // "no email" in the inbox whatever happened here.
+  const submissionId = typeof form_submission_id === 'string' && /^[0-9a-f-]{36}$/i.test(form_submission_id) ? form_submission_id : null;
+  const recordFate = async (email_status: string, email_response_id: string | null, email_error: string | null) => {
+    if (!submissionId) return;
+    try {
+      await supabase.from('form_submissions').update({ email_status, email_response_id, email_error }).eq('id', submissionId);
+    } catch (e) {
+      console.warn('[send-contact-email] could not record fate', (e as any)?.message || e);
+    }
+  };
+
   const recipient = await resolveContactRecipient(supabase, site_slug);
   if (!recipient) {
+    await recordFate('error', null, `No contact email is configured for site "${site_slug}"`);
     return NextResponse.json(
       { error: 'No contact email is configured for this site' },
       { status: 422 }
@@ -86,6 +102,7 @@ export async function POST(req: Request) {
     site_slug,
     form_submission_id,
   }]);
+  await recordFate(status, response_id, error);
 
   if (status === 'error') {
     return NextResponse.json({ error }, { status: 500 });

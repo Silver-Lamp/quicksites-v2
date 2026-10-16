@@ -1269,7 +1269,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   one table over). Found by replaying the exact anon call while answering where B Hard's leads
   should go. Fix: insert WITHOUT a returning select, id minted client-side
   (`contactFormSubmit.test.ts`). ⚠️ The Platform Inbox (`/admin/inbox`) reads `contact_messages`
-  — QuickSites' own `/contact` form — NOT `form_submissions`; tenant leads have **no admin UI**.
+  — QuickSites' own `/contact` form — NOT `form_submissions`; tenant leads now have
+  `/admin/inbox/site-forms` (migration `20260889`). ⚠️ **The live probe found two more**: (1) the
+  form's anon `UPDATE … email_status` returned **204 and changed nothing** — Postgres applies the
+  (admin-only) SELECT policy to the rows an UPDATE's WHERE must read, so "no error" was "no
+  rows" — the email's fate is now written by `/api/send-contact-email` with the service role;
+  (2) on the platform path the slug came from the HOST ("www"), filing the lead under a site
+  that does not exist and sending the notify email nowhere — path first, then host.
 - **`public.nav_events` is empty and unused (2026-10-11).** Its only writer, `/api/log-event`, inserted
   with the anon-key client into a table the 2026-07 RLS hardening closed, so it recorded zero rows
   in its life while three admin nav menus kept calling it. Route and callers removed

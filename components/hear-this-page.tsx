@@ -56,6 +56,9 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
     // The renderer stamps the site's opt-out on its root in the server HTML, so it is readable
     // at mount — no need to wait for the 1.5 s owner-embed detection.
     setSiteOff(!!document.querySelector(`[${HEAR_THIS_PAGE_SITE_ATTR}="off"]`));
+    // The locale too — it was read only in the 1.5 s detect pass, so the first paint on an Italian
+    // site said "Hear this page" / "Dismiss" (HJ's re-run, 2026-10-16, on the sim site).
+    setLocale(document.querySelector(`[${SITE_LOCALE_ATTR}]`)?.getAttribute(SITE_LOCALE_ATTR) || 'en');
     setPageUrl(window.location.origin + window.location.pathname);
     const detect = () => {
       const hosts = Array.from(document.querySelectorAll('[data-about-that-embed]'));
@@ -71,8 +74,11 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
   React.useEffect(() => {
     if (typeof document === 'undefined') return;
     const isField = (el: Element | null) => !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && (el as HTMLInputElement).type !== 'checkbox' && (el as HTMLInputElement).type !== 'radio';
-    const onFocusIn = (e: FocusEvent) => { if (isField(e.target as Element)) setFieldFocused(true); };
-    const onFocusOut = () => { window.setTimeout(() => setFieldFocused(isField(document.activeElement)), 50); };
+    // Anything focused INSIDE a form counts: the booking block's time chips are <button>s, and
+    // while a visitor picked "20:15" the pill sat on it (HJ's re-run, 2026-10-16).
+    const inForm = (el: Element | null) => !!el && (isField(el) || !!el.closest?.('form'));
+    const onFocusIn = (e: FocusEvent) => { if (inForm(e.target as Element)) setFieldFocused(true); };
+    const onFocusOut = () => { window.setTimeout(() => setFieldFocused(inForm(document.activeElement)), 50); };
     document.addEventListener('focusin', onFocusIn);
     document.addEventListener('focusout', onFocusOut);
     return () => {

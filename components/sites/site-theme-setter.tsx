@@ -6,7 +6,15 @@ import { useEffect } from 'react';
  * Force the site theme on /host pages even if something (e.g. next-themes)
  * tries to put `dark` back on <html> or <body>.
  */
-export default function SiteThemeSetter({ mode }: { mode: 'light' | 'dark' }) {
+export default function SiteThemeSetter({ mode, lang }: { mode: 'light' | 'dark'; lang?: string }) {
+  // The document language is the SITE's, not the app's: the root layout says lang="en" for every
+  // page, so screen readers read an Italian trattoria in an English voice and Chrome offered to
+  // translate it (HJ's re-run, 2026-10-16). The renderer root carries lang too, but assistive tech
+  // and the translate prompt read <html>. The routes' inline script sets it before paint; this
+  // keeps it set.
+  useEffect(() => {
+    if (lang) document.documentElement.lang = lang;
+  }, [lang]);
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;

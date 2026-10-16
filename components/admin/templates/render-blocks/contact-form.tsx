@@ -2,6 +2,7 @@
 'use client';
 
 import type { Block } from '@/types/blocks';
+import { chromeStrings, siteLocale } from '@/lib/sites/siteLocale';
 import { formatUsPhone, telHref } from '@/lib/phone/formatUs';
 import { formatPhoneInput, phoneMaxLength, phonePlaceholder, phoneRegionForSite, phoneValidationError } from '@/lib/phone/region';
 import { abEvent } from '@/lib/ab/client';
@@ -161,6 +162,10 @@ export default function ContactFormRender({
   // Italian restaurant's guests could not leave a number at all.
   const phoneRegion = phoneRegionForSite(t);
 
+  // OUR words on their page (labels, button, errors) follow the site's language — HJ's re-run
+  // (2026-10-16) found an Italian trattoria's form saying "Name: / Email: / Phone Number: / Submit".
+  const cs = chromeStrings(siteLocale((t as any)?.data ? t : { data: t }));
+
   // ⚠️ Person sites get "Get in Touch". A one-person portfolio headed "Contact Us" is wrong about
   // who is on the page, not merely unfashionable. See lib/sites/personSite.ts.
   const title = titleRaw || defaultContactHeading((t as any)?.data ?? t, businessName);
@@ -223,18 +228,17 @@ export default function ContactFormRender({
       setSubmitError(
         isEditor
           ? 'No valid contact email is configured. Set it in Template Identity.'
-          : 'Sorry — this form isn’t set up to receive messages right now.'
+          : cs.formNotSetUp
       );
       return;
     }
 
     const nextErrors: typeof errors = {};
-    if (!formData.name) nextErrors.name = 'Name is required.';
+    if (!formData.name) nextErrors.name = cs.nameRequired;
     if (!formData.email && !formData.phone)
-      nextErrors.contact =
-        'Please provide either an email or phone number.';
+      nextErrors.contact = cs.contactRequired;
     if (formData.email && !isValidEmail(formData.email))
-      nextErrors.email = 'Email format is invalid.';
+      nextErrors.email = cs.emailInvalid;
     const phoneError = phoneValidationError(formData.phone, phoneRegion);
     if (phoneError) nextErrors.phone = phoneError;
     setErrors(nextErrors);
@@ -264,7 +268,7 @@ export default function ContactFormRender({
 
     if (insertError) {
       console.error('Insert error:', insertError);
-      setSubmitError('There was a problem submitting the form. Please try again.');
+      setSubmitError(cs.submitFailed);
       setSubmitting(false);
       return;
     }
@@ -341,14 +345,14 @@ Service: ${formData.service || 'N/A'}
             {businessName && <div className="text-muted-foreground">{businessName}</div>}
             {displayPhone && (
               <div className="text-muted-foreground">
-                Or call us at{' '}
+                {cs.orCallUs}{' '}
                 <a href={telHref(phoneRaw)} className="underline">
                   {displayPhone}
                 </a>
               </div>
             )}
             {hasValidEmail && (
-              <div className="text-muted-foreground">We’ll reply from {effectiveEmail}</div>
+              <div className="text-muted-foreground">{cs.replyFrom} {effectiveEmail}</div>
             )}
           </div>
 
@@ -382,15 +386,17 @@ Service: ${formData.service || 'N/A'}
 
           {submitted ? (
             <p className="text-green-600 text-center">
-              Thank you! Your submission has been received.
+              {cs.thanks}
             </p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 text-foreground">
               <div>
-                <label className="block font-semibold mb-1">Name:</label>
+                <label htmlFor="contact-name" className="block font-semibold mb-1">{cs.name}</label>
                 <input
+                  id="contact-name"
                   type="text"
                   name="name"
+                  autoComplete="name"
                   className={inputClass(!!errors.name)}
                   value={formData.name}
                   onChange={handleChange}
@@ -401,10 +407,12 @@ Service: ${formData.service || 'N/A'}
               </div>
 
               <div>
-                <label className="block font-semibold mb-1">Email:</label>
+                <label htmlFor="contact-email" className="block font-semibold mb-1">{cs.email}</label>
                 <input
+                  id="contact-email"
                   type="email"
                   name="email"
+                  autoComplete="email"
                   className={inputClass(!!errors.email)}
                   value={formData.email}
                   onChange={handleChange}
@@ -415,10 +423,12 @@ Service: ${formData.service || 'N/A'}
               </div>
 
               <div>
-                <label className="block font-semibold mb-1">Phone Number:</label>
+                <label htmlFor="contact-phone" className="block font-semibold mb-1">{cs.phoneNumber}</label>
                 <input
+                  id="contact-phone"
                   type="tel"
                   name="phone"
+                  autoComplete="tel"
                   inputMode="tel"
                   placeholder={phonePlaceholder(phoneRegion)}
                   maxLength={phoneMaxLength(phoneRegion)}
@@ -448,7 +458,7 @@ Service: ${formData.service || 'N/A'}
                   required question with no true answer does not just clutter the form, it BLOCKS
                   the only way to contact the business. See `hideServicePicker`. */}
               <div className={(services.length === 0 || hideServicePicker) && !isEditor ? 'hidden' : undefined}>
-                <label className="block font-semibold mb-1">{pickerLabel}</label>
+                <label htmlFor="contact-service" className="block font-semibold mb-1">{pickerLabel}</label>
                 {services.length === 0 ? (
                   isEditor ? (
                     <div className="text-red-500 text-sm italic bg-red-900/10 border border-red-500/30 rounded px-3 py-2">
@@ -459,6 +469,7 @@ Service: ${formData.service || 'N/A'}
                   ) : null
                 ) : (
                   <select
+                    id="contact-service"
                     name="service"
                     className={inputClass()}
                     value={formData.service}
@@ -491,7 +502,7 @@ Service: ${formData.service || 'N/A'}
                   disabled={submitting || services.length === 0 || !hasValidEmail}
                   className="bg-primary text-primary-foreground hover:opacity-90 px-6 py-2 rounded transition disabled:opacity-50"
                 >
-                  {submitting ? 'Submitting...' : 'Submit'}
+                  {submitting ? cs.submitting : cs.submit}
                 </button>
               </div>
             </form>

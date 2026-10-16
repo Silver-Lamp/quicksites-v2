@@ -45,4 +45,34 @@ describe('the chrome around a site speaks its language', () => {
     expect(src).toMatch(/className="hidden sm:inline">\{cs\.hearThisPage\}/);
     expect(src).not.toMatch(/>\s*Hear this page\s*</);
   });
+  // HJ's re-run (2026-10-16): four small things were still English or in the way.
+  it('the pill reads the locale AT MOUNT (not only in the 1.5 s detect pass) and hides while anything inside a form has focus (time chips are buttons)', () => {
+    const src = read('components/hear-this-page.tsx');
+    const mountRead = src.indexOf('setLocale(document.querySelector(`[${SITE_LOCALE_ATTR}]`)');
+    const detect = src.indexOf('const detect = () =>');
+    expect(mountRead).toBeGreaterThan(-1);
+    expect(mountRead).toBeLessThan(detect);
+    expect(src).toMatch(/closest\?\.\('form'\)/);
+    expect(src).toMatch(/if \(inForm\(e\.target as Element\)\) setFieldFocused\(true\)/);
+  });
+  it('the document language follows the site on both public routes', () => {
+    expect(read('components/sites/site-theme-setter.tsx')).toMatch(/document\.documentElement\.lang = lang/);
+    expect(read('components/sites/site-lang-setter.tsx')).toMatch(/document\.documentElement\.lang = lang/);
+    const host = read('app/host/[[...rest]]/page.tsx');
+    expect(host).toMatch(/<SiteThemeSetter mode=\{colorMode\} lang=\{siteLang\} \/>/);
+    expect(host).toMatch(/h\.lang='\$\{siteLang\}'/); // before paint, in the inline script
+    expect(read('app/sites/[slug]/[[...rest]]/page.tsx')).toMatch(/<SiteLangSetter lang=\{siteLang\} \/>/);
+  });
+  it('the contact form draws its chrome from the site locale and links every label to its input', () => {
+    const src = read('components/admin/templates/render-blocks/contact-form.tsx');
+    expect(src).toMatch(/chromeStrings\(siteLocale\(/);
+    for (const literal of ['>Name:<', '>Email:<', '>Phone Number:<', "'Submit'", "'Submitting...'", 'Or call us at{', 'Thank you! Your submission']) expect(src).not.toContain(literal);
+    for (const id of ['contact-name', 'contact-email', 'contact-phone']) {
+      expect(src).toContain(`htmlFor="${id}"`);
+      expect(src).toContain(`id="${id}"`);
+    }
+    const it = chromeStrings('it');
+    expect(it.name).toBe('Nome');
+    expect(it.submit).toBe('Invia');
+  });
 });

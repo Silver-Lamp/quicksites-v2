@@ -32,6 +32,8 @@ import { isLinkExemptDemo } from '@/lib/booking/partnerLink';
 import type React from 'react';
 import { cookies } from 'next/headers';
 import AbBeacon from '@/components/home/ab-beacon';
+import SiteLangSetter from '@/components/sites/site-lang-setter';
+import { siteLocale } from '@/lib/sites/siteLocale';
 import { applySiteVariantB, pickSiteVariant, siteAbCookie, siteExperimentId } from '@/lib/ab/siteAb';
 import { getSiteAb } from '@/lib/ab/siteAbDb';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
@@ -650,6 +652,7 @@ export default async function SitePreviewPage({
 
   const pageSlug = decision.kind === 'page' ? decision.slug : rest?.[0] ?? firstPageSlug(normalized);
   const colorMode = (normalized.color_mode ?? 'light') as 'light' | 'dark';
+  const siteLang = siteLocale(normalized);
   // Absolute public URL of THIS page — used as the `url` in the JSON-LD blocks below, which is an
   // address a search engine will follow. It must be the visitor's URL, not our rewrite target.
   const pageUrl = await publicUrlFromHeaders(siteRow.slug ?? slug, rest);
@@ -762,6 +765,7 @@ export default async function SitePreviewPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
         />
       )}
+      <SiteLangSetter lang={siteLang} />
       {abBeacon}
       <SiteRenderer
         site={normalized as any}

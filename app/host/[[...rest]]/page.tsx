@@ -12,6 +12,7 @@ import Script from 'next/script';
 
 import SiteRenderer from '@/components/sites/site-renderer';
 import SiteThemeSetter from '@/components/sites/site-theme-setter';
+import { siteLocale } from '@/lib/sites/siteLocale';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import { supabaseAdmin } from '@/lib/supabase/admin';
@@ -310,12 +311,14 @@ export default async function HostSitePage({
   const pageSlug = decision.kind === 'page' ? decision.slug : (params?.rest && params.rest[0]) || firstPageSlug(site);
   const colorMode = (site.color_mode ?? 'light') as 'light' | 'dark';
   const baseUrl = await originFromHeaders();
+  const siteLang = siteLocale(site);
 
   qlog('RENDER', { pageSlug, pagesLen: site.pages?.length });
 
   // Ensure correct theme before hydration/paint
   const inline = `(function(m){try{
     var h=document.documentElement,b=document.body;
+    h.lang='${siteLang}';
     if(m==='dark'){h.classList.add('dark');b.classList.add('dark');h.dataset.theme='dark';b.dataset.theme='dark';}
     else {h.classList.remove('dark');b.classList.remove('dark');h.dataset.theme='light';b.dataset.theme='light';}
     document.cookie='qs-site-theme='+m+'; Path=/; Max-Age=31536000; SameSite=Lax';
@@ -324,7 +327,7 @@ export default async function HostSitePage({
   return (
     <>
       <Script id="qs-site-theme" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: inline }} />
-      <SiteThemeSetter mode={colorMode} />
+      <SiteThemeSetter mode={colorMode} lang={siteLang} />
 
       <TemplateEditorProvider
         templateName={site.template_name ?? site.slug ?? String(site.id)}

@@ -10,6 +10,7 @@ import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import { defaultContactHeading, isPersonTemplate } from '@/lib/sites/personSite';
 import { contactInterestsFor } from '@/lib/industries/contactInterests';
+import { contactFormMode, emailOnlyCopy, validateEmailOnly } from '@/lib/forms/contactFormMode';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
@@ -165,6 +166,10 @@ export default function ContactFormRender({
   // OUR words on their page (labels, button, errors) follow the site's language — HJ's re-run
   // (2026-10-16) found an Italian trattoria's form saying "Name: / Email: / Phone Number: / Submit".
   const cs = chromeStrings(siteLocale((t as any)?.data ? t : { data: t }));
+  // Two shapes (lib/forms/contactFormMode.ts): the classic form, or one styled email field.
+  const mode = contactFormMode(block?.content);
+  const emailOnly = mode === 'email_only';
+  const eo = emailOnlyCopy(block?.content, cs);
 
   // ⚠️ Person sites get "Get in Touch". A one-person portfolio headed "Contact Us" is wrong about
   // who is on the page, not merely unfashionable. See lib/sites/personSite.ts.
@@ -234,6 +239,10 @@ export default function ContactFormRender({
     }
 
     const nextErrors: typeof errors = {};
+    if (emailOnly) {
+      const emailErr = validateEmailOnly(formData.email, cs);
+      if (emailErr) nextErrors.email = emailErr;
+    } else {
     if (!formData.name) nextErrors.name = cs.nameRequired;
     if (!formData.email && !formData.phone)
       nextErrors.contact = cs.contactRequired;
@@ -241,6 +250,7 @@ export default function ContactFormRender({
       nextErrors.email = cs.emailInvalid;
     const phoneError = phoneValidationError(formData.phone, phoneRegion);
     if (phoneError) nextErrors.phone = phoneError;
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -284,8 +294,10 @@ export default function ContactFormRender({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: [effectiveEmail], // use site/template email; fallback to block-level if needed
-          subject: `New Contact Form Submission from ${siteSlug}`,
-          message: `
+          subject: emailOnly ? `New email sign-up from ${siteSlug}` : `New Contact Form Submission from ${siteSlug}`,
+          message: emailOnly
+            ? `New email sign-up from ${siteSlug}:\n\nBusiness: ${businessName || 'N/A'}\nEmail: ${formData.email}`
+            : `
 New contact form submission from ${siteSlug}:
 
 Business: ${businessName || 'N/A'}
@@ -331,6 +343,60 @@ Service: ${formData.service || 'N/A'}
     `w-full rounded px-3 py-2 transition-colors bg-background text-foreground border ${
       error ? 'border-red-500' : 'border-input'
     }`;
+
+  if (emailOnly) {
+    // ⚠️ ONE field. No name, no phone, no interest picker — a notify-me capture asks for the
+    // address and nothing else. The same insert + email path as the full form; `name`/`phone`
+    // are nullable in form_submissions and the email route needs neither.
+    return (
+      <section id={anchorId} data-contact-anchor data-contact-mode="email_only">
+        <SectionShell compact className="bg-transparent">
+          <div className="mx-auto w-full max-w-xl rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-sm sm:p-8">
+            <h2 className="text-center text-2xl font-bold text-foreground">{title}</h2>
+            {eo.description ? <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted-foreground">{eo.description}</p> : null}
+            {showEmailNudge && isEditor && (
+              <div className="mt-4 rounded border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-foreground">
+                No valid <code>contact_email</code> is configured on the site — sign-ups are stored but nobody is emailed.
+              </div>
+            )}
+            {submitted ? (
+              <p role="status" aria-live="polite" className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm font-medium text-foreground">
+                {eo.successMessage}
+              </p>
+            ) : (
+              <form onSubmit={handleSubmit} className="mt-5">
+                <label htmlFor="contact-email" className="sr-only">{cs.email}</label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    id="contact-email"
+                    type="email"
+                    name="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder={eo.placeholder}
+                    aria-invalid={!!errors.email}
+                    className={`${inputClass(!!errors.email)} min-h-[44px] flex-1 rounded-full px-4`}
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
+                  <button
+                    type="submit"
+                    disabled={submitting || !hasValidEmail}
+                    className="min-h-[44px] rounded-full bg-primary px-6 py-2 font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                  >
+                    {submitting ? cs.submitting : eo.buttonText}
+                  </button>
+                </div>
+                {errors.email ? <p className="mt-2 text-sm text-red-500">{errors.email}</p> : null}
+                {submitError ? <div role="alert" className="mt-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-500">{submitError}</div> : null}
+                {eo.note ? <p className="mt-3 text-center text-xs text-muted-foreground">{eo.note}</p> : null}
+              </form>
+            )}
+          </div>
+        </SectionShell>
+      </section>
+    );
+  }
 
   return (
     <section id={anchorId} data-contact-anchor>

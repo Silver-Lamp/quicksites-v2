@@ -586,7 +586,15 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   (audio-honesty standard). ⚠️ Its palette default was `https://example.com/audio.mp3`, an iframe
   to nowhere on every live site that added the block before filling it in — and with a file
   player it would have been a dead player; now `url: ''` (schema accepts `''`), which renders
-  nothing in public (`audioFile.test.tsx`). **New block `video_showcase`** (same
+  nothing in public (`audioFile.test.tsx`).
+  **The contact form has an EMAIL-ONLY mode (2026-10-16, owner: "a simplified toggle version
+  that doesn't ask for name and phone, just email, styled")**: `contact_form.mode =
+  'email_only'` (editor toggle + description / button / placeholder / success / note fields)
+  renders one styled email field + button and asks for nothing else — a notify-me capture; the
+  decisions are pure in `lib/forms/contactFormMode.ts` (mode, copy fallbacks in the site's
+  language, validation), the submit path is the same insert + email route (`name`/`phone` are
+  nullable, the route needs neither). `contactFormMode.test.ts` greps the branch for exactly
+  ONE `<input>`, of type email. **New block `video_showcase`** (same
   day): up to three portrait videos tilted like phones on a table until one plays, pulled up
   over the hero's bottom edge, with an optional h2 — empty renders nothing in public
   (`videoShowcase.test.tsx`). ⚠️ **Validate a script-seeded block against

@@ -847,9 +847,13 @@ export const blockContentSchemaMap = {
     label: 'Audio',
     icon: '🎧',
     schema: z.object({
-      provider: z.enum(['spotify', 'soundcloud', 'suno']),
-      url: z.string().url('Audio URL must be valid'),
+      /** `file` = a direct audio file (mp3/m4a/wav/ogg) played in a native player; the others are embeds. */
+      provider: z.enum(['spotify', 'soundcloud', 'suno', 'file']),
+      /** '' = not configured yet (renders nothing in public); the default used to be a fake example.com URL. */
+      url: z.union([z.string().url('Audio URL must be valid'), z.literal('')]),
       title: z.string().optional(),
+      /** One line under the title (e.g. "Ad jingle — 32 s"). */
+      caption: z.string().optional(),
     }),
   },
 

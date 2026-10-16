@@ -13,6 +13,7 @@ import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import { track as trackEvent } from '@/lib/analytics/syntheticTraffic';
 import { AboutThatEmbed } from '@/components/admin/templates/render-blocks/about-that';
+import { SITE_LOCALE_ATTR, chromeStrings } from '@/lib/sites/siteLocale';
 import {
   HEAR_THIS_PAGE_ENABLED,
   HEAR_THIS_PAGE_EMBED_ID,
@@ -32,6 +33,12 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
   // that owner-voice player is the richer experience, and it avoids a redundant
   // house-narrator render (and its spend).
   const [ownerVoiceOnPage, setOwnerVoiceOnPage] = React.useState(false);
+  // The SITE's language (lib/sites/siteLocale.ts stamps it on the renderer root) — an English
+  // pill on an Italian restaurant's page was the second thing HiveJournal's sweep saw (2026-10-15).
+  const [locale, setLocale] = React.useState<string>('en');
+  // Hidden while the visitor is typing into a form: on a phone the pill sat over the booking
+  // form's "Telefono" field. A pill nobody can see past is not a feature.
+  const [fieldFocused, setFieldFocused] = React.useState(false);
 
   // Collapse + un-dismiss on navigation; recompute the grounded URL (origin+pathname,
   // no query string) so each page narrates itself. Then detect an owner embed once the
@@ -46,10 +53,26 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
       const hosts = Array.from(document.querySelectorAll('[data-about-that-embed]'));
       const hasOwner = hosts.some((el) => el.getAttribute('data-about-that-embed') !== HEAR_THIS_PAGE_EMBED_ID);
       if (hasOwner) setOwnerVoiceOnPage(true);
+      setLocale(document.querySelector(`[${SITE_LOCALE_ATTR}]`)?.getAttribute(SITE_LOCALE_ATTR) || 'en');
     };
     const t = window.setTimeout(detect, 1500);
     return () => window.clearTimeout(t);
   }, [pathname]);
+
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const isField = (el: Element | null) => !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && (el as HTMLInputElement).type !== 'checkbox' && (el as HTMLInputElement).type !== 'radio';
+    const onFocusIn = (e: FocusEvent) => { if (isField(e.target as Element)) setFieldFocused(true); };
+    const onFocusOut = () => { window.setTimeout(() => setFieldFocused(isField(document.activeElement)), 50); };
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+    };
+  }, []);
+
+  const cs = chromeStrings(locale);
 
   if (!HEAR_THIS_PAGE_ENABLED || !HEAR_THIS_PAGE_EMBED_ID) return null;
   if (!hearThisPageVisibleFor(pathname, settings)) return null;
@@ -65,6 +88,7 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
 
   if (ownerVoiceOnPage) return null;
   if (dismissed) return null;
+  if (fieldFocused && !open) return null;
 
   // ⚠️ Clears whatever bars are pinned below it. Was a flat `bottom-4`, which put this launcher
   // inside the claim bar on every unclaimed draft — the two surfaces that always appear together.
@@ -78,12 +102,12 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
         <div className="w-[min(92vw,360px)] rounded-2xl border border-border bg-background/95 p-3 shadow-2xl backdrop-blur">
           <div className="mb-2 flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-sm font-semibold">
-              <span aria-hidden>🎙️</span> Hear this page
+              <span aria-hidden>🎙️</span> {cs.hearThisPage}
             </span>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label="Close"
+              aria-label={cs.close}
               className="rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
             >
               ✕
@@ -109,14 +133,16 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
               try { trackEvent('hear_this_page_opened', { path: pathname || '' }); } catch {}
               setOpen(true);
             }}
+            aria-label={cs.hearThisPage}
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/90 px-3 py-2 text-sm font-medium shadow-lg backdrop-blur transition hover:bg-muted"
           >
-            <span aria-hidden>🔊</span> Hear this page
+            {/* Icon-only on a phone: the label's width is what covered the form fields. */}
+            <span aria-hidden>🔊</span> <span className="hidden sm:inline">{cs.hearThisPage}</span>
           </button>
           <button
             type="button"
             onClick={() => setDismissed(true)}
-            aria-label="Dismiss"
+            aria-label={cs.dismiss}
             className="rounded-full border border-border bg-background/90 px-2 py-2 text-xs text-muted-foreground shadow-lg backdrop-blur transition hover:bg-muted"
           >
             ✕

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 import { availability, loadBookingSite } from '@/lib/booking/db';
 import { hasBookableWindows } from '@/lib/booking/settings';
+import { dayTimes } from '@/lib/booking/slots';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ templateId:
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isInteger(party) || party < 1) return NextResponse.json({ error: 'bad_query' }, { status: 400 });
   const site = await loadBookingSite(templateId);
   if (!site || !hasBookableWindows(site.settings)) return NextResponse.json({ error: 'not_bookable' }, { status: 404 });
-  const slots = await availability(site, date, party);
-  return NextResponse.json({ ok: true, date, party, slots: slots.map((s) => ({ starts_at: s.starts_at, ends_at: s.ends_at, table_id: s.table_id, label: s.label, time: s.time })) });
+  const now = new Date();
+  const slots = await availability(site, date, party, now);
+  // `times` is every bookable start that day, free or not, so the widget can mark a full time
+  // as full rather than hide it; `slots` is the free subset with the table each would get.
+  const times = party <= site.settings.maxParty ? dayTimes(site.settings, date, now) : [];
+  return NextResponse.json({ ok: true, date, party, times, slots: slots.map((s) => ({ starts_at: s.starts_at, ends_at: s.ends_at, table_id: s.table_id, label: s.label, time: s.time })) });
 }

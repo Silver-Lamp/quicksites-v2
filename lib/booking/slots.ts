@@ -64,6 +64,39 @@ export function computeSlots(input: { date: string; party: number; settings: Boo
   return out;
 }
 
+export type Service = 'lunch' | 'dinner';
+export type DayTime = { time: string; starts_at: string; service: Service };
+
+/** A window opening before 16:00 is lunch; later is dinner. The widget groups chips by this. */
+export function serviceOf(w: { open: string }): Service {
+  return String(w.open) < '16:00' ? 'lunch' : 'dinner';
+}
+
+/**
+ * EVERY bookable start on a date — free or not — so the widget can show a full time as "full"
+ * instead of silently omitting it. HiveJournal's sweep (2026-10-15): a guest who wanted 20:15
+ * simply did not see it, and could not tell "full" from "not offered". Same loop as
+ * `computeSlots`, minus the table search; nothing about other guests is in it.
+ */
+export function dayTimes(settings: BookingSettings, date: string, now = new Date()): DayTime[] {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
+  if (settings.closedDates.includes(date)) return [];
+  const wd = weekdayOf(date, settings.tz);
+  const windows = settings.windows[wd] ?? [];
+  const earliest = addMinutes(now, settings.leadMinutes);
+  const out: DayTime[] = [];
+  for (const w of windows) {
+    const open = zonedInstant(date, w.open, settings.tz);
+    const close = zonedInstant(date, w.close, settings.tz);
+    const service = serviceOf(w);
+    for (let t = open; t < close; t = addMinutes(t, settings.slotMinutes)) {
+      if (t < earliest) continue;
+      out.push({ time: formatInTimeZone(t, settings.tz, 'HH:mm'), starts_at: t.toISOString(), service });
+    }
+  }
+  return out;
+}
+
 /** The dates a guest may pick: today onward, up to `days` ahead, skipping closed ones. */
 export function bookableDates(settings: BookingSettings, days = 30, now = new Date()): string[] {
   const out: string[] = [];

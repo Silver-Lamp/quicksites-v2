@@ -3,6 +3,7 @@
 
 import dynamic from 'next/dynamic';
 import { formatUsPhone } from '@/lib/phone/formatUs';
+import { chromeStrings, siteLocale } from '@/lib/sites/siteLocale';
 import Link from 'next/link';
 import { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import type { Block } from '@/types/blocks';
@@ -244,6 +245,9 @@ export default function FooterRender({
   const meta = (template?.data as any)?.meta ?? {};
   const contact = meta?.contact ?? {};
   const db = (template as any) || {};
+  // OUR column headings in the SITE's language — "Quick Links / Company Info / Find Us" stood
+  // under an all-Italian page until HiveJournal's sweep (2026-10-15). lib/sites/siteLocale.ts.
+  const cs = chromeStrings(siteLocale(template));
 
   const businessName =
     (typeof meta.business === 'string' && meta.business.trim()) ||
@@ -468,7 +472,7 @@ export default function FooterRender({
       <div className={`max-w-6xl mx-auto grid ${gridCols} gap-8`}>
         {/* Quick Links */}
         <div className="space-y-3">
-          <h3 className={`text-base font-semibold ${headingColor}`}>Quick Links</h3>
+          <h3 className={`text-base font-semibold ${headingColor}`}>{cs.quickLinks}</h3>
           <nav className="grid gap-2">
             {links.length ? (
               links.map((l, i) =>
@@ -500,19 +504,19 @@ export default function FooterRender({
 
         {/* Company Info (read-only) — business sites only; see isPersonal above. */}
         <div className={`space-y-3 ${isPersonal ? 'hidden' : ''}`}>
-          <h3 className={`text-base font-semibold ${headingColor}`}>Company Info</h3>
+          <h3 className={`text-base font-semibold ${headingColor}`}>{cs.companyInfo}</h3>
           {(fullAddressForDisplay || showEditorHints) && (
             <div className="whitespace-pre-line leading-relaxed">
               {fullAddressForDisplay || <span className={subText}>—</span>}
             </div>
           )}
           <div className="space-y-1">
-            <div className={subText}>Business</div>
+            <div className={subText}>{cs.business}</div>
             <div>{businessName || <span className={subText}>—</span>}</div>
           </div>
           {(phone || showEditorHints) && (
             <div className="space-y-1">
-              <div className={subText}>Phone</div>
+              <div className={subText}>{cs.phone}</div>
               {phone ? (
                 <a
                   href={previewOnly ? '#' : `tel:${(phone || '').replace(/\D/g, '')}`}
@@ -535,7 +539,7 @@ export default function FooterRender({
             above, this column can be genuinely empty — so hide the whole thing rather than
             leave "Find Us" hovering over blank space. */}
         <div className={`space-y-3 ${!centerOk && !socials.length && !showEditorHints ? 'hidden' : ''}`}>
-          <h3 className={`text-base font-semibold ${headingColor}`}>{isPersonal ? 'Elsewhere' : 'Find Us'}</h3>
+          <h3 className={`text-base font-semibold ${headingColor}`}>{isPersonal ? cs.elsewhere : cs.findUs}</h3>
           {/* No map on a personal page: "Map unavailable" is a 180px box announcing that we
               don't know where someone lives — and on an About-Me page we have no business
               asking. */}

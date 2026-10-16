@@ -1091,6 +1091,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   path+query) — **the partner shape carries no guest phone/email**. Demo site
   `/sites/trattoria-del-borgo-demo` (fictional; sample guests invented). The block is silent in
   public until the site has bookable windows. Map: [`docs/ITALY_RESTAURANT_DEMO.md`](docs/ITALY_RESTAURANT_DEMO.md).
+  ⚠️ **HiveJournal walked it as a guest on a phone (2026-10-15) and found what every check had
+  missed**: the confirmation landed off-screen (the guest was looking at the menu, likely to book
+  twice), the English "Hear this page" pill sat over "Telefono", the footer said "Quick Links /
+  Company Info / Find Us" under an all-Italian page, a full time silently vanished instead of
+  reading "pieno", and the contact form asked for "(555) 123-4567". Now: the confirmation scrolls
+  into view with `aria-live` + a reference + an `.ics` + how to change it (`emailSent` only off a
+  simulation); `availability` returns `times` (every start, free or not — `dayTimes`) beside the
+  free `slots`, grouped Pranzo/Cena; **the site's language is one read, `lib/sites/siteLocale.ts`**,
+  stamped `data-qs-locale`/`lang` on the renderer root so chrome mounted outside the tree (the pill)
+  can read it; the phone format is the site's (`lib/phone/region.ts`); the demo is noindex by the
+  `demo_kind` flag. The sim site's nav had been seeded in English — a scratch seed that skips the
+  nav relabel ships English chrome under an Italian name; the demo seed shows the relabel.
 - **`/spread-the-word` — the public referral page (2026-10-11)**: `/for-sales` is the brief for
   people recruited to SELL (calls, the domain rental, territories) and reads like a job; the
   owner wanted a shareable version that is "just about telling people about it and helping

@@ -338,6 +338,18 @@ export function TemplateEditorToolbar({
           {/* Preview leads the action group: "what does this look like?" is the question an
               owner asks before Save or Publish, and until today the only answer for an
               unpublished draft was a copy-the-link line in the guest banner. */}
+          {/* A/B test for this site's home page (owner, 2026-10-16: "easy to get to from the editor"). */}
+          {currentId && (
+            <a
+              href={`/admin/ab?template=${currentId}`}
+              target="_blank"
+              rel="noreferrer"
+              title="A/B test this site's home page (opens the test page)"
+              className="inline-flex h-9 items-center gap-1 rounded-md border border-white/15 px-3 text-xs font-medium text-white/80 hover:bg-white/10"
+            >
+              🧪 A/B
+            </a>
+          )}
           {onPreview && (
             <Button
               type="button"

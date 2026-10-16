@@ -13,8 +13,8 @@ export async function setHomepageAb(value: unknown, updatedBy?: string | null): 
   await setSiteSetting(HOMEPAGE_AB_KEY, value, updatedBy ?? null);
 }
 
-export async function recordAbEvent(input: { variant: AbVariant; visitor: string; event: AbEventName; path?: string | null }): Promise<void> {
-  await supabaseAdmin.from('ab_events').insert({ experiment: AB_EXPERIMENT, variant: input.variant, visitor: input.visitor, event: input.event, path: input.path ?? null });
+export async function recordAbEvent(input: { experiment?: string; variant: AbVariant; visitor: string; event: AbEventName; path?: string | null }): Promise<void> {
+  await supabaseAdmin.from('ab_events').insert({ experiment: input.experiment ?? AB_EXPERIMENT, variant: input.variant, visitor: input.visitor, event: input.event, path: input.path ?? null });
 }
 
 /** Unique visitors per (variant, event) since `since` (ISO) — the honest unit is a visitor, not a hit. */

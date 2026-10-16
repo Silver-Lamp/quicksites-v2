@@ -12,7 +12,7 @@ export const AB_EXPERIMENT = 'homepage_hero';
 export const AB_COOKIE = 'qs_ab_home';
 export const AB_COOKIE_DAYS = 180;
 export type AbVariant = 'A' | 'B';
-export const AB_EVENTS = ['exposure', 'cta_click', 'guest_build_started', 'signup_click'] as const;
+export const AB_EVENTS = ['exposure', 'cta_click', 'guest_build_started', 'signup_click', 'form_submitted'] as const;
 export type AbEventName = (typeof AB_EVENTS)[number];
 
 export type HomepageAbB = {
@@ -70,17 +70,18 @@ export function isAbEventName(v: unknown): v is AbEventName {
 }
 
 export type AbCount = { variant: AbVariant; event: string; visitors: number };
-export type AbSummaryRow = { variant: AbVariant; exposures: number; cta_click: number; guest_build_started: number; signup_click: number; cta_rate: number | null; build_rate: number | null };
+export type AbSummaryRow = { variant: AbVariant; exposures: number; cta_click: number; guest_build_started: number; signup_click: number; form_submitted: number; cta_rate: number | null; build_rate: number | null; form_rate: number | null };
 
 /** Per-variant unique-visitor counts → rates. A rate with no exposures is null, never 0. */
 export function summarizeAb(counts: AbCount[]): AbSummaryRow[] {
   return (['A', 'B'] as AbVariant[]).map((variant) => {
     const n = (event: string) => counts.find((c) => c.variant === variant && c.event === event)?.visitors ?? 0;
     const exposures = n('exposure');
-    const row: AbSummaryRow = { variant, exposures, cta_click: n('cta_click'), guest_build_started: n('guest_build_started'), signup_click: n('signup_click'), cta_rate: null, build_rate: null };
+    const row: AbSummaryRow = { variant, exposures, cta_click: n('cta_click'), guest_build_started: n('guest_build_started'), signup_click: n('signup_click'), form_submitted: n('form_submitted'), cta_rate: null, build_rate: null, form_rate: null };
     if (exposures > 0) {
       row.cta_rate = row.cta_click / exposures;
       row.build_rate = row.guest_build_started / exposures;
+      row.form_rate = row.form_submitted / exposures;
     }
     return row;
   });

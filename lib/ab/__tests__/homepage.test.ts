@@ -51,7 +51,8 @@ describe('the wiring', () => {
     expect(page).not.toMatch(/cookies\(\)\)\.set/);
     const route = read('app/api/ab/event/route.ts');
     expect(route).toMatch(/isSyntheticRequest\(req\.headers\.get\('user-agent'\)\)/);
-    expect(route).toMatch(/body\?\.assign === true && !req\.cookies\.get\(AB_COOKIE\)/);
+    expect(route).toMatch(/body\?\.assign === true && !req\.cookies\.get\(cookieName\)/);
+    expect(route).toMatch(/const cookieName = templateId \? siteAbCookie\(templateId\) : AB_COOKIE/);
     expect(route).not.toMatch(/user_agent|ip:/);
     expect(AB_COOKIE).toBe('qs_ab_home');
   });

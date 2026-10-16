@@ -17,6 +17,7 @@ import { SITE_LOCALE_ATTR, chromeStrings } from '@/lib/sites/siteLocale';
 import {
   HEAR_THIS_PAGE_ENABLED,
   HEAR_THIS_PAGE_EMBED_ID,
+  HEAR_THIS_PAGE_SITE_ATTR,
   HEAR_THIS_PAGE_VOICE_LABEL,
   hearThisPageVisibleFor,
   resolveKinds,
@@ -39,6 +40,8 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
   // Hidden while the visitor is typing into a form: on a phone the pill sat over the booking
   // form's "Telefono" field. A pill nobody can see past is not a feature.
   const [fieldFocused, setFieldFocused] = React.useState(false);
+  // A site's owner switched the pill off (`meta.hear_this_page: false`, stamped on the renderer root).
+  const [siteOff, setSiteOff] = React.useState(false);
 
   // Collapse + un-dismiss on navigation; recompute the grounded URL (origin+pathname,
   // no query string) so each page narrates itself. Then detect an owner embed once the
@@ -47,6 +50,7 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
     setOpen(false);
     setDismissed(false);
     setOwnerVoiceOnPage(false);
+    setSiteOff(false);
     if (typeof window === 'undefined') return;
     setPageUrl(window.location.origin + window.location.pathname);
     const detect = () => {
@@ -54,6 +58,7 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
       const hasOwner = hosts.some((el) => el.getAttribute('data-about-that-embed') !== HEAR_THIS_PAGE_EMBED_ID);
       if (hasOwner) setOwnerVoiceOnPage(true);
       setLocale(document.querySelector(`[${SITE_LOCALE_ATTR}]`)?.getAttribute(SITE_LOCALE_ATTR) || 'en');
+      setSiteOff(!!document.querySelector(`[${HEAR_THIS_PAGE_SITE_ATTR}="off"]`));
     };
     const t = window.setTimeout(detect, 1500);
     return () => window.clearTimeout(t);
@@ -87,6 +92,7 @@ export default function HearThisPage({ settings }: { settings?: HearThisPageSett
   if (typeof window !== 'undefined' && window.parent !== window) return null;
 
   if (ownerVoiceOnPage) return null;
+  if (siteOff) return null;
   if (dismissed) return null;
   if (fieldFocused && !open) return null;
 

@@ -87,7 +87,10 @@ export default function ContactFormRender({
         ? dbServices
         : blockServices;
   const pickerLabel = interests.mode === 'hide' ? "I'm Interested In:" : interests.label;
-  const pickerPlaceholder = interests.mode === 'hide' ? 'Select a service' : interests.placeholder;
+  // When the OWNER typed the block's own options, the empty state says "Select one" — "Select a
+  // service" over "I want to order for myself / I run a store" is the trade placeholder leaking.
+  const usingBlockList = interests.mode !== 'options' && dbServices.length === 0 && blockServices.length > 0;
+  const pickerPlaceholder = usingBlockList ? 'Select one' : interests.mode === 'hide' ? 'Select a service' : interests.placeholder;
 
   // Case-insensitive subset filter if author chose a subset in block content
   const includesSet = new Set(norm(includedSubset).map((s) => s.toLowerCase()));

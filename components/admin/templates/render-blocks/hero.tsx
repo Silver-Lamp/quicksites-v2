@@ -311,7 +311,7 @@ export default function HeroRender({
   const CtaEl = canShowCTA ? (
     previewOnly ? (
       <span
-        className={`inline-block ${ctaSize} bg-primary text-primary-foreground font-bold rounded-full opacity-80 cursor-default select-none`}
+        className={`inline-flex min-h-[44px] items-center justify-center ${ctaSize} bg-primary text-primary-foreground font-bold rounded-full opacity-80 cursor-default select-none`}
         aria-disabled="true"
         role="button"
         tabIndex={-1}
@@ -322,7 +322,8 @@ export default function HeroRender({
       <a
         href={href}
         onClick={onClick}
-        className={`inline-block ${ctaSize} bg-primary hover:opacity-90 text-primary-foreground font-bold rounded-full transition`}
+        /* min-h-[44px]: the thumb-size floor — the CTA measured 36px tall on a phone (UX scan, 2026-10-16). */
+        className={`inline-flex min-h-[44px] items-center justify-center ${ctaSize} bg-primary hover:opacity-90 text-primary-foreground font-bold rounded-full transition`}
         aria-label={
           action === 'call_phone'
             ? 'Call us now'

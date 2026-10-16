@@ -1824,6 +1824,8 @@ export const blockContentSchemaMap = {
         title: z.string().default('Featured Products'),
         columns: z.number().int().min(1).max(6).default(3),
         productIds: z.array(z.string()).default([]),
+        /** One line under the gallery ("Online ordering opens soon …") — a price with no button invites a hunt for one. */
+        note: z.string().optional(),
         products: z
           .array(
             z.object({

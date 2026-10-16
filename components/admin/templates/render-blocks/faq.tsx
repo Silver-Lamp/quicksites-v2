@@ -71,10 +71,14 @@ export default function FaqRender({
       )}
       <div className="flex justify-center">
         <div className="flex flex-col items-start text-left w-full max-w-2xl pl-6 sm:pl-12 md:pl-0 md:ml-8 text-card-foreground">
-          <h3 className={compact ? 'font-semibold mb-1' : 'text-xl font-semibold mb-4'}>
-            {final.title || 'Frequently Asked Questions'}
-          </h3>
-          <hr className="my-4 border-border" />
+          {/* An h2 like every other section heading (it was an h3 under an h1, so the outline skipped
+              a level), and no divider — the `<hr>` inside a narrow flex column collapsed to a 16px
+              tick under the "Q" (UX scan, 2026-10-16). */}
+          {compact ? (
+            <h3 className="font-semibold mb-1">{final.title || 'Frequently Asked Questions'}</h3>
+          ) : (
+            <h2 className="text-2xl font-bold tracking-tight mb-5">{final.title || 'Frequently Asked Questions'}</h2>
+          )}
           <dl className="space-y-4">
             {final.items.map((item, i) => (
               <div key={`${item.question}-${i}`}>

@@ -114,6 +114,20 @@ const EXCLUDED_PREFIXES = [
   '/sign',
 ];
 
+/**
+ * Per-SITE opt-out (owner, 2026-10-16: "remove hear this page" on the B Hard site). The pill is
+ * mounted in the root layout and cannot see template data, so the site renderer stamps this
+ * attribute on its root and the pill reads it — the same mechanism as the locale stamp.
+ */
+export const HEAR_THIS_PAGE_SITE_ATTR = 'data-qs-hear-this-page';
+
+/** `data.meta.hear_this_page === false` (on a template row or its data). Absent = shown. */
+export function siteHearThisPageOff(siteData: unknown): boolean {
+  const d = siteData as any;
+  const meta = d?.data?.meta ?? d?.meta ?? {};
+  return meta?.hear_this_page === false;
+}
+
 /** Which configurable surface a pathname belongs to. */
 export function surfaceForPathname(pathname: string | null | undefined): HearThisPageSurface {
   if (!pathname || pathname === '/') return 'home';

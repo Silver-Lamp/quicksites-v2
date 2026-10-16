@@ -111,12 +111,13 @@ export function formatSnapshotPrice(p: Pick<SnapshotProduct, 'price_cents' | 'cu
  * provisioned — real titles, real prices in the store's own currency, real images where the
  * store had any, and NO cart button, because there is nothing wired to sell yet.
  */
-function SnapshotGallery({ title, columns, products, isEditor }: { title?: string; columns: number; products: SnapshotProduct[]; isEditor: boolean }) {
+function SnapshotGallery({ title, columns, products, isEditor, note }: { title?: string; columns: number; products: SnapshotProduct[]; isEditor: boolean; note?: string }) {
   return (
     <section className="py-8" data-products-grid="snapshot">
       {/* text-foreground: the heading inherited no color and rendered dark-on-dark on the first
           production gallery (CLAUDE.md §7 — semantic tokens, never an inherited default). */}
       {title && <h2 className="text-2xl font-bold mb-4 text-foreground">{title}</h2>}
+      {note ? <p className="mb-4 text-sm text-muted-foreground" data-products-note>{note}</p> : null}
       <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
         {products.map((p) => {
           const body = (
@@ -253,7 +254,7 @@ export default function RenderProductsGrid({ block }: { block: Block }) {
     // the live catalog is the truth and a stale snapshot must not shadow it.
     const snapshot = ids.length ? [] : readSnapshot(content);
     if (snapshot.length) {
-      return <SnapshotGallery title={content.title} columns={columns} products={snapshot} isEditor={isEditor} />;
+      return <SnapshotGallery title={content.title} columns={columns} products={snapshot} isEditor={isEditor} note={typeof content.note === 'string' ? content.note.trim() : undefined} />;
     }
     if (!isEditor) return null;
     return (

@@ -24,7 +24,7 @@ describe('Hear this page — per-site off', () => {
     expect(read('components/sites/site-renderer.tsx')).toMatch(/siteHearThisPageOff\(site\) \? \{ \[HEAR_THIS_PAGE_SITE_ATTR\]: 'off' \}/);
     const pill = read('components/hear-this-page.tsx');
     expect(pill).toMatch(/HEAR_THIS_PAGE_SITE_ATTR\}="off"/);
-    expect(pill).toMatch(/if \(siteOff\) return null/);
+    expect(pill).toMatch(/if \(siteOff !== false\) return null/); // null until the mount check — no flash on opted-out sites
     expect(HEAR_THIS_PAGE_SITE_ATTR).toBe('data-qs-hear-this-page');
   });
 });

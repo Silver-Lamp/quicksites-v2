@@ -41,6 +41,7 @@ describe('the chrome around a site speaks its language', () => {
     expect(src).toMatch(/getAttribute\(SITE_LOCALE_ATTR\)/);
     expect(src).toMatch(/addEventListener\('focusin'/);
     expect(src).toMatch(/fieldFocused && !open\) return null/);
+    expect(src).toMatch(/if \(siteOff !== false\) return null/); // nothing renders until the mount check has run (no flash on opted-out sites)
     expect(src).toMatch(/className="hidden sm:inline">\{cs\.hearThisPage\}/);
     expect(src).not.toMatch(/>\s*Hear this page\s*</);
   });

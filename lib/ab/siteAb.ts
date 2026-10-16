@@ -79,9 +79,13 @@ export function pickSiteVariant(test: SiteAbTest, cookieValue: string | null | u
  */
 export function applySiteVariantB<T>(data: T, hero: SiteAbHero): T {
   const d: any = JSON.parse(JSON.stringify(data ?? {}));
-  const pages = Array.isArray(d.pages) ? d.pages : [];
-  const page = pages[0];
-  if (!page) return d;
+  // ⚠️ The renderer's site object carries the pages TWICE — `pages` and `data.pages` — the same
+  // array by reference until the clone above splits them. The first live look (bhard.store,
+  // 2026-10-16) stamped B, set the cookie, and rendered A: only `pages` had been patched and the
+  // block tree is read from `data.pages`. Patch every pages array in the object.
+  const pageLists: any[][] = [];
+  for (const list of [d.pages, d.data?.pages]) if (Array.isArray(list) && list.length) pageLists.push(list);
+  if (!pageLists.length) return d;
   const patch: Record<string, unknown> = {};
   if (hero.video_url) patch.video_url = hero.video_url;
   if (hero.poster_url) patch.image_url = hero.poster_url;
@@ -91,11 +95,14 @@ export function applySiteVariantB<T>(data: T, hero: SiteAbHero): T {
   if (hero.cta_text) patch.cta_text = hero.cta_text;
   patch.layout_mode = hero.layout_mode ?? (hero.video_url ? 'background' : 'inline');
   if (hero.video_url) patch.video_has_audio = hero.has_audio === true;
-  for (const key of ['blocks', 'content_blocks'] as const) {
-    const list = Array.isArray(page[key]) ? page[key] : [];
-    const b = list.find((x: any) => x?.type === 'hero');
-    if (!b) continue;
-    for (const c of [b.content, b.props]) if (c && typeof c === 'object') Object.assign(c, patch);
+  for (const pages of pageLists) {
+    const page = pages[0];
+    for (const key of ['blocks', 'content_blocks'] as const) {
+      const list = Array.isArray(page?.[key]) ? page[key] : [];
+      const b = list.find((x: any) => x?.type === 'hero');
+      if (!b) continue;
+      for (const c of [b.content, b.props]) if (c && typeof c === 'object') Object.assign(c, patch);
+    }
   }
   return d;
 }

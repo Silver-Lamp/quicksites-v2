@@ -71,14 +71,19 @@ export async function uploadOrgAsset(file: File, opts: { orgId: string; orgSlug:
     .upload(key, buffer, { contentType, cacheControl: '86400', upsert: true });
   if (error) throw new Error(error.message);
 
-  // Prefer a signed URL (private bucket); fall back to public if the bucket is public.
+  // ⚠️ The URL goes into `organizations.logo_url` and is served for the life of the brand. This
+  // used to "prefer a signed URL" (one year) on a bucket that is PUBLIC — and on 2026-10-16 the
+  // QuickSites, Point Seven and CedarSites logos were alt text, because their tokens had run out
+  // (lib/org/storageUrl.ts). A public bucket gets the plain public URL. Only a private bucket is
+  // signed, and then for the longest span the API allows, because there is no re-sign job.
+  const { data: bucket } = await supabaseAdmin.storage.getBucket(ORG_ASSETS_BUCKET);
   let url: string | null = null;
-  try {
-    const { data: signed } = await supabaseAdmin.storage.from(ORG_ASSETS_BUCKET).createSignedUrl(data.path, 60 * 60 * 24 * 365);
+  if (bucket?.public) {
+    url = supabaseAdmin.storage.from(ORG_ASSETS_BUCKET).getPublicUrl(data.path).data.publicUrl;
+  } else {
+    const { data: signed } = await supabaseAdmin.storage.from(ORG_ASSETS_BUCKET).createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10);
     url = signed?.signedUrl ?? null;
-  } catch {
-    /* fall through */
+    if (!url) throw new Error('could not sign the asset URL on a private bucket');
   }
-  if (!url) url = supabaseAdmin.storage.from(ORG_ASSETS_BUCKET).getPublicUrl(data.path).data.publicUrl;
   return { url, path: data.path, contentType, bytes: buffer.byteLength };
 }

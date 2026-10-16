@@ -8,6 +8,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
+import { publicStorageUrl } from '@/lib/org/storageUrl';
 
 export type CampaignBrand = {
   orgId: string | null;
@@ -45,8 +46,9 @@ function rowToBrand(row: any): CampaignBrand {
     orgId: String(row.id),
     name: row.name || 'QuickSites',
     slug: row.slug ?? null,
-    logoUrl: row.logo_url ?? null,
-    darkLogoUrl: row.dark_logo_url ?? null,
+    // Normalised on read: pre-2026-10-16 rows carry signed (expiring) storage URLs.
+    logoUrl: publicStorageUrl(row.logo_url ?? null),
+    darkLogoUrl: publicStorageUrl(row.dark_logo_url ?? null),
     baseUrl: hostToBase(row.canonical_host || row.primary_domain) ?? publicBaseUrl(),
     emailFrom: row.email_from ?? null,
     supportEmail: row.support_email ?? null,

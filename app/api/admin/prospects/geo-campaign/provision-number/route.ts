@@ -63,6 +63,17 @@ export async function POST(req: Request) {
     });
   }
 
+  // ⚠️ REFUSE BEFORE BUYING when there is no pitch site to put the number on. On 2026-10-16
+  // paterson-auto-repair.com (an auto_shop_competition row with no template) bought a number,
+  // texted the business "calls are being forwarded to you", and the push then reported "campaign
+  // has no pitch site" — a line nobody can dial and a notice about calls that cannot come.
+  if (!campaign.template_id) {
+    return NextResponse.json(
+      { error: 'This campaign has no pitch site to show the number on; nothing would ring it.', code: 'no_pitch_site' },
+      { status: 409 },
+    );
+  }
+
   // Where calls forward: explicit body → existing → a platform fallback capture line.
   const forwardTo =
     (typeof body.forwardTo === 'string' && body.forwardTo.trim()) ||

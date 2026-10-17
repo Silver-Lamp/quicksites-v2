@@ -26,13 +26,22 @@ export async function resolveBusinessNameByPhone(phone: string): Promise<string 
   const key = last10(phone);
   if (!key) return null;
 
-  // No index can serve a suffix match, but this table is small (~1.2k rows) and this runs when an
-  // operator picks a destination, never on the call path — so a scan is the right trade here.
+  // ⚠️ Narrowed SERVER-SIDE on the last seven digits. This used to fetch "all rows, limit 5000"
+  // and compare in JS — but PostgREST caps any response at its `max_rows` (1,000 on Supabase by
+  // default), so with 1,429 phoned prospects the scan silently saw the first thousand. On
+  // 2026-10-16 two freshly provisioned lines (Lynn, Paterson) resolved to NO name while their
+  // prospects sat past row 1,000, and callers would have heard "a local towing company serving
+  // Lynn". `.limit(5000)` was not a cap; it was a wish. Phones are stored as typed —
+  // "(781) 500-2083" or "+17815002083" — so both spellings of the tail are matched, and the exact
+  // last-ten compare below still decides.
+  const tail7 = key.slice(-7);
+  const dashed = `${tail7.slice(0, 3)}-${tail7.slice(3)}`;
   const { data, error } = await supabaseAdmin
     .from('outreach_prospects')
     .select('business_name, phone')
     .not('phone', 'is', null)
-    .limit(5000);
+    .or(`phone.ilike.%${dashed},phone.ilike.%${tail7}`)
+    .limit(200);
   if (error || !Array.isArray(data)) return null;
 
   for (const row of data as Array<{ business_name: string | null; phone: string | null }>) {

@@ -566,6 +566,20 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   0–8. `lib/gsc/latestWindow.ts#latestWindowTotals` keeps the latest `end_date` per host;
   `latestWindow.test.ts` source-guards every reader. ⚠️ `rank_status='page1'` is NOT demand — a
   position-1.3 domain with 4 impressions is first for a query nobody types.
+  **Step 1 as carried out (2026-10-16 evening):** five numbers bought for the unnumbered trade
+  domains with real demand and a vetted pick — paterson-auto-repair (49 imps → River auto Tech),
+  wenatchee-towing (9 → Direct Towing), germantown-towing (8 → 5 Star Towing MKE), oak-harbor-towing
+  (5 → Deception Towing), lynn-towing (5 → Koala towing); the four towing sites serve their
+  numbers. ⚠️ **Paterson is an `auto_shop_competition` row with NO template** — the domain fronts
+  the SecondSet auto-shop directory, the push wrote nothing, and the business had already been
+  texted "calls are being forwarded"; a second text said nothing will come. `provision-number`
+  now refuses a campaign without a pitch site BEFORE buying (`no_pitch_site`, 409).
+  ⚠️ **`.limit(5000)` is not a cap, it is a wish: PostgREST returns at most `max_rows` (1,000 on
+  Supabase by default).** `resolveBusinessNameByPhone` scanned "all prospects" in JS and, with
+  1,429 phoned rows, never saw Koala towing or River auto Tech — two of the five new lines would
+  have announced "a local towing company serving Lynn". Narrow server-side (`phone.ilike.%500-2083`)
+  and compare the last ten in JS. Any "fetch everything and filter in code" over a table that can
+  grow past a thousand rows has this bug.
 - **Fleet scope — exclude at READ, never at write (2026-09-22)**: `lib/gsc/fleetScope.ts`. One
   personal page was **21% of every impression across 92 domains** and had been setting the fleet's
   average position invisibly. Aggregates now drop `NON_COMMERCIAL_PAGES` and **say what they

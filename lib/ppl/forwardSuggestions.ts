@@ -5,6 +5,7 @@
 // All the judgement lives there; this file only fetches.
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
+import { latestWindowTotals, type HarvestRow } from '@/lib/gsc/latestWindow';
 import {
   recommendForwardTargets,
   deconflictTopPicks,
@@ -59,11 +60,14 @@ export async function suggestForwardTargets(
   // so both sides go through the same normalizer rather than comparing raw strings.
   const demand = new Map<string, number>();
   if (opts.requireDemand !== false) {
-    const { data: gsc } = await supabaseAdmin.from('gsc_queries').select('domain, impressions');
-    for (const g of gsc ?? []) {
-      const key = normalizeGscDomain(g.domain);
-      if (key) demand.set(key, (demand.get(key) ?? 0) + (g.impressions ?? 0));
-    }
+    // ⚠️ The latest 28-day CAPTURE per host, not a sum across the daily captures — that read
+    // 2,247 for a domain whose real window was 64 (lib/gsc/latestWindow.ts, 2026-10-16).
+    const { data: gsc } = await supabaseAdmin
+      .from('gsc_queries')
+      .select('domain, end_date, impressions, clicks')
+      .gte('end_date', new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10))
+      .limit(50000);
+    for (const [key, t] of latestWindowTotals((gsc ?? []) as HarvestRow[])) demand.set(key, t.impressions);
   }
 
   const rows = campaigns ?? [];

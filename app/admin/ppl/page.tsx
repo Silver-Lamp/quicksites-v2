@@ -25,6 +25,8 @@ import { decidedByLabel } from '@/lib/ppl/forwardCandidates';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import { accountFamily, listTrackingNumbers, twilioConfigured } from '@/lib/outreach/callTracking';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import PplCorpusSection from '@/components/admin/ppl-corpus-section';
+import { loadPplCorpus } from '@/lib/ppl/corpus';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -120,6 +122,9 @@ export default async function PplOpsPage() {
     leftMessage: 0,
     rate: null as number | null,
   }));
+
+  // What the calls say (lib/ppl/corpus.ts) — the 2026-10-16 corpus analysis, re-derived per load.
+  const corpus = await loadPplCorpus().catch(() => null);
 
   const base = publicBaseUrl();
   const { data: allCampaigns } = await supabaseAdmin
@@ -274,6 +279,8 @@ export default async function PplOpsPage() {
       </section>
 
       {/* The sequence */}
+      {corpus ? <PplCorpusSection s={corpus} /> : null}
+
       <section className="mt-10">
         <h2 className="text-lg font-semibold">The sequence</h2>
         <p className="text-sm text-muted-foreground">

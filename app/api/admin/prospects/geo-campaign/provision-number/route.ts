@@ -19,6 +19,7 @@ import { isOptedOut, sendForwardNotice } from '@/lib/ppl/forwardNotice';
 import { pushTrackingNumberToSite } from '@/lib/ppl/pushTrackingNumberToSite';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import { isCompetitionKind } from '@/lib/outreach/competitionKinds';
+import { syncForwardAddressToSite } from '@/lib/ppl/syncForwardAddress';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -109,6 +110,8 @@ export async function POST(req: Request) {
     // bridge (lib/ppl/forwardAnnounce.ts). setCampaignTracking writes only the number; without
     // this every freshly provisioned line announced "a local towing company serving <city>".
     await setCampaignForwardTo(campaignId, forwardTo).catch(() => undefined);
+    // …and the footer address follows that business (lib/ppl/footerAddress.ts). Best-effort.
+    const footer = await syncForwardAddressToSite(campaignId).catch((e) => ({ ok: false, kind: 'error' as const, republished: false, warning: e instanceof Error ? e.message : String(e) }));
 
     // ⚠️ THE STEP THAT MAKES THE PURCHASE MEAN ANYTHING. Everything above succeeds while the
     // page a caller sees still advertises the old phone — so the calls go somewhere untracked,
@@ -138,7 +141,7 @@ export async function POST(req: Request) {
       body.sendNotice === false
         ? { sent: false, reason: 'skipped' }
         : await sendForwardNotice(campaignId);
-    return NextResponse.json({ ok: true, number: phoneNumber, forwardTo, notice, site: sitePush, locality });
+    return NextResponse.json({ ok: true, number: phoneNumber, forwardTo, notice, site: sitePush, footer, locality });
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message || 'Could not provision a number.' },

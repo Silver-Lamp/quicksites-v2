@@ -323,12 +323,16 @@ export default function FooterRender({
   const cityState = [city, state].filter(Boolean).join(', ');
   const cityStatePostal = [cityState, postal].filter(Boolean).join(' ');
 
-  const fullAddressForDisplay = [addressLine1, addressLine2, cityStatePostal]
+  // A service-area label ("Serving Richland, WA") already names the place; a second "Richland, WA"
+  // line under it reads as a street address that is not there (lib/ppl/footerAddress.ts).
+  const isServiceArea = /^serving\b/i.test(addressLine1);
+  const fullAddressForDisplay = [addressLine1, addressLine2, isServiceArea ? '' : cityStatePostal]
     .filter(Boolean)
     .join('\n');
 
-  const fullAddressForGeocode =
-    [addressLine1, addressLine2, city, state, postal].filter(Boolean).join(', ') || null;
+  const fullAddressForGeocode = isServiceArea
+    ? null // a service area is not a point; nothing to geocode or pin
+    : [addressLine1, addressLine2, city, state, postal].filter(Boolean).join(', ') || null;
 
   const latMeta = contact.latitude;
   const lonMeta = contact.longitude;

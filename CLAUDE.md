@@ -589,7 +589,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   set-forward and provision-number) and an OWNER's own address is never clobbered
   (`footerAddressIsAuto`). The footer skips its city line and never geocodes a "Serving …" label.
   Backfilled with `force` on the tracked lines. The park-registry fill belongs to claimed sites
-  with a real owner, not to these.
+  with a real owner, not to these. ⚠️ **The first backfill "republished" graftontowing.com and
+  the live footer still showed the coffee shop** — the domain is bound through the LEGACY
+  `sites` row, and `republishIfPublished` refreshed only `published_sites`. It now also mints the
+  `sites.published_snapshot_id` copy from the draft (`refreshLegacySiteSnapshots`; `hash` is NOT
+  NULL; rev = high-water mark + 1), so every caller — number push, backdrop upgrade, hero paint,
+  footer sync — reaches both served copies (`republishBothSnapshots.test.ts`). A PO box is not a
+  street (`vashon-handyman` showed "PO Box 30") — it falls back to the service area.
   ⚠️ **`.limit(5000)` is not a cap, it is a wish: PostgREST returns at most `max_rows` (1,000 on
   Supabase by default).** `resolveBusinessNameByPhone` scanned "all prospects" in JS and, with
   1,429 phoned rows, never saw Koala towing or River auto Tech — two of the five new lines would

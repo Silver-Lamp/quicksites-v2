@@ -15,6 +15,7 @@ export function parseUsAddress(raw: string | null | undefined): ParsedUsAddress 
   if (parts.length < 2) return null;
   const line1 = parts[0];
   if (!/\d/.test(line1)) return null; // "Sheffield, AL" is a town, not a street
+  if (/^p\.?\s*o\.?\s*box\b/i.test(line1)) return null; // a PO box is a mailbox, not a place a footer should send anyone (vashon-handyman, 2026-10-17)
   const stateZip = parts[parts.length - 1];
   const m = /^([A-Z]{2})\s*(\d{5}(?:-\d{4})?)?$/i.exec(stateZip);
   const city = parts.length >= 3 ? parts[parts.length - 2] : '';

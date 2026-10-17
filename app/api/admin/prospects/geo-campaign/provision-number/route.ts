@@ -18,6 +18,7 @@ import {
 import { isOptedOut, sendForwardNotice } from '@/lib/ppl/forwardNotice';
 import { pushTrackingNumberToSite } from '@/lib/ppl/pushTrackingNumberToSite';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
+import { isCompetitionKind } from '@/lib/outreach/competitionKinds';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,7 +68,10 @@ export async function POST(req: Request) {
   // paterson-auto-repair.com (an auto_shop_competition row with no template) bought a number,
   // texted the business "calls are being forwarded to you", and the push then reported "campaign
   // has no pitch site" — a line nobody can dial and a notice about calls that cannot come.
-  if (!campaign.template_id) {
+  // A competition row (auto-shop / restaurant apex) has no template: its DIRECTORY page reads
+  // the campaign row at render and shows the line with the answering shop's name.
+  const directoryPage = isCompetitionKind((campaign as { kind?: string | null }).kind);
+  if (!campaign.template_id && !directoryPage) {
     return NextResponse.json(
       { error: 'This campaign has no pitch site to show the number on; nothing would ring it.', code: 'no_pitch_site' },
       { status: 409 },
@@ -110,11 +114,13 @@ export async function POST(req: Request) {
     // page a caller sees still advertises the old phone — so the calls go somewhere untracked,
     // the campaign reads "0 calls", and the business we are about to text gets nothing. Never
     // fatal: the number is already bought, so a failure here reports rather than 500s.
-    const sitePush = await pushTrackingNumberToSite({
-      templateId: campaign.template_id,
-      trackingNumber: phoneNumber,
-      actorId: operator.id ?? null,
-    }).catch((e) => ({ ok: false, fields: 0, republished: false, warning: String(e?.message || e) }));
+    const sitePush = directoryPage
+      ? { ok: true, fields: 0, republished: false, warning: 'directory page reads the campaign row; nothing to push' }
+      : await pushTrackingNumberToSite({
+          templateId: campaign.template_id,
+          trackingNumber: phoneNumber,
+          actorId: operator.id ?? null,
+        }).catch((e) => ({ ok: false, fields: 0, republished: false, warning: String(e?.message || e) }));
     // The forwarded business is told once, and can reply STOP (docs/PPL_VERTICAL.md §9).
     // Refused for an opted-out phone: the number is bought but nothing forwards to that business.
     if (await isOptedOut(forwardTo)) {

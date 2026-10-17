@@ -41,3 +41,22 @@ describe('SecondSet copy is gated', () => {
     expect(CODE).toMatch(/Trusted auto shops in/);
   });
 });
+
+describe('the call line names who answers (2026-10-16, paterson-auto-repair.com)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { callLineFor } = require('@/lib/outreach/autoShopCompetitionDirectory');
+  it('exists only with a number AND a named forward-to', () => {
+    expect(callLineFor({ tracking_number: '+18565432146', forward_to: '+19738072255', forward_to_name: 'River auto Tech and Tire shop LLC' })).toEqual({ number: '+18565432146', display: '(856) 543-2146', answeredBy: 'River auto Tech and Tire shop LLC' });
+    expect(callLineFor({ tracking_number: '+18565432146', forward_to: '+19738072255', forward_to_name: null })).toBeNull();
+    expect(callLineFor({ tracking_number: null, forward_to: '+19738072255', forward_to_name: 'x' })).toBeNull();
+  });
+  it('the page says who answers next to the number and never calls it the directory\'s own', () => {
+    expect(CODE).toMatch(/data-directory-call-line/);
+    const at = CODE.indexOf('data-directory-call-line');
+    const block = CODE.slice(at, at + 900);
+    expect(block).toMatch(/tel:\$\{dir\.callLine\.number\}/);
+    expect(block).toMatch(/Answered by .*\{dir\.callLine\.answeredBy\}/s);
+    expect(block).not.toMatch(/our (number|line|team)|call us/i);
+    expect(CODE).toMatch(/dir\.callLine \? \(/);
+  });
+});

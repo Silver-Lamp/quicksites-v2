@@ -10,6 +10,8 @@ describe('parseUsAddress', () => {
     expect(parseUsAddress('4944 County Rd 222, Cullman, AL 35057, USA')).toEqual({ line1: '4944 County Rd 222', city: 'Cullman', state: 'AL', postal: '35057' });
     expect(parseUsAddress('222 E Bruneau Ave # B, Kennewick, WA 99336, USA')).toMatchObject({ line1: '222 E Bruneau Ave # B', city: 'Kennewick', state: 'WA' });
     expect(parseUsAddress('Sheffield, AL')).toBeNull();
+    expect(parseUsAddress('PO Box 30, Vashon, WA 98070, USA')).toBeNull();
+    expect(parseUsAddress('P.O. Box 30, Vashon, WA 98070')).toBeNull();
     expect(parseUsAddress('')).toBeNull();
   });
 });

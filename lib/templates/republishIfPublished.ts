@@ -126,5 +126,65 @@ export async function republishIfPublished(
       warning: `Committed, but republish failed (${error.message}) — the live site is unchanged until it republishes.`,
     };
   }
-  return { republished: true };
+  // ⚠️ A SITE IS SERVED FROM TWO SNAPSHOTS. `publish_template_demo` refreshes `published_sites`
+  // (the platform copy and templates.custom_domain hosts). A custom host bound through the LEGACY
+  // `sites` row is served from `sites.published_snapshot_id → snapshots.data`, which no publish
+  // path wrote — so graftontowing.com kept a coffee shop's address in its footer after a
+  // "republished" footer sync (2026-10-17). Mint that copy too, from the same draft.
+  const legacy = await refreshLegacySiteSnapshots(templateId).catch((e) => ({ refreshed: 0, warning: e instanceof Error ? e.message : String(e) }));
+  return legacy.warning ? { republished: true, warning: `platform copy republished; legacy sites snapshot: ${legacy.warning}` } : { republished: true };
+}
+
+/**
+ * For every legacy `sites` row pinned to this template, clone its pinned snapshot, overwrite the
+ * content columns from the template's current row, and repoint the site at the new snapshot.
+ * Mirrors scripts/lib/republishTemplate.mjs. `(template_id, rev)` is unique, so the rev is the
+ * table's high-water mark + 1; `hash` is NOT NULL (sha256 of the data).
+ */
+export async function refreshLegacySiteSnapshots(templateId: string): Promise<{ refreshed: number; warning?: string }> {
+  const { data: siteRows } = await supabaseAdmin
+    .from('sites')
+    .select('id, published_snapshot_id')
+    .eq('template_id', templateId)
+    .not('published_snapshot_id', 'is', null);
+  const rows = (siteRows ?? []) as { id: string; published_snapshot_id: string }[];
+  if (!rows.length) return { refreshed: 0 };
+
+  const { data: tpl, error: tErr } = await supabaseAdmin.from('templates').select('*').eq('id', templateId).maybeSingle();
+  if (tErr || !tpl) return { refreshed: 0, warning: `template read failed: ${tErr?.message ?? 'not found'}` };
+  const { data: top } = await supabaseAdmin.from('snapshots').select('rev').eq('template_id', templateId).order('rev', { ascending: false }).limit(1).maybeSingle();
+  const { createHash } = await import('node:crypto');
+
+  let refreshed = 0;
+  const warnings: string[] = [];
+  for (const site of rows) {
+    const { data: pinned } = await supabaseAdmin.from('snapshots').select('*').eq('id', site.published_snapshot_id).maybeSingle();
+    if (!pinned) {
+      warnings.push(`site ${site.id}: pinned snapshot missing`);
+      continue;
+    }
+    const next: Record<string, unknown> = { ...(pinned as Record<string, unknown>) };
+    delete next.id;
+    delete next.created_at;
+    // Every column the snapshot shares with the template takes the template's current value.
+    for (const k of Object.keys(next)) if (k in (tpl as Record<string, unknown>) && !['rev', 'hash', 'published'].includes(k)) next[k] = (tpl as Record<string, unknown>)[k];
+    next.template_id = templateId;
+    next.rev = Math.max(Number((tpl as { rev?: number }).rev ?? 0), Number((top as { rev?: number } | null)?.rev ?? 0), refreshed) + 1;
+    next.hash = createHash('sha256').update(JSON.stringify((tpl as { data?: unknown }).data ?? {})).digest('hex');
+    next.published = true;
+    next.created_at = new Date().toISOString();
+    next.commit_message = 'republishIfPublished: legacy sites snapshot refreshed from the draft';
+    const { data: inserted, error: iErr } = await supabaseAdmin.from('snapshots').insert(next).select('id, rev').single();
+    if (iErr || !inserted) {
+      warnings.push(`site ${site.id}: snapshot insert failed: ${iErr?.message ?? 'no row'}`);
+      continue;
+    }
+    const { error: uErr } = await supabaseAdmin
+      .from('sites')
+      .update({ published_snapshot_id: (inserted as { id: string }).id, published_rev: (inserted as { rev: number }).rev, published_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', site.id);
+    if (uErr) warnings.push(`site ${site.id}: repoint failed: ${uErr.message}`);
+    else refreshed += 1;
+  }
+  return { refreshed, ...(warnings.length ? { warning: warnings.join('; ') } : {}) };
 }

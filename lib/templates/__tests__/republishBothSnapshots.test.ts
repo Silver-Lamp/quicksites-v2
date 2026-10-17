@@ -17,4 +17,6 @@ it('after the platform RPC, the legacy sites snapshot is minted from the draft a
   expect(src).toMatch(/\.update\(\{ published_snapshot_id: /);
   // never a silent failure: a legacy miss rides out as a warning
   expect(src).toMatch(/legacy sites snapshot: \$\{legacy\.warning\}/);
+  // the palette columns carry CHECK constraints the template's values can violate — never copied
+  expect(src).toMatch(/KEEP_PINNED = new Set\(\['rev', 'hash', 'published', 'brand', 'theme'\]\)/);
 });

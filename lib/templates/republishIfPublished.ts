@@ -166,8 +166,13 @@ export async function refreshLegacySiteSnapshots(templateId: string): Promise<{ 
     const next: Record<string, unknown> = { ...(pinned as Record<string, unknown>) };
     delete next.id;
     delete next.created_at;
-    // Every column the snapshot shares with the template takes the template's current value.
-    for (const k of Object.keys(next)) if (k in (tpl as Record<string, unknown>) && !['rev', 'hash', 'published'].includes(k)) next[k] = (tpl as Record<string, unknown>)[k];
+    // Every column the snapshot shares with the template takes the template's current value —
+    // except the legacy palette columns, which carry CHECK constraints on snapshots that the
+    // template's values do not satisfy (`brand` must be green/blue/red; graftontowing's template
+    // says 'default' and the first refresh failed on `snapshots_brand_check`, 2026-10-17). They
+    // are not content; the pinned snapshot's values stay.
+    const KEEP_PINNED = new Set(['rev', 'hash', 'published', 'brand', 'theme']);
+    for (const k of Object.keys(next)) if (k in (tpl as Record<string, unknown>) && !KEEP_PINNED.has(k)) next[k] = (tpl as Record<string, unknown>)[k];
     next.template_id = templateId;
     next.rev = Math.max(Number((tpl as { rev?: number }).rev ?? 0), Number((top as { rev?: number } | null)?.rev ?? 0), refreshed) + 1;
     next.hash = createHash('sha256').update(JSON.stringify((tpl as { data?: unknown }).data ?? {})).digest('hex');

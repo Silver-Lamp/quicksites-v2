@@ -364,6 +364,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `own_business` as defence in depth. Checked after the screen list, before the PPL gate.
   `POST /api/admin/ppl/text-business` lets an operator text a campaign's forward-to from the
   server (Twilio creds are not local). Pinned by `lib/ppl/__tests__/ownNumberCall.test.ts`.
+  **`/admin/ppl` carries "The corpus — what the calls say" (2026-10-16, owner: "analyze our
+  corpus … work it into our PPL page")**: `lib/ppl/corpus.ts#summariseCorpus` (pure, tested)
+  re-derives on every load the 30-day outcome table, the AI-read mix, a billing-threshold table
+  (how many customer calls would bill at 90/60/45/30 s — the customer calls so far ran 15, 30
+  and 159 s, so 90 s bills one in three), the cost of the lines, a per-line table, and FOUR
+  derived lists in place of written recommendations: **pitch now** (a customer-read lead ≥90 s
+  on the line), **ranked domains with no number** (page-one, owned, not a directory — the only
+  supply that produced customers; 24 of 29 page-one domains had none), **destinations that do
+  not answer** (≥3 dials, 0 answered — test-dial before re-pointing), **noise lines** (≥75%
+  vendor/robocall, no customer — new unranked domains draw prospectors). The finding that
+  shaped it: customers come only from ranked domains with impressions; the eleven 6-day-old
+  Vashon lines produced 39 calls and no customer lead. Never type a domain into these lists.
   **And after EVERY call the business took, it is texted the caller's number** (owner, same
   day: "text them the number as well") — `lib/ppl/connectedCallNotice.ts` (pure decision:
   `connected` or `brief`, forwards only, never the own-number case; copy says site · number ·

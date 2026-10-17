@@ -14,6 +14,8 @@ export const NUMBER_MONTHLY_USD = 1.15;
 export const BILLABLE_SECONDS_OPTIONS = [90, 60, 45, 30] as const;
 /** Industries whose sites are directories, never a business a caller can hire — never a PPL line. */
 export const NON_BUSINESS_INDUSTRIES = new Set(['dome_builder', 'treehouse_builder']);
+/** A line is worth a number once its latest 28-day window shows this many impressions (the suggestion gate uses 10; 5 is the watch list). */
+export const DEMAND_MIN_IMPRESSIONS = 5;
 
 export type CorpusCampaign = {
   id: string;
@@ -60,10 +62,14 @@ export type LineRow = {
   forwardToName: string | null;
   impressions28d: number | null;
   clicks28d: number | null;
+  /** Every call on the line except the business ringing itself / operator tests (voicemails included). */
+  calls: number;
   dials: number;
   answered: number;
   leads90: number;
   customers: number;
+  /** Calls that are BOTH customer-read AND answered ≥90 s — the same call, the pitch's evidence. */
+  customerLeads90: number;
   junk: number;
   ownOrTest: number;
   answerRate: number | null;
@@ -85,7 +91,7 @@ export type CorpusSummary = {
   numberCostMonthlyUsd: number;
   connectedMinutesAll: number;
   distinctCallers: number;
-  supply: { pageOne: number; pageOneWithNumber: number; rankedWithoutNumber: Array<{ domain: string; rankPosition: number | null; city: string | null; industry: string | null }> };
+  supply: { pageOne: number; pageOneWithNumber: number; demandWithoutNumber: Array<{ domain: string; impressions28d: number; clicks28d: number; rankStatus: string | null; rankPosition: number | null; city: string | null; industry: string | null }> };
   pitchNow: LineRow[];
   nonAnswerers: LineRow[];
   noiseLines: LineRow[];
@@ -164,10 +170,12 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
       forwardToName: camp.forward_to_name,
       impressions28d: gscByHost.get(hostOf(camp.domain))?.impressions ?? null,
       clicks28d: gscByHost.get(hostOf(camp.domain))?.clicks ?? null,
+      calls: 0,
       dials: 0,
       answered: 0,
       leads90: 0,
       customers: 0,
+      customerLeads90: 0,
       junk: 0,
       ownOrTest: 0,
       answerRate: null,
@@ -175,10 +183,14 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
     };
     if (!line.lastCallAt || c.created_at > line.lastCallAt) line.lastCallAt = c.created_at;
     if (own) line.ownOrTest += 1;
-    else if (c.handling === 'forward' || c.handling == null) {
-      if (d === 'connected' || d === 'brief' || d === 'unanswered') line.dials += 1;
-      if (d === 'connected') line.answered += 1;
-      if (d === 'connected' && (c.call_duration ?? 0) >= 90) line.leads90 += 1;
+    else {
+      line.calls += 1;
+      if (c.handling === 'forward' || c.handling == null) {
+        if (d === 'connected' || d === 'brief' || d === 'unanswered') line.dials += 1;
+        if (d === 'connected') line.answered += 1;
+        if (d === 'connected' && (c.call_duration ?? 0) >= 90) line.leads90 += 1;
+        if (read === 'customer' && d === 'connected' && (c.call_duration ?? 0) >= 90) line.customerLeads90 += 1;
+      }
       if (read === 'customer') line.customers += 1;
       if (read && JUNK_READS.has(read)) line.junk += 1;
     }
@@ -192,7 +204,7 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
       campaignId: camp.id, domain: camp.domain, city: camp.city, industry: camp.industry_key, rankStatus: camp.rank_status, rankPosition: camp.rank_position,
       ageDays: camp.created_at ? Math.floor((nowMs - Date.parse(camp.created_at)) / 86_400_000) : null, forwardToName: camp.forward_to_name,
       impressions28d: gscByHost.get(hostOf(camp.domain))?.impressions ?? null, clicks28d: gscByHost.get(hostOf(camp.domain))?.clicks ?? null,
-      dials: 0, answered: 0, leads90: 0, customers: 0, junk: 0, ownOrTest: 0, answerRate: null, lastCallAt: null,
+      calls: 0, dials: 0, answered: 0, leads90: 0, customers: 0, customerLeads90: 0, junk: 0, ownOrTest: 0, answerRate: null, lastCallAt: null,
     });
   }
   const lines = Array.from(perLine.values()).map((l) => ({ ...l, answerRate: l.dials ? l.answered / l.dials : null }));
@@ -204,10 +216,15 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
 
   const owned = (c: CorpusCampaign) => c.domain_status === 'registered' || c.domain_status === 'attached';
   const pageOne = input.campaigns.filter((c) => c.rank_status === 'page1' && owned(c));
-  const rankedWithoutNumber = pageOne
-    .filter((c) => !c.tracking_number && !NON_BUSINESS_INDUSTRIES.has(c.industry_key ?? ''))
-    .sort((a, b) => (a.rank_position ?? 99) - (b.rank_position ?? 99))
-    .map((c) => ({ domain: c.domain, rankPosition: c.rank_position, city: c.city, industry: c.industry_key }));
+  // ⚠️ DEMAND, not rank. The first cut listed page-one domains; measured honestly a position-1.3
+  // domain had 4 impressions a month (CLAUDE.md, the harvest lesson). A line is supply when its
+  // latest 28-day window shows impressions — whatever its rank says.
+  const demandWithoutNumber = input.campaigns
+    .filter((c) => owned(c) && !c.tracking_number && !NON_BUSINESS_INDUSTRIES.has(c.industry_key ?? '') && c.industry_key !== 'restaurant')
+    .map((c) => ({ c, g: gscByHost.get(hostOf(c.domain)) }))
+    .filter(({ g }) => (g?.impressions ?? 0) >= DEMAND_MIN_IMPRESSIONS)
+    .sort((a, b) => (b.g?.impressions ?? 0) - (a.g?.impressions ?? 0))
+    .map(({ c, g }) => ({ domain: c.domain, impressions28d: g?.impressions ?? 0, clicks28d: g?.clicks ?? 0, rankStatus: c.rank_status, rankPosition: c.rank_position, city: c.city, industry: c.industry_key }));
 
   const numbers = input.campaigns.filter((c) => c.tracking_number).length;
 
@@ -226,11 +243,13 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
     numberCostMonthlyUsd: Math.round(numbers * NUMBER_MONTHLY_USD * 100) / 100,
     connectedMinutesAll: Math.round(connectedSeconds / 60),
     distinctCallers: callers.size,
-    supply: { pageOne: pageOne.length, pageOneWithNumber: pageOne.filter((c) => c.tracking_number).length, rankedWithoutNumber },
+    supply: { pageOne: pageOne.length, pageOneWithNumber: pageOne.filter((c) => c.tracking_number).length, demandWithoutNumber },
     // Evidence-based, never a name typed by hand:
-    pitchNow: lines.filter((l) => l.leads90 > 0 && l.customers > 0),
+    // The SAME call must be customer-read and ≥90 s — a long "unknown" plus a short customer call
+    // on one line is not a lead to pitch on.
+    pitchNow: lines.filter((l) => l.customerLeads90 > 0),
     nonAnswerers: lines.filter((l) => l.dials >= 3 && l.answered === 0),
-    noiseLines: lines.filter((l) => l.dials + l.ownOrTest >= 3 && l.customers === 0 && l.junk >= 0.75 * Math.max(1, l.dials)),
+    noiseLines: lines.filter((l) => l.calls >= 3 && l.customers === 0 && l.junk >= 0.75 * l.calls),
   };
 }
 

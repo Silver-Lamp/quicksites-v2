@@ -13,6 +13,7 @@ const camps: CorpusCampaign[] = [
   { id: 'vash', domain: 'vashon-roofing.com', city: 'Vashon', industry_key: 'roofing', rank_status: 'ranking', rank_position: 73.9, tracking_number: '+12065550100', forward_to: '+12065550101', forward_to_name: 'Celtic Construction', domain_status: 'attached', created_at: iso(8) },
   { id: 'rent', domain: 'renton-towing.com', city: 'Renton', industry_key: 'towing', rank_status: 'ranking', rank_position: 57.8, tracking_number: '+12533568119', forward_to: '+12532170639', forward_to_name: 'V’Z Towing', domain_status: 'attached', created_at: iso(95) },
   { id: 'ash', domain: 'ashland-city-towing.com', city: 'Ashland City', industry_key: 'towing', rank_status: 'page1', rank_position: 1.3, tracking_number: null, forward_to: null, forward_to_name: null, domain_status: 'registered', created_at: iso(60) },
+  { id: 'lynnr', domain: 'lynn-ranking.com', city: 'Lynn', industry_key: 'towing', rank_status: 'ranking', rank_position: 14.6, tracking_number: null, forward_to: null, forward_to_name: null, domain_status: 'registered', created_at: iso(60) },
   { id: 'dome', domain: 'utahdomebuilders.com', city: 'Utah', industry_key: 'dome_builder', rank_status: 'page1', rank_position: 4.2, tracking_number: null, forward_to: null, forward_to_name: null, domain_status: 'registered', created_at: iso(30) },
   { id: 'old', domain: 'old-towing.com', city: 'X', industry_key: 'towing', rank_status: 'unranked', rank_position: null, tracking_number: '+12065550199', forward_to: null, forward_to_name: null, domain_status: 'attached', created_at: iso(300) },
 ];
@@ -32,7 +33,7 @@ const calls: CorpusCall[] = [
 ];
 
 describe('summariseCorpus', () => {
-  const s = summariseCorpus({ campaigns: camps, calls, gsc: [{ domain: 'https://www.richland-towing.com/', end_date: '2026-10-12', impressions: 9000, clicks: 900 }, { domain: 'https://www.richland-towing.com/', end_date: '2026-10-13', impressions: 2000, clicks: 100 }, { domain: 'richland-towing.com', end_date: '2026-10-13', impressions: 247, clicks: 0 }], nowMs: now });
+  const s = summariseCorpus({ campaigns: camps, calls, gsc: [{ domain: 'https://www.richland-towing.com/', end_date: '2026-10-12', impressions: 9000, clicks: 900 }, { domain: 'https://www.richland-towing.com/', end_date: '2026-10-13', impressions: 2000, clicks: 100 }, { domain: 'richland-towing.com', end_date: '2026-10-13', impressions: 247, clicks: 0 }, { domain: 'sc-domain:ashland-city-towing.com', end_date: '2026-10-13', impressions: 4, clicks: 0 }, { domain: 'sc-domain:lynn-ranking.com', end_date: '2026-10-13', impressions: 12, clicks: 1 }], nowMs: now });
   it('30-day outcomes count the window only; the all-time table counts everything', () => {
     expect(s.outcomes30d).toMatchObject({ calls: 8, leads90: 1, answered15to89: 2, unanswered: 4, voicemails: 1, voicemailNoSpeech: 1 });
     expect(s.outcomesAll.leads90).toBe(2);
@@ -58,9 +59,21 @@ describe('summariseCorpus', () => {
     expect(s.pitchNow.map((l) => l.domain)).toEqual(['richland-towing.com']);
     expect(s.nonAnswerers.map((l) => l.domain)).toEqual([]);
     expect(s.noiseLines.map((l) => l.domain)).toEqual(['vashon-roofing.com']);
-    expect(s.supply.rankedWithoutNumber.map((r) => r.domain)).toEqual(['ashland-city-towing.com']);
+    // demand, not rank: ashland (page 1, 4 impressions) is NOT supply; a ranking domain with 12 is
+    expect(s.supply.demandWithoutNumber.map((r) => r.domain)).toEqual(['lynn-ranking.com']);
     expect(s.supply.pageOne).toBe(3);
     expect(s.supply.pageOneWithNumber).toBe(1);
+  });
+  it('pitch needs the SAME call to be customer-read and ≥90 s', () => {
+    const s2 = summariseCorpus({ campaigns: camps, calls: [
+      call({ geo_campaign_id: 'vash', created_at: iso(1), call_duration: 116, read: 'unknown' }),
+      call({ geo_campaign_id: 'vash', created_at: iso(1), call_duration: 15, read: 'customer' }),
+    ], gsc: [], nowMs: now });
+    const v = s2.lines.find((l) => l.domain === 'vashon-roofing.com')!;
+    expect(v.leads90).toBe(1);
+    expect(v.customers).toBe(1);
+    expect(v.customerLeads90).toBe(0);
+    expect(s2.pitchNow).toEqual([]);
   });
   it('threshold table and cost line', () => {
     expect(s.billableAt.find((b) => b.seconds === 90)!.customerCalls).toBe(2);

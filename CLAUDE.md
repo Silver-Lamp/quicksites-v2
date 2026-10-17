@@ -580,6 +580,16 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   Paterson". ⚠️ A directory is not a business, so the line is shown ONLY with the answering
   shop's name (`callLineFor` returns null without one) and never as "our number"; pinned in
   `autoShopDirectoryCopy.test.tsx`.
+  **The footer address FOLLOWS the answering business (2026-10-17, owner: "y").** An audit of the
+  27 tracked lines found 8 footers with a street address, 7 of them somewhere the answering
+  business is not — graftontowing.com's was a coffee shop's — and none with a source.
+  `lib/ppl/footerAddress.ts` (pure): the forward-to's listed address when that business is in the
+  campaign city, else "Serving <city>, <ST>", never invented; stamped `meta.contact.address_source`
+  so a re-point moves it (`syncForwardAddressToSite` runs after `setCampaignForwardTo` in
+  set-forward and provision-number) and an OWNER's own address is never clobbered
+  (`footerAddressIsAuto`). The footer skips its city line and never geocodes a "Serving …" label.
+  Backfilled with `force` on the tracked lines. The park-registry fill belongs to claimed sites
+  with a real owner, not to these.
   ⚠️ **`.limit(5000)` is not a cap, it is a wish: PostgREST returns at most `max_rows` (1,000 on
   Supabase by default).** `resolveBusinessNameByPhone` scanned "all prospects" in JS and, with
   1,429 phoned rows, never saw Koala towing or River auto Tech — two of the five new lines would

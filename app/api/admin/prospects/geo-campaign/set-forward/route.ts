@@ -19,6 +19,7 @@
 // onto the unresponsive list as a side effect would be a judgement nobody asked for.
 
 import { NextResponse } from 'next/server';
+import { syncForwardAddressToSite } from '@/lib/ppl/syncForwardAddress';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/auth/requireUser';
 import { supabaseAdmin } from '@/lib/supabase/admin';
@@ -99,6 +100,9 @@ export async function POST(req: Request) {
   // destination: a null here means every caller hears "a local towing company" instead of
   // a name, which is honest but weaker, and is worth knowing before the postcards go out.
   const { from, to, name } = await setCampaignForwardTo(campaignId, b.forwardTo);
+  // The footer address follows the answering business (lib/ppl/footerAddress.ts). Best-effort,
+  // never fatal: the re-point itself is the operation. Its result rides in the response as `footer`.
+  const footer = await syncForwardAddressToSite(campaignId).catch((e) => ({ ok: false, kind: 'error' as const, republished: false, warning: e instanceof Error ? e.message : String(e) }));
 
   // Repointing TO a number previously written off is a deliberate second chance; record it as
   // one rather than leaving a stale row that would disqualify it from every future suggestion.
@@ -144,7 +148,7 @@ export async function POST(req: Request) {
     .neq('id', campaignId);
   const alsoForwardsFor = (shared ?? []).map((r) => (r as { domain: string }).domain);
 
-  return NextResponse.json({
+  return NextResponse.json({ footer, 
     ok: true,
     campaignId,
     from,

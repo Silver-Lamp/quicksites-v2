@@ -982,6 +982,11 @@ export const blockContentSchemaMap = {
       success_message: z.string().optional(),
       /** email_only: small print under the field (what the address is used for). */
       note: z.string().optional(),
+      /** The auto-reply the SUBMITTER receives — the merchant's touchpoint (lib/templates/contactAutoreply.ts). On unless switched off. */
+      autoreply_enabled: z.boolean().optional(),
+      autoreply_from_name: z.string().optional(),
+      autoreply_subject: z.string().optional(),
+      autoreply_body: z.string().optional(),
     }),
   },
 

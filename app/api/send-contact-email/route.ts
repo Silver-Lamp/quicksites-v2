@@ -4,7 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { orgEmailBrand } from '@/lib/email';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
-import { resolveContactRecipient, isEmail } from '@/lib/templates/contactRecipient';
+import { pickContactEmail, isEmail } from '@/lib/templates/contactRecipient';
+import { resolveAutoreply } from '@/lib/templates/contactAutoreply';
 
 const resend = lazyClient(() => new Resend(process.env.RESEND_API_KEY));
 const supabase = createClient(
@@ -21,6 +22,8 @@ export async function POST(req: Request) {
     subject,
     message,
     user_email,
+    user_name,
+    form_mode,
     site_slug,
     form_submission_id,
   } = await req.json();
@@ -49,7 +52,14 @@ export async function POST(req: Request) {
     }
   };
 
-  const recipient = await resolveContactRecipient(supabase, site_slug);
+  // One row read serves both the recipient (server-derived — never from the body) and the
+  // merchant's auto-reply settings.
+  const { data: siteRow } = await supabase
+    .from('templates')
+    .select('slug, contact_email, business_name, template_name, custom_domain, data')
+    .eq('slug', site_slug.trim())
+    .maybeSingle();
+  const recipient = pickContactEmail(siteRow);
   if (!recipient) {
     await recordFate('error', null, `No contact email is configured for site "${site_slug}"`);
     return NextResponse.json(
@@ -75,14 +85,26 @@ export async function POST(req: Request) {
     status = 'sent';
     response_id = response?.data?.id || null;
 
-    // Send confirmation to the user if applicable
+    // ⚠️ THE AUTO-REPLY IS THE MERCHANT'S, NOT OURS (lib/templates/contactAutoreply.ts). It used
+    // to be "Thanks for contacting us! … — The QuickSites Team" from a QuickSites sender, on every
+    // tenant site — the owner signed up on B Hard's notify form and got a platform email (2026-10-16).
+    // Now: the business's name on the From line (our verified sending address), their subject and
+    // words, replies to their contact address. Off only if the merchant switched it off.
     if (isEmail(user_email)) {
-      await resend.emails.send({
-        from: brand.from,
-        to: [user_email],
-        subject: 'Thanks for contacting us!',
-        text: `Hi there,\n\nThanks for reaching out. We’ve received your message and will get back to you shortly.\n\n${brand.footer}`,
+      const reply = resolveAutoreply(siteRow, {
+        name: typeof user_name === 'string' ? user_name : null,
+        email: user_email,
+        mode: form_mode === 'email_only' ? 'email_only' : form_mode === 'full' ? 'full' : null,
       });
+      if (reply.enabled) {
+        await resend.emails.send({
+          from: `${reply.fromName.replace(/[<>"]/g, '')} <${brand.fromAddress}>`,
+          to: [user_email],
+          ...(reply.replyTo ? { replyTo: reply.replyTo } : {}),
+          subject: reply.subject,
+          text: reply.text,
+        });
+      }
     }
   } catch (err: any) {
     console.error('[Email error]', err);

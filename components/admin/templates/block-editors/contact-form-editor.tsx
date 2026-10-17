@@ -23,6 +23,11 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
   const [placeholder, setPlaceholder] = useState<string>(c0.placeholder || '');
   const [successMessage, setSuccessMessage] = useState<string>(c0.success_message || '');
   const [note, setNote] = useState<string>(c0.note || '');
+  const [autoreplyEnabled, setAutoreplyEnabled] = useState<boolean>(c0.autoreply_enabled !== false);
+  const [autoreplyFromName, setAutoreplyFromName] = useState<string>(c0.autoreply_from_name || '');
+  const [autoreplySubject, setAutoreplySubject] = useState<string>(c0.autoreply_subject || '');
+  const [autoreplyBody, setAutoreplyBody] = useState<string>(c0.autoreply_body || '');
+  const businessName = String((template as any)?.business_name || (template as any)?.data?.meta?.business_name || (template as any)?.template_name || '').trim();
   const fieldCls = 'w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent';
 
   // DB-backed (read-only in editor)
@@ -110,6 +115,24 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
             </div>
             <input type="text" value={successMessage} onChange={(e) => setSuccessMessage(e.target.value)} className={fieldCls} placeholder="Success message (default: Thanks — you’re on the list.)" />
             <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className={fieldCls} placeholder="Small print under the field, e.g. what the address is used for (optional)" />
+          </div>
+        ) : null}
+      </div>
+
+      {/* Auto-reply: the email the SUBMITTER gets — the merchant's touchpoint, not QuickSites' */}
+      <div className="space-y-2 rounded-md border border-neutral-800 p-3">
+        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-neutral-200">
+          <input type="checkbox" className="form-checkbox accent-purple-600" checked={autoreplyEnabled} onChange={(e) => setAutoreplyEnabled(e.target.checked)} />
+          Auto-reply to the person who submits
+        </label>
+        <p className="text-xs text-neutral-400">
+          Sent from “{autoreplyFromName.trim() || businessName || 'your business name'}” with replies going to your contact address. Use {'{name}'}, {'{business}'}, {'{email}'} and {'{site}'} in the text. Leave a field blank for the default.
+        </p>
+        {autoreplyEnabled ? (
+          <div className="grid grid-cols-1 gap-2 pt-1">
+            <input type="text" value={autoreplyFromName} onChange={(e) => setAutoreplyFromName(e.target.value)} className={fieldCls} placeholder={`From name (default: ${businessName || 'your business name'})`} />
+            <input type="text" value={autoreplySubject} onChange={(e) => setAutoreplySubject(e.target.value)} className={fieldCls} placeholder={emailOnly ? 'Subject (default: You’re on the list — {business})' : 'Subject (default: Thanks for contacting {business})'} />
+            <textarea value={autoreplyBody} onChange={(e) => setAutoreplyBody(e.target.value)} rows={5} className={fieldCls} placeholder={emailOnly ? 'Body (default: Thanks for signing up. We’ll email you at this address when there’s news. — {business})' : 'Body (default: Hi {name}, thanks for reaching out. We’ve received your message and will get back to you shortly. — {business})'} />
           </div>
         ) : null}
       </div>
@@ -212,6 +235,10 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
               content: {
                 title,
                 services: sanitizedSubset,
+                ...(autoreplyEnabled ? {} : { autoreply_enabled: false }),
+                ...(autoreplyFromName.trim() ? { autoreply_from_name: autoreplyFromName.trim() } : {}),
+                ...(autoreplySubject.trim() ? { autoreply_subject: autoreplySubject.trim() } : {}),
+                ...(autoreplyBody.trim() ? { autoreply_body: autoreplyBody.trim() } : {}),
                 ...(emailOnly
                   ? {
                       mode: 'email_only',

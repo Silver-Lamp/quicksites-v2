@@ -309,6 +309,8 @@ Phone: ${formData.phone || 'N/A'}
 Service: ${formData.service || 'N/A'}
           `.trim(),
           user_email: formData.email || null,
+          user_name: emailOnly ? null : formData.name || null,
+          form_mode: mode,
           site_slug: siteSlug,
           form_submission_id: data.id,
         }),

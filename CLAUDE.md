@@ -614,7 +614,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   decisions are pure in `lib/forms/contactFormMode.ts` (mode, copy fallbacks in the site's
   language, validation), the submit path is the same insert + email route (`name`/`phone` are
   nullable, the route needs neither). `contactFormMode.test.ts` greps the branch for exactly
-  ONE `<input>`, of type email. **New block `video_showcase`** (same
+  ONE `<input>`, of type email.
+  **THE FORM'S AUTO-REPLY IS THE MERCHANT'S EMAIL, NOT OURS (2026-10-16).** Until then every
+  tenant form sent one hard-coded "Thanks for contacting us! … — The QuickSites Team" from a
+  QuickSites sender; the owner signed up on B Hard's notify form and got a platform email from a
+  name the visitor had never heard of. `lib/templates/contactAutoreply.ts#resolveAutoreply`
+  (pure): the business's name on the From line (our verified sending address; the merchant's
+  domain cannot send until it is verified in Resend), replies to the site's contact address, the
+  merchant's subject/body from the contact_form block (`autoreply_*`, editor "Auto-reply"
+  section, `{name}` `{business}` `{email}` `{site}`), defaults by form mode (email-only: "You're
+  on the list"), on unless switched off, one "because you submitted a form on <site>" line.
+  The form posts `user_name` + `form_mode`. ⚠️ The source guard matches the old subject as CODE,
+  not the comment explaining its removal (§4). `contactAutoreply.test.ts`. **New block `video_showcase`** (same
   day): up to three portrait videos tilted like phones on a table until one plays, pulled up
   over the hero's bottom edge, with an optional h2 — empty renders nothing in public
   (`videoShowcase.test.tsx`). ⚠️ **Validate a script-seeded block against

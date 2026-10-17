@@ -5,7 +5,7 @@
 // because it has a customer-read lead ≥90 s today, not because its name was typed here.
 import Link from 'next/link';
 import type { CorpusSummary, LineRow } from '@/lib/ppl/corpus';
-import { NUMBER_MONTHLY_USD } from '@/lib/ppl/corpus';
+import { DEMAND_MIN_IMPRESSIONS, NUMBER_MONTHLY_USD } from '@/lib/ppl/corpus';
 
 const pct = (n: number | null) => (n == null ? '—' : `${Math.round(n * 100)}%`);
 const num = (n: number | null | undefined) => (n == null ? '—' : String(n));
@@ -104,27 +104,27 @@ export default function PplCorpusSection({ s }: { s: CorpusSummary }) {
       </div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <Card title="Pitch now — a customer-read lead ≥90 s on the line" tone={s.pitchNow.length ? 'good' : undefined}>
-          <LineList rows={s.pitchNow} empty="No line has a customer-read call of 90 s or more yet. The pitch is “here is what you received”; wait for the evidence." note={(l) => `${l.leads90} lead${l.leads90 === 1 ? '' : 's'} ≥90 s, ${l.customers} customer read${l.customers === 1 ? '' : 's'}${l.rankStatus === 'page1' ? `, page 1 (${num(l.rankPosition)})` : ''}${l.clicks28d != null ? `, ${l.clicks28d} clicks / 28 d` : ''}`} />
+        <Card title="Pitch now — a customer-read call of 90 s or more on the line" tone={s.pitchNow.length ? 'good' : undefined}>
+          <LineList rows={s.pitchNow} empty="No line has a customer-read call of 90 s or more yet. The pitch is “here is what you received”; wait for the evidence." note={(l) => `${l.customerLeads90} customer call${l.customerLeads90 === 1 ? '' : 's'} ≥90 s${l.rankStatus === 'page1' ? `, page 1 (${num(l.rankPosition)})` : ''}${l.impressions28d != null ? `, ${l.impressions28d} impressions / ${l.clicks28d ?? 0} clicks in 28 d` : ''}`} />
         </Card>
-        <Card title="Ranked domains with no number — the supply that produces customers" tone={s.supply.rankedWithoutNumber.length ? 'warn' : undefined}>
-          {s.supply.rankedWithoutNumber.length ? (
+        <Card title={`Demand with no number — ≥${DEMAND_MIN_IMPRESSIONS} impressions in the latest 28 days, no line`} tone={s.supply.demandWithoutNumber.length ? 'warn' : undefined}>
+          {s.supply.demandWithoutNumber.length ? (
             <>
               <ul className="columns-2 text-xs">
-                {s.supply.rankedWithoutNumber.map((r) => (
-                  <li key={r.domain}>{r.domain} <span className="text-muted-foreground">({num(r.rankPosition)})</span></li>
+                {s.supply.demandWithoutNumber.map((r) => (
+                  <li key={r.domain}>{r.domain} <span className="text-muted-foreground">({r.impressions28d} impr{r.rankStatus === 'page1' ? `, p1 ${num(r.rankPosition)}` : ''})</span></li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-muted-foreground">Directories (dome / treehouse builders) are excluded: a directory is not a business. Adding all {s.supply.rankedWithoutNumber.length} ≈ ${(s.supply.rankedWithoutNumber.length * NUMBER_MONTHLY_USD).toFixed(2)}/mo. Attach from “Tracked campaigns” below.</p>
+              <p className="mt-2 text-xs text-muted-foreground">Rank is not demand: a position-1.3 domain with 4 impressions is first for a query nobody types. Directories and restaurants are excluded. Adding all {s.supply.demandWithoutNumber.length} ≈ ${(s.supply.demandWithoutNumber.length * NUMBER_MONTHLY_USD).toFixed(2)}/mo; a line needs a swept business to forward to. Attach from “Tracked campaigns” below.</p>
             </>
-          ) : <p className="text-muted-foreground">Every page-one trade domain carries a number.</p>}
+          ) : <p className="text-muted-foreground">Every trade domain with measurable demand carries a number.</p>}
         </Card>
         <Card title="Destinations that do not answer — test-dial from an ordinary phone before re-pointing" tone={s.nonAnswerers.length ? 'bad' : undefined}>
           <LineList rows={s.nonAnswerers} empty="No destination with 3+ dials and no answer." note={(l) => `0 of ${l.dials} answered`} />
           <p className="mt-2 text-xs text-muted-foreground">We bill only answered calls, so an unanswered line earns nothing and loses the caller. “They screen us” and “they answer nobody” look identical through our bridge (§11e).</p>
         </Card>
         <Card title="Noise lines — mostly vendors and robocalls, no customer yet">
-          <LineList rows={s.noiseLines} empty="None." note={(l) => `${l.junk} of ${l.dials} junk${l.ageDays != null ? `, ${l.ageDays} days old` : ''}${l.impressions28d != null ? `, ${l.impressions28d} impressions / 28 d` : ''}`} />
+          <LineList rows={s.noiseLines} empty="None." note={(l) => `${l.junk} of ${l.calls} calls junk${l.ageDays != null ? `, ${l.ageDays} days old` : ''}${l.impressions28d != null ? `, ${l.impressions28d} impressions / 28 d` : ''}`} />
           <p className="mt-2 text-xs text-muted-foreground">New, unranked domains draw prospectors, not customers. Judge a line after it ranks and has impressions.</p>
         </Card>
       </div>

@@ -25,7 +25,7 @@ import { isCronAuthorized } from '@/lib/cron/auth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/email';
 import { buildCallAlertEmail, alertRecipients, type CallRow } from '@/lib/ppl/callAlert';
-import { analyzeAndStore, type CallLogForAnalysis } from '@/lib/ppl/callAnalysis';
+import { analyzeAndStore, analysisReady, type CallLogForAnalysis } from '@/lib/ppl/callAnalysis';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 
 export const runtime = 'nodejs';
@@ -36,7 +36,7 @@ export const maxDuration = 120;
 /** Wall-clock budget for the analysis pass; anything left over waits for the next run. */
 const ANALYSIS_BUDGET_MS = 70_000;
 const ANALYSIS_COLS =
-  'id, call_sid, from_number, call_status, call_duration, handling, custom_domain, geo_campaign_id, created_at, recording_url, voicemail_speech, voicemail_transcript, voicemail_verdict, voicemail_verdict_reason, voicemail_notify_result, missed_call_notify_result';
+  'id, call_sid, from_number, call_status, call_duration, handling, custom_domain, geo_campaign_id, created_at, recording_url, voicemail_speech, voicemail_transcript, voicemail_verdict, voicemail_verdict_reason, voicemail_notify_result, missed_call_notify_result, connected_notify_result';
 
 /** Don't report a call that may still be ringing. */
 const SETTLE_SECONDS = Number(process.env.CALL_ALERT_SETTLE_SECONDS ?? '90') || 90;
@@ -77,6 +77,9 @@ async function handle(req: NextRequest) {
       const started = Date.now();
       for (const row of (todo ?? []) as CallLogForAnalysis[]) {
         if (Date.now() - started > ANALYSIS_BUDGET_MS) break;
+        // ⚠️ Settled since it STARTED is not over: a 4-minute call is still ringing at 90 s. Leave
+        // a call with no outcome yet for the next run (lib/ppl/callAnalysis.ts#analysisReady).
+        if (!analysisReady(row, Date.now())) continue;
         try {
           const r = await analyzeAndStore(db, row);
           analysed.push({ id: row.id, read: r.read, ...(r.error ? { error: r.error } : {}) });

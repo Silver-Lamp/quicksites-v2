@@ -218,6 +218,7 @@ export type CallLogForAnalysis = {
   voicemail_verdict_reason?: string | null;
   voicemail_notify_result?: Record<string, unknown> | null;
   missed_call_notify_result?: Record<string, unknown> | null;
+  connected_notify_result?: Record<string, unknown> | null;
 };
 
 /** Everything we can measure about one call. Each source degrades on its own. */
@@ -337,7 +338,7 @@ export async function gatherCallFacts(db: Db, row: CallLogForAnalysis): Promise<
         verdict: row.voicemail_verdict ?? null,
         verdictReason: row.voicemail_verdict_reason ?? null,
       },
-      businessTexted: vmResult?.business_sms === true || mcResult?.business_sms === true,
+      businessTexted: vmResult?.business_sms === true || mcResult?.business_sms === true || (row.connected_notify_result as { business_sms?: unknown } | null | undefined)?.business_sms === true,
     },
     caller: {
       areaCode: areaCodeOf(row.from_number),
@@ -495,4 +496,21 @@ export function analysisLine(row: { analysis_summary?: string | null; analysis?:
   const conf = row.analysis?.confidence;
   const head = read && READ_LABEL[read] ? `AI read: ${READ_LABEL[read]}${conf ? ` (${conf} confidence)` : ''}. ` : 'AI read: ';
   return `${head}${s}`;
+}
+
+
+/**
+ * Is this call OVER enough to read? ⚠️ The alert cron analysed calls 90 s after they STARTED —
+ * a 259 s customer call on vashon-plumbing.com (2026-10-17) was read while still ringing
+ * ("outcome in_progress, duration null") and filed as unknown/low, permanently. A call is ready
+ * when its dial has an outcome (dial-* / completed), its parent ended (abandoned / ended), a
+ * voicemail exists — or it is simply old enough that a missing outcome is itself the fact.
+ */
+export const ANALYSIS_STALE_AFTER_MS = 30 * 60_000;
+export function analysisReady(row: { call_status: string | null; recording_url?: string | null; created_at: string }, nowMs = Date.now()): boolean {
+  const s = (row.call_status ?? '').trim().toLowerCase();
+  if (row.recording_url) return true;
+  if (s.startsWith('dial-') || s === 'completed' || s === 'answered' || s === 'abandoned' || s === 'ended' || s === 'busy' || s === 'no-answer' || s === 'failed' || s === 'canceled') return true;
+  const t = Date.parse(row.created_at);
+  return Number.isFinite(t) && nowMs - t > ANALYSIS_STALE_AFTER_MS;
 }

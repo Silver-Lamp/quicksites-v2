@@ -7,6 +7,7 @@
 // rows say so today, not because someone wrote its name down.
 import { classifyDial } from '@/lib/ppl/forwardHealth';
 import { isOwnBusinessCaller } from '@/lib/ppl/ownNumberCall';
+import { latestWindowTotals } from '@/lib/gsc/latestWindow';
 
 /** Twilio local number, per month (docs/PPL_VERTICAL.md §9 status table). Minutes are negligible at today's volume. */
 export const NUMBER_MONTHLY_USD = 1.15;
@@ -43,7 +44,8 @@ export type CorpusCall = {
   read: string | null;
 };
 
-export type CorpusGsc = { domain: string; impressions: number; clicks: number };
+/** A harvest row. ⚠️ The harvest is a daily capture of a rolling 28-day window; lib/gsc/latestWindow.ts sums ONE capture. */
+export type CorpusGsc = { domain: string; end_date: string; impressions: number; clicks: number };
 
 export type Outcomes = { calls: number; leads90: number; answered15to89: number; brief: number; unanswered: number; voicemails: number; voicemailNoSpeech: number; voicemailNotLead: number };
 
@@ -117,14 +119,8 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
   const windowDays = input.windowDays ?? 30;
   const sinceMs = nowMs - windowDays * 86_400_000;
   const byCampaign = new Map(input.campaigns.map((c) => [c.id, c]));
-  const gscByHost = new Map<string, { impressions: number; clicks: number }>();
-  for (const g of input.gsc) {
-    const h = hostOf(g.domain);
-    const e = gscByHost.get(h) ?? { impressions: 0, clicks: 0 };
-    e.impressions += g.impressions || 0;
-    e.clicks += g.clicks || 0;
-    gscByHost.set(h, e);
-  }
+  // Latest 28-day capture per host — never a sum across the daily captures (30× too high).
+  const gscByHost = latestWindowTotals(input.gsc);
 
   const outcomes30d = emptyOutcomes();
   const outcomesAll = emptyOutcomes();
@@ -243,12 +239,13 @@ export async function loadPplCorpus(nowMs = Date.now()): Promise<CorpusSummary> 
   const [{ data: campaigns }, { data: calls }, { data: gsc }] = await Promise.all([
     supabaseAdmin.from('geo_industry_campaigns').select('id, domain, city, industry_key, rank_status, rank_position, tracking_number, forward_to, forward_to_name, domain_status, created_at'),
     supabaseAdmin.from('call_logs').select('geo_campaign_id, from_number, forwarded_to, handling, call_status, call_duration, created_at, recording_url, voicemail_speech, voicemail_verdict, analysis').not('geo_campaign_id', 'is', null).order('created_at', { ascending: false }).limit(5000),
-    supabaseAdmin.from('gsc_queries').select('domain, impressions, clicks').gte('end_date', new Date(nowMs - 28 * 86_400_000).toISOString().slice(0, 10)).limit(20000),
+    // Only recent captures are needed to find each host's latest window.
+    supabaseAdmin.from('gsc_queries').select('domain, end_date, impressions, clicks').gte('end_date', new Date(nowMs - 10 * 86_400_000).toISOString().slice(0, 10)).limit(50000),
   ]);
   return summariseCorpus({
     campaigns: (campaigns ?? []) as CorpusCampaign[],
     calls: ((calls ?? []) as Array<Omit<CorpusCall, 'read'> & { analysis: { read?: string } | null }>).map((c) => ({ ...c, read: typeof c.analysis?.read === 'string' ? c.analysis.read : null })),
-    gsc: ((gsc ?? []) as Array<{ domain: string; impressions: number | null; clicks: number | null }>).map((g) => ({ domain: g.domain, impressions: g.impressions ?? 0, clicks: g.clicks ?? 0 })),
+    gsc: ((gsc ?? []) as Array<{ domain: string; end_date: string; impressions: number | null; clicks: number | null }>).map((g) => ({ domain: g.domain, end_date: g.end_date, impressions: g.impressions ?? 0, clicks: g.clicks ?? 0 })),
     nowMs,
   });
 }

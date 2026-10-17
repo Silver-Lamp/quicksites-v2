@@ -32,7 +32,7 @@ const calls: CorpusCall[] = [
 ];
 
 describe('summariseCorpus', () => {
-  const s = summariseCorpus({ campaigns: camps, calls, gsc: [{ domain: 'https://www.richland-towing.com/', impressions: 2000, clicks: 100 }, { domain: 'richland-towing.com', impressions: 247, clicks: 0 }], nowMs: now });
+  const s = summariseCorpus({ campaigns: camps, calls, gsc: [{ domain: 'https://www.richland-towing.com/', end_date: '2026-10-12', impressions: 9000, clicks: 900 }, { domain: 'https://www.richland-towing.com/', end_date: '2026-10-13', impressions: 2000, clicks: 100 }, { domain: 'richland-towing.com', end_date: '2026-10-13', impressions: 247, clicks: 0 }], nowMs: now });
   it('30-day outcomes count the window only; the all-time table counts everything', () => {
     expect(s.outcomes30d).toMatchObject({ calls: 8, leads90: 1, answered15to89: 2, unanswered: 4, voicemails: 1, voicemailNoSpeech: 1 });
     expect(s.outcomesAll.leads90).toBe(2);
@@ -41,7 +41,7 @@ describe('summariseCorpus', () => {
     expect(s.reads.find((r) => r.read === 'customer')).toEqual({ read: 'customer', count: 3, leads90: 2 });
     expect(s.customerShare).toBeCloseTo(3 / 8, 5);
   });
-  it('a line row: GSC matched across URL spellings, own-number calls excluded from dials, answer rate', () => {
+  it('a line row: GSC = the LATEST capture only, matched across URL spellings; own-number calls excluded from dials; answer rate', () => {
     const rich = s.lines.find((l) => l.domain === 'richland-towing.com')!;
     expect(rich.impressions28d).toBe(2247);
     expect(rich.clicks28d).toBe(100);

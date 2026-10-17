@@ -8,7 +8,7 @@
 
 import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
-import { getGeoCampaign, setCampaignTracking } from '@/lib/outreach/geoCampaigns';
+import { getGeoCampaign, setCampaignTracking, setCampaignForwardTo } from '@/lib/outreach/geoCampaigns';
 import {
   callTrackingEnabled,
   twilioConfigured,
@@ -90,6 +90,10 @@ export async function POST(req: Request) {
       lon: (campaign as any).center_lon ?? null,
     });
     await setCampaignTracking(campaignId, { number: phoneNumber, sid, forwardTo });
+    // Record WHO the number belongs to, so the caller is told the business's name before the
+    // bridge (lib/ppl/forwardAnnounce.ts). setCampaignTracking writes only the number; without
+    // this every freshly provisioned line announced "a local towing company serving <city>".
+    await setCampaignForwardTo(campaignId, forwardTo).catch(() => undefined);
 
     // ⚠️ THE STEP THAT MAKES THE PURCHASE MEAN ANYTHING. Everything above succeeds while the
     // page a caller sees still advertises the old phone — so the calls go somewhere untracked,

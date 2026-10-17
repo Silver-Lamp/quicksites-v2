@@ -555,6 +555,17 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   broken. ⚠️ A `local_pack` arrives as one block OR as consecutive siblings; uncollapsed it reads
   as pack-of-1 AND 3 blocks above organic, flipping a skip into a best case — both halves wrong,
   toward spending money.
+- **⚠️ THE GSC HARVEST IS A ROLLING 28-DAY WINDOW CAPTURED EVERY DAY — SUM ONE CAPTURE, NEVER
+  THE TABLE (found 2026-10-16).** `gsc_queries` holds one row per query per capture, each row
+  Google's 28-day aggregate; summing a domain's rows adds the same month ~30 times. Three readers
+  did exactly that — the per-call analysis facts, the forward-to suggestion gate and the new
+  `/admin/ppl` corpus section — and reported "richland-towing.com: 2,247 impressions, 100
+  clicks" where the true latest window was **64 and 4**. A recommendation to buy numbers for
+  "page-one domains with demand" was built on it; measured honestly, ONE unnumbered trade domain
+  clears 10 impressions a month (paterson-auto-repair, 49) and the page-one towing domains sit at
+  0–8. `lib/gsc/latestWindow.ts#latestWindowTotals` keeps the latest `end_date` per host;
+  `latestWindow.test.ts` source-guards every reader. ⚠️ `rank_status='page1'` is NOT demand — a
+  position-1.3 domain with 4 impressions is first for a query nobody types.
 - **Fleet scope — exclude at READ, never at write (2026-09-22)**: `lib/gsc/fleetScope.ts`. One
   personal page was **21% of every impression across 92 domains** and had been setting the fleet's
   average position invisibly. Aggregates now drop `NON_COMMERCIAL_PAGES` and **say what they

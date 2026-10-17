@@ -23,6 +23,7 @@
 // it tells the operator what to make of the row. ⚠️ The model never sees the caller's number —
 // the AREA CODE is a signal (geography), the number is not.
 import { classifyDial } from '@/lib/ppl/forwardHealth';
+import { latestWindowFor, type HarvestRow } from '@/lib/gsc/latestWindow';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { posthogHogqlResult, posthogQueryUnavailableReason, hogqlString } from '@/lib/analytics/posthogQuery';
@@ -280,18 +281,19 @@ export async function gatherCallFacts(db: Db, row: CallLogForAnalysis): Promise<
   // Search Console: the harvested query rows for this domain, summed.
   let gsc: CallFacts['site']['gsc'] = { unavailable: 'no domain' };
   if (domain) {
+    // ⚠️ ONE capture of the rolling 28-day window (lib/gsc/latestWindow.ts). Summing every
+    // harvested row read "2,247 impressions, 100 clicks" on a domain whose real window was 64 / 4,
+    // and the model reasoned from it (2026-10-16).
     const { data, error } = await db
       .from('gsc_queries')
-      .select('impressions, clicks')
+      .select('domain, end_date, impressions, clicks')
       .or(`domain.eq.sc-domain:${domain},domain.ilike.%//${domain}/%,domain.ilike.%//www.${domain}/%`)
-      .limit(2000);
+      .gte('end_date', new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10))
+      .limit(5000);
     if (error) gsc = { unavailable: `gsc_queries: ${String(error.message).slice(0, 80)}` };
     else {
-      const rows = (data ?? []) as { impressions: number | null; clicks: number | null }[];
-      gsc = {
-        impressions: rows.reduce((n, r) => n + (r.impressions ?? 0), 0),
-        clicks: rows.reduce((n, r) => n + (r.clicks ?? 0), 0),
-      };
+      const w = latestWindowFor((data ?? []) as HarvestRow[], domain);
+      gsc = w ? { impressions: w.impressions, clicks: w.clicks } : { impressions: 0, clicks: 0 };
     }
   }
 

@@ -1117,7 +1117,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   12:57; `OPERATOR_PHONE_NUMBERS` (comma list, owner action, unset in prod) files those as
   `operator_test`, and the facts say "no operator phone list is configured" rather than implying
   "not the operator". Backfill / re-run: `npx tsx --env-file=.env.local scripts/analyze-calls.mts
-  [n] [--redo]`. `/status` gate `call_analysis`.
+  [n] [--redo]`. `/status` gate `call_analysis`. ⚠️ **"Settled" was measured from when the call
+  STARTED (2026-10-17):** the cron read a 259 s customer call on vashon-plumbing.com at 90 s —
+  still ringing, duration null — and filed it unknown/low for good, with "no business text"
+  because the taken-call text had not been sent yet (and `businessTexted` did not read
+  `connected_notify_result` anyway). `analysisReady` now requires a dial outcome, a parent end, a
+  voicemail, or 30 minutes with none (the missing outcome is then the fact);
+  `analysisReady.test.ts`. A read of a call that is not over is a read of nothing.
 - **Inbound-call email alerts (2026-10-01)**: `/api/cron/call-alert` every 5 min emails
   `ADMIN_EMAILS` when a call lands in `call_logs`, so a real lead cannot sit unseen in a dashboard
   nobody opened (two did, on 2026-09-30). ⚠️ **Deliberately NOT in the Twilio webhook**: that

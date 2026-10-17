@@ -1345,6 +1345,16 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   plain `lib/` module, never in a component file, however small** — now
   `lib/partners/perfectLoopsUrls.ts`, pinned by a source guard that nothing the route reaches
   imports from `@/components/`.
+- **The people list (2026-10-17, owner: "include Craig and anyone else we missed on the QS side"
+  on HJ's `/dashboard/admin/people`)**: HJ's dashboard is built from a code-owned `PEOPLE` list in
+  THEIR repo, which we never edit — so QuickSites keeps its own, `lib/people/qsPeople.ts` (names
+  and relations only, never contact details; a test requires every entry's `/for-<name>` page to
+  exist and every `/for-*` page to be listed), and serves it with 60 days of per-page visits from
+  PostHog at `GET /api/partner/hj/people` (HMAC over `pathname + search`, the booking-day scheme;
+  fail-closed; `visitsUnavailable` reported, never zero). Contract:
+  **`crosstalk/contracts/people-registry.md`** (link, never fork). Keys match HJ's for the people
+  on both lists (amy, angela, daniel, ryan, daryle) so they merge, not duplicate. Adding a person =
+  one entry there.
 - **Sign-in methods + the header's account corner (2026-10-03)**: `/login` is the ONE auth route
   (`lib/auth/authLinks.ts` — `signInHref()` / `signUpHref()`, never a literal) and offers
   **email+password** (LIVE; proven on prod with a throwaway confirmed user: wrong password → honest

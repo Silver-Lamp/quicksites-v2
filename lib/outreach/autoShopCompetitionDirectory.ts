@@ -20,14 +20,31 @@ export type AutoShopDirectoryEntry = {
   published: boolean;
 };
 
+/**
+ * The directory's tracking line. ⚠️ A directory is not a business, so the line is shown ONLY with
+ * the name of the real shop that answers it — never as "our number". Null until the campaign has
+ * both a tracking number and a named forward-to (2026-10-16, paterson-auto-repair.com).
+ */
+export type AutoShopCallLine = { number: string; display: string; answeredBy: string };
+
 export type AutoShopDirectory = {
   campaignId: string;
   city: string;
   region: string | null;
   domain: string;
   hasWinner: boolean;
+  callLine: AutoShopCallLine | null;
   entries: AutoShopDirectoryEntry[];
 };
+
+export function callLineFor(c: { tracking_number?: string | null; forward_to?: string | null; forward_to_name?: string | null }): AutoShopCallLine | null {
+  const number = (c.tracking_number ?? '').trim();
+  const name = (c.forward_to_name ?? '').trim();
+  if (!number || !(c.forward_to ?? '').trim() || !name) return null;
+  const d = number.replace(/\D/g, '').slice(-10);
+  const display = d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : number;
+  return { number: number.startsWith('+') ? number : `+${number.replace(/\D/g, '')}`, display, answeredBy: name };
+}
 
 function safeParse(x: any): any {
   if (typeof x !== 'string') return x ?? {};
@@ -57,7 +74,7 @@ export async function loadAutoShopDirectoryBySlug(slug: string): Promise<AutoSho
   if (!clean) return null;
   const { data: campaign } = await supabaseAdmin
     .from('geo_industry_campaigns')
-    .select('id, city, region, domain, claimed_by_prospect_id')
+    .select('id, city, region, domain, claimed_by_prospect_id, tracking_number, forward_to, forward_to_name')
     .eq('kind', AUTO_SHOP_COMPETITION_KIND)
     .eq('slug', clean)
     .maybeSingle();
@@ -70,7 +87,7 @@ export async function loadAutoShopDirectoryByCampaignId(campaignId: string): Pro
   if (!clean) return null;
   const { data: campaign } = await supabaseAdmin
     .from('geo_industry_campaigns')
-    .select('id, city, region, domain, claimed_by_prospect_id')
+    .select('id, city, region, domain, claimed_by_prospect_id, tracking_number, forward_to, forward_to_name')
     .eq('kind', AUTO_SHOP_COMPETITION_KIND)
     .eq('id', clean)
     .maybeSingle();
@@ -84,6 +101,9 @@ async function assembleDirectory(campaign: {
   region: string | null;
   domain: string;
   claimed_by_prospect_id: string | null;
+  tracking_number?: string | null;
+  forward_to?: string | null;
+  forward_to_name?: string | null;
 }): Promise<AutoShopDirectory> {
   const base: Omit<AutoShopDirectory, 'entries'> = {
     campaignId: campaign.id,
@@ -91,6 +111,7 @@ async function assembleDirectory(campaign: {
     region: campaign.region,
     domain: campaign.domain,
     hasWinner: !!campaign.claimed_by_prospect_id,
+    callLine: callLineFor(campaign),
   };
 
   const { data: prospects } = await supabaseAdmin

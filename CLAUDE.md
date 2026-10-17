@@ -573,7 +573,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   numbers. ⚠️ **Paterson is an `auto_shop_competition` row with NO template** — the domain fronts
   the SecondSet auto-shop directory, the push wrote nothing, and the business had already been
   texted "calls are being forwarded"; a second text said nothing will come. `provision-number`
-  now refuses a campaign without a pitch site BEFORE buying (`no_pitch_site`, 409).
+  now refuses a campaign without a pitch site BEFORE buying (`no_pitch_site`, 409) — **unless it
+  is a competition row, whose DIRECTORY page shows the line** (owner: "fix paterson"): the
+  auto-shop directory reads `tracking_number` + `forward_to_name` from the campaign row at render
+  and shows "Need a shop now? (856) … — Answered by River auto Tech, an independent shop in
+  Paterson". ⚠️ A directory is not a business, so the line is shown ONLY with the answering
+  shop's name (`callLineFor` returns null without one) and never as "our number"; pinned in
+  `autoShopDirectoryCopy.test.tsx`.
   ⚠️ **`.limit(5000)` is not a cap, it is a wish: PostgREST returns at most `max_rows` (1,000 on
   Supabase by default).** `resolveBusinessNameByPhone` scanned "all prospects" in JS and, with
   1,429 phoned rows, never saw Koala towing or River auto Tech — two of the five new lines would

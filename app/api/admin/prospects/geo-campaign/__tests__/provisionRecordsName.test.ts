@@ -13,12 +13,14 @@ it('provision-number resolves the business name right after writing the tracking
   expect(name - tracking).toBeLessThan(600);
 });
 
-it('provision-number refuses a campaign with no pitch site BEFORE it buys anything', () => {
+it('provision-number refuses a campaign with no pitch site BEFORE it buys anything — unless a competition directory shows the line', () => {
   const src = fs.readFileSync(path.join(process.cwd(), 'app/api/admin/prospects/geo-campaign/provision-number/route.ts'), 'utf8');
   const refuse = src.indexOf("code: 'no_pitch_site'");
   const buy = src.indexOf('await provisionTrackingNumber(');
   expect(refuse).toBeGreaterThan(-1);
   expect(refuse).toBeLessThan(buy);
+  expect(src).toMatch(/if \(!campaign\.template_id && !directoryPage\)/);
+  expect(src).toMatch(/const directoryPage = isCompetitionKind\(/);
 });
 
 it('the forward-to name resolver narrows on the phone server-side (PostgREST returns at most 1,000 rows, whatever .limit says)', () => {

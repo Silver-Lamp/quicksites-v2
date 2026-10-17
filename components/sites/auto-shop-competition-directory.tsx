@@ -53,6 +53,22 @@ export default function AutoShopCompetitionDirectory({ dir }: { dir: AutoShopDir
         </p>
       </header>
 
+      {/* ⚠️ THE LINE NAMES WHO ANSWERS. A directory is not a business (the dome-cohort rule), so
+          the number is never "ours" or the city's: it is a real shop's, said so, and the whisper
+          + announcement on the call say the same (lib/ppl/forwardAnnounce.ts). Rendered only when
+          the campaign has a number AND a named forward-to. */}
+      {dir.callLine ? (
+        <div data-directory-call-line className="mx-auto mt-6 max-w-xl rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-center">
+          <p className="text-xs uppercase tracking-widest text-emerald-300">Need a shop now?</p>
+          <a href={`tel:${dir.callLine.number}`} className="mt-1 inline-block text-2xl font-bold text-white hover:underline">
+            {dir.callLine.display}
+          </a>
+          <p className="mt-1 text-sm text-zinc-300">
+            Answered by <span className="font-semibold text-zinc-100">{dir.callLine.answeredBy}</span>, an independent shop in {place}.
+          </p>
+        </div>
+      ) : null}
+
       {entries.length === 0 ? (
         <p className="mt-10 text-center text-zinc-400">Shops are being added — check back soon.</p>
       ) : (

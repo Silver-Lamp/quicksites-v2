@@ -6,8 +6,11 @@
 // the "they said yes" steps with the two server actions (create the account + deposit link,
 // text the link) and the editor link for the rename. Dark chrome tokens only.
 import { useEffect, useMemo, useRef, useState } from 'react';
+// ⚠️ TYPE-ONLY from pitchPlan. That module runs on the server (it reaches the corpus and, since
+// the outcome survey, the Supabase admin client); a value import here bundles it for the
+// browser, where `createClient` throws "supabaseKey is required" and the whole page dies.
 import type { PitchPlan, ScriptNode } from '@/lib/ppl/pitchPlan';
-import { usd } from '@/lib/ppl/pitchPlan';
+import { usd } from '@/lib/ppl/money';
 
 /** One step already taken on the call: the node we were on and what they said to leave it. */
 type TrailStep = { nodeId: string; title: string; said: string | null };

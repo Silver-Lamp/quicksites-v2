@@ -86,16 +86,28 @@ export function ReviewClient({ project, viewer, isOwner, token, initialThreads, 
     setBusy(null);
   }
 
+  // Three steps, because a generator WAV (~6 MB) is over Vercel's 4.5 MB function-body cap:
+  // sign → PUT the bytes straight into storage → register the path. Our API never sees the file.
   async function upload(track: Track, form: HTMLFormElement) {
     const fd = new FormData(form);
-    fd.set('track', track.key);
+    const file = fd.get('file');
+    if (!(file instanceof File) || !file.size) { setMsg('Pick a file first.'); return; }
+    const notes = String(fd.get('notes') ?? '');
     setBusy(`upload-${track.key}`);
-    const r = await fetch(`/api/admin/creative/${project.key}/upload`, { method: 'POST', body: fd });
-    const j = await r.json().catch(() => null);
-    setMsg(r.ok ? `Added v${j?.version?.version ?? '?'} to ${track.label}. Transcript follows in a few seconds.` : `Upload failed: ${j?.detail || j?.error || r.status}`);
-    form.reset();
-    await refresh();
-    setBusy(null);
+    try {
+      const sign = await fetch(`/api/admin/creative/${project.key}/upload-url`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ track: track.key, filename: file.name, contentType: file.type, size: file.size }) });
+      const s = await sign.json().catch(() => null);
+      if (!sign.ok || !s?.signedUrl) { setMsg(`Upload refused: ${s?.detail || s?.error || sign.status}`); return; }
+      const put = await fetch(s.signedUrl, { method: 'PUT', headers: { 'content-type': s.contentType, 'x-upsert': 'false' }, body: file });
+      if (!put.ok) { setMsg(`Storage refused the file (${put.status}).`); return; }
+      const reg = await fetch(`/api/admin/creative/${project.key}/upload`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ track: track.key, path: s.path, notes }) });
+      const j = await reg.json().catch(() => null);
+      setMsg(reg.ok ? `Added v${j?.version?.version ?? '?'} to ${track.label}. Transcript follows in a few seconds.` : `Not registered: ${j?.hint || j?.detail || j?.error || reg.status}`);
+      form.reset();
+      await refresh();
+    } finally {
+      setBusy(null);
+    }
   }
 
   return (

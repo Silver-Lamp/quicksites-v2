@@ -86,10 +86,11 @@ describe('source guards — the campaign flips to pay-per-call only when money l
     expect(fn).toMatch(/pricing_model: 'ppl'/);
   });
   it('the pitch route texts only the forward-to, honours STOP, and the terms page types no number', () => {
-    const route = read('app/api/admin/ppl/pitch/route.ts');
-    expect(route).toMatch(/sendSms\(c\.forward_to/);
-    expect(route).not.toMatch(/sendSms\([^)]*from_number/);
-    expect(route).toMatch(/isOptedOut\(c\.forward_to/);
+    // The sends live in lib/ppl/pitchSend.ts (the button and the cron share them).
+    const send = read('lib/ppl/pitchSend.ts');
+    expect(send).toMatch(/sendSms\(c\.forward_to!/);
+    expect(send).not.toMatch(/sendSms\([^)]*from_number/);
+    expect(send).toMatch(/isOptedOut\(c\.forward_to\)/);
     const terms = read('app/leads/terms/page.tsx');
     expect(terms).not.toMatch(/\$\d/);
     expect(terms).toMatch(/usd\(next\.cplCents\)/);

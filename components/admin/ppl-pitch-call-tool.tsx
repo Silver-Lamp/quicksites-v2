@@ -260,6 +260,8 @@ type PitchState = {
   lead: { at: string; seconds: number; callerPhone: string | null } | null;
   alternative: { id: string; name: string; phone: string } | null;
   preview: { text1: string; text2: string; text2Kind: 'repoint' | 'last_free'; text2By: string | null };
+  sentBy?: 'operator' | 'cron' | null;
+  window?: { ok: boolean; tz: string; local: string; reason?: 'weekend' | 'outside_hours'; next: string | null };
 };
 
 /**
@@ -311,6 +313,12 @@ function ByText({ plan, dealKey, setDealKey }: { plan: PitchPlan; dealKey: DealK
             {state.account && <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">account {state.account.status} · {usd(state.account.balance_cents)}</span>}
           </div>
           <p className="rounded border border-border bg-muted px-3 py-2"><span className="font-medium">Next: </span>{state.next.why}</p>
+          {state.window && (
+            <p className="text-[11px] text-muted-foreground">
+              Their clock: {state.window.local} ({state.window.tz.split('/').pop()?.replace('_', ' ')}). {state.window.ok ? 'Inside their texting window now.' : `Outside their texting window (${state.window.reason === 'weekend' ? 'weekend' : 'off hours'}) — the cron would wait for ${state.window.next}; a button here sends regardless.`}
+              {state.sentBy ? ` Last text sent by the ${state.sentBy}.` : ''}
+            </p>
+          )}
 
           {!f.textedAt && (
             <fieldset className="rounded border border-border p-2">

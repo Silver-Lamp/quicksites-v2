@@ -131,6 +131,10 @@
     {
       "path": "/api/cron/ppl-outcome-survey",
       "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/cron/ppl-pitch",
+      "schedule": "25 * * * *"
     }
   ]
 }

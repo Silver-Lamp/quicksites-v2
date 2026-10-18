@@ -229,6 +229,15 @@ export const CONFIG_GATES: ConfigGate[] = [
       'With the flag on but Twilio incomplete the cron returns {skipped: sms_not_configured} every hour and no business is ever asked, so the conversion measurement the pricing rests on quietly never starts. The call rows stay unmarked; nothing is billed either way.',
   },
   {
+    key: 'ppl_pitch_auto',
+    label: 'Text-first pitch cron — text 1 / follow-up in the business\'s own hours, an email to the owner on every step (/api/cron/ppl-pitch, hourly)',
+    enabledBy: 'PPL_PITCH_AUTO_ENABLED',
+    requires: ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM', 'RESEND_API_KEY', 'ADMIN_EMAILS', 'CRON_SECRET', 'STRIPE_SECRET_KEY'],
+    degradeOnly: true,
+    breaks:
+      'With the flag on but a piece missing: no Twilio → nothing is ever sent (cron says sms_not_configured); no Resend or ADMIN_EMAILS → texts go out and the owner is told NOTHING, so a promised re-point date can pass unseen; no Stripe key → the deposit link cannot be minted and every text1 fails.',
+  },
+  {
     key: 'voicemail_relay',
     label: 'A voicemail-first message can actually reach the operator',
     // ⚠️ NO `enabledBy`, deliberately. Voicemail-first is switched on by clearing a campaign's

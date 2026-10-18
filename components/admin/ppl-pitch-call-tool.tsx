@@ -150,7 +150,7 @@ function ScriptWalker({ node, trail, total, onGo, onBack, onRestart, onYes }: {
         {node.kind === 'ask' && options.length > 0 && (
           <div className="mt-3">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">They say… <span className="normal-case">(or press the number)</span></div>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
               {options.map((o, i) => (
                 <button key={o.label} type="button" onClick={() => onGo(o.next, o.label)} aria-keyshortcuts={String(i + 1)}
                   className="flex min-h-[3rem] items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm hover:bg-muted">

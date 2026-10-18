@@ -21,10 +21,10 @@ const READ_LABEL: Record<string, string> = {
   unknown: 'unknown',
 };
 
-function Card({ title, children, tone }: { title: string; children: React.ReactNode; tone?: 'good' | 'warn' | 'bad' }) {
+function Card({ title, children, tone, className }: { title: string; children: React.ReactNode; tone?: 'good' | 'warn' | 'bad'; className?: string }) {
   const ring = tone === 'good' ? 'border-emerald-500/30' : tone === 'warn' ? 'border-amber-500/30' : tone === 'bad' ? 'border-rose-500/30' : 'border-border';
   return (
-    <div className={`rounded-xl border ${ring} bg-card p-4 text-card-foreground`}>
+    <div className={`rounded-xl border ${ring} bg-card p-4 text-card-foreground ${className ?? ''}`}>
       <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{title}</div>
       <div className="mt-2 text-sm">{children}</div>
     </div>
@@ -106,7 +106,9 @@ export default function PplCorpusSection({ s }: { s: CorpusSummary }) {
       </div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <Card title="Pitch now — a customer-read call of 90 s or more on the line" tone={s.pitchNow.length ? 'good' : undefined}>
+        {/* Spans both columns: the "Prepare the call" console under each line needs the width (the
+            script's reply grid at half-width wrapped every label to five lines on the first look). */}
+        <Card title="Pitch now — a customer-read call of 90 s or more on the line" tone={s.pitchNow.length ? 'good' : undefined} className="lg:col-span-2">
           {s.pitchNow.length ? (
             <ul className="space-y-2">
               {s.pitchNow.map((l) => (

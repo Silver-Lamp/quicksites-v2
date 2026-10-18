@@ -5,7 +5,7 @@
 // is the one the account table would charge; the tree is whole (every branch lands somewhere,
 // every node is reachable, every path ends); and the advice is derived from the row — the
 // missed-call line appears only when a dial actually rang out.
-import { buildPitchPlan, pitchScript, pitchFacts, rankPitchOrder, layoutScript, everySayable, whenLabel, SCRIPT_FORBIDDEN, STARTER_DEPOSIT_CENTS, usd } from '@/lib/ppl/pitchPlan';
+import { buildPitchPlan, pitchScript, pitchFacts, rankPitchOrder, layoutScript, everySayable, whenLabel, SCRIPT_FORBIDDEN, STARTER_DEPOSIT_CENTS, DEALS, usd } from '@/lib/ppl/pitchPlan';
 import { FORBIDDEN_IVR_PHRASES } from '@/lib/ppl/ivr';
 import { PPL_DEFAULTS } from '@/lib/ppl/rules';
 import type { LineRow } from '@/lib/ppl/corpus';
@@ -31,7 +31,13 @@ describe('honesty of everything the script can say', () => {
   });
   it('names only the money the account would charge', () => {
     const dollars = Array.from(all.matchAll(/\$\d[\d,]*\d|\$\d/g)).map((m) => m[0]);
-    const allowed = new Set([usd(PPL_DEFAULTS.cplCents), usd(STARTER_DEPOSIT_CENTS), usd(plan.deal.reloadAmountCents), usd(plan.deal.reloadThresholdCents), usd(PPL_DEFAULTS.reloadAmountCents)].map((s) => s.toLowerCase()));
+    // Every figure must be one the account table would charge: a deal's price, deposit, reload or threshold, or the default reload the advice warns off.
+    const allowed = new Set(
+      [
+        ...Object.values(plan.deals).flatMap((d) => [d.cplCents, d.depositCents, d.reloadAmountCents, d.reloadThresholdCents]),
+        PPL_DEFAULTS.reloadAmountCents,
+      ].map((c) => usd(c).toLowerCase()),
+    );
     expect(dollars.filter((d) => !allowed.has(d))).toEqual([]);
     expect(dollars.length).toBeGreaterThan(0);
   });
@@ -53,9 +59,22 @@ describe('the tree', () => {
     walk(script[0].id);
     expect([...ids].filter((i) => !seen.has(i))).toEqual([]);
   });
-  it('every non-terminal node leads somewhere and the three endings exist', () => {
+  it('every non-terminal node leads somewhere; the endings are later, no, and one yes per deal', () => {
     for (const n of script) if (n.kind !== 'end') expect((n.options?.length ?? 0) > 0 || !!n.next).toBe(true);
-    expect(script.filter((n) => n.kind === 'end').map((n) => n.outcome).sort()).toEqual(['later', 'no', 'yes']);
+    const ends = script.filter((n) => n.kind === 'end');
+    expect(new Set(ends.map((n) => n.outcome))).toEqual(new Set(['later', 'no', 'yes']));
+    expect(ends.filter((n) => n.outcome === 'yes').map((n) => n.deal).sort()).toEqual(['next', 'package']);
+  });
+  it('the deals are what the account table charges: the next one is one lead ahead, the package is a round count, never a percentage in the script', () => {
+    expect(DEALS.next.depositCents).toBe(DEALS.next.cplCents);
+    expect(DEALS.next.reloadAmountCents).toBe(DEALS.next.cplCents);
+    expect(DEALS.next.reloadThresholdCents).toBe(DEALS.next.cplCents); // below one lead → charge one lead: always exactly one ahead
+    expect(DEALS.package.cplCents * DEALS.package.leads).toBe(DEALS.package.depositCents);
+    expect(DEALS.package.cplCents).toBeLessThan(DEALS.next.cplCents);
+    const spoken = script.map((n) => n.say).join(' ');
+    expect(spoken).not.toMatch(/\d+\s?%/); // the lever is spoken by a person, never printed in the script
+    expect(spoken).toMatch(/refundable/);
+    expect(spoken).toMatch(/one (call )?ahead/);
   });
   it('lays out with every node placed once and ends on the last row', () => {
     const f = layoutScript(script);
@@ -105,9 +124,13 @@ describe('advice is derived from the row', () => {
   it('labels call times on the owner\'s clock, not the server\'s UTC', () => {
     expect(whenLabel('2026-10-17T21:53:00Z')).toBe('Saturday, October 17 at 2:53 PM');
   });
-  it('the starter ask is derived from the constants, with the lead count it buys', () => {
+  it('the deals in the advice are the constants: pay-the-next-one at the default price, the package as a count for a round number', () => {
     const p = buildPitchPlan(kens, [kens]);
-    expect(p.deal.leadsInDeposit).toBe(Math.floor(STARTER_DEPOSIT_CENTS / PPL_DEFAULTS.cplCents));
-    expect(p.advice.join(' ')).toContain(`${usd(STARTER_DEPOSIT_CENTS)} to start`);
+    expect(p.deals.next.cplCents).toBe(PPL_DEFAULTS.cplCents);
+    expect(p.deal.leadsInDeposit).toBe(DEALS.package.leads);
+    expect(STARTER_DEPOSIT_CENTS).toBe(DEALS.package.depositCents);
+    const advice = p.advice.join(' ');
+    expect(advice).toContain(`the next is ${usd(DEALS.next.cplCents)} paid now`);
+    expect(advice).toContain(`"${DEALS.package.label}"`);
   });
 });

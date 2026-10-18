@@ -15,10 +15,35 @@ import { PPL_DEFAULTS } from '@/lib/ppl/rules';
 import { outcomeSentence } from '@/lib/ppl/outcomeSurvey';
 import type { LineRow } from '@/lib/ppl/corpus';
 
-/** A first yes is asked for a small balance, not the $1,200 reload — set per account, never a code change. */
-export const STARTER_DEPOSIT_CENTS = 30_000;
-export const STARTER_RELOAD_THRESHOLD_CENTS = 10_000;
-export const STARTER_RELOAD_AMOUNT_CENTS = 30_000;
+/**
+ * The two deals a first yes can take (owner, 2026-10-18). Both are per-account VALUES the
+ * account table already holds — price per lead, deposit, reload threshold, reload amount — so a
+ * deal is a row, never a code path.
+ *
+ * `next`: "pre-pay the next one" — they got one free; the next is one lead's price, paid now, and
+ * the card is charged one lead as each one posts, always exactly one ahead. Never post-pay: the
+ * line connects only while the balance covers a lead, so a declined card stops the line and says
+ * so, and nobody ever owes us money.
+ *
+ * `package`: "4 for $300" — a count for a round number, stated as a package, never as a
+ * percentage ("20% off" makes the single-lead price read as the penalty). Up to 20% is a SPOKEN
+ * lever on the call, never printed. Unused balance is refundable on request — the script says so,
+ * which makes the lower rate a real price cut rather than breakage.
+ */
+export type DealKey = 'next' | 'package';
+export type Deal = { key: DealKey; label: string; cplCents: number; depositCents: number; reloadThresholdCents: number; reloadAmountCents: number; leads: number };
+export const PACKAGE_LEADS = 4;
+export const PACKAGE_PRICE_CENTS = 30_000;
+export const DEALS: Record<DealKey, Deal> = {
+  next: { key: 'next', label: 'Pay the next one', cplCents: PPL_DEFAULTS.cplCents, depositCents: PPL_DEFAULTS.cplCents, reloadThresholdCents: PPL_DEFAULTS.cplCents, reloadAmountCents: PPL_DEFAULTS.cplCents, leads: 1 },
+  package: { key: 'package', label: `${PACKAGE_LEADS} for ${'$'}${PACKAGE_PRICE_CENTS / 100}`, cplCents: Math.round(PACKAGE_PRICE_CENTS / PACKAGE_LEADS), depositCents: PACKAGE_PRICE_CENTS, reloadThresholdCents: Math.round(PACKAGE_PRICE_CENTS / PACKAGE_LEADS), reloadAmountCents: PACKAGE_PRICE_CENTS, leads: PACKAGE_LEADS },
+};
+/** The most we say yes to on the call when an owner is almost there. Spoken, never printed. */
+export const SPOKEN_LEVER_MAX_PCT = 20;
+/** Kept for callers that still read the old names: the package is the "$300 starter". */
+export const STARTER_DEPOSIT_CENTS = DEALS.package.depositCents;
+export const STARTER_RELOAD_THRESHOLD_CENTS = DEALS.package.reloadThresholdCents;
+export const STARTER_RELOAD_AMOUNT_CENTS = DEALS.package.reloadAmountCents;
 
 export const SCRIPT_FORBIDDEN = ['rank', 'first page', 'page one', 'google', 'guarantee', 'licensed', 'insured', 'specialist', '24/7', 'escrow', 'capacity', 'high volume', 'seasonal'];
 
@@ -34,6 +59,8 @@ export type ScriptNode = {
   options?: Array<{ label: string; next: string }>;
   next?: string;
   outcome?: 'yes' | 'later' | 'no';
+  /** On a yes: which deal they took, so the on-yes step creates the right account. */
+  deal?: DealKey;
 };
 
 export type PitchFacts = {
@@ -61,6 +88,10 @@ export type PitchPlan = {
   /** 1 = call this one first among the pitch-now lines, with the reason. */
   order: { rank: number; of: number; reason: string };
   advice: string[];
+  /** Both deals the script offers, plus the floor they share. */
+  deals: Record<DealKey, Deal>;
+  minBillableSeconds: number;
+  /** @deprecated the package deal, kept for the first render's shape. */
   deal: { cplCents: number; minBillableSeconds: number; depositCents: number; reloadThresholdCents: number; reloadAmountCents: number; leadsInDeposit: number };
   script: ScriptNode[];
   /** What to do the moment they say yes — in order, in the same step. */
@@ -125,7 +156,7 @@ export function pitchAdvice(f: PitchFacts, d = PPL_DEFAULTS): string[] {
   if (f.unanswered > 0) out.push(`${f.unanswered} of ${f.dials} forwarded dials rang out. Say it: on pay-per-call they pay nothing for a ring-out, but each one was a customer who reached nobody. Their phone shows our tracking number as the caller — ask them to answer it.`);
   if (f.rankStatus === 'page1') out.push(`The page is on page one (position ${f.rankPosition ?? '?'}) with ${f.impressions28d ?? 0} impressions in 28 days: the page is the asset, the call is the proof.`);
   else out.push(`The page is not on page one yet (position ${f.rankPosition ?? 'unknown'}, ${f.impressions28d ?? 0} impressions / ${f.clicks28d ?? 0} clicks in 28 days). Pitch the call they received, never where the page sits.`);
-  out.push(`Ask for ${usd(STARTER_DEPOSIT_CENTS)} to start (about ${Math.floor(STARTER_DEPOSIT_CENTS / d.cplCents)} calls at ${usd(d.cplCents)}), reloading ${usd(STARTER_RELOAD_AMOUNT_CENTS)} under ${usd(STARTER_RELOAD_THRESHOLD_CENTS)} — the ${usd(d.reloadAmountCents)} default is a large ask of a business that has had ${f.leads.length === 1 ? 'one call' : `${f.leads.length} calls`}. Price, floor and reloads are per-account values.`);
+  out.push(`Lead with "pay the next one": the call they got was free, the next is ${usd(DEALS.next.cplCents)} paid now, then the card is charged ${usd(DEALS.next.cplCents)} as each one posts — always one ahead, never after the fact. Offer "${DEALS.package.label}" (${usd(DEALS.package.cplCents)} a lead) as the package for an owner who would rather see one charge; up to ${SPOKEN_LEVER_MAX_PCT}% is a spoken lever when they are almost there — never printed. The ${usd(d.reloadAmountCents)} default reload is not a first ask. Price, floor and reloads are per-account values.`);
   out.push(`Keep the ${d.minBillableSeconds}-second floor: it bills the calls that were conversations and spares the 12- and 15-second ones. Decide it before quoting; the script says it out loud.`);
   out.push('Phone them, never text the pitch. On a yes, do the four steps on the "They said yes" tab in one sitting — the page must stop claiming a company that does not exist before anyone pays.');
   return out;
@@ -133,10 +164,10 @@ export function pitchAdvice(f: PitchFacts, d = PPL_DEFAULTS): string[] {
 
 export function pitchScript(f: PitchFacts, tracking: string | null, d = PPL_DEFAULTS): ScriptNode[] {
   const last = f.leads[f.leads.length - 1];
-  const cpl = usd(d.cplCents);
-  const dep = usd(STARTER_DEPOSIT_CENTS);
-  const reload = usd(STARTER_RELOAD_AMOUNT_CENTS);
-  const leadsIn = Math.floor(STARTER_DEPOSIT_CENTS / d.cplCents);
+  const cpl = usd(DEALS.next.cplCents);
+  const pkg = usd(DEALS.package.depositCents);
+  const pkgEach = usd(DEALS.package.cplCents);
+  const pkgN = DEALS.package.leads;
   const secs = `${d.minBillableSeconds} seconds`;
   const line = tracking ? ` Your line is ${tracking}.` : '';
   const open = last
@@ -151,8 +182,9 @@ export function pitchScript(f: PitchFacts, tracking: string | null, d = PPL_DEFA
     { id: 'who', kind: 'say', title: 'Who we are', say: `I run ${f.domain} — the page people land on when they look for ${f.trade} around ${f.city}. When they call the number on it, it rings you; that is the call on ${last?.whenLabel ?? 'the day you were texted'}.`, next: 'offer' },
     { id: 'was_job', kind: 'say', title: 'It was a job', say: `Good — that is what the page is for. I would like to keep sending them to you, and I only want paying for the ones that are real.`, next: 'offer' },
     { id: 'not_job', kind: 'say', title: 'Not a job', say: `Fair enough — ${last ? `a ${last.minutesLabel} call is usually a real one, but you would know` : 'you would know better than I would'}. Either way the line keeps ringing you; the question is whether the real ones are worth paying for.`, next: 'offer' },
-    { id: 'offer', kind: 'ask', title: 'The deal', say: `Here is the deal. You pay ${cpl} for each call that lasts ${secs} or more. Shorter calls, wrong numbers, sales calls — nothing. You start with ${dep} on the account, about ${leadsIn} calls; when it runs low it tops up ${reload}, and you get a text for every charge with the caller's number. If the balance ever hits zero, the line tells callers it is not connecting and stops — nobody rings into silence. Want to try it?`, options: [
-      { label: 'Yes', next: 'yes' },
+    { id: 'offer', kind: 'ask', title: 'The deal', say: `Here is the deal. The call you got was free. The next one is ${cpl}, paid now — and after that your card is charged ${cpl} as each one comes in, only for calls that last ${secs} or more; shorter calls, wrong numbers, sales calls are never charged. You are always exactly one call ahead, never behind. If a charge ever fails, the line tells callers it is not connecting and stops — nobody rings into silence, and you never owe us anything. You get a text for every charge with the caller's number. If you would rather see one charge, it is ${pkgN} for ${pkg} — ${pkgEach} each — and anything unused is refundable if you ask. Want to try it?`, options: [
+      { label: `Yes — the next one (${cpl})`, next: 'yes_next' },
+      { label: `Yes — ${pkgN} for ${pkg}`, next: 'yes_package' },
       { label: 'How much, again?', next: 'price' },
       { label: 'Why does my phone show your number?', next: 'caller_id' },
       { label: 'I miss calls sometimes', next: 'missed' },
@@ -162,7 +194,7 @@ export function pitchScript(f: PitchFacts, tracking: string | null, d = PPL_DEFA
       { label: 'Let me think about it', next: 'later' },
       { label: 'No', next: 'no' },
     ] },
-    { id: 'price', kind: 'say', title: 'The price, plainly', say: `${cpl} a call, only for calls over ${secs}. ${dep} to start, ${reload} when it gets low. Every charge is a text to you, and there is a statement page you can check any time. You can contest a charge within ${d.disputeWindowHours} hours.`, next: 'offer' },
+    { id: 'price', kind: 'say', title: 'The price, plainly', say: `${cpl} a call, only for calls over ${secs}, charged one at a time as they come in — or ${pkgN} for ${pkg} up front, ${pkgEach} each, with the unused part refundable on request. Every charge is a text to you, and there is a statement page you can check any time. You can contest a charge within ${d.disputeWindowHours} hours.`, next: 'offer' },
     { id: 'caller_id', kind: 'say', title: 'Caller ID', say: `Because the call comes through our line, your phone shows the tracking number instead of the customer's. The first thing you hear is us saying it is a customer from the site, then they are on. Answer it like any customer — you get their real number by text right after.`, next: 'offer' },
     { id: 'missed', kind: 'say', title: 'Missed calls', say: f.unanswered > 0
       ? `You pay nothing for a call that rings out — but that customer is gone. On this line ${f.unanswered} of ${f.dials} calls were not answered. The one to pick up is the tracking number.`
@@ -170,7 +202,8 @@ export function pitchScript(f: PitchFacts, tracking: string | null, d = PPL_DEFA
     { id: 'enough', kind: 'say', title: 'They have enough work', say: `Then say no — I would rather hear no than have you resent a bill. The line stays as it is for now, and if it goes quiet you know where I am.`, next: 'no' },
     { id: 'competitor', kind: 'say', title: 'Already paying a lead service', say: `Different thing. They sell the same lead to several shops and you race for it. This line rings only you, and you pay only for calls that actually connected for ${secs}. Keep both if you like — they do not fight.`, next: 'offer' },
     { id: 'per_job', kind: 'say', title: 'Per job instead?', say: `There is a per-job way, and it is honest only when the payment itself runs through us: you take the customer's payment through our link, we take a share of the job, and no call is ever charged. That is not set up for ${f.trade} yet — if you would rather pay that way, tell me and you are first in line. Until then it is per call, and you can contest any call within ${d.disputeWindowHours} hours. A self-reported "that one didn't become a job" cannot be the bill — I would be asking you to charge yourself.`, next: 'offer' },
-    { id: 'yes', kind: 'end', title: 'Yes', outcome: 'yes', say: `Great. I will text you a link to put the ${dep} on. The moment it lands, the page shows your name and calls are billed from then on — nothing before that. After each call you take, you will get one text asking whether it became a job — Y, N or not yet. That is for our records only and never changes a charge.${line}` },
+    { id: 'yes_next', kind: 'end', title: 'Yes — the next one', outcome: 'yes', deal: 'next', say: `Great. I will text you a link to pay the ${cpl} for the next call. The moment it lands, the page shows your name and calls are billed from then on — nothing before that, and each one after is charged as it comes in. After each call you take, you will get one text asking whether it became a job — Y, N or not yet. That is for our records only and never changes a charge.${line}` },
+    { id: 'yes_package', kind: 'end', title: `Yes — ${pkgN} for ${pkg}`, outcome: 'yes', deal: 'package', say: `Great. I will text you a link to put the ${pkg} on — that is ${pkgN} calls at ${pkgEach}. The moment it lands, the page shows your name and calls are billed from then on — nothing before that; when it runs low it tops up another ${pkg}, and anything unused is refundable if you ask. After each call you take, you will get one text asking whether it became a job — Y, N or not yet. That is for our records only and never changes a charge.${line}` },
     { id: 'later', kind: 'end', title: 'Later', outcome: 'later', say: `Sure. I will text you the link so it is there when you want it; nothing happens until you use it, and the line keeps forwarding meanwhile.` },
     { id: 'no', kind: 'end', title: 'No', outcome: 'no', say: `No problem. I will keep forwarding for now; if that changes I will text you first.` },
   ];
@@ -246,10 +279,12 @@ export function buildPitchPlan(line: LineRow, allPitch: LineRow[], tracking: str
     facts,
     order: { rank, of: ordered.length, reason },
     advice: pitchAdvice(facts, d),
-    deal: { cplCents: d.cplCents, minBillableSeconds: d.minBillableSeconds, depositCents: STARTER_DEPOSIT_CENTS, reloadThresholdCents: STARTER_RELOAD_THRESHOLD_CENTS, reloadAmountCents: STARTER_RELOAD_AMOUNT_CENTS, leadsInDeposit: Math.floor(STARTER_DEPOSIT_CENTS / d.cplCents) },
+    deals: DEALS,
+    minBillableSeconds: d.minBillableSeconds,
+    deal: { cplCents: DEALS.package.cplCents, minBillableSeconds: d.minBillableSeconds, depositCents: DEALS.package.depositCents, reloadThresholdCents: DEALS.package.reloadThresholdCents, reloadAmountCents: DEALS.package.reloadAmountCents, leadsInDeposit: DEALS.package.leads },
     script,
     onYes: [
-      `Create the pay-per-call account for ${facts.business} with the starter balance (${usd(STARTER_DEPOSIT_CENTS)} deposit, ${usd(d.cplCents)} a lead, ${d.minBillableSeconds} s floor) — the button below does it and hands back the deposit link.`,
+      `Create the pay-per-call account for ${facts.business} on the deal they took — "${DEALS.next.label}" (${usd(DEALS.next.cplCents)} now, ${usd(DEALS.next.cplCents)} a lead as each posts) or "${DEALS.package.label}" (${usd(DEALS.package.cplCents)} a lead, unused refundable on request) — ${d.minBillableSeconds} s floor either way. The button below does it and hands back the deposit link.`,
       'Text them the deposit link from the server (the button below) — calls connect and bill only after the deposit lands.',
       `Rename the pitch site to ${facts.business} so the page stops asserting a company that does not exist — the editor link below.`,
       'Turn the pay-per-call flag on in production (PPL_ENABLED — an owner action; /status shows the gate).',

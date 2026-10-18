@@ -13,7 +13,7 @@
 // starter constants below, so changing the deal changes the script.
 import { PPL_DEFAULTS } from '@/lib/ppl/rules';
 import { outcomeSentence } from '@/lib/ppl/outcomeSurvey';
-import type { LineRow } from '@/lib/ppl/corpus';
+import type { LineRow, LinePitch } from '@/lib/ppl/corpus';
 
 /**
  * The two deals a first yes can take (owner, 2026-10-18). Both are per-account VALUES the
@@ -79,6 +79,8 @@ export type PitchFacts = {
   ageDays: number | null;
   /** The sentence from the did-it-become-a-job survey, or null when nobody was asked yet. */
   outcomeLine: string | null;
+  /** Where the text-first pitch stands: the phone call is the THIRD touch and opens with the text. */
+  pitch: LinePitch;
 };
 
 export type PitchPlan = {
@@ -139,7 +141,19 @@ export function pitchFacts(line: LineRow): PitchFacts {
     rankPosition: line.rankPosition,
     ageDays: line.ageDays,
     outcomeLine: outcomeSentence({ asked: line.outcome.asked, answered: line.outcome.jobs + line.outcome.noJobs + line.outcome.notYet, jobs: line.outcome.jobs, noJobs: line.outcome.noJobs, notYet: line.outcome.notYet }),
+    pitch: line.pitch,
   };
+}
+
+function dayLabel(iso: string | null, tz = PITCH_TZ): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'long' }).format(d);
+}
+function dateLabel(ymd: string | null): string {
+  if (!ymd) return '';
+  const d = new Date(`${ymd}T12:00:00Z`);
+  return Number.isNaN(d.getTime()) ? ymd : new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'short', day: 'numeric' }).format(d);
 }
 
 /** Which pitch-now line to call first: more paid-grade leads, then more impressions, then older. */
@@ -150,7 +164,12 @@ export function rankPitchOrder(lines: LineRow[]): LineRow[] {
 export function pitchAdvice(f: PitchFacts, d = PPL_DEFAULTS): string[] {
   const out: string[] = [];
   const last = f.leads[f.leads.length - 1];
-  if (last) out.push(`Open with the ${last.whenLabel} call (${last.minutesLabel}). They were texted that caller's number; ask whether it became a job — that answer is the real pitch signal and we do not have it yet.`);
+  if (f.pitch.textedAt) {
+    const dealLabel = f.pitch.deal ? DEALS[f.pitch.deal].label : DEALS.next.label;
+    out.push(`This call is the THIRD touch. You texted them ${dayLabel(f.pitch.textedAt)} ("${dealLabel}", with the pay link and the terms)${f.pitch.followupAt ? ` and followed up ${dayLabel(f.pitch.followupAt)}` : ''}. Open with the text, not with the call — "did you get a chance to look at it?" — and resend the link while you are on the phone rather than describing it.`);
+    if (f.pitch.followupKind === 'repoint' && f.pitch.repointName) out.push(`The follow-up named ${f.pitch.repointName} by ${dateLabel(f.pitch.repointBy)}. Say it on the call ("I said I'd offer the line to ${f.pitch.repointName}; I'd rather it stayed with you") — and if the date passes with no deposit, re-point as promised. A date we do not keep makes every later text worthless.`);
+    if (f.pitch.followupKind === 'last_free') out.push(`The follow-up said that was the last free call (no other shop here to offer it to). On the call the ask is simply: the next one is ${usd(DEALS.next.cplCents)}, the link is in your texts.`);
+  } else if (last) out.push(`Open with the ${last.whenLabel} call (${last.minutesLabel}). They were texted that caller's number; ask whether it became a job — that answer is the real pitch signal and we do not have it yet. (If you would rather text first, the "By text" tab sends the same offer with a pay link; the call then opens with the text.)`);
   if (f.leads.length > 1) out.push(`${f.leads.length} paid-grade calls on this line, not one — say so; the ask is to keep what is already happening.`);
   if (f.outcomeLine) out.push(`${f.outcomeLine} That is their own answer to the records-only text — use it before you ask the question again.`);
   if (f.unanswered > 0) out.push(`${f.unanswered} of ${f.dials} forwarded dials rang out. Say it: on pay-per-call they pay nothing for a ring-out, but each one was a customer who reached nobody. Their phone shows our tracking number as the caller — ask them to answer it.`);
@@ -170,19 +189,48 @@ export function pitchScript(f: PitchFacts, tracking: string | null, d = PPL_DEFA
   const pkgN = DEALS.package.leads;
   const secs = `${d.minBillableSeconds} seconds`;
   const line = tracking ? ` Your line is ${tracking}.` : '';
-  const open = last
-    ? `Hi, this is Sandon. On ${last.whenLabel} someone who found ${f.domain} called and talked with you for ${last.minutesLabel} — you would have had a text from us with their number right after. Did that turn into a job?`
-    : `Hi, this is Sandon. Calls from ${f.domain} have been ringing through to you — you would have had a text from us with each caller's number. Have any turned into jobs?`;
+  const texted = !!f.pitch.textedAt;
+  const textedDeal: DealKey = f.pitch.deal ?? 'next';
+  const repoint = f.pitch.followupKind === 'repoint' && f.pitch.repointName ? `I said I would offer the line to ${f.pitch.repointName} by ${dateLabel(f.pitch.repointBy)}; I would rather it stayed with you. ` : '';
+  const open = texted
+    ? `Hi, this is Sandon from QuickSites. I texted you ${dayLabel(f.pitch.textedAt)} about the ${last ? `${last.whenLabel.split(',')[0]} call` : 'calls'} from ${f.domain} — the one that was on us. Did you get a chance to look at it?`
+    : last
+      ? `Hi, this is Sandon. On ${last.whenLabel} someone who found ${f.domain} called and talked with you for ${last.minutesLabel} — you would have had a text from us with their number right after. Did that turn into a job?`
+      : `Hi, this is Sandon. Calls from ${f.domain} have been ringing through to you — you would have had a text from us with each caller's number. Have any turned into jobs?`;
+  const openOptions = texted
+    ? [
+        { label: 'Saw it, have not got to it', next: 'job_q' },
+        { label: 'Did not see it', next: 'missed_text' },
+        { label: 'Already paid / paying it now', next: 'paid_now' },
+        { label: 'Who is this?', next: 'who' },
+        { label: 'Not interested', next: 'no' },
+      ]
+    : [
+        { label: 'Yes, it was a job', next: 'was_job' },
+        { label: 'No / not sure', next: 'not_job' },
+        { label: 'Who is this?', next: 'who' },
+      ];
+  const offerSay = texted
+    ? `${repoint}Short version of the text: the call you got was free. ${textedDeal === 'next' ? `The next one is ${cpl}, paid through the link, and after that your card is charged ${cpl} as each call of ${secs} or more comes in — always one ahead, never behind, nothing after the fact.` : `${pkgN} calls for ${pkg} through the link — ${pkgEach} each, only calls of ${secs} or more, unused refundable if you ask.`} If a charge ever fails the line just stops and says so; you never owe us anything. The link is in that text — I can resend it right now so it is on top. Want to try it?`
+    : `Here is the deal. The call you got was free. The next one is ${cpl}, paid now — and after that your card is charged ${cpl} as each one comes in, only for calls that last ${secs} or more; shorter calls, wrong numbers, sales calls are never charged. You are always exactly one call ahead, never behind. If a charge ever fails, the line tells callers it is not connecting and stops — nobody rings into silence, and you never owe us anything. You get a text for every charge with the caller's number. If you would rather see one charge, it is ${pkgN} for ${pkg} — ${pkgEach} each — and anything unused is refundable if you ask. Want to try it?`;
+  const yesTail = texted ? `I am resending the link now — tap it while we are on, and the moment it lands the page shows your name and calls are billed from then on; nothing before that.` : null;
+  const textedOnly: ScriptNode[] = texted
+    ? [
+        { id: 'job_q', kind: 'ask', title: 'Did it become a job?', say: `No rush. ${last ? `Did the ${last.whenLabel.split(',')[0]} call turn into a job?` : 'Have any of those calls turned into jobs?'}`, options: [
+          { label: 'Yes, it was a job', next: 'was_job' },
+          { label: 'No / not sure', next: 'not_job' },
+        ] },
+        { id: 'missed_text', kind: 'say', title: 'They did not see the text', say: `It came from this number — the same one that texts you the caller's number after each call. Here is the short version.`, next: 'offer' },
+        { id: 'paid_now', kind: 'end', title: 'Already paid', outcome: 'yes', deal: textedDeal, say: `Perfect. The moment it lands the page shows your name and calls are billed from then on — nothing before that. After each call you take you will get one text asking whether it became a job; that is for our records only and never changes a charge.${line}` },
+      ]
+    : [];
   return [
-    { id: 'open', kind: 'ask', title: 'Open with the call they got', say: open, options: [
-      { label: 'Yes, it was a job', next: 'was_job' },
-      { label: 'No / not sure', next: 'not_job' },
-      { label: 'Who is this?', next: 'who' },
-    ] },
+    { id: 'open', kind: 'ask', title: texted ? 'Open with the text you sent' : 'Open with the call they got', say: open, options: openOptions },
+    ...textedOnly,
     { id: 'who', kind: 'say', title: 'Who we are', say: `I run ${f.domain} — the page people land on when they look for ${f.trade} around ${f.city}. When they call the number on it, it rings you; that is the call on ${last?.whenLabel ?? 'the day you were texted'}.`, next: 'offer' },
     { id: 'was_job', kind: 'say', title: 'It was a job', say: `Good — that is what the page is for. I would like to keep sending them to you, and I only want paying for the ones that are real.`, next: 'offer' },
     { id: 'not_job', kind: 'say', title: 'Not a job', say: `Fair enough — ${last ? `a ${last.minutesLabel} call is usually a real one, but you would know` : 'you would know better than I would'}. Either way the line keeps ringing you; the question is whether the real ones are worth paying for.`, next: 'offer' },
-    { id: 'offer', kind: 'ask', title: 'The deal', say: `Here is the deal. The call you got was free. The next one is ${cpl}, paid now — and after that your card is charged ${cpl} as each one comes in, only for calls that last ${secs} or more; shorter calls, wrong numbers, sales calls are never charged. You are always exactly one call ahead, never behind. If a charge ever fails, the line tells callers it is not connecting and stops — nobody rings into silence, and you never owe us anything. You get a text for every charge with the caller's number. If you would rather see one charge, it is ${pkgN} for ${pkg} — ${pkgEach} each — and anything unused is refundable if you ask. Want to try it?`, options: [
+    { id: 'offer', kind: 'ask', title: 'The deal', say: offerSay, options: [
       { label: `Yes — the next one (${cpl})`, next: 'yes_next' },
       { label: `Yes — ${pkgN} for ${pkg}`, next: 'yes_package' },
       { label: 'How much, again?', next: 'price' },
@@ -202,8 +250,8 @@ export function pitchScript(f: PitchFacts, tracking: string | null, d = PPL_DEFA
     { id: 'enough', kind: 'say', title: 'They have enough work', say: `Then say no — I would rather hear no than have you resent a bill. The line stays as it is for now, and if it goes quiet you know where I am.`, next: 'no' },
     { id: 'competitor', kind: 'say', title: 'Already paying a lead service', say: `Different thing. They sell the same lead to several shops and you race for it. This line rings only you, and you pay only for calls that actually connected for ${secs}. Keep both if you like — they do not fight.`, next: 'offer' },
     { id: 'per_job', kind: 'say', title: 'Per job instead?', say: `There is a per-job way, and it is honest only when the payment itself runs through us: you take the customer's payment through our link, we take a share of the job, and no call is ever charged. That is not set up for ${f.trade} yet — if you would rather pay that way, tell me and you are first in line. Until then it is per call, and you can contest any call within ${d.disputeWindowHours} hours. A self-reported "that one didn't become a job" cannot be the bill — I would be asking you to charge yourself.`, next: 'offer' },
-    { id: 'yes_next', kind: 'end', title: 'Yes — the next one', outcome: 'yes', deal: 'next', say: `Great. I will text you a link to pay the ${cpl} for the next call. The moment it lands, the page shows your name and calls are billed from then on — nothing before that, and each one after is charged as it comes in. After each call you take, you will get one text asking whether it became a job — Y, N or not yet. That is for our records only and never changes a charge.${line}` },
-    { id: 'yes_package', kind: 'end', title: `Yes — ${pkgN} for ${pkg}`, outcome: 'yes', deal: 'package', say: `Great. I will text you a link to put the ${pkg} on — that is ${pkgN} calls at ${pkgEach}. The moment it lands, the page shows your name and calls are billed from then on — nothing before that; when it runs low it tops up another ${pkg}, and anything unused is refundable if you ask. After each call you take, you will get one text asking whether it became a job — Y, N or not yet. That is for our records only and never changes a charge.${line}` },
+    { id: 'yes_next', kind: 'end', title: 'Yes — the next one', outcome: 'yes', deal: 'next', say: `Great. ${yesTail ?? `I will text you a link to pay the ${cpl} for the next call. The moment it lands, the page shows your name and calls are billed from then on — nothing before that, and each one after is charged as it comes in.`} After each call you take, you will get one text asking whether it became a job — Y, N or not yet. That is for our records only and never changes a charge.${line}` },
+    { id: 'yes_package', kind: 'end', title: `Yes — ${pkgN} for ${pkg}`, outcome: 'yes', deal: 'package', say: `Great. ${yesTail ?? `I will text you a link to put the ${pkg} on — that is ${pkgN} calls at ${pkgEach}. The moment it lands, the page shows your name and calls are billed from then on — nothing before that; when it runs low it tops up another ${pkg}, and anything unused is refundable if you ask.`} After each call you take, you will get one text asking whether it became a job — Y, N or not yet. That is for our records only and never changes a charge.${line}` },
     { id: 'later', kind: 'end', title: 'Later', outcome: 'later', say: `Sure. I will text you the link so it is there when you want it; nothing happens until you use it, and the line keeps forwarding meanwhile.` },
     { id: 'no', kind: 'end', title: 'No', outcome: 'no', say: `No problem. I will keep forwarding for now; if that changes I will text you first.` },
   ];

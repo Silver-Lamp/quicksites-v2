@@ -22,7 +22,7 @@ import { createDepositCheckout } from '@/lib/ppl/billing';
 import { isOptedOut } from '@/lib/ppl/forwardNotice';
 import { sendSms } from '@/lib/sms/sendSms';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
-import { DEALS, type DealKey } from '@/lib/ppl/pitchPlan';
+import { DEALS, usd, type DealKey } from '@/lib/ppl/pitchPlan';
 import { PPL_DEFAULTS } from '@/lib/ppl/rules';
 import { pitchText1, pitchText2, pitchNextStep, type PitchFunnel } from '@/lib/ppl/pitchText';
 import { last10 } from '@/lib/ppl/ownNumberCall';
@@ -125,7 +125,8 @@ export async function GET(req: Request) {
 
 const Body = z.object({
   campaignId: z.string().uuid(),
-  action: z.enum(['text1', 'text2', 'called', 'result']),
+  /** `resend`: a fresh pay link for the EXISTING account, texted while the owner is on the phone — no funnel stamp. */
+  action: z.enum(['text1', 'text2', 'resend', 'called', 'result']),
   dealKey: z.enum(['next', 'package']).optional(),
   result: z.enum(['paid', 'no', 'later', 'no_reply', 'repointed']).optional(),
   notes: z.string().max(2000).optional(),
@@ -168,6 +169,18 @@ export async function POST(req: Request) {
     patch.updated_at = now.toISOString();
     const { error } = await supabaseAdmin.from('geo_industry_campaigns').update(patch).eq('id', c.id);
     if (error) return NextResponse.json({ error: 'stamp_failed', detail: error.message }, { status: 502 });
+    return NextResponse.json({ ok: true, sent: text, to: c.forward_to, accountCreated: created });
+  }
+  if (b.action === 'resend') {
+    if (!c.forward_to) return NextResponse.json({ error: 'no_forward_to' }, { status: 409 });
+    if (await isOptedOut(c.forward_to).catch(() => false)) return NextResponse.json({ error: 'opted_out' }, { status: 409 });
+    const dealKey: DealKey = b.dealKey ?? (funnelOf(c).deal as DealKey | null) ?? 'next';
+    const { url, created } = await depositLink(c, dealKey, c.forward_to_name || 'the business on the line');
+    const d = DEALS[dealKey];
+    const text = `QuickSites: here is the link again for ${c.domain} — ${dealKey === 'next' ? `${usd(d.cplCents)} for the next call, then ${usd(d.cplCents)} as each one comes in` : `${d.leads} calls for ${usd(d.depositCents)}`}: ${url} Reply STOP to stop.`;
+    const r = await sendSms(c.forward_to, text);
+    if (!r.ok) return NextResponse.json({ error: 'send_failed', detail: r.error ?? null }, { status: 502 });
+    if (!funnelOf(c).deal) await supabaseAdmin.from('geo_industry_campaigns').update({ pitch_deal: dealKey, updated_at: now.toISOString() }).eq('id', c.id);
     return NextResponse.json({ ok: true, sent: text, to: c.forward_to, accountCreated: created });
   }
   if (b.action === 'called') patch.pitch_called_at = now.toISOString();

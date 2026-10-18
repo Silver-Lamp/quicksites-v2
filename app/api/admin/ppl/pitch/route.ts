@@ -12,7 +12,7 @@ import { getPplAccountByCampaign } from '@/lib/ppl/accounts';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import type { DealKey } from '@/lib/ppl/pitchPlan';
 import { pitchText1, pitchText2, pitchNextStep } from '@/lib/ppl/pitchText';
-import { funnelOf, latestLead, alternativeShop, sendPitchText1, sendPitchText2, resendPitchLink, type PitchCampaign } from '@/lib/ppl/pitchSend';
+import { funnelOf, latestLead, alternativeShop, storedAlternative, vetAlternative, rejectAlternative, sendPitchText1, sendPitchText2, resendPitchLink, type PitchCampaign } from '@/lib/ppl/pitchSend';
 import { isGoodTimeToText, nextWindowLabel } from '@/lib/ppl/sendWindow';
 
 export const runtime = 'nodejs';
@@ -26,7 +26,9 @@ export async function GET(req: Request) {
   if (!c) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   const funnel = funnelOf(c);
   const dealKey: DealKey = funnel.deal ?? 'next';
-  const [lead, alternative, account] = await Promise.all([latestLead(c.id), alternativeShop(c), getPplAccountByCampaign(c.id)]);
+  const [lead, stored, computed, account] = await Promise.all([latestLead(c.id), storedAlternative(c), alternativeShop(c), getPplAccountByCampaign(c.id)]);
+  // Before text 1 the alternative is the candidate we WOULD store; after, it is the one on file (vetted or not).
+  const alternative = stored ? { id: stored.id, name: stored.name, phone: stored.phone, vetted: stored.vetted, stored: true } : computed ? { ...computed, vetted: false, stored: false } : null;
   const base = publicBaseUrl();
   const placeholder = `${base}/leads/pay/…`;
   const t1 = pitchText1({ domain: c.domain, lead, deal: dealKey, checkoutUrl: placeholder, termsUrl: `${base}/leads/terms` });
@@ -48,7 +50,7 @@ export async function GET(req: Request) {
 
 const Body = z.object({
   campaignId: z.string().uuid(),
-  action: z.enum(['text1', 'text2', 'resend', 'called', 'result']),
+  action: z.enum(['text1', 'text2', 'resend', 'called', 'result', 'vet', 'reject_alt']),
   dealKey: z.enum(['next', 'package']).optional(),
   result: z.enum(['paid', 'no', 'later', 'no_reply', 'repointed']).optional(),
   notes: z.string().max(2000).optional(),
@@ -67,6 +69,8 @@ export async function POST(req: Request) {
     if (!r.ok) return NextResponse.json({ error: r.error, detail: r.detail ?? null }, { status: r.error === 'not_found' ? 404 : r.error === 'send_failed' ? 502 : 409 });
     return NextResponse.json({ ok: true, sent: r.text, to: r.to, accountCreated: r.accountCreated });
   }
+  if (b.action === 'vet') return NextResponse.json({ ok: await vetAlternative(b.campaignId) });
+  if (b.action === 'reject_alt') return NextResponse.json({ ok: true, ...(await rejectAlternative(b.campaignId)) });
   const c = await getGeoCampaign(b.campaignId).catch(() => null);
   if (!c) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   const now = new Date().toISOString();

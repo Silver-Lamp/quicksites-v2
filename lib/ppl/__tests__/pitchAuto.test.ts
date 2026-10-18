@@ -48,6 +48,11 @@ describe('what the cron does with one line', () => {
   it('the follow-up waits its days, then goes; after both texts it waits for the owner, and a passed re-point date asks the owner to intervene', () => {
     expect(d(f({ textedAt: new Date(T - 2 * 86_400_000).toISOString() }))).toEqual({ action: 'wait', reason: 'followup_not_due' });
     expect(d(f({ textedAt: new Date(T - 3 * 86_400_000).toISOString() }))).toEqual({ action: 'text2' });
+    // The follow-up would promise the line to the next business: held until a person has vetted them.
+    const due = f({ textedAt: new Date(T - 3 * 86_400_000).toISOString() });
+    expect(d(due, { alternative: { id: 'bradleys', vetted: false } })).toEqual({ action: 'vet_needed', alternativeId: 'bradleys' });
+    expect(d(due, { alternative: { id: 'bradleys', vetted: true } })).toEqual({ action: 'text2' });
+    expect(d(due, { alternative: null })).toEqual({ action: 'text2' });
     expect(d(f({ textedAt: 'x', followupAt: 'y', followupKind: 'last_free' }))).toEqual({ action: 'wait', reason: 'awaiting_call' });
     expect(d(f({ textedAt: 'x', followupAt: 'y', followupKind: 'repoint', repointBy: '2026-10-21' }))).toEqual({ action: 'intervene_repoint', by: '2026-10-21' });
     expect(d(f({ textedAt: 'x', followupAt: 'y', followupKind: 'repoint', repointBy: '2026-10-25' }))).toEqual({ action: 'wait', reason: 'awaiting_call' });
@@ -59,8 +64,14 @@ describe('source guards', () => {
     const src = read('app/api/cron/ppl-pitch/route.ts');
     expect(src).not.toMatch(/setCampaignForwardTo|set-forward|forward_to:/);
     expect(src.indexOf('isGoodTimeToText(')).toBeLessThan(src.indexOf('sendPitchText1(c.id'));
-    for (const subject of ['Paid:', 'Intervene:', 'Pitch text 1 sent', 'Pitch follow-up sent', 'FAILED']) expect(src).toContain(subject);
+    for (const subject of ['Paid:', 'Intervene:', 'Pitch text 1 sent', 'Pitch follow-up sent', 'FAILED', 'Vet ']) expect(src).toContain(subject);
     expect(src).toMatch(/PPL_PITCH_AUTO_ENABLED/);
+    // The cron never sends the follow-up past an unvetted business: it does not use the override, and the decision holds.
+    expect(src).not.toMatch(/allowUnvetted/);
+    expect(src).toMatch(/action === 'vet_needed'/);
+    // Text 1's email names the next business and asks for the vet; the intervene email carries their number.
+    expect(src).toMatch(/Next business in line/);
+    expect(src).toMatch(/NOT yet vetted/);
   });
   it('the button and the cron send through the same functions', () => {
     const route = read('app/api/admin/ppl/pitch/route.ts');

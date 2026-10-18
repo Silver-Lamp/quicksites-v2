@@ -15,6 +15,7 @@
 
 import { classifyDial, type DialOutcome } from '@/lib/ppl/forwardHealth';
 import { analysisLine } from '@/lib/ppl/callAnalysis';
+import { automationRemindersHtml, automationRemindersText } from '@/lib/ppl/automationStatus';
 
 export type CallRow = {
   id: string;
@@ -218,7 +219,14 @@ export function buildCallAlertEmail(rows: CallRow[], baseUrl: string): AlertEmai
   </p>
 </div>`;
 
-  return { subject, html, text };
+  // Which pay-per-call automations are OFF, so an alert never implies a text or a bill that will not happen.
+  const reminders = automationRemindersHtml();
+  const remindersText = automationRemindersText();
+  return {
+    subject,
+    html: reminders ? html.replace(/<\/div>\s*$/, `${reminders}</div>`) : html,
+    text: remindersText ? `${text}\n\n${remindersText}` : text,
+  };
 }
 
 function esc(s: string): string {

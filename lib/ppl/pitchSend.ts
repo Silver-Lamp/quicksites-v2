@@ -18,7 +18,7 @@ import { pitchText1, pitchText2, type PitchFunnel } from '@/lib/ppl/pitchText';
 import { last10 } from '@/lib/ppl/ownNumberCall';
 import { classifyDial } from '@/lib/ppl/forwardHealth';
 
-export type PitchCampaign = GeoCampaign & Partial<Record<'pitch_deal' | 'pitch_texted_at' | 'pitch_followup_at' | 'pitch_followup_kind' | 'pitch_repoint_prospect_id' | 'pitch_repoint_by' | 'pitch_called_at' | 'pitch_result' | 'pitch_notes' | 'pitch_sent_by' | 'pitch_intervene_emailed_at' | 'pitch_paid_emailed_at', string | null>>;
+export type PitchCampaign = GeoCampaign & Partial<Record<'pitch_deal' | 'pitch_texted_at' | 'pitch_followup_at' | 'pitch_followup_kind' | 'pitch_repoint_prospect_id' | 'pitch_repoint_by' | 'pitch_called_at' | 'pitch_result' | 'pitch_notes' | 'pitch_sent_by' | 'pitch_intervene_emailed_at' | 'pitch_paid_emailed_at' | 'pitch_alternative_prospect_id' | 'pitch_alternative_vetted_at' | 'pitch_vet_reminded_on', string | null>> & { pitch_alternative_rejected?: string[] | null };
 
 export type SentBy = 'operator' | 'cron';
 
@@ -54,7 +54,7 @@ export async function latestLead(campaignId: string): Promise<{ at: string; seco
 }
 
 /** Another no-website shop in the same city + trade, with a phone, not the current forward-to, not opted out. */
-export async function alternativeShop(c: PitchCampaign): Promise<{ id: string; name: string; phone: string } | null> {
+export async function alternativeShop(c: PitchCampaign, exclude: string[] = c.pitch_alternative_rejected ?? []): Promise<{ id: string; name: string; phone: string } | null> {
   if (!c?.city || !c.industry_key) return null;
   const { data } = await supabaseAdmin
     .from('outreach_prospects')
@@ -68,11 +68,35 @@ export async function alternativeShop(c: PitchCampaign): Promise<{ id: string; n
     .limit(10);
   const cur = last10(c.forward_to);
   for (const p of data ?? []) {
-    if (!p.phone || last10(p.phone) === cur) continue;
+    if (!p.phone || last10(p.phone) === cur || exclude.includes(p.id)) continue;
     if (await isOptedOut(p.phone).catch(() => false)) continue;
     return { id: p.id, name: p.business_name, phone: p.phone };
   }
   return null;
+}
+
+/** The alternative on file for a campaign, with whether a person has vetted them. */
+export async function storedAlternative(c: PitchCampaign): Promise<{ id: string; name: string; phone: string | null; vetted: boolean } | null> {
+  if (!c.pitch_alternative_prospect_id) return null;
+  const { data } = await supabaseAdmin.from('outreach_prospects').select('id, business_name, phone').eq('id', c.pitch_alternative_prospect_id).maybeSingle();
+  if (!data) return null;
+  return { id: data.id, name: data.business_name, phone: data.phone ?? null, vetted: !!c.pitch_alternative_vetted_at };
+}
+
+/** A person looked at them (listing + a dial from an ordinary phone) and they are suitable. */
+export async function vetAlternative(campaignId: string): Promise<boolean> {
+  const { error } = await supabaseAdmin.from('geo_industry_campaigns').update({ pitch_alternative_vetted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', campaignId).not('pitch_alternative_prospect_id', 'is', null);
+  return !error;
+}
+
+/** Not suitable: move to the next candidate (or none), unvetted. */
+export async function rejectAlternative(campaignId: string): Promise<{ next: { id: string; name: string; phone: string } | null }> {
+  const c = (await getGeoCampaign(campaignId).catch(() => null)) as PitchCampaign | null;
+  if (!c) return { next: null };
+  const rejected = Array.from(new Set([...(c.pitch_alternative_rejected ?? []), ...(c.pitch_alternative_prospect_id ? [c.pitch_alternative_prospect_id] : [])]));
+  const next = await alternativeShop(c, rejected);
+  await supabaseAdmin.from('geo_industry_campaigns').update({ pitch_alternative_rejected: rejected, pitch_alternative_prospect_id: next?.id ?? null, pitch_alternative_vetted_at: null, pitch_vet_reminded_on: null, updated_at: new Date().toISOString() }).eq('id', campaignId);
+  return { next };
 }
 
 export async function depositLink(c: PitchCampaign, dealKey: DealKey, businessName: string): Promise<{ url: string; created: boolean; account: PplAccount }> {
@@ -108,11 +132,14 @@ export async function sendPitchText1(campaignId: string, opts: { dealKey?: DealK
   const r = await sendSms(c.forward_to!, text);
   if (!r.ok) return { ok: false, error: 'send_failed', detail: r.error ?? null };
   const now = new Date().toISOString();
-  await supabaseAdmin.from('geo_industry_campaigns').update({ pitch_texted_at: now, pitch_deal: dealKey, pitch_sent_by: opts.by, updated_at: now }).eq('id', c.id).is('pitch_texted_at', null);
-  return { ok: true, text, to: c.forward_to!, accountCreated: created };
+  // Pick the next business in line NOW, so the owner can vet them before the follow-up names them.
+  const alt = c.pitch_alternative_prospect_id ? null : await alternativeShop(c);
+  await supabaseAdmin.from('geo_industry_campaigns').update({ pitch_texted_at: now, pitch_deal: dealKey, pitch_sent_by: opts.by, updated_at: now, ...(alt ? { pitch_alternative_prospect_id: alt.id } : {}) }).eq('id', c.id).is('pitch_texted_at', null);
+  const stored = alt ?? (await storedAlternative(c).then((s) => (s ? { id: s.id, name: s.name, phone: s.phone ?? '' } : null)));
+  return { ok: true, text, to: c.forward_to!, accountCreated: created, alternative: stored ? { id: stored.id, name: stored.name } : null };
 }
 
-export async function sendPitchText2(campaignId: string, opts: { by: SentBy }): Promise<SendResult> {
+export async function sendPitchText2(campaignId: string, opts: { by: SentBy; allowUnvetted?: boolean }): Promise<SendResult> {
   const c = (await getGeoCampaign(campaignId).catch(() => null)) as PitchCampaign | null;
   if (!c) return { ok: false, error: 'not_found' };
   const g = await guard(c); if (g) return g;
@@ -121,7 +148,11 @@ export async function sendPitchText2(campaignId: string, opts: { by: SentBy }): 
   const dealKey: DealKey = (funnelOf(c).deal as DealKey | null) ?? 'next';
   const business = c.forward_to_name || 'the business on the line';
   const { url } = await depositLink(c, dealKey, business);
-  const alt = await alternativeShop(c);
+  // Only a business a person has vetted may be promised the line. Unvetted → refuse (the cron
+  // emails a reminder instead); none on file → the "last free one" wording.
+  const stored = await storedAlternative(c);
+  if (stored && !stored.vetted && !opts.allowUnvetted) return { ok: false, error: 'alternative_not_vetted', detail: stored.name };
+  const alt = stored ? { id: stored.id, name: stored.name } : null;
   const now = new Date();
   const t2 = pitchText2({ domain: c.domain, deal: dealKey, checkoutUrl: url, alternative: alt ? { name: alt.name } : null, sentAt: now });
   const r = await sendSms(c.forward_to!, t2.text);
@@ -158,16 +189,20 @@ export type AutoDecision =
   | { action: 'intervene_repoint'; by: string }
   | { action: 'text1' }
   | { action: 'text2' }
+  | { action: 'vet_needed'; alternativeId: string }
   | { action: 'wait'; reason: 'followup_not_due' | 'awaiting_call' | 'already_done' | 'no_lead' | 'result_recorded' };
 
-export function pitchAutoDecision(args: { funnel: PitchFunnel; hasPaidGradeLead: boolean; accountActive: boolean; nowMs: number; followupAfterDays: number }): AutoDecision {
+export function pitchAutoDecision(args: { funnel: PitchFunnel; hasPaidGradeLead: boolean; accountActive: boolean; nowMs: number; followupAfterDays: number; alternative?: { id: string; vetted: boolean } | null }): AutoDecision {
   const f = args.funnel;
   if (args.accountActive && f.result !== 'paid') return { action: 'mark_paid' };
   if (f.result) return { action: 'wait', reason: 'result_recorded' };
   if (!f.textedAt) return args.hasPaidGradeLead ? { action: 'text1' } : { action: 'wait', reason: 'no_lead' };
   if (!f.followupAt) {
     const days = (args.nowMs - Date.parse(f.textedAt)) / 86_400_000;
-    return days >= args.followupAfterDays ? { action: 'text2' } : { action: 'wait', reason: 'followup_not_due' };
+    if (days < args.followupAfterDays) return { action: 'wait', reason: 'followup_not_due' };
+    // The follow-up would promise the line to the next business: a person must have looked first.
+    if (args.alternative && !args.alternative.vetted) return { action: 'vet_needed', alternativeId: args.alternative.id };
+    return { action: 'text2' };
   }
   if (f.followupKind === 'repoint' && f.repointBy && args.nowMs >= Date.parse(`${f.repointBy}T23:59:59Z`)) return { action: 'intervene_repoint', by: f.repointBy };
   return { action: 'wait', reason: f.calledAt ? 'already_done' : 'awaiting_call' };

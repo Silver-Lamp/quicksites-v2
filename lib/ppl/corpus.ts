@@ -29,6 +29,8 @@ export type CorpusCampaign = {
   forward_to_name: string | null;
   domain_status: string | null;
   created_at: string | null;
+  /** The pitch site — the "rename it to the real business" step on a yes needs the editor link. */
+  template_id?: string | null;
 };
 
 export type CorpusCall = {
@@ -74,6 +76,12 @@ export type LineRow = {
   ownOrTest: number;
   answerRate: number | null;
   lastCallAt: string | null;
+  /** Forwarded dials that rang out — the "you missed N" fact a pitch must say out loud. */
+  unanswered: number;
+  /** The customer-read, ≥90 s calls themselves (when, how long): what the pitch opens with. */
+  leadCalls: Array<{ at: string; seconds: number }>;
+  templateId: string | null;
+  trackingNumber: string | null;
 };
 
 export type CorpusSummary = {
@@ -180,6 +188,10 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
       ownOrTest: 0,
       answerRate: null,
       lastCallAt: null,
+      unanswered: 0,
+      leadCalls: [],
+      templateId: camp.template_id ?? null,
+      trackingNumber: camp.tracking_number,
     };
     if (!line.lastCallAt || c.created_at > line.lastCallAt) line.lastCallAt = c.created_at;
     if (own) line.ownOrTest += 1;
@@ -188,8 +200,12 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
       if (c.handling === 'forward' || c.handling == null) {
         if (d === 'connected' || d === 'brief' || d === 'unanswered') line.dials += 1;
         if (d === 'connected') line.answered += 1;
+        if (d === 'unanswered') line.unanswered += 1;
         if (d === 'connected' && (c.call_duration ?? 0) >= 90) line.leads90 += 1;
-        if (read === 'customer' && d === 'connected' && (c.call_duration ?? 0) >= 90) line.customerLeads90 += 1;
+        if (read === 'customer' && d === 'connected' && (c.call_duration ?? 0) >= 90) {
+          line.customerLeads90 += 1;
+          line.leadCalls.push({ at: c.created_at, seconds: c.call_duration ?? 0 });
+        }
       }
       if (read === 'customer') line.customers += 1;
       if (read && JUNK_READS.has(read)) line.junk += 1;
@@ -205,9 +221,10 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
       ageDays: camp.created_at ? Math.floor((nowMs - Date.parse(camp.created_at)) / 86_400_000) : null, forwardToName: camp.forward_to_name,
       impressions28d: gscByHost.get(hostOf(camp.domain))?.impressions ?? null, clicks28d: gscByHost.get(hostOf(camp.domain))?.clicks ?? null,
       calls: 0, dials: 0, answered: 0, leads90: 0, customers: 0, customerLeads90: 0, junk: 0, ownOrTest: 0, answerRate: null, lastCallAt: null,
+      unanswered: 0, leadCalls: [], templateId: camp.template_id ?? null, trackingNumber: camp.tracking_number,
     });
   }
-  const lines = Array.from(perLine.values()).map((l) => ({ ...l, answerRate: l.dials ? l.answered / l.dials : null }));
+  const lines = Array.from(perLine.values()).map((l) => ({ ...l, answerRate: l.dials ? l.answered / l.dials : null, leadCalls: [...l.leadCalls].sort((a, b) => a.at.localeCompare(b.at)) }));
   lines.sort((a, b) => b.leads90 - a.leads90 || b.customers - a.customers || b.dials - a.dials || a.domain.localeCompare(b.domain));
 
   const readRows = Array.from(reads.entries()).map(([read, v]) => ({ read, ...v })).sort((a, b) => b.count - a.count);
@@ -256,7 +273,7 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
 export async function loadPplCorpus(nowMs = Date.now()): Promise<CorpusSummary> {
   const { supabaseAdmin } = await import('@/lib/supabase/admin');
   const [{ data: campaigns }, { data: calls }, { data: gsc }] = await Promise.all([
-    supabaseAdmin.from('geo_industry_campaigns').select('id, domain, city, industry_key, rank_status, rank_position, tracking_number, forward_to, forward_to_name, domain_status, created_at'),
+    supabaseAdmin.from('geo_industry_campaigns').select('id, domain, city, industry_key, rank_status, rank_position, tracking_number, forward_to, forward_to_name, domain_status, created_at, template_id'),
     supabaseAdmin.from('call_logs').select('geo_campaign_id, from_number, forwarded_to, handling, call_status, call_duration, created_at, recording_url, voicemail_speech, voicemail_verdict, analysis').not('geo_campaign_id', 'is', null).order('created_at', { ascending: false }).limit(5000),
     // Only recent captures are needed to find each host's latest window.
     supabaseAdmin.from('gsc_queries').select('domain, end_date, impressions, clicks').gte('end_date', new Date(nowMs - 10 * 86_400_000).toISOString().slice(0, 10)).limit(50000),

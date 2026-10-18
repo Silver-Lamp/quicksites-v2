@@ -46,6 +46,9 @@ export type CorpusCall = {
   voicemail_verdict: string | null;
   /** `analysis->>'read'` from lib/ppl/callAnalysis.ts, or null when not analysed. */
   read: string | null;
+  /** The did-it-become-a-job survey (lib/ppl/outcomeSurvey.ts): when asked, what they said. */
+  outcome_survey_sent_at?: string | null;
+  outcome_reported?: string | null;
 };
 
 /** A harvest row. ⚠️ The harvest is a daily capture of a rolling 28-day window; lib/gsc/latestWindow.ts sums ONE capture. */
@@ -82,6 +85,8 @@ export type LineRow = {
   leadCalls: Array<{ at: string; seconds: number }>;
   templateId: string | null;
   trackingNumber: string | null;
+  /** What the business told us when asked "did it become a job?" — asked / job / no / not yet. */
+  outcome: { asked: number; jobs: number; noJobs: number; notYet: number };
 };
 
 export type CorpusSummary = {
@@ -192,8 +197,15 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
       leadCalls: [],
       templateId: camp.template_id ?? null,
       trackingNumber: camp.tracking_number,
+      outcome: { asked: 0, jobs: 0, noJobs: 0, notYet: 0 },
     };
     if (!line.lastCallAt || c.created_at > line.lastCallAt) line.lastCallAt = c.created_at;
+    if (c.outcome_survey_sent_at) {
+      line.outcome.asked += 1;
+      if (c.outcome_reported === 'job') line.outcome.jobs += 1;
+      else if (c.outcome_reported === 'no_job') line.outcome.noJobs += 1;
+      else if (c.outcome_reported === 'not_yet') line.outcome.notYet += 1;
+    }
     if (own) line.ownOrTest += 1;
     else {
       line.calls += 1;
@@ -221,7 +233,7 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
       ageDays: camp.created_at ? Math.floor((nowMs - Date.parse(camp.created_at)) / 86_400_000) : null, forwardToName: camp.forward_to_name,
       impressions28d: gscByHost.get(hostOf(camp.domain))?.impressions ?? null, clicks28d: gscByHost.get(hostOf(camp.domain))?.clicks ?? null,
       calls: 0, dials: 0, answered: 0, leads90: 0, customers: 0, customerLeads90: 0, junk: 0, ownOrTest: 0, answerRate: null, lastCallAt: null,
-      unanswered: 0, leadCalls: [], templateId: camp.template_id ?? null, trackingNumber: camp.tracking_number,
+      unanswered: 0, leadCalls: [], templateId: camp.template_id ?? null, trackingNumber: camp.tracking_number, outcome: { asked: 0, jobs: 0, noJobs: 0, notYet: 0 },
     });
   }
   const lines = Array.from(perLine.values()).map((l) => ({ ...l, answerRate: l.dials ? l.answered / l.dials : null, leadCalls: [...l.leadCalls].sort((a, b) => a.at.localeCompare(b.at)) }));
@@ -274,7 +286,7 @@ export async function loadPplCorpus(nowMs = Date.now()): Promise<CorpusSummary> 
   const { supabaseAdmin } = await import('@/lib/supabase/admin');
   const [{ data: campaigns }, { data: calls }, { data: gsc }] = await Promise.all([
     supabaseAdmin.from('geo_industry_campaigns').select('id, domain, city, industry_key, rank_status, rank_position, tracking_number, forward_to, forward_to_name, domain_status, created_at, template_id'),
-    supabaseAdmin.from('call_logs').select('geo_campaign_id, from_number, forwarded_to, handling, call_status, call_duration, created_at, recording_url, voicemail_speech, voicemail_verdict, analysis').not('geo_campaign_id', 'is', null).order('created_at', { ascending: false }).limit(5000),
+    supabaseAdmin.from('call_logs').select('geo_campaign_id, from_number, forwarded_to, handling, call_status, call_duration, created_at, recording_url, voicemail_speech, voicemail_verdict, analysis, outcome_survey_sent_at, outcome_reported').not('geo_campaign_id', 'is', null).order('created_at', { ascending: false }).limit(5000),
     // Only recent captures are needed to find each host's latest window.
     supabaseAdmin.from('gsc_queries').select('domain, end_date, impressions, clicks').gte('end_date', new Date(nowMs - 10 * 86_400_000).toISOString().slice(0, 10)).limit(50000),
   ]);

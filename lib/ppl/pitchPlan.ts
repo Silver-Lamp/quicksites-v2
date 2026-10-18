@@ -12,6 +12,7 @@
 // the account table would not charge: every dollar figure is formatted from PPL_DEFAULTS and the
 // starter constants below, so changing the deal changes the script.
 import { PPL_DEFAULTS } from '@/lib/ppl/rules';
+import { outcomeSentence } from '@/lib/ppl/outcomeSurvey';
 import type { LineRow } from '@/lib/ppl/corpus';
 
 /** A first yes is asked for a small balance, not the $1,200 reload — set per account, never a code change. */
@@ -48,6 +49,8 @@ export type PitchFacts = {
   rankStatus: string | null;
   rankPosition: number | null;
   ageDays: number | null;
+  /** The sentence from the did-it-become-a-job survey, or null when nobody was asked yet. */
+  outcomeLine: string | null;
 };
 
 export type PitchPlan = {
@@ -103,6 +106,7 @@ export function pitchFacts(line: LineRow): PitchFacts {
     rankStatus: line.rankStatus,
     rankPosition: line.rankPosition,
     ageDays: line.ageDays,
+    outcomeLine: outcomeSentence({ asked: line.outcome.asked, answered: line.outcome.jobs + line.outcome.noJobs + line.outcome.notYet, jobs: line.outcome.jobs, noJobs: line.outcome.noJobs, notYet: line.outcome.notYet }),
   };
 }
 
@@ -116,6 +120,7 @@ export function pitchAdvice(f: PitchFacts, d = PPL_DEFAULTS): string[] {
   const last = f.leads[f.leads.length - 1];
   if (last) out.push(`Open with the ${last.whenLabel} call (${last.minutesLabel}). They were texted that caller's number; ask whether it became a job — that answer is the real pitch signal and we do not have it yet.`);
   if (f.leads.length > 1) out.push(`${f.leads.length} paid-grade calls on this line, not one — say so; the ask is to keep what is already happening.`);
+  if (f.outcomeLine) out.push(`${f.outcomeLine} That is their own answer to the records-only text — use it before you ask the question again.`);
   if (f.unanswered > 0) out.push(`${f.unanswered} of ${f.dials} forwarded dials rang out. Say it: on pay-per-call they pay nothing for a ring-out, but each one was a customer who reached nobody. Their phone shows our tracking number as the caller — ask them to answer it.`);
   if (f.rankStatus === 'page1') out.push(`The page is on page one (position ${f.rankPosition ?? '?'}) with ${f.impressions28d ?? 0} impressions in 28 days: the page is the asset, the call is the proof.`);
   else out.push(`The page is not on page one yet (position ${f.rankPosition ?? 'unknown'}, ${f.impressions28d ?? 0} impressions / ${f.clicks28d ?? 0} clicks in 28 days). Pitch the call they received, never where the page sits.`);
@@ -152,6 +157,7 @@ export function pitchScript(f: PitchFacts, tracking: string | null, d = PPL_DEFA
       { label: 'I miss calls sometimes', next: 'missed' },
       { label: 'I have enough work', next: 'enough' },
       { label: 'I already pay a lead service', next: 'competitor' },
+      { label: 'Can I pay per job instead?', next: 'per_job' },
       { label: 'Let me think about it', next: 'later' },
       { label: 'No', next: 'no' },
     ] },
@@ -162,7 +168,8 @@ export function pitchScript(f: PitchFacts, tracking: string | null, d = PPL_DEFA
       : `You pay nothing for a call that rings out — only for calls you answer that run ${secs} or more. The one to pick up is the tracking number.`, next: 'offer' },
     { id: 'enough', kind: 'say', title: 'They have enough work', say: `Then say no — I would rather hear no than have you resent a bill. The line stays as it is for now, and if it goes quiet you know where I am.`, next: 'no' },
     { id: 'competitor', kind: 'say', title: 'Already paying a lead service', say: `Different thing. They sell the same lead to several shops and you race for it. This line rings only you, and you pay only for calls that actually connected for ${secs}. Keep both if you like — they do not fight.`, next: 'offer' },
-    { id: 'yes', kind: 'end', title: 'Yes', outcome: 'yes', say: `Great. I will text you a link to put the ${dep} on. The moment it lands, the page shows your name and calls are billed from then on — nothing before that.${line}` },
+    { id: 'per_job', kind: 'say', title: 'Per job instead?', say: `There is a per-job way, and it is honest only when the payment itself runs through us: you take the customer's payment through our link, we take a share of the job, and no call is ever charged. That is not set up for ${f.trade} yet — if you would rather pay that way, tell me and you are first in line. Until then it is per call, and you can contest any call within ${d.disputeWindowHours} hours. A self-reported "that one didn't become a job" cannot be the bill — I would be asking you to charge yourself.`, next: 'offer' },
+    { id: 'yes', kind: 'end', title: 'Yes', outcome: 'yes', say: `Great. I will text you a link to put the ${dep} on. The moment it lands, the page shows your name and calls are billed from then on — nothing before that. After each call you take, you will get one text asking whether it became a job — Y, N or not yet. That is for our records only and never changes a charge.${line}` },
     { id: 'later', kind: 'end', title: 'Later', outcome: 'later', say: `Sure. I will text you the link so it is there when you want it; nothing happens until you use it, and the line keeps forwarding meanwhile.` },
     { id: 'no', kind: 'end', title: 'No', outcome: 'no', say: `No problem. I will keep forwarding for now; if that changes I will text you first.` },
   ];

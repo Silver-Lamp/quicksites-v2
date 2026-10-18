@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/auth/requireUser';
-import { getGeoCampaign, setCampaignPricing } from '@/lib/outreach/geoCampaigns';
+import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { createPplAccount, getPplAccountByCampaign, listPplAccounts } from '@/lib/ppl/accounts';
 import { createDepositCheckout, pplEnabled } from '@/lib/ppl/billing';
 import { PPL_DEFAULTS } from '@/lib/ppl/rules';
@@ -77,12 +77,10 @@ export async function POST(req: Request) {
     reload_amount_cents: b.reload_amount_cents,
     auto_reload: b.auto_reload,
   });
-  await setCampaignPricing(campaign.id, {
-    pricing_model: 'ppl',
-    price_cents: account.cpl_cents,
-    locked_rate_cents: null,
-    billing_interval: 'per_lead',
-  });
+  // ⚠️ The campaign is NOT switched to pay-per-call here. It flips in the deposit webhook
+  // (lib/ppl/billing.ts#applyPplCheckoutCompleted) when the first deposit lands: an account
+  // created to mint a link for a text-first pitch must leave the line forwarding free until the
+  // business has actually paid — a ppl campaign with a zero balance connects nobody.
 
   const deposit = b.deposit_cents ?? PPL_DEFAULTS.reloadAmountCents;
   const checkout = await createDepositCheckout(account, deposit);

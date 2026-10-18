@@ -7,12 +7,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/auth/requireUser';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { getPplAccountByCampaign } from '@/lib/ppl/accounts';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import type { DealKey } from '@/lib/ppl/pitchPlan';
 import { pitchText1, pitchText2, pitchNextStep } from '@/lib/ppl/pitchText';
-import { funnelOf, latestLead, alternativeShop, storedAlternative, vetAlternative, rejectAlternative, sendPitchText1, sendPitchText2, resendPitchLink, type PitchCampaign } from '@/lib/ppl/pitchSend';
+import { funnelOf, latestLead, alternativeShop, storedAlternative, vetAlternative, rejectAlternative, sendPitchText1, sendPitchText2, resendPitchLink, loadPitchCampaign } from '@/lib/ppl/pitchSend';
 import { isGoodTimeToText, nextWindowLabel } from '@/lib/ppl/sendWindow';
 
 export const runtime = 'nodejs';
@@ -22,7 +21,7 @@ export async function GET(req: Request) {
   const gate = await requireAdmin();
   if (gate instanceof NextResponse) return gate;
   const campaignId = new URL(req.url).searchParams.get('campaignId') ?? '';
-  const c = (await getGeoCampaign(campaignId).catch(() => null)) as PitchCampaign | null;
+  const c = await loadPitchCampaign(campaignId).catch(() => null);
   if (!c) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   const funnel = funnelOf(c);
   const dealKey: DealKey = funnel.deal ?? 'next';
@@ -71,7 +70,7 @@ export async function POST(req: Request) {
   }
   if (b.action === 'vet') return NextResponse.json({ ok: await vetAlternative(b.campaignId) });
   if (b.action === 'reject_alt') return NextResponse.json({ ok: true, ...(await rejectAlternative(b.campaignId)) });
-  const c = await getGeoCampaign(b.campaignId).catch(() => null);
+  const c = await loadPitchCampaign(b.campaignId).catch(() => null);
   if (!c) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   const now = new Date().toISOString();
   const patch: Record<string, unknown> = { updated_at: now };

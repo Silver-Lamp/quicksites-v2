@@ -457,6 +457,13 @@ const NAV_ADMIN: NavItem[] = [
   },
   {
     type: 'item',
+    label: 'Creative review (B Hard)',
+    href: '/review/bhard',
+    icon: <Mic size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
     label: 'Platform Inbox',
     href: '/admin/inbox',
     icon: <Mail size={18} />,

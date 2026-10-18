@@ -6,6 +6,8 @@
 import Link from 'next/link';
 import type { CorpusSummary, LineRow } from '@/lib/ppl/corpus';
 import { DEMAND_MIN_IMPRESSIONS, NUMBER_MONTHLY_USD } from '@/lib/ppl/corpus';
+import { buildPitchPlan } from '@/lib/ppl/pitchPlan';
+import PplPitchCallTool from '@/components/admin/ppl-pitch-call-tool';
 
 const pct = (n: number | null) => (n == null ? '—' : `${Math.round(n * 100)}%`);
 const num = (n: number | null | undefined) => (n == null ? '—' : String(n));
@@ -105,7 +107,21 @@ export default function PplCorpusSection({ s }: { s: CorpusSummary }) {
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         <Card title="Pitch now — a customer-read call of 90 s or more on the line" tone={s.pitchNow.length ? 'good' : undefined}>
-          <LineList rows={s.pitchNow} empty="No line has a customer-read call of 90 s or more yet. The pitch is “here is what you received”; wait for the evidence." note={(l) => `${l.customerLeads90} customer call${l.customerLeads90 === 1 ? '' : 's'} ≥90 s${l.rankStatus === 'page1' ? `, page 1 (${num(l.rankPosition)})` : ''}${l.impressions28d != null ? `, ${l.impressions28d} impressions / ${l.clicks28d ?? 0} clicks in 28 d` : ''}`} />
+          {s.pitchNow.length ? (
+            <ul className="space-y-2">
+              {s.pitchNow.map((l) => (
+                <li key={l.campaignId}>
+                  <span className="font-medium">{l.domain}</span>
+                  {l.forwardToName ? <span className="text-muted-foreground"> → {l.forwardToName}</span> : null}
+                  <span className="text-muted-foreground"> · {l.customerLeads90} customer call{l.customerLeads90 === 1 ? '' : 's'} ≥90 s{l.rankStatus === 'page1' ? `, page 1 (${num(l.rankPosition)})` : ''}{l.impressions28d != null ? `, ${l.impressions28d} impressions / ${l.clicks28d ?? 0} clicks in 28 d` : ''}</span>
+                  {/* Advice + a branching script + its flow chart + the on-yes steps, all derived from this row (lib/ppl/pitchPlan.ts). */}
+                  <PplPitchCallTool plan={buildPitchPlan(l, s.pitchNow, l.trackingNumber)} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">No line has a customer-read call of 90 s or more yet. The pitch is “here is what you received”; wait for the evidence.</p>
+          )}
         </Card>
         <Card title={`Demand with no number — ≥${DEMAND_MIN_IMPRESSIONS} impressions in the latest 28 days, no line`} tone={s.supply.demandWithoutNumber.length ? 'warn' : undefined}>
           {s.supply.demandWithoutNumber.length ? (

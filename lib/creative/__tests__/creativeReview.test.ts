@@ -94,6 +94,13 @@ describe('source guards', () => {
     expect(src).toMatch(/commitTemplatePatch\(/);
     expect(src).not.toMatch(/\.from\('templates'\)\s*\.update\(/);
   });
+  it('the Hear-this-page pill stays off the review surface (it covered a take\'s notes on a phone)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { hearThisPageVisibleFor } = require('@/lib/hearThisPage/config');
+    expect(hearThisPageVisibleFor('/review/bhard')).toBe(false);
+    expect(hearThisPageVisibleFor('/review')).toBe(false);
+    expect(hearThisPageVisibleFor('/reviews-of-us')).toBe(true);
+  });
   it('players never autoplay (matched as a JSX attribute, not as a word — the comment says it too)', () => {
     const src = read('app/review/[project]/review-client.tsx');
     expect(src).not.toMatch(/<(audio|video)[^>]*\bautoPlay\b/i);

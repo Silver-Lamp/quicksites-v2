@@ -89,6 +89,9 @@ export function normalizeSettings(raw: any): HearThisPageSettings {
 // there are far more public routes than private ones.
 const EXCLUDED_PREFIXES = [
   '/admin',
+  // A client's unreleased takes under review: nothing to narrate, and on a phone the pill sat
+  // over a take's notes (2026-10-17 walk-through) — the booking-form overlap, again.
+  '/review',
   '/login',
   '/logout',
   '/auth',

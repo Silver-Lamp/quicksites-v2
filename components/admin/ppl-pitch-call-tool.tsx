@@ -105,11 +105,33 @@ export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
 }
 
 function FlowChart({ plan, current }: { plan: PitchPlan; current: string }) {
+  const [large, setLarge] = useState(false);
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] text-muted-foreground">Round = a question, you wait · square = you speak · dotted = an objection loops back to the offer · green/amber/red = yes / later / no. The lit node is where the Script tab is.</p>
+        <button type="button" onClick={() => setLarge(true)} className="ml-2 shrink-0 rounded border border-border px-2 py-0.5 hover:bg-muted">Open large</button>
+      </div>
+      <FlowSvg plan={plan} current={current} fit />
+      {large && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-label="Call script flow chart, full size" onClick={() => setLarge(false)}>
+          <div className="max-h-full max-w-6xl overflow-auto rounded-lg border border-border bg-card p-4 text-card-foreground" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex justify-between text-xs"><span className="font-medium">{plan.facts.domain} — the call, as a flow chart</span><button type="button" onClick={() => setLarge(false)} className="underline">close</button></div>
+            <FlowSvg plan={plan} current={current} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FlowSvg({ plan, current, fit }: { plan: PitchPlan; current: string; fit?: boolean }) {
   const f = plan.flow;
   const pos = new Map(f.nodes.map((n) => [n.id, n]));
+  const optionCount = new Map(plan.script.map((n) => [n.id, n.options?.length ?? 0]));
   return (
-    <div className="mt-3 overflow-x-auto">
-      <svg width={f.width} height={f.height} viewBox={`0 0 ${f.width} ${f.height}`} role="img" aria-label="Call script as a flow chart" className="max-w-none">
+    <div className={fit ? 'mt-2 w-full' : 'mt-2 overflow-x-auto'}>
+      <svg width={fit ? '100%' : f.width} height={fit ? undefined : f.height} viewBox={`0 0 ${f.width} ${f.height}`} role="img" aria-label="Call script as a flow chart" className={fit ? 'h-auto w-full' : 'max-w-none'}>
         <defs>
           <marker id="pitch-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.5" /></marker>
         </defs>
@@ -124,7 +146,8 @@ function FlowChart({ plan, current }: { plan: PitchPlan; current: string }) {
           return (
             <g key={i} className="text-foreground">
               <path d={d} fill="none" stroke="currentColor" strokeOpacity={up ? 0.25 : 0.45} strokeDasharray={up ? '4 3' : undefined} markerEnd="url(#pitch-arrow)" />
-              {e.label && !up && <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 4} fontSize="9" textAnchor="middle" fill="currentColor" opacity="0.7">{e.label.length > 22 ? e.label.slice(0, 21) + '…' : e.label}</text>}
+              {/* Edge labels only where they fit: a node with many replies has their titles on the target boxes already. */}
+              {e.label && !up && (optionCount.get(e.from) ?? 0) <= 3 && <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 4} fontSize="9" textAnchor="middle" fill="currentColor" opacity="0.7">{e.label.length > 22 ? e.label.slice(0, 21) + '…' : e.label}</text>}
             </g>
           );
         })}
@@ -139,7 +162,6 @@ function FlowChart({ plan, current }: { plan: PitchPlan; current: string }) {
           );
         })}
       </svg>
-      <p className="mt-1 text-[11px] text-muted-foreground">Round = a question, you wait · square = you speak · dotted = an objection loops back to the offer · green/amber/red = yes / later / no. The lit node is where the Script tab is.</p>
     </div>
   );
 }

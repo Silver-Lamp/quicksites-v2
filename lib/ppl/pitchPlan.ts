@@ -75,10 +75,12 @@ const TRADE_WORD: Record<string, string> = {
   towing: 'a tow', plumbing: 'a plumber', electrical: 'an electrician', hvac: 'heating and cooling', roofing: 'a roofer', landscaping: 'landscaping', auto_repair: 'auto repair', general_contractor: 'a contractor', painting: 'a painter', moving: 'movers',
 };
 
-function whenLabel(iso: string): string {
+/** The owner's clock, like the call notices (lib/ppl/connectedCallNotice.ts) — the server runs UTC. */
+export const PITCH_TZ = 'America/Los_Angeles';
+export function whenLabel(iso: string, tz = PITCH_TZ): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return 'recently';
-  return d.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(d).replace(/, (\d)/, ' at $1');
 }
 function minutesLabel(seconds: number): string {
   if (seconds >= 120) return `${Math.round(seconds / 60)} minutes`;
@@ -192,7 +194,7 @@ export function layoutScript(nodes: ScriptNode[]): FlowLayout {
     const l = level.get(n.id) ?? maxLevel + 1;
     rows.set(l, [...(rows.get(l) ?? []), n.id]);
   }
-  const W = 150, H = 44, GX = 18, GY = 60;
+  const W = 132, H = 40, GX = 12, GY = 56;
   const widest = Math.max(1, ...Array.from(rows.values()).map((r) => r.length));
   const width = widest * (W + GX) + GX;
   const out: FlowLayout['nodes'] = [];
@@ -220,9 +222,15 @@ export function buildPitchPlan(line: LineRow, allPitch: LineRow[], tracking: str
   const ordered = rankPitchOrder(allPitch);
   const rank = Math.max(1, ordered.findIndex((l) => l.campaignId === line.campaignId) + 1);
   const first = ordered[0];
+  const calls = (n: number) => `${n} paid-grade call${n === 1 ? '' : 's'}`;
+  const tied = !!first && first.campaignId !== line.campaignId && first.customerLeads90 === line.customerLeads90;
+  const second = ordered[1];
+  const tiedAtTop = rank === 1 && !!second && second.customerLeads90 === line.customerLeads90;
   const reason = rank === 1
-    ? (line.customerLeads90 > 1 ? `most paid-grade calls (${line.customerLeads90})` : `${line.customerLeads90} paid-grade call${line.customerLeads90 === 1 ? '' : 's'}${(line.impressions28d ?? 0) > 0 ? ` and the most impressions (${line.impressions28d})` : ''}`)
-    : `${first?.domain ?? 'another line'} has ${first?.customerLeads90 ?? 0} paid-grade call${(first?.customerLeads90 ?? 0) === 1 ? '' : 's'} to this line's ${line.customerLeads90}`;
+    ? (ordered.length === 1 ? `the only line with a paid-grade call` : tiedAtTop ? `tied with ${second!.domain} at ${calls(line.customerLeads90)}; the most impressions (${line.impressions28d ?? 0}) breaks the tie` : `the most paid-grade calls (${line.customerLeads90})`)
+    : tied
+      ? `tied with ${first!.domain} at ${calls(line.customerLeads90)}; it has more impressions (${first!.impressions28d ?? 0} vs ${line.impressions28d ?? 0}) — if you would rather start with the line that has more to fix, start here`
+      : `${first?.domain ?? 'another line'} has ${calls(first?.customerLeads90 ?? 0)} to this line's ${line.customerLeads90}`;
   const script = pitchScript(facts, tracking, d);
   return {
     campaignId: line.campaignId,

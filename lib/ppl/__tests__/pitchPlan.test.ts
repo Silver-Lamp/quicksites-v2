@@ -5,7 +5,7 @@
 // is the one the account table would charge; the tree is whole (every branch lands somewhere,
 // every node is reachable, every path ends); and the advice is derived from the row — the
 // missed-call line appears only when a dial actually rang out.
-import { buildPitchPlan, pitchScript, pitchFacts, rankPitchOrder, layoutScript, everySayable, SCRIPT_FORBIDDEN, STARTER_DEPOSIT_CENTS, usd } from '@/lib/ppl/pitchPlan';
+import { buildPitchPlan, pitchScript, pitchFacts, rankPitchOrder, layoutScript, everySayable, whenLabel, SCRIPT_FORBIDDEN, STARTER_DEPOSIT_CENTS, usd } from '@/lib/ppl/pitchPlan';
 import { FORBIDDEN_IVR_PHRASES } from '@/lib/ppl/ivr';
 import { PPL_DEFAULTS } from '@/lib/ppl/rules';
 import type { LineRow } from '@/lib/ppl/corpus';
@@ -79,6 +79,16 @@ describe('advice is derived from the row', () => {
     expect(rankPitchOrder([kens, line()]).map((l) => l.domain)).toEqual(['vashon-plumbing.com', 'richland-towing.com']);
     const p = buildPitchPlan(kens, [kens, line()]);
     expect(p.order).toEqual({ rank: 2, of: 2, reason: expect.stringContaining('vashon-plumbing.com has 2') });
+  });
+  it('on a tie says so and names the tie-break, instead of "1 call to this line\'s 1"', () => {
+    const one = line({ customerLeads90: 1, leadCalls: [{ at: '2026-10-17T21:53:00Z', seconds: 259 }] });
+    const p = buildPitchPlan(one, [kens, one]);
+    expect(p.order.rank).toBe(2);
+    expect(p.order.reason).toMatch(/tied with richland-towing.com at 1 paid-grade call; it has more impressions \(55 vs 11\)/);
+    expect(buildPitchPlan(kens, [kens, one]).order.reason).toMatch(/tied .* the most impressions \(55\) breaks the tie/);
+  });
+  it('labels call times on the owner\'s clock, not the server\'s UTC', () => {
+    expect(whenLabel('2026-10-17T21:53:00Z')).toBe('Saturday, October 17 at 2:53 PM');
   });
   it('the starter ask is derived from the constants, with the lead count it buys', () => {
     const p = buildPitchPlan(kens, [kens]);

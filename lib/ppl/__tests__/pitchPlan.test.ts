@@ -13,7 +13,7 @@ import type { LineRow } from '@/lib/ppl/corpus';
 const line = (p: Partial<LineRow> = {}): LineRow => ({
   campaignId: 'c1', domain: 'vashon-plumbing.com', city: 'Vashon', industry: 'plumbing', rankStatus: 'ranking', rankPosition: 54.9, ageDays: 9,
   forwardToName: 'Midsound Plumbing', impressions28d: 11, clicks28d: 3, calls: 8, dials: 7, answered: 4, leads90: 2, customers: 2, customerLeads90: 2, junk: 0, ownOrTest: 0, answerRate: 4 / 7, lastCallAt: '2026-10-17T21:53:00Z',
-  unanswered: 3, leadCalls: [{ at: '2026-10-13T18:00:00Z', seconds: 116 }, { at: '2026-10-17T21:53:00Z', seconds: 259 }], templateId: 't1', trackingNumber: '+12535550100', ...p,
+  unanswered: 3, leadCalls: [{ at: '2026-10-13T18:00:00Z', seconds: 116 }, { at: '2026-10-17T21:53:00Z', seconds: 259 }], templateId: 't1', trackingNumber: '+12535550100', outcome: { asked: 0, jobs: 0, noJobs: 0, notYet: 0 }, ...p,
 });
 const kens = line({ campaignId: 'c2', domain: 'richland-towing.com', city: 'Richland', industry: 'towing', forwardToName: "Ken's Auto Rescue", rankPosition: 14, impressions28d: 55, clicks28d: 2, calls: 1, dials: 1, answered: 1, leads90: 1, customers: 1, customerLeads90: 1, unanswered: 0, leadCalls: [{ at: '2026-10-17T19:10:00Z', seconds: 159 }], ageDays: 20 });
 

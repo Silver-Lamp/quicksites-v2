@@ -18,6 +18,8 @@ import {
   isStopMessage,
   stopConfirmationText,
 } from '@/lib/ppl/forwardNotice';
+import { parseOutcomeReply, outcomeReplyAck } from '@/lib/ppl/outcomeSurvey';
+import { recordOutcomeReply } from '@/lib/ppl/outcomeSurveyDb';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,6 +57,14 @@ export async function POST(req: Request) {
   if (isStartMessage(body, optOutType)) {
     await applyStart(from);
     return xml('<?xml version="1.0" encoding="UTF-8"?><Response/>');
+  }
+  // "Did that call become a job?" (lib/ppl/outcomeSurvey.ts): a Y / N / NOT YET from a business
+  // lands on the most recent call we ASKED it about and have no answer for. Anything else is
+  // ignored — this line is not a conversation. Best-effort; a failure answers nothing.
+  const reply = parseOutcomeReply(body);
+  if (reply) {
+    const recorded = await recordOutcomeReply(from, reply, body).catch(() => false);
+    if (recorded) return xml(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${outcomeReplyAck(reply)}</Message></Response>`);
   }
   return xml('<?xml version="1.0" encoding="UTF-8"?><Response/>');
 }

@@ -220,6 +220,15 @@ export const CONFIG_GATES: ConfigGate[] = [
       'A campaign marked pricing_model=ppl bridges calls but cannot bill them (no signed callback), cannot credit a deposit (webhook secret), or bills silently (no statement email). With the flag off, ppl campaigns fall back to the plain forward-and-log path and nothing is charged.',
   },
   {
+    key: 'ppl_outcome_survey',
+    label: 'Did-it-become-a-job text to the business after a billable-length call (/api/cron/ppl-outcome-survey, hourly)',
+    enabledBy: 'PPL_OUTCOME_SURVEY_ENABLED',
+    requires: ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM', 'CRON_SECRET'],
+    degradeOnly: true,
+    breaks:
+      'With the flag on but Twilio incomplete the cron returns {skipped: sms_not_configured} every hour and no business is ever asked, so the conversion measurement the pricing rests on quietly never starts. The call rows stay unmarked; nothing is billed either way.',
+  },
+  {
     key: 'voicemail_relay',
     label: 'A voicemail-first message can actually reach the operator',
     // ⚠️ NO `enabledBy`, deliberately. Voicemail-first is switched on by clearing a campaign's

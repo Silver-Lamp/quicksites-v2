@@ -11,6 +11,8 @@ import SiteHeader from '@/components/site/site-header';
 import SiteFooter from '@/components/site/site-footer';
 import { verifyStatementToken } from '@/lib/ppl/statementToken';
 import { getPplAccount, listLedger } from '@/lib/ppl/accounts';
+import { outcomeStatsForCampaign } from '@/lib/ppl/outcomeSurveyDb';
+import { outcomeSentence } from '@/lib/ppl/outcomeSurvey';
 import { listDisputesForAccount, DISPUTE_CATEGORIES } from '@/lib/ppl/disputes';
 import { disputeWindowOpen, usd, PPL_DEFAULTS } from '@/lib/ppl/rules';
 import { supabaseAdmin } from '@/lib/supabase/admin';
@@ -31,10 +33,13 @@ export default async function LeadStatementPage({
   const account = await getPplAccount(v.accountId);
   if (!account || account.status === 'closed') notFound();
 
-  const [ledger, disputes] = await Promise.all([
+  const [ledger, disputes, outcomes] = await Promise.all([
     listLedger(account.id, 200),
     listDisputesForAccount(account.id),
+    // What the business itself told us after each call — for the record, never the bill.
+    outcomeStatsForCampaign(account.geo_campaign_id).catch(() => null),
   ]);
+  const outcomeLine = outcomes ? outcomeSentence(outcomes) : null;
   const disputeByLedger = new Map(disputes.map((d) => [d.ledger_id, d]));
   const sids = ledger.map((r) => r.call_sid).filter(Boolean) as string[];
   const { data: recs } = sids.length
@@ -52,6 +57,11 @@ export default async function LeadStatementPage({
             Pay-per-call statement
           </p>
           <h1 className="mt-1 text-2xl font-semibold">{account.business_name}</h1>
+          {outcomeLine && (
+            <p className="mt-2 text-sm text-muted-foreground" data-outcome-line>
+              {outcomeLine} Your answers never change a charge; they tell us what a call is worth.
+            </p>
+          )}
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-border bg-card p-4 text-card-foreground">
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">

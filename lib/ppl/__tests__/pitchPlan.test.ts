@@ -66,6 +66,21 @@ describe('the tree', () => {
   });
 });
 
+describe('the client console never bundles the server module', () => {
+  it('imports from pitchPlan as TYPE only, and pulls values from the pure money module', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('node:fs') as typeof import('node:fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require('node:path') as typeof import('node:path');
+    const src = fs.readFileSync(path.resolve(__dirname, '../../../components/admin/ppl-pitch-call-tool.tsx'), 'utf8');
+    const valueImports = src.match(/^import (?!type )[^;]*from '@\/lib\/ppl\/pitchPlan'/gm) ?? [];
+    expect(valueImports).toEqual([]);
+    expect(src).toMatch(/import \{ usd \} from '@\/lib\/ppl\/money'/);
+    const money = fs.readFileSync(path.resolve(__dirname, '../money.ts'), 'utf8');
+    expect(money).not.toMatch(/^import /m); // pure: nothing for the browser to drag in
+  });
+});
+
 describe('advice is derived from the row', () => {
   it('says the missed-call line only when a dial rang out, and opens with the latest lead', () => {
     const withMisses = buildPitchPlan(line(), [line()]);

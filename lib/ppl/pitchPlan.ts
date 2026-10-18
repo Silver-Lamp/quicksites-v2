@@ -22,7 +22,8 @@ export const STARTER_RELOAD_AMOUNT_CENTS = 30_000;
 
 export const SCRIPT_FORBIDDEN = ['rank', 'first page', 'page one', 'google', 'guarantee', 'licensed', 'insured', 'specialist', '24/7', 'escrow', 'capacity', 'high volume', 'seasonal'];
 
-export const usd = (cents: number) => `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+import { usd } from '@/lib/ppl/money';
+export { usd };
 
 export type ScriptNode = {
   id: string;

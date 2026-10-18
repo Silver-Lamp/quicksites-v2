@@ -6,8 +6,11 @@
 // the "they said yes" steps with the two server actions (create the account + deposit link,
 // text the link) and the editor link for the rename. Dark chrome tokens only.
 import { useEffect, useMemo, useRef, useState } from 'react';
+// ⚠️ TYPE-ONLY from pitchPlan. That module runs on the server (it reaches the corpus and, since
+// the outcome survey, the Supabase admin client); a value import here bundles it for the
+// browser, where `createClient` throws "supabaseKey is required" and the whole page dies.
 import type { PitchPlan, ScriptNode } from '@/lib/ppl/pitchPlan';
-import { usd } from '@/lib/ppl/pitchPlan';
+import { usd } from '@/lib/ppl/money';
 
 /** One step already taken on the call: the node we were on and what they said to leave it. */
 type TrailStep = { nodeId: string; title: string; said: string | null };
@@ -150,7 +153,7 @@ function ScriptWalker({ node, trail, total, onGo, onBack, onRestart, onYes }: {
         {node.kind === 'ask' && options.length > 0 && (
           <div className="mt-3">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">They say… <span className="normal-case">(or press the number)</span></div>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
               {options.map((o, i) => (
                 <button key={o.label} type="button" onClick={() => onGo(o.next, o.label)} aria-keyshortcuts={String(i + 1)}
                   className="flex min-h-[3rem] items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm hover:bg-muted">

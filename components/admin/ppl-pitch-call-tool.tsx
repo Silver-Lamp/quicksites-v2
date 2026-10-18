@@ -5,9 +5,12 @@
 // said, read what to say next), the same tree as a flow chart (pure SVG, current node lit), and
 // the "they said yes" steps with the two server actions (create the account + deposit link,
 // text the link) and the editor link for the rename. Dark chrome tokens only.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PitchPlan, ScriptNode } from '@/lib/ppl/pitchPlan';
 import { usd } from '@/lib/ppl/pitchPlan';
+
+/** One step already taken on the call: the node we were on and what they said to leave it. */
+type TrailStep = { nodeId: string; title: string; said: string | null };
 
 type Tab = 'facts' | 'script' | 'flow' | 'yes';
 
@@ -15,18 +18,19 @@ export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('facts');
   const [at, setAt] = useState<string>(plan.script[0]?.id ?? 'open');
-  const [trail, setTrail] = useState<string[]>([]);
+  const [trail, setTrail] = useState<TrailStep[]>([]);
   const byId = useMemo(() => new Map(plan.script.map((n) => [n.id, n])), [plan.script]);
   const node = byId.get(at) ?? plan.script[0];
 
-  function go(next: string) {
-    setTrail((t) => [...t, at]);
+  function go(next: string, said: string | null) {
+    const cur = byId.get(at);
+    setTrail((t) => [...t, { nodeId: at, title: cur?.title ?? at, said }]);
     setAt(next);
   }
   function back() {
     setTrail((t) => {
       const prev = t[t.length - 1];
-      if (prev) setAt(prev);
+      if (prev) setAt(prev.nodeId);
       return t.slice(0, -1);
     });
   }
@@ -67,32 +71,7 @@ export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
           )}
 
           {tab === 'script' && node && (
-            <div className="mt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{node.title}</span>
-                <span className="space-x-2">
-                  {trail.length > 0 && <button type="button" onClick={back} className="underline text-muted-foreground">back</button>}
-                  <button type="button" onClick={restart} className="underline text-muted-foreground">start over</button>
-                </span>
-              </div>
-              <p className="mt-2 rounded border border-border bg-card p-3 text-sm leading-relaxed text-card-foreground">{node.say}</p>
-              {node.kind === 'ask' && node.options && (
-                <div className="mt-2">
-                  <div className="text-[11px] text-muted-foreground">They say…</div>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {node.options.map((o) => <button key={o.label} type="button" onClick={() => go(o.next)} className="rounded border border-border px-2 py-1 hover:bg-muted">{o.label}</button>)}
-                  </div>
-                </div>
-              )}
-              {node.kind === 'say' && node.next && (
-                <button type="button" onClick={() => go(node.next!)} className="mt-2 rounded bg-primary px-3 py-1 text-primary-foreground">Then →</button>
-              )}
-              {node.kind === 'end' && (
-                <p className="mt-2 text-muted-foreground">
-                  {node.outcome === 'yes' ? 'Now the "They said yes" tab — all four steps in this sitting.' : node.outcome === 'later' ? 'Text the deposit link anyway; nothing bills until they use it.' : 'Nothing changes on the line. Note it on the campaign.'}
-                </p>
-              )}
-            </div>
+            <ScriptWalker node={node} trail={trail} total={plan.script.length} onGo={go} onBack={back} onRestart={restart} onYes={() => setTab('yes')} />
           )}
 
           {tab === 'flow' && <FlowChart plan={plan} current={at} />}
@@ -100,6 +79,101 @@ export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
           {tab === 'yes' && <OnYes plan={plan} />}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The call console. Left rail: a large Back (the thing you reach for mid-call), Start over, and
+ * the trail of what they have said so far. Right: what to say now at reading size, then their
+ * likely replies as numbered targets you can hit with a thumb or a digit key. Keys: ← or
+ * Backspace = back · 1–9 = their reply · Enter = Then · R = start over (never while typing).
+ */
+function ScriptWalker({ node, trail, total, onGo, onBack, onRestart, onYes }: {
+  node: ScriptNode;
+  trail: TrailStep[];
+  total: number;
+  onGo: (next: string, said: string | null) => void;
+  onBack: () => void;
+  onRestart: () => void;
+  onYes: () => void;
+}) {
+  const canBack = trail.length > 0;
+  const cameFrom = trail[trail.length - 1];
+  const options = node.kind === 'ask' ? node.options ?? [] : [];
+
+  // Keys are handled on the walker itself, not the window: two open tools must not both answer
+  // the same digit. The walker takes focus when it mounts and after each step so keys land.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { rootRef.current?.focus({ preventScroll: true }); }, [node.id]);
+  function onKey(e: React.KeyboardEvent<HTMLDivElement>) {
+    const t = e.target as HTMLElement | null;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if ((e.key === 'ArrowLeft' || e.key === 'Backspace') && canBack) { e.preventDefault(); onBack(); return; }
+    if (e.key === 'r' || e.key === 'R') { e.preventDefault(); onRestart(); return; }
+    if (e.key === 'Enter' && node.kind === 'say' && node.next) { e.preventDefault(); onGo(node.next, null); return; }
+    const n = Number(e.key);
+    if (node.kind === 'ask' && Number.isInteger(n) && n >= 1 && n <= options.length) { e.preventDefault(); const o = options[n - 1]; onGo(o.next, o.label); }
+  }
+
+  return (
+    <div ref={rootRef} tabIndex={-1} onKeyDown={onKey} className="mt-3 grid gap-3 outline-none sm:grid-cols-[9rem_1fr]" data-script-walker>
+      {/* Left rail */}
+      <div className="flex flex-row gap-2 sm:flex-col">
+        <button type="button" onClick={onBack} disabled={!canBack} aria-keyshortcuts="ArrowLeft Backspace"
+          className="flex min-h-[4.5rem] flex-1 flex-col items-center justify-center rounded-lg border border-border bg-card text-card-foreground hover:bg-muted disabled:opacity-40 sm:flex-none">
+          <span className="text-2xl leading-none">←</span>
+          <span className="mt-1 text-sm font-medium">Back</span>
+          {cameFrom && <span className="mt-0.5 max-w-[8rem] truncate px-1 text-[10px] text-muted-foreground">to “{cameFrom.title}”</span>}
+        </button>
+        <button type="button" onClick={onRestart} aria-keyshortcuts="r" className="rounded-lg border border-border px-2 py-2 text-xs hover:bg-muted">Start over</button>
+        {trail.length > 0 && (
+          <ol className="hidden text-[11px] text-muted-foreground sm:block">
+            {trail.map((s, i) => (
+              <li key={i} className="mt-1 border-l-2 border-border pl-2">
+                <div className="truncate">{s.title}</div>
+                {s.said && <div className="truncate italic">“{s.said}”</div>}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+
+      {/* What to say now */}
+      <div className="min-w-0">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{node.title}</span>
+          <span className="text-[11px] text-muted-foreground">step {trail.length + 1}{cameFrom?.said ? ` · after “${cameFrom.said}”` : ''}</span>
+        </div>
+        <p className="mt-2 rounded-lg border border-border bg-card p-4 text-base leading-relaxed text-card-foreground sm:text-lg">{node.say}</p>
+        {node.kind === 'ask' && options.length > 0 && (
+          <div className="mt-3">
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">They say… <span className="normal-case">(or press the number)</span></div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {options.map((o, i) => (
+                <button key={o.label} type="button" onClick={() => onGo(o.next, o.label)} aria-keyshortcuts={String(i + 1)}
+                  className="flex min-h-[3rem] items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-left text-sm hover:bg-muted">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-xs text-muted-foreground">{i + 1}</span>
+                  <span>{o.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {node.kind === 'say' && node.next && (
+          <button type="button" onClick={() => onGo(node.next!, null)} aria-keyshortcuts="Enter" className="mt-3 min-h-[3rem] w-full rounded-lg bg-primary px-4 text-base font-medium text-primary-foreground sm:w-auto sm:px-8">Then → <span className="ml-2 text-xs font-normal opacity-70">Enter</span></button>
+        )}
+        {node.kind === 'end' && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <p className="text-muted-foreground">
+              {node.outcome === 'yes' ? 'Now the four steps, in this sitting.' : node.outcome === 'later' ? 'Text the deposit link anyway; nothing bills until they use it.' : 'Nothing changes on the line. Note it on the campaign.'}
+            </p>
+            {node.outcome === 'yes' && <button type="button" onClick={onYes} className="min-h-[3rem] rounded-lg bg-primary px-4 text-base font-medium text-primary-foreground">They said yes →</button>}
+          </div>
+        )}
+        <p className="mt-3 text-[10px] text-muted-foreground">Keys: ← or Backspace back · 1–9 their reply · Enter then · R start over.</p>
+      </div>
     </div>
   );
 }

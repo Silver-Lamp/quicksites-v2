@@ -15,7 +15,7 @@ import { usd } from '@/lib/ppl/money';
 /** One step already taken on the call: the node we were on and what they said to leave it. */
 type TrailStep = { nodeId: string; title: string; said: string | null };
 
-type Tab = 'facts' | 'script' | 'flow' | 'yes';
+type Tab = 'facts' | 'text' | 'script' | 'flow' | 'yes';
 
 export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
   const [open, setOpen] = useState(false);
@@ -52,9 +52,9 @@ export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
       {open && (
         <div className="mt-2 rounded-lg border border-border bg-background/60 p-3 text-xs" data-pitch-tool>
           <div className="flex flex-wrap gap-1">
-            {(['facts', 'script', 'flow', 'yes'] as Tab[]).map((t) => (
+            {(['facts', 'text', 'script', 'flow', 'yes'] as Tab[]).map((t) => (
               <button key={t} type="button" onClick={() => setTab(t)} aria-pressed={tab === t} className={`rounded px-2 py-1 ${tab === t ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-muted'}`}>
-                {t === 'facts' ? 'Facts & advice' : t === 'script' ? 'Script' : t === 'flow' ? 'Flow chart' : 'They said yes'}
+                {t === 'facts' ? 'Facts & advice' : t === 'text' ? 'By text' : t === 'script' ? 'Script (call)' : t === 'flow' ? 'Flow chart' : 'They said yes'}
               </button>
             ))}
           </div>
@@ -79,6 +79,8 @@ export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
               </p>
             </div>
           )}
+
+          {tab === 'text' && <ByText plan={plan} dealKey={dealKey} setDealKey={setDealKey} />}
 
           {tab === 'script' && node && (
             <ScriptWalker node={node} trail={trail} total={plan.script.length} onGo={go} onBack={back} onRestart={restart} onYes={() => setTab('yes')} />
@@ -246,6 +248,112 @@ function FlowSvg({ plan, current, fit }: { plan: PitchPlan; current: string; fit
           );
         })}
       </svg>
+    </div>
+  );
+}
+
+type PitchState = {
+  funnel: { deal: DealKey | null; textedAt: string | null; followupAt: string | null; followupKind: 'repoint' | 'last_free' | null; repointBy: string | null; calledAt: string | null; result: string | null };
+  next: { step: 'text1' | 'text2' | 'call' | 'repoint' | 'done'; why: string };
+  account: { status: string; balance_cents: number } | null;
+  to: string | null;
+  lead: { at: string; seconds: number; callerPhone: string | null } | null;
+  alternative: { id: string; name: string; phone: string } | null;
+  preview: { text1: string; text2: string; text2Kind: 'repoint' | 'last_free'; text2By: string | null };
+};
+
+/**
+ * Text first, call second (owner, 2026-10-18). Day 0: the call they got + the deal + the link
+ * that IS the yes + terms. Day 3: the honest follow-up — a real re-point name and date where
+ * another no-website shop exists in the city, else "that was the last free one". Then the call,
+ * opening with the text. Every send is from the server; the funnel is stamped on the campaign.
+ */
+function ByText({ plan, dealKey, setDealKey }: { plan: PitchPlan; dealKey: DealKey; setDealKey: (k: DealKey) => void }) {
+  const [state, setState] = useState<PitchState | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [notes, setNotes] = useState('');
+
+  async function load() {
+    const r = await fetch(`/api/admin/ppl/pitch?campaignId=${plan.campaignId}`, { cache: 'no-store' });
+    const j = await r.json().catch(() => null);
+    if (r.ok) { setState(j); if (j?.funnel?.deal) setDealKey(j.funnel.deal); } else setMsg(`Could not load: ${j?.error || r.status}`);
+  }
+  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [plan.campaignId]);
+
+  async function act(action: 'text1' | 'text2' | 'called' | 'result', extra: Record<string, unknown> = {}) {
+    const label = action === 'text1' ? 'Send text 1' : action === 'text2' ? 'Send the follow-up' : action;
+    if ((action === 'text1' || action === 'text2') && !window.confirm(`${label} to ${state?.to ?? 'the business'} now?`)) return;
+    setBusy(action);
+    const r = await fetch('/api/admin/ppl/pitch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaignId: plan.campaignId, action, dealKey, ...extra }) });
+    const j = await r.json().catch(() => null);
+    setMsg(r.ok ? (j?.sent ? `Sent to ${j.to}${j.accountCreated ? ' (account created, pending until they pay)' : ''}.` : 'Recorded.') : `Failed: ${j?.detail || j?.error || r.status}`);
+    await load();
+    setBusy(null);
+  }
+
+  const when = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null);
+  const f = state?.funnel;
+  const chip = (label: string, at: string | null, extra?: string | null) => (
+    <span className={`rounded-full border px-2 py-0.5 ${at ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-border text-muted-foreground'}`}>{label}{at ? ` · ${when(at)}` : ''}{extra ? ` · ${extra}` : ''}</span>
+  );
+
+  return (
+    <div className="mt-3 space-y-3">
+      {!state && !msg && <p className="text-muted-foreground">Loading the funnel…</p>}
+      {state && f && (
+        <>
+          <div className="flex flex-wrap gap-1 text-[11px]">
+            {chip('Text 1', f.textedAt, f.deal ? plan.deals[f.deal].label : null)}
+            {chip('Follow-up', f.followupAt, f.followupKind === 'repoint' ? `re-point by ${f.repointBy}` : f.followupKind === 'last_free' ? 'last free' : null)}
+            {chip('Called', f.calledAt)}
+            {chip('Result', f.result ? 'x' : null, f.result)}
+            {state.account && <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">account {state.account.status} · {usd(state.account.balance_cents)}</span>}
+          </div>
+          <p className="rounded border border-border bg-muted px-3 py-2"><span className="font-medium">Next: </span>{state.next.why}</p>
+
+          {!f.textedAt && (
+            <fieldset className="rounded border border-border p-2">
+              <legend className="px-1 text-[11px] uppercase tracking-wide text-muted-foreground">Deal in the text</legend>
+              <div className="flex flex-wrap gap-3">
+                {(Object.values(plan.deals) as Array<PitchPlan['deals'][DealKey]>).map((d) => (
+                  <label key={d.key} className={`flex cursor-pointer items-center gap-2 rounded border px-2 py-1 ${dealKey === d.key ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                    <input type="radio" name={`tdeal-${plan.campaignId}`} checked={dealKey === d.key} onChange={() => setDealKey(d.key)} />
+                    <span>{d.label} <span className="text-muted-foreground">· {usd(d.depositCents)} now, {usd(d.cplCents)} a lead</span></span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border border-border bg-card p-3 text-card-foreground">
+              <div className="flex items-baseline justify-between"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Text 1 — day 0</span>{f.textedAt && <span className="text-[11px] text-emerald-600 dark:text-emerald-300">sent {when(f.textedAt)}</span>}</div>
+              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{state.preview.text1}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">The pay link is minted at send (the account is created pending; the line stays free until they pay). {state.lead ? '' : 'No customer-read call ≥ the floor on this line — the text will say "the calls you have taken" instead of naming one.'}</p>
+              <button type="button" disabled={busy !== null || !!f.textedAt || !state.to} onClick={() => act('text1')} className="mt-2 rounded bg-primary px-3 py-1 text-primary-foreground disabled:opacity-50">{f.textedAt ? 'Text 1 sent' : busy === 'text1' ? 'Sending…' : `Send text 1 to ${state.to ?? '—'}`}</button>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3 text-card-foreground">
+              <div className="flex items-baseline justify-between"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Text 2 — day {3}, {state.preview.text2Kind === 'repoint' ? 'a real re-point' : 'last free one'}</span>{f.followupAt && <span className="text-[11px] text-emerald-600 dark:text-emerald-300">sent {when(f.followupAt)}</span>}</div>
+              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{state.preview.text2}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {state.alternative ? <>Alternative on file: <span className="text-foreground">{state.alternative.name}</span> — the date in the text is a promise; the Re-point control on this campaign is how it is kept.</> : 'No other no-website shop in this city and trade, so the text says "last free one" — never a bluff.'}
+              </p>
+              <button type="button" disabled={busy !== null || !f.textedAt || !!f.followupAt} onClick={() => act('text2')} className="mt-2 rounded bg-primary px-3 py-1 text-primary-foreground disabled:opacity-50">{f.followupAt ? 'Follow-up sent' : busy === 'text2' ? 'Sending…' : 'Send the follow-up'}</button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+            <button type="button" disabled={busy !== null || !!f.calledAt} onClick={() => act('called')} className="rounded border border-border px-3 py-1 hover:bg-muted disabled:opacity-50">{f.calledAt ? `Called ${when(f.calledAt)}` : 'Mark: I called'}</button>
+            <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="what they said…" className="min-w-[14rem] flex-1 rounded border border-border bg-background px-2 py-1" />
+            {(['paid', 'later', 'no', 'no_reply', 'repointed'] as const).map((r) => (
+              <button key={r} type="button" disabled={busy !== null} onClick={() => act('result', { result: r, notes })} className={`rounded border px-2 py-1 hover:bg-muted disabled:opacity-50 ${f.result === r ? 'border-primary bg-primary/10' : 'border-border'}`}>{r.replace('_', ' ')}</button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">"Paid" is recorded by hand here; the account itself goes active the moment the deposit lands, with or without this. Terms the text links to: <a href="/leads/terms" target="_blank" rel="noreferrer" className="underline">/leads/terms</a>.</p>
+        </>
+      )}
+      {msg && <p role="status" className="rounded border border-border bg-muted px-2 py-1">{msg}</p>}
     </div>
   );
 }

@@ -19,6 +19,7 @@ import type Stripe from 'stripe';
 import * as Sentry from '@sentry/nextjs';
 import { stripe } from '@/lib/stripe/server';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
+import { setCampaignPricing } from '@/lib/outreach/geoCampaigns';
 import {
   getPplAccount,
   getPplAccountByCampaign,
@@ -249,6 +250,16 @@ export async function applyPplCheckoutCompleted(s: Stripe.Checkout.Session): Pro
         paused_reason: null,
         paused_at: null,
       });
+      // The campaign becomes pay-per-call HERE, when money lands — never at account creation.
+      // A text-first pitch creates the account (pending) to mint the deposit link; if creation
+      // flipped the campaign, a pay-per-call line with a zero balance would tell callers it is
+      // not connecting and cut off a shop's free forwarding before it had agreed (2026-10-18).
+      await setCampaignPricing(account.geo_campaign_id, {
+        pricing_model: 'ppl',
+        price_cents: account.cpl_cents,
+        locked_rate_cents: null,
+        billing_interval: 'per_lead',
+      }).catch((e) => Sentry.captureException(e));
     }
   }
   return true;

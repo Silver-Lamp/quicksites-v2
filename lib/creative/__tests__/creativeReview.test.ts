@@ -94,6 +94,17 @@ describe('source guards', () => {
     expect(src).toMatch(/commitTemplatePatch\(/);
     expect(src).not.toMatch(/\.from\('templates'\)\s*\.update\(/);
   });
+  it('no take bytes ever travel through our API — a generator WAV is over Vercel\'s 4.5 MB function cap (413 on the third take)', () => {
+    const client = read('app/review/[project]/review-client.tsx');
+    expect(client).toMatch(/upload-url/);
+    expect(client).toMatch(/method: 'PUT'/);
+    // The file must never be the body of a request to /api/ — only to the signed storage URL.
+    expect(client).not.toMatch(/fetch\(`\/api\/[^`]*`,\s*\{[^}]*body:\s*fd\b/);
+    const route = read('app/api/admin/creative/[project]/upload/route.ts');
+    expect(route).not.toMatch(/formData\(/);
+    expect(route).toMatch(/startsWith\(prefix\)/); // a registered path is confined to the project/track prefix
+    expect(route).toMatch(/not_uploaded/); // and must exist in storage before a row is written
+  });
   it('the Hear-this-page pill stays off the review surface (it covered a take\'s notes on a phone)', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { hearThisPageVisibleFor } = require('@/lib/hearThisPage/config');

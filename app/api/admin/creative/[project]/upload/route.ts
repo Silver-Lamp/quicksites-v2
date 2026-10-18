@@ -1,34 +1,25 @@
 // app/api/admin/creative/[project]/upload/route.ts
 //
-// POST multipart { file, track, title?, notes? } → the take lands in the public `videos` bucket
-// under <project>/takes/, a `creative_versions` row is minted with the next version number for the
-// track, and the transcript is filled in after the response (Whisper via the meter; a failure is
-// recorded as 'failed', the row still exists). Admin-only. WAV/MP3/M4A/MP4/WebM, 60 MB cap — a
-// 30 s WAV from the generator is ~6 MB; the browser plays WAV natively, so no re-encode here
-// (ffmpeg lives only in scripts/, never on Vercel).
+// POST JSON { path, track, title?, notes? } → register a take the browser has ALREADY put into
+// the `videos` bucket through the signed URL from ../upload-url. Mints the next version number
+// for the track and fills the transcript in after the response (Whisper via the meter; a
+// failure is recorded as 'failed', the row still exists). Admin-only.
+//
+// ⚠️ No file bytes come through here: Vercel caps a function body at 4.5 MB and a generator WAV
+// is ~6 MB — the first version of this route took multipart and 413'd on the third take
+// (2026-10-18). The path is verified to exist in the bucket under this project's prefix before a
+// row is written, so a typed path cannot register someone else's object.
 import { NextResponse, after } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireUser';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { reviewProject } from '@/lib/creative/projects';
 import { addVersion, setTranscript } from '@/lib/creative/versions';
 import { transcribeTakeUrl } from '@/lib/creative/transcribe';
+import { takeKindFor } from '@/lib/creative/takeTypes';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
-
-const MAX_BYTES = 60 * 1024 * 1024;
-const EXT: Record<string, { ext: string; kind: 'audio' | 'video' }> = {
-  'audio/wav': { ext: 'wav', kind: 'audio' },
-  'audio/x-wav': { ext: 'wav', kind: 'audio' },
-  'audio/wave': { ext: 'wav', kind: 'audio' },
-  'audio/mpeg': { ext: 'mp3', kind: 'audio' },
-  'audio/mp4': { ext: 'm4a', kind: 'audio' },
-  'audio/x-m4a': { ext: 'm4a', kind: 'audio' },
-  'video/mp4': { ext: 'mp4', kind: 'video' },
-  'video/webm': { ext: 'webm', kind: 'video' },
-  'video/quicktime': { ext: 'mov', kind: 'video' },
-};
 
 export async function POST(req: Request, ctx: { params: Promise<{ project: string }> }) {
   const gate = await requireAdmin();
@@ -37,27 +28,27 @@ export async function POST(req: Request, ctx: { params: Promise<{ project: strin
   const { project: key } = await ctx.params;
   const project = reviewProject(key);
   if (!project) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-  const form = await req.formData().catch(() => null);
-  const file = form?.get('file');
-  if (!(file instanceof File)) return NextResponse.json({ error: 'file_required' }, { status: 400 });
-  const trackKey = String(form?.get('track') ?? '').trim();
-  const track = project.tracks.find((t) => t.key === trackKey);
+  const body = await req.json().catch(() => ({}));
+  const track = project.tracks.find((t) => t.key === String(body?.track ?? ''));
   if (!track) return NextResponse.json({ error: 'unknown_track' }, { status: 400 });
-  const typeInfo = EXT[file.type] ?? (file.name.toLowerCase().endsWith('.wav') ? EXT['audio/wav'] : null);
-  if (!typeInfo) return NextResponse.json({ error: 'unsupported_type', detail: file.type }, { status: 415 });
-  if (typeInfo.kind !== track.kind) return NextResponse.json({ error: 'kind_mismatch', detail: `${track.label} takes ${track.kind}` }, { status: 400 });
-  if (file.size > MAX_BYTES) return NextResponse.json({ error: 'too_large' }, { status: 413 });
+  const path = String(body?.path ?? '');
+  const prefix = `${project.key}/takes/${track.key}-`;
+  if (!path.startsWith(prefix) || path.includes('..')) return NextResponse.json({ error: 'bad_path' }, { status: 400 });
+  const info = takeKindFor('', path);
+  if (!info || info.kind !== track.kind) return NextResponse.json({ error: 'kind_mismatch' }, { status: 400 });
 
-  const path = `${project.key}/takes/${track.key}-${Date.now()}-${globalThis.crypto.randomUUID().slice(0, 8)}.${typeInfo.ext}`;
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const contentType = file.type || (typeInfo.ext === 'wav' ? 'audio/wav' : 'application/octet-stream');
-  const { error } = await supabaseAdmin.storage.from('videos').upload(path, bytes, { contentType, cacheControl: '86400', upsert: false });
-  if (error) return NextResponse.json({ error: 'upload_failed', detail: error.message }, { status: 502 });
+  // The object must actually be there — the browser's PUT may have failed after the URL was signed.
+  const dir = path.slice(0, path.lastIndexOf('/'));
+  const name = path.slice(path.lastIndexOf('/') + 1);
+  const { data: listed, error: listErr } = await supabaseAdmin.storage.from('videos').list(dir, { search: name, limit: 5 });
+  if (listErr) return NextResponse.json({ error: 'storage_unreadable', detail: listErr.message }, { status: 502 });
+  const obj = (listed ?? []).find((o) => o.name === name);
+  if (!obj) return NextResponse.json({ error: 'not_uploaded', hint: 'The file never landed in storage; try the upload again.' }, { status: 409 });
+
   const url = supabaseAdmin.storage.from('videos').getPublicUrl(path).data.publicUrl;
-
-  const title = String(form?.get('title') ?? '').trim() || track.label;
-  const notes = String(form?.get('notes') ?? '').trim() || null;
-  const version = await addVersion({ project: project.key, track: track.key, kind: track.kind, title, url, contentType, notes, createdBy: admin.id ?? null, transcriptStatus: track.kind === 'audio' ? 'pending' : 'skipped' });
+  const title = String(body?.title ?? '').trim() || track.label;
+  const notes = String(body?.notes ?? '').trim() || null;
+  const version = await addVersion({ project: project.key, track: track.key, kind: track.kind, title, url, contentType: info.contentType, notes, createdBy: admin.id ?? null, transcriptStatus: track.kind === 'audio' ? 'pending' : 'skipped' });
 
   if (track.kind === 'audio') {
     after(async () => {

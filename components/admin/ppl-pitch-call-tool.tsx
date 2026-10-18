@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 // ⚠️ TYPE-ONLY from pitchPlan. That module runs on the server (it reaches the corpus and, since
 // the outcome survey, the Supabase admin client); a value import here bundles it for the
 // browser, where `createClient` throws "supabaseKey is required" and the whole page dies.
-import type { PitchPlan, ScriptNode } from '@/lib/ppl/pitchPlan';
+import type { PitchPlan, ScriptNode, DealKey } from '@/lib/ppl/pitchPlan';
 import { usd } from '@/lib/ppl/money';
 
 /** One step already taken on the call: the node we were on and what they said to leave it. */
@@ -22,6 +22,9 @@ export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
   const [tab, setTab] = useState<Tab>('facts');
   const [at, setAt] = useState<string>(plan.script[0]?.id ?? 'open');
   const [trail, setTrail] = useState<TrailStep[]>([]);
+  // The deal the owner will create the account on: set by the yes the script ended on, and
+  // changeable on the "They said yes" tab (a call can end off-script).
+  const [dealKey, setDealKey] = useState<DealKey>('next');
   const byId = useMemo(() => new Map(plan.script.map((n) => [n.id, n])), [plan.script]);
   const node = byId.get(at) ?? plan.script[0];
 
@@ -29,6 +32,8 @@ export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
     const cur = byId.get(at);
     setTrail((t) => [...t, { nodeId: at, title: cur?.title ?? at, said }]);
     setAt(next);
+    const dest = byId.get(next);
+    if (dest?.deal) setDealKey(dest.deal);
   }
   function back() {
     setTrail((t) => {
@@ -69,7 +74,9 @@ export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Advice (rules over this row)</div>
                 <ul className="mt-1 list-disc space-y-1 pl-4">{plan.advice.map((a, i) => <li key={i}>{a}</li>)}</ul>
               </div>
-              <p className="text-muted-foreground">Deal as the script states it: {usd(plan.deal.cplCents)} per call ≥{plan.deal.minBillableSeconds} s · {usd(plan.deal.depositCents)} to start (~{plan.deal.leadsInDeposit} calls) · reload {usd(plan.deal.reloadAmountCents)} under {usd(plan.deal.reloadThresholdCents)}.</p>
+              <p className="text-muted-foreground">
+                Deals as the script states them, calls ≥{plan.minBillableSeconds} s only: <span className="text-foreground">{plan.deals.next.label}</span> — {usd(plan.deals.next.cplCents)} now, then {usd(plan.deals.next.cplCents)} charged as each one posts (always one ahead) · <span className="text-foreground">{plan.deals.package.label}</span> — {usd(plan.deals.package.cplCents)} a lead, tops up {usd(plan.deals.package.reloadAmountCents)} under {usd(plan.deals.package.reloadThresholdCents)}, unused refundable on request.
+              </p>
             </div>
           )}
 
@@ -79,7 +86,7 @@ export default function PplPitchCallTool({ plan }: { plan: PitchPlan }) {
 
           {tab === 'flow' && <FlowChart plan={plan} current={at} />}
 
-          {tab === 'yes' && <OnYes plan={plan} />}
+          {tab === 'yes' && <OnYes plan={plan} dealKey={dealKey} setDealKey={setDealKey} />}
         </div>
       )}
     </div>
@@ -243,17 +250,18 @@ function FlowSvg({ plan, current, fit }: { plan: PitchPlan; current: string; fit
   );
 }
 
-function OnYes({ plan }: { plan: PitchPlan }) {
+function OnYes({ plan, dealKey, setDealKey }: { plan: PitchPlan; dealKey: DealKey; setDealKey: (k: DealKey) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const deal = plan.deals[dealKey];
 
   async function createAccount() {
     setBusy('account');
     const r = await fetch('/api/admin/ppl/accounts', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ geo_campaign_id: plan.campaignId, business_name: plan.facts.business, cpl_cents: plan.deal.cplCents, min_billable_seconds: plan.deal.minBillableSeconds, reload_threshold_cents: plan.deal.reloadThresholdCents, reload_amount_cents: plan.deal.reloadAmountCents, deposit_cents: plan.deal.depositCents }),
+      body: JSON.stringify({ geo_campaign_id: plan.campaignId, business_name: plan.facts.business, cpl_cents: deal.cplCents, min_billable_seconds: plan.minBillableSeconds, reload_threshold_cents: deal.reloadThresholdCents, reload_amount_cents: deal.reloadAmountCents, deposit_cents: deal.depositCents }),
     });
     const j = await r.json().catch(() => null);
     if (r.ok && j?.checkout_url) { setLink(j.checkout_url); setMsg(`Account created (pending until the deposit lands). Deposit link for ${usd(j.deposit_cents)} ready.`); }
@@ -263,7 +271,9 @@ function OnYes({ plan }: { plan: PitchPlan }) {
   async function textLink() {
     if (!link) return;
     setBusy('text');
-    const body = `QuickSites: here is the link to start the pay-per-call line for ${plan.facts.domain} — ${usd(plan.deal.depositCents)} to begin, ${usd(plan.deal.cplCents)} per answered call of ${plan.deal.minBillableSeconds} s or more, nothing billed until the deposit lands: ${link} Reply STOP any time to stop.`;
+    const body = dealKey === 'next'
+      ? `QuickSites: here is the link to pay for the next call from ${plan.facts.domain} — ${usd(deal.cplCents)} now, then ${usd(deal.cplCents)} charged as each answered call of ${plan.minBillableSeconds} s or more comes in, always one ahead; nothing billed until this lands: ${link} Reply STOP any time to stop.`
+      : `QuickSites: here is the link to start the pay-per-call line for ${plan.facts.domain} — ${usd(deal.depositCents)} for ${deal.leads} answered calls of ${plan.minBillableSeconds} s or more (${usd(deal.cplCents)} each, unused refundable on request), nothing billed until the deposit lands: ${link} Reply STOP any time to stop.`;
     const r = await fetch('/api/admin/ppl/text-business', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaignId: plan.campaignId, body }) });
     const j = await r.json().catch(() => null);
     setMsg(r.ok ? 'Texted the deposit link to the business.' : `Text failed: ${j?.error || r.status}`);
@@ -274,8 +284,19 @@ function OnYes({ plan }: { plan: PitchPlan }) {
       <ol className="list-decimal space-y-2 pl-4">
         {plan.onYes.map((s, i) => <li key={i}>{s}</li>)}
       </ol>
+      <fieldset className="rounded border border-border p-2">
+        <legend className="px-1 text-[11px] uppercase tracking-wide text-muted-foreground">The deal they took</legend>
+        <div className="flex flex-wrap gap-3">
+          {(Object.values(plan.deals) as Array<PitchPlan['deals'][DealKey]>).map((d) => (
+            <label key={d.key} className={`flex cursor-pointer items-center gap-2 rounded border px-2 py-1 ${dealKey === d.key ? 'border-primary bg-primary/10' : 'border-border'}`}>
+              <input type="radio" name={`deal-${plan.campaignId}`} checked={dealKey === d.key} onChange={() => setDealKey(d.key)} disabled={!!link} />
+              <span>{d.label} <span className="text-muted-foreground">· {usd(d.depositCents)} now, {usd(d.cplCents)} a lead</span></span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <div className="flex flex-wrap items-center gap-2 pt-1">
-        <button type="button" disabled={busy !== null || !!link} onClick={createAccount} className="rounded bg-primary px-3 py-1 text-primary-foreground disabled:opacity-50">{link ? 'Account created' : busy === 'account' ? 'Creating…' : `Create account + ${usd(plan.deal.depositCents)} deposit link`}</button>
+        <button type="button" disabled={busy !== null || !!link} onClick={createAccount} className="rounded bg-primary px-3 py-1 text-primary-foreground disabled:opacity-50">{link ? 'Account created' : busy === 'account' ? 'Creating…' : `Create account + ${usd(deal.depositCents)} deposit link`}</button>
         <button type="button" disabled={!link || busy !== null} onClick={textLink} className="rounded border border-border px-3 py-1 hover:bg-muted disabled:opacity-50">{busy === 'text' ? 'Texting…' : 'Text them the link'}</button>
         {plan.templateId ? <a href={`/admin/templates/${plan.templateId}`} className="underline" target="_blank" rel="noreferrer">Open the site in the editor (rename it)</a> : <span className="text-muted-foreground">No pitch site on this campaign to rename.</span>}
         <a href="/status" className="underline text-muted-foreground" target="_blank" rel="noreferrer">/status (the ppl gate)</a>

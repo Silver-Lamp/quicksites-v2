@@ -363,6 +363,17 @@ function OnYes({ plan, dealKey, setDealKey }: { plan: PitchPlan; dealKey: DealKe
   const [link, setLink] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const deal = plan.deals[dealKey];
+  // Once the pitch text went out the account already exists (pending): the yes on the phone is
+  // "resend the link while we're on", not "create the account".
+  const texted = !!plan.facts.pitch.textedAt;
+
+  async function resendLink() {
+    setBusy('resend');
+    const r = await fetch('/api/admin/ppl/pitch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaignId: plan.campaignId, action: 'resend', dealKey }) });
+    const j = await r.json().catch(() => null);
+    setMsg(r.ok ? `Resent the pay link to ${j?.to}.` : `Resend failed: ${j?.detail || j?.error || r.status}`);
+    setBusy(null);
+  }
 
   async function createAccount() {
     setBusy('account');
@@ -404,8 +415,14 @@ function OnYes({ plan, dealKey, setDealKey }: { plan: PitchPlan; dealKey: DealKe
         </div>
       </fieldset>
       <div className="flex flex-wrap items-center gap-2 pt-1">
-        <button type="button" disabled={busy !== null || !!link} onClick={createAccount} className="rounded bg-primary px-3 py-1 text-primary-foreground disabled:opacity-50">{link ? 'Account created' : busy === 'account' ? 'Creating…' : `Create account + ${usd(deal.depositCents)} deposit link`}</button>
-        <button type="button" disabled={!link || busy !== null} onClick={textLink} className="rounded border border-border px-3 py-1 hover:bg-muted disabled:opacity-50">{busy === 'text' ? 'Texting…' : 'Text them the link'}</button>
+        {texted ? (
+          <button type="button" disabled={busy !== null} onClick={resendLink} className="rounded bg-primary px-3 py-1 text-primary-foreground disabled:opacity-50">{busy === 'resend' ? 'Resending…' : `Resend the pay link (${deal.label})`}</button>
+        ) : (
+          <>
+            <button type="button" disabled={busy !== null || !!link} onClick={createAccount} className="rounded bg-primary px-3 py-1 text-primary-foreground disabled:opacity-50">{link ? 'Account created' : busy === 'account' ? 'Creating…' : `Create account + ${usd(deal.depositCents)} deposit link`}</button>
+            <button type="button" disabled={!link || busy !== null} onClick={textLink} className="rounded border border-border px-3 py-1 hover:bg-muted disabled:opacity-50">{busy === 'text' ? 'Texting…' : 'Text them the link'}</button>
+          </>
+        )}
         {plan.templateId ? <a href={`/admin/templates/${plan.templateId}`} className="underline" target="_blank" rel="noreferrer">Open the site in the editor (rename it)</a> : <span className="text-muted-foreground">No pitch site on this campaign to rename.</span>}
         <a href="/status" className="underline text-muted-foreground" target="_blank" rel="noreferrer">/status (the ppl gate)</a>
       </div>

@@ -31,7 +31,42 @@ export type CorpusCampaign = {
   created_at: string | null;
   /** The pitch site — the "rename it to the real business" step on a yes needs the editor link. */
   template_id?: string | null;
+  /** The text-first pitch funnel (lib/ppl/pitchText.ts) — the phone script opens with the text. */
+  pitch_deal?: string | null;
+  pitch_texted_at?: string | null;
+  pitch_followup_at?: string | null;
+  pitch_followup_kind?: string | null;
+  pitch_repoint_prospect_id?: string | null;
+  pitch_repoint_by?: string | null;
+  pitch_called_at?: string | null;
+  pitch_result?: string | null;
+  /** Resolved by the loader from pitch_repoint_prospect_id — the shop text 2 named. */
+  pitch_repoint_name?: string | null;
 };
+
+export type LinePitch = {
+  deal: 'next' | 'package' | null;
+  textedAt: string | null;
+  followupAt: string | null;
+  followupKind: 'repoint' | 'last_free' | null;
+  repointBy: string | null;
+  repointName: string | null;
+  calledAt: string | null;
+  result: string | null;
+};
+
+export function linePitchOf(c: CorpusCampaign): LinePitch {
+  return {
+    deal: c.pitch_deal === 'next' || c.pitch_deal === 'package' ? c.pitch_deal : null,
+    textedAt: c.pitch_texted_at ?? null,
+    followupAt: c.pitch_followup_at ?? null,
+    followupKind: c.pitch_followup_kind === 'repoint' || c.pitch_followup_kind === 'last_free' ? c.pitch_followup_kind : null,
+    repointBy: c.pitch_repoint_by ?? null,
+    repointName: c.pitch_repoint_name ?? null,
+    calledAt: c.pitch_called_at ?? null,
+    result: c.pitch_result ?? null,
+  };
+}
 
 export type CorpusCall = {
   geo_campaign_id: string | null;
@@ -87,6 +122,7 @@ export type LineRow = {
   trackingNumber: string | null;
   /** What the business told us when asked "did it become a job?" — asked / job / no / not yet. */
   outcome: { asked: number; jobs: number; noJobs: number; notYet: number };
+  pitch: LinePitch;
 };
 
 export type CorpusSummary = {
@@ -198,6 +234,7 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
       templateId: camp.template_id ?? null,
       trackingNumber: camp.tracking_number,
       outcome: { asked: 0, jobs: 0, noJobs: 0, notYet: 0 },
+      pitch: linePitchOf(camp),
     };
     if (!line.lastCallAt || c.created_at > line.lastCallAt) line.lastCallAt = c.created_at;
     if (c.outcome_survey_sent_at) {
@@ -233,7 +270,7 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
       ageDays: camp.created_at ? Math.floor((nowMs - Date.parse(camp.created_at)) / 86_400_000) : null, forwardToName: camp.forward_to_name,
       impressions28d: gscByHost.get(hostOf(camp.domain))?.impressions ?? null, clicks28d: gscByHost.get(hostOf(camp.domain))?.clicks ?? null,
       calls: 0, dials: 0, answered: 0, leads90: 0, customers: 0, customerLeads90: 0, junk: 0, ownOrTest: 0, answerRate: null, lastCallAt: null,
-      unanswered: 0, leadCalls: [], templateId: camp.template_id ?? null, trackingNumber: camp.tracking_number, outcome: { asked: 0, jobs: 0, noJobs: 0, notYet: 0 },
+      unanswered: 0, leadCalls: [], templateId: camp.template_id ?? null, trackingNumber: camp.tracking_number, outcome: { asked: 0, jobs: 0, noJobs: 0, notYet: 0 }, pitch: linePitchOf(camp),
     });
   }
   const lines = Array.from(perLine.values()).map((l) => ({ ...l, answerRate: l.dials ? l.answered / l.dials : null, leadCalls: [...l.leadCalls].sort((a, b) => a.at.localeCompare(b.at)) }));
@@ -285,13 +322,20 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
 export async function loadPplCorpus(nowMs = Date.now()): Promise<CorpusSummary> {
   const { supabaseAdmin } = await import('@/lib/supabase/admin');
   const [{ data: campaigns }, { data: calls }, { data: gsc }] = await Promise.all([
-    supabaseAdmin.from('geo_industry_campaigns').select('id, domain, city, industry_key, rank_status, rank_position, tracking_number, forward_to, forward_to_name, domain_status, created_at, template_id'),
+    supabaseAdmin.from('geo_industry_campaigns').select('id, domain, city, industry_key, rank_status, rank_position, tracking_number, forward_to, forward_to_name, domain_status, created_at, template_id, pitch_deal, pitch_texted_at, pitch_followup_at, pitch_followup_kind, pitch_repoint_prospect_id, pitch_repoint_by, pitch_called_at, pitch_result'),
     supabaseAdmin.from('call_logs').select('geo_campaign_id, from_number, forwarded_to, handling, call_status, call_duration, created_at, recording_url, voicemail_speech, voicemail_verdict, analysis, outcome_survey_sent_at, outcome_reported').not('geo_campaign_id', 'is', null).order('created_at', { ascending: false }).limit(5000),
     // Only recent captures are needed to find each host's latest window.
     supabaseAdmin.from('gsc_queries').select('domain, end_date, impressions, clicks').gte('end_date', new Date(nowMs - 10 * 86_400_000).toISOString().slice(0, 10)).limit(50000),
   ]);
+  // The shop text 2 named, by id → name, so the phone script can say it back.
+  const repointIds = Array.from(new Set((campaigns ?? []).map((c: any) => c.pitch_repoint_prospect_id).filter(Boolean)));
+  const nameById = new Map<string, string>();
+  if (repointIds.length) {
+    const { data: pros } = await supabaseAdmin.from('outreach_prospects').select('id, business_name').in('id', repointIds);
+    for (const p of pros ?? []) nameById.set(p.id, p.business_name);
+  }
   return summariseCorpus({
-    campaigns: (campaigns ?? []) as CorpusCampaign[],
+    campaigns: ((campaigns ?? []) as CorpusCampaign[]).map((c) => ({ ...c, pitch_repoint_name: c.pitch_repoint_prospect_id ? nameById.get(c.pitch_repoint_prospect_id) ?? null : null })),
     calls: ((calls ?? []) as Array<Omit<CorpusCall, 'read'> & { analysis: { read?: string } | null }>).map((c) => ({ ...c, read: typeof c.analysis?.read === 'string' ? c.analysis.read : null })),
     gsc: ((gsc ?? []) as Array<{ domain: string; end_date: string; impressions: number | null; clicks: number | null }>).map((g) => ({ domain: g.domain, end_date: g.end_date, impressions: g.impressions ?? 0, clicks: g.clicks ?? 0 })),
     nowMs,

@@ -258,7 +258,7 @@ type PitchState = {
   account: { status: string; balance_cents: number } | null;
   to: string | null;
   lead: { at: string; seconds: number; callerPhone: string | null } | null;
-  alternative: { id: string; name: string; phone: string } | null;
+  alternative: { id: string; name: string; phone: string | null; vetted: boolean; stored: boolean } | null;
   preview: { text1: string; text2: string; text2Kind: 'repoint' | 'last_free'; text2By: string | null };
   sentBy?: 'operator' | 'cron' | null;
   window?: { ok: boolean; tz: string; local: string; reason?: 'weekend' | 'outside_hours'; next: string | null };
@@ -283,7 +283,7 @@ function ByText({ plan, dealKey, setDealKey }: { plan: PitchPlan; dealKey: DealK
   }
   useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [plan.campaignId]);
 
-  async function act(action: 'text1' | 'text2' | 'called' | 'result', extra: Record<string, unknown> = {}) {
+  async function act(action: 'text1' | 'text2' | 'called' | 'result' | 'vet' | 'reject_alt', extra: Record<string, unknown> = {}) {
     const label = action === 'text1' ? 'Send text 1' : action === 'text2' ? 'Send the follow-up' : action;
     if ((action === 'text1' || action === 'text2') && !window.confirm(`${label} to ${state?.to ?? 'the business'} now?`)) return;
     setBusy(action);
@@ -344,10 +344,25 @@ function ByText({ plan, dealKey, setDealKey }: { plan: PitchPlan; dealKey: DealK
             <div className="rounded-lg border border-border bg-card p-3 text-card-foreground">
               <div className="flex items-baseline justify-between"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Text 2 — day {3}, {state.preview.text2Kind === 'repoint' ? 'a real re-point' : 'last free one'}</span>{f.followupAt && <span className="text-[11px] text-emerald-600 dark:text-emerald-300">sent {when(f.followupAt)}</span>}</div>
               <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{state.preview.text2}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                {state.alternative ? <>Alternative on file: <span className="text-foreground">{state.alternative.name}</span> — the date in the text is a promise; the Re-point control on this campaign is how it is kept.</> : 'No other no-website shop in this city and trade, so the text says "last free one" — never a bluff.'}
-              </p>
-              <button type="button" disabled={busy !== null || !f.textedAt || !!f.followupAt} onClick={() => act('text2')} className="mt-2 rounded bg-primary px-3 py-1 text-primary-foreground disabled:opacity-50">{f.followupAt ? 'Follow-up sent' : busy === 'text2' ? 'Sending…' : 'Send the follow-up'}</button>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                {state.alternative ? (
+                  <>
+                    <div>
+                      Next business in line: <span className="text-foreground">{state.alternative.name}</span>{state.alternative.phone ? ` · ${state.alternative.phone}` : ''}
+                      {' '}— {state.alternative.vetted ? <span className="text-emerald-600 dark:text-emerald-300">vetted</span> : <span className="text-amber-600 dark:text-amber-300">not vetted yet</span>}.
+                      {' '}The follow-up promises them the line by a date, so look at their listing and dial them from an ordinary phone first; it is held until you mark one of these.
+                    </div>
+                    {!f.followupAt && (
+                      <div className="mt-1 flex gap-2">
+                        <button type="button" disabled={busy !== null || state.alternative.vetted || !state.alternative.stored} onClick={() => act('vet')} className="rounded border border-emerald-500/50 px-2 py-0.5 text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-50 dark:text-emerald-300">{state.alternative.vetted ? 'Vetted' : 'Mark vetted'}</button>
+                        <button type="button" disabled={busy !== null || !state.alternative.stored} onClick={() => { if (window.confirm(`Not suitable: ${state.alternative?.name}? The next candidate is picked, or the text says "last free one".`)) void act('reject_alt'); }} className="rounded border border-border px-2 py-0.5 hover:bg-muted disabled:opacity-50">Not suitable</button>
+                        {!state.alternative.stored && <span className="self-center">(chosen when text 1 goes out)</span>}
+                      </div>
+                    )}
+                  </>
+                ) : 'No other no-website shop in this city and trade, so the text says "last free one" — never a bluff.'}
+              </div>
+              <button type="button" disabled={busy !== null || !f.textedAt || !!f.followupAt || (!!state.alternative && state.alternative.stored && !state.alternative.vetted)} onClick={() => act('text2')} className="mt-2 rounded bg-primary px-3 py-1 text-primary-foreground disabled:opacity-50">{f.followupAt ? 'Follow-up sent' : busy === 'text2' ? 'Sending…' : state.alternative && state.alternative.stored && !state.alternative.vetted ? 'Vet them first' : 'Send the follow-up'}</button>
             </div>
           </div>
 

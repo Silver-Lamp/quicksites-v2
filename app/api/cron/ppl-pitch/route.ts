@@ -18,7 +18,8 @@ import { sendEmail } from '@/lib/email';
 import { alertRecipients } from '@/lib/ppl/callAlert';
 import { loadPplCorpus } from '@/lib/ppl/corpus';
 import { getPplAccountByCampaign } from '@/lib/ppl/accounts';
-import { funnelOf, pitchAutoDecision, sendPitchText1, sendPitchText2, type PitchCampaign } from '@/lib/ppl/pitchSend';
+import { funnelOf, pitchAutoDecision, sendPitchText1, sendPitchText2, storedAlternative, type PitchCampaign } from '@/lib/ppl/pitchSend';
+import { automationRemindersHtml } from '@/lib/ppl/automationStatus';
 import { FOLLOWUP_AFTER_DAYS } from '@/lib/ppl/pitchText';
 import { isGoodTimeToText, nextWindowLabel } from '@/lib/ppl/sendWindow';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
@@ -40,7 +41,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 async function email(subject: string, lines: string[]): Promise<boolean> {
   const to = alertRecipients();
   if (!to.length) return false;
-  const html = `<div style="font:14px/1.5 -apple-system,Segoe UI,sans-serif;max-width:640px">${lines.map((l) => `<p>${l}</p>`).join('')}<p style="color:#888;font-size:12px">Pay-per-call pitch cron · <a href="${publicBaseUrl()}/admin/ppl">/admin/ppl</a></p></div>`;
+  const html = `<div style="font:14px/1.5 -apple-system,Segoe UI,sans-serif;max-width:640px">${lines.map((l) => `<p>${l}</p>`).join('')}${automationRemindersHtml()}<p style="color:#888;font-size:12px">Pay-per-call pitch cron · <a href="${publicBaseUrl()}/admin/ppl">/admin/ppl</a></p></div>`;
   try { await sendEmail({ to: to.join(','), subject, html }); return true; } catch { return false; }
 }
 
@@ -58,12 +59,13 @@ export async function GET(req: NextRequest) {
       .not('forward_to', 'is', null);
     if (error) throw new Error(error.message);
     const now = Date.now();
-    const out = { text1: 0, text2: 0, paid: 0, intervene: 0, waiting: 0, outsideWindow: 0, failed: 0, emailed: 0 };
+    const out = { text1: 0, text2: 0, paid: 0, intervene: 0, vetNeeded: 0, waiting: 0, outsideWindow: 0, failed: 0, emailed: 0 };
     let sends = 0;
     for (const c of (camps ?? []) as PitchCampaign[]) {
       const funnel = funnelOf(c);
       const account = await getPplAccountByCampaign(c.id).catch(() => null);
-      const decision = pitchAutoDecision({ funnel, hasPaidGradeLead: pitchNowIds.has(c.id), accountActive: account?.status === 'active', nowMs: now, followupAfterDays: FOLLOWUP_AFTER_DAYS });
+      const alt = await storedAlternative(c).catch(() => null);
+      const decision = pitchAutoDecision({ funnel, hasPaidGradeLead: pitchNowIds.has(c.id), accountActive: account?.status === 'active', nowMs: now, followupAfterDays: FOLLOWUP_AFTER_DAYS, alternative: alt ? { id: alt.id, vetted: alt.vetted } : null });
       const who = `${c.forward_to_name || c.forward_to} (${c.domain})`;
       const adminLink = `<a href="${publicBaseUrl()}/admin/ppl">/admin/ppl</a>`;
 
@@ -83,11 +85,23 @@ export async function GET(req: NextRequest) {
         if (!c.pitch_intervene_emailed_at) {
           const ok = await email(`Intervene: re-point ${c.domain} as promised (${decision.by})`, [
             `Text 2 to <strong>${esc(who)}</strong> said the line would be offered to another shop by <strong>${decision.by}</strong>. That date has passed and no deposit has landed.`,
-            `<strong>The cron does not re-point.</strong> Test-dial the alternative from an ordinary phone, then use Re-point on the campaign — or decide to leave it and note why. Either way, do it today: a date we do not keep makes every later text worthless. ${adminLink}`,
+            `<strong>The cron does not re-point.</strong> The business named was <strong>${esc(alt?.name ?? 'the alternative')}</strong>${alt?.phone ? ` (${esc(alt.phone)})` : ''}${alt?.vetted ? ', vetted' : ' — NOT yet vetted'}. Dial them from an ordinary phone if you have not, then use Re-point on the campaign — or decide to leave it and note why. Either way, do it today: a date we do not keep makes every later text worthless. ${adminLink}`,
           ]);
           if (ok) { out.emailed += 1; await supabaseAdmin.from('geo_industry_campaigns').update({ pitch_intervene_emailed_at: new Date().toISOString() }).eq('id', c.id); }
         }
         out.intervene += 1;
+        continue;
+      }
+      if (decision.action === 'vet_needed') {
+        const today = new Date(now).toISOString().slice(0, 10);
+        if (c.pitch_vet_reminded_on !== today) {
+          const ok = await email(`Vet ${alt?.name ?? 'the next business'} — the follow-up to ${who} is waiting on you`, [
+            `The follow-up to <strong>${esc(who)}</strong> is due. It would promise the line to <strong>${esc(alt?.name ?? 'the next business')}</strong>${alt?.phone ? ` (${esc(alt.phone)})` : ''} by a date — so a person has to look first.`,
+            `<strong>Do:</strong> open their listing, dial them from an ordinary phone, then on /admin/ppl → By text mark <strong>Vetted</strong> (the follow-up goes in the next window) or <strong>Not suitable</strong> (the next candidate is picked, or the text says "last free one" if there is nobody). This reminder repeats daily until one is pressed. ${adminLink}`,
+          ]);
+          if (ok) { out.emailed += 1; await supabaseAdmin.from('geo_industry_campaigns').update({ pitch_vet_reminded_on: today }).eq('id', c.id); }
+        }
+        out.vetNeeded += 1;
         continue;
       }
       if (decision.action === 'wait') { out.waiting += 1; continue; }
@@ -109,7 +123,10 @@ export async function GET(req: NextRequest) {
         const ok = await email(`Pitch text 1 sent to ${who}`, [
           `Sent at ${esc(win.local)} their time:`,
           `<blockquote style="border-left:3px solid #ccc;margin:0;padding:4px 10px;color:#333">${esc(r.text)}</blockquote>`,
-          `<strong>What happens next:</strong> if the deposit lands, you get a "Paid" email and the line bills. If not, the follow-up goes in ${FOLLOWUP_AFTER_DAYS} days (next window: ${esc(nextWindowLabel(now + FOLLOWUP_AFTER_DAYS * 86_400_000 - 3_600_000, { region: c.region, industry: c.industry_key }))}). A call from you any time before that is the strongest move — the console script opens with this text. ${adminLink}`,
+          `<strong>What happens next:</strong> if the deposit lands, you get a "Paid" email and the line bills. If not, the follow-up goes in ${FOLLOWUP_AFTER_DAYS} days (next window: ${esc(nextWindowLabel(now + FOLLOWUP_AFTER_DAYS * 86_400_000 - 3_600_000, { region: c.region, industry: c.industry_key }))}). A call from you any time before that is the strongest move — the console script opens with this text.`,
+          r.alternative
+            ? `<strong>Next business in line: ${esc(r.alternative.name)}.</strong> The follow-up will promise them the line by a date, so vet them before then — open their listing, dial them from an ordinary phone — and mark <strong>Vetted</strong> or <strong>Not suitable</strong> on /admin/ppl → By text. The follow-up is held until you do, and you will be reminded daily once it is due. ${adminLink}`
+            : `<strong>No other no-website shop in this city and trade</strong>, so the follow-up will say "that was the last free call" and promise nobody the line. ${adminLink}`,
         ]);
         if (ok) out.emailed += 1;
       } else {

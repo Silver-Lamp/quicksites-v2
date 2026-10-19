@@ -1268,6 +1268,17 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   path+query) — **the partner shape carries no guest phone/email**. Demo site
   `/sites/trattoria-del-borgo-demo` (fictional; sample guests invented). The block is silent in
   public until the site has bookable windows. Map: [`docs/ITALY_RESTAURANT_DEMO.md`](docs/ITALY_RESTAURANT_DEMO.md).
+  **The same engine books ONE PROVIDER (2026-10-19, Katie Bee, a Vashon organizer; #1274):**
+  `meta.booking.mode: 'appointment'` pins the party to one, hides the guests picker, groups
+  times morning/afternoon at noon, and speaks "a time with Katie" through an OVERLAY on the
+  strings table (only keys the base has; en/it the same keys — pinned). The provider is one
+  `restaurant_tables` row with `seats: 1`. ⚠️ **A spec site's hours are placeholders the
+  business never gave** — `meta.booking.preview: true` runs the whole widget (banner, "nothing
+  was booked" confirmation) and writes nothing, and `POST …/book` 403s before any row. Seed a
+  preview site's blocks only after the renderer that knows the flag is live: the old one would
+  take a real islander's booking against availability that does not exist. Billing for a
+  service business is the existing commerce rail (own Stripe, listed packages); after-the-fact
+  invoicing does not exist and `/for-katie` says so.
   ⚠️ **HiveJournal walked it as a guest on a phone (2026-10-15) and found what every check had
   missed**: the confirmation landed off-screen (the guest was looking at the menu, likely to book
   twice), the English "Hear this page" pill sat over "Telefono", the footer said "Quick Links /

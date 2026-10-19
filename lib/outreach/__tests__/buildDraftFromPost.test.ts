@@ -134,6 +134,22 @@ describe('assemblePostTemplate', () => {
     expect(assemblePostTemplate({ ...POST, kind: 'services' }).industry).toBe('other');
   });
 
+  it('a services post with NO prices on any item says "Services", never "Prices" (Katie Bee\'s organizing flyer, 2026-10-19)', () => {
+    const u = assemblePostTemplate({ ...POST, kind: 'services', sectionName: 'Specializes in downsizing & decluttering', items: POST.items.map((i: any) => ({ name: i.name })) });
+    const text = walkStrings(u.data).concat(walkStrings(u.header_block), walkStrings(u.footer_block)).join('\n');
+    expect(text).not.toMatch(/\bPrices\b|See prices/);
+    expect(text).toMatch(/See services/);
+    const menu = u.data.pages[0].blocks.find((b: any) => b.type === 'menu');
+    expect(menu.content.title).toBe('Services');
+    expect(menu.content.sections[0].name).toBe('Specializes in downsizing & decluttering');
+    const navLabels = [...(u.header_block?.content?.nav_items ?? []), ...(u.footer_block?.content?.links ?? [])].map((l: any) => l.label);
+    expect(navLabels).toContain('Services');
+    expect(navLabels).not.toContain('Prices');
+    // One priced item is enough to keep "Prices" — a price list is a price list.
+    const p = assemblePostTemplate({ ...POST, kind: 'services', items: [{ name: 'Hem', price: '$20' }, { name: 'Zip' }] });
+    expect(p.data.pages[0].blocks.find((b: any) => b.type === 'menu').content.title).toBe('Prices');
+  });
+
   it('an event (a ticketed dinner) keeps its menu, says "Reserve a seat", takes a mailto CTA, and is filed non-food', () => {
     const e = assemblePostTemplate({ ...POST, kind: 'event', ctaLink: 'mailto:host@example.com?subject=RSVP', sectionName: 'The menu' });
     expect(e.industry).toBe('other');

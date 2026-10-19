@@ -70,7 +70,7 @@ describe('the wiring (source guards)', () => {
   });
   it('the admin text route only ever texts the campaign\'s own forward_to', () => {
     const src = read('app/api/admin/ppl/text-business/route.ts');
-    expect(src).toMatch(/sendSms\(campaign\.forward_to, parsed\.data\.body\)/);
+    expect(src).toMatch(/sendSms\(campaign\.forward_to, parsed\.data\.body(, \{[^)]*\})?\)/);
     expect(src).toMatch(/requireAdmin\(\)/);
     expect(src).not.toMatch(/z\.object\(\{[^}]*to:/);
   });

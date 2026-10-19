@@ -13,6 +13,7 @@ import type { DealKey } from '@/lib/ppl/pitchPlan';
 import { pitchText1, pitchText2, pitchNextStep } from '@/lib/ppl/pitchText';
 import { funnelOf, latestLead, alternativeShop, storedAlternative, vetAlternative, rejectAlternative, sendPitchText1, sendPitchText2, resendPitchLink, loadPitchCampaign } from '@/lib/ppl/pitchSend';
 import { isGoodTimeToText, nextWindowLabel } from '@/lib/ppl/sendWindow';
+import { recentMessagesForCampaign } from '@/lib/ppl/inboundSms';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
   if (!c) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   const funnel = funnelOf(c);
   const dealKey: DealKey = funnel.deal ?? 'next';
-  const [lead, stored, computed, account] = await Promise.all([latestLead(c.id), storedAlternative(c), alternativeShop(c), getPplAccountByCampaign(c.id)]);
+  const [lead, stored, computed, account, replies] = await Promise.all([latestLead(c.id), storedAlternative(c), alternativeShop(c), getPplAccountByCampaign(c.id), recentMessagesForCampaign(c.id).catch(() => [])]);
   // Before text 1 the alternative is the candidate we WOULD store; after, it is the one on file (vetted or not).
   const alternative = stored ? { id: stored.id, name: stored.name, phone: stored.phone, vetted: stored.vetted, stored: true } : computed ? { ...computed, vetted: false, stored: false } : null;
   const base = publicBaseUrl();
@@ -43,6 +44,7 @@ export async function GET(req: Request) {
     lead,
     alternative,
     window: { ...win, next: win.ok ? null : nextWindowLabel(Date.now(), { region: c.region, industry: c.industry_key }) },
+    replies,
     preview: { text1: t1, text2: t2.text, text2Kind: t2.kind, text2By: t2.by?.toISOString() ?? null },
   });
 }

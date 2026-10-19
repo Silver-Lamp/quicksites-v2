@@ -261,6 +261,7 @@ type PitchState = {
   alternative: { id: string; name: string; phone: string | null; vetted: boolean; stored: boolean } | null;
   preview: { text1: string; text2: string; text2Kind: 'repoint' | 'last_free'; text2By: string | null };
   sentBy?: 'operator' | 'cron' | null;
+  replies?: Array<{ received_at: string; body: string; direction: 'in' | 'out'; kind: 'stop' | 'start' | 'outcome' | 'reply' | null; reason: string | null; ok: boolean | null }>;
   window?: { ok: boolean; tz: string; local: string; reason?: 'weekend' | 'outside_hours'; next: string | null };
 };
 
@@ -366,6 +367,19 @@ function ByText({ plan, dealKey, setDealKey }: { plan: PitchPlan; dealKey: DealK
             </div>
           </div>
 
+          {state.replies && state.replies.length > 0 && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">The text thread{state.replies.some((r) => r.direction === 'in') ? ' — they texted back' : ''}</div>
+              <ul className="mt-1 space-y-1">
+                {state.replies.map((r, i) => (
+                  <li key={i} className={r.direction === 'in' ? '' : 'text-muted-foreground'}>
+                    <span className="text-muted-foreground">{new Date(r.received_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} {r.direction === 'in' ? '← them' : `→ us${r.reason ? ` (${r.reason})` : ''}${r.ok === false ? ' FAILED' : ''}`}{r.kind && r.kind !== 'reply' ? ` · ${r.kind.toUpperCase()}` : ''}:</span> <span className={r.direction === 'in' ? 'text-foreground' : ''}>{r.body}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-[11px] text-muted-foreground">No automatic reply was sent. Call them, opening with what they wrote; if they want to pay, Resend the pay link on "They said yes".</p>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
             <button type="button" disabled={busy !== null || !!f.calledAt} onClick={() => act('called')} className="rounded border border-border px-3 py-1 hover:bg-muted disabled:opacity-50">{f.calledAt ? `Called ${when(f.calledAt)}` : 'Mark: I called'}</button>
             <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="what they said…" className="min-w-[14rem] flex-1 rounded border border-border bg-background px-2 py-1" />

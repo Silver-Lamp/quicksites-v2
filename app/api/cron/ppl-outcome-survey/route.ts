@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
         .select('id');
       if (!claimed?.length) continue;
       const body = outcomeSurveySmsText({ domain: camp?.domain ?? c.custom_domain ?? 'the site', callerPhone: c.from_number, at: c.created_at });
-      const r = await sendSms(d.to, body).catch((e: any) => ({ ok: false, error: String(e?.message || e) }));
+      const r = await sendSms(d.to, body, { reason: 'outcome_survey', campaignId: c.geo_campaign_id }).catch((e: any) => ({ ok: false, error: String(e?.message || e) }));
       await supabaseAdmin.from('call_logs').update({ outcome_survey_result: { ok: r.ok, error: r.ok ? null : r.error ?? null, to: d.to, at: new Date().toISOString() } }).eq('id', c.id);
       if (r.ok) sent += 1; else failed += 1;
     }

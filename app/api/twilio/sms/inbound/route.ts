@@ -9,7 +9,7 @@
 // (it blocks our future SMS to the number); this route is what clears the CALL forward, which
 // Twilio knows nothing about.
 
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import twilio from 'twilio';
 import {
   applyStart,
@@ -20,6 +20,7 @@ import {
 } from '@/lib/ppl/forwardNotice';
 import { parseOutcomeReply, outcomeReplyAck } from '@/lib/ppl/outcomeSurvey';
 import { recordOutcomeReply } from '@/lib/ppl/outcomeSurveyDb';
+import { campaignForNumber, recordInboundSms, emailInboundReply } from '@/lib/ppl/inboundSms';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,10 +46,13 @@ export async function POST(req: Request) {
   const from = params.From || '';
   const body = params.Body || '';
   const optOutType = params.OptOutType || null;
+  const to = params.To || null;
+  const sid = params.MessageSid || null;
   if (!from) return xml('<?xml version="1.0" encoding="UTF-8"?><Response/>');
 
   if (isStopMessage(body, optOutType)) {
     await applyStop(from, 'sms_stop');
+    after(async () => { const c = await campaignForNumber(from).catch(() => null); const id = await recordInboundSms({ from, to, body, kind: 'stop', sid, campaign: c }); await emailInboundReply(id, { from, body, kind: 'stop', campaign: c }); });
     // Twilio may have already blocked outbound SMS to this number; the <Message> is best-effort.
     return xml(
       `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${stopConfirmationText()}</Message></Response>`
@@ -56,6 +60,7 @@ export async function POST(req: Request) {
   }
   if (isStartMessage(body, optOutType)) {
     await applyStart(from);
+    after(async () => { const c = await campaignForNumber(from).catch(() => null); const id = await recordInboundSms({ from, to, body, kind: 'start', sid, campaign: c }); await emailInboundReply(id, { from, body, kind: 'start', campaign: c }); });
     return xml('<?xml version="1.0" encoding="UTF-8"?><Response/>');
   }
   // "Did that call become a job?" (lib/ppl/outcomeSurvey.ts): a Y / N / NOT YET from a business
@@ -64,7 +69,18 @@ export async function POST(req: Request) {
   const reply = parseOutcomeReply(body);
   if (reply) {
     const recorded = await recordOutcomeReply(from, reply, body).catch(() => false);
-    if (recorded) return xml(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${outcomeReplyAck(reply)}</Message></Response>`);
+    if (recorded) {
+      after(async () => { const c = await campaignForNumber(from).catch(() => null); await recordInboundSms({ from, to, body, kind: 'outcome', sid, campaign: c }); });
+      return xml(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${outcomeReplyAck(reply)}</Message></Response>`);
+    }
   }
+  // Everything else is a human writing to us — a reply to the pitch, a question, "how do I pay".
+  // Stored, matched to its campaign, emailed to the owner with the next move. NO auto-reply:
+  // the honest answer to a person's words is a person (2026-10-18, the day the first pitch went out).
+  after(async () => {
+    const c = await campaignForNumber(from).catch(() => null);
+    const id = await recordInboundSms({ from, to, body, kind: 'reply', sid, campaign: c });
+    await emailInboundReply(id, { from, body, kind: 'reply', campaign: c });
+  });
   return xml('<?xml version="1.0" encoding="UTF-8"?><Response/>');
 }

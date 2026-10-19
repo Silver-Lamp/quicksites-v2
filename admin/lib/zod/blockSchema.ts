@@ -566,6 +566,9 @@ export const blockContentSchemaMap = {
               url: z.string().url(),
               poster: z.union([z.string().url(), z.literal('')]).optional(),
               caption: z.string().optional(),
+              /** A picture card's tap-to-reveal panel (lib/sites/heroMedia.ts): a short title and a few lines. */
+              title: z.string().optional(),
+              text: z.string().optional(),
             }),
           )
           .max(3)

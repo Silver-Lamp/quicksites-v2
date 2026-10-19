@@ -16,6 +16,8 @@ export const BILLABLE_SECONDS_OPTIONS = [90, 60, 45, 30] as const;
 export const NON_BUSINESS_INDUSTRIES = new Set(['dome_builder', 'treehouse_builder']);
 /** A line is worth a number once its latest 28-day window shows this many impressions (the suggestion gate uses 10; 5 is the watch list). */
 export const DEMAND_MIN_IMPRESSIONS = 5;
+/** A line that has drawn no customer and no demand for this long is a release candidate (owner's plan, 2026-10-18). */
+export const RELEASE_AFTER_DAYS = 60;
 
 export type CorpusCampaign = {
   id: string;
@@ -144,6 +146,13 @@ export type CorpusSummary = {
   pitchNow: LineRow[];
   nonAnswerers: LineRow[];
   noiseLines: LineRow[];
+  /**
+   * Lines to RELEASE, by a person: a tracking number ≥ RELEASE_AFTER_DAYS old on a domain with
+   * no customer-read call ever and under DEMAND_MIN_IMPRESSIONS in the latest 28-day window.
+   * Cheap in dollars (~$1/mo) but a line forwarding junk spends the business's patience; a
+   * line a paying account rides is never listed.
+   */
+  releaseCandidates: LineRow[];
 };
 
 const hostOf = (s: string): string => String(s || '').toLowerCase().replace(/^sc-domain:/, '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
@@ -316,6 +325,7 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
     pitchNow: lines.filter((l) => l.customerLeads90 > 0),
     nonAnswerers: lines.filter((l) => l.dials >= 3 && l.answered === 0),
     noiseLines: lines.filter((l) => l.calls >= 3 && l.customers === 0 && l.junk >= 0.75 * l.calls),
+    releaseCandidates: lines.filter((l) => l.trackingNumber && (l.ageDays ?? 0) >= RELEASE_AFTER_DAYS && l.customers === 0 && l.customerLeads90 === 0 && (l.impressions28d ?? 0) < DEMAND_MIN_IMPRESSIONS && l.pitch.result !== 'paid'),
   };
 }
 

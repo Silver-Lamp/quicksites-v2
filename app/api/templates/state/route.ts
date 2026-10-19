@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -246,7 +247,7 @@ export async function GET(req: Request) {
   }
 
   // Domain fallback
-  const platformDomain = normalized?.slug ? `${String(normalized.slug).toLowerCase()}.quicksites.ai` : null;
+  const platformDomain = normalized?.slug ? tenantSiteHost(String(normalized.slug)) : null;
   const effectiveDomain = publishedDomain ?? platformDomain ?? null;
 
   // 4) Response

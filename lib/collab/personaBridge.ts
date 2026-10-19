@@ -17,15 +17,17 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { addFeedback } from './feedback';
+import { platformSiteRoots, siteSlugFromHost, tenantSiteHosts } from '@/lib/sites/tenantRoot';
 
 /** `https://foo-ab12.quicksites.ai/whatever` → `foo-ab12`. Null for anything else. */
 export function slugFromTenantUrl(raw: string): string | null {
   try {
     const host = new URL(raw).hostname.toLowerCase();
-    const m = host.match(/^([a-z0-9-]+)\.quicksites\.ai$/);
-    if (!m) return null;
+    // One label on a platform root (the tenant root, or the brand root while sites are still there).
     // 'www' is the marketing site, not a tenant; a finding about it is not about anyone's option.
-    return m[1] === 'www' ? null : m[1];
+    const slug = siteSlugFromHost(host, platformSiteRoots());
+    if (!slug || !/^[a-z0-9-]+$/.test(slug) || !tenantSiteHosts(slug).includes(host)) return null;
+    return slug;
   } catch {
     return null;
   }

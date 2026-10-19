@@ -10,6 +10,7 @@
 // client who mistakes a preview for something already live will make a different decision than
 // one who knows it is still theirs to change.
 import * as React from 'react';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 type Msg = {
   id: string;
@@ -304,7 +305,7 @@ export default function CollabClient({
                 opt.versions.find((v) => v.version === shownVersion[opt.key]) ?? opt.latest;
               const t = templatesById[shown.templateId];
               if (!t) return null;
-              const url = `https://${t.slug}.quicksites.ai/`;
+              const url = `${tenantSiteUrl(t.slug)}/`;
               const isPicked = decided === t.id;
               const preview = previews[t.slug];
               const optionFeedback = feedback.filter(

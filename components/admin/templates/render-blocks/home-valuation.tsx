@@ -12,6 +12,7 @@ import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { siteSlugFromHost } from '@/lib/sites/tenantRoot';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -65,7 +66,8 @@ export default function HomeValuationRender({
     typeof window !== 'undefined'
       ? (() => {
           const host = window.location.hostname.toLowerCase();
-          if (host.endsWith('.quicksites.ai')) return host.split('.')[0];
+          const fromHost = siteSlugFromHost(host);
+          if (fromHost) return fromHost;
           const parts = host.replace(/^www\./, '').split('.');
           return parts.length >= 2 ? parts[0] : host;
         })()

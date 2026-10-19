@@ -9,6 +9,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { AUTO_SHOP_COMPETITION_KIND } from '@/lib/outreach/competitionKinds';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 export type AutoShopDirectoryEntry = {
   templateId: string;
@@ -66,7 +67,7 @@ function heroFromData(data: any): string | null {
 /** Public URL of a shop's own QuickSites site (custom domain, else the platform subdomain). */
 function shopSiteUrl(slug: string, customDomain?: string | null): string {
   if (customDomain) return `https://${customDomain}`;
-  return `https://${slug}.quicksites.ai`;
+  return tenantSiteUrl(slug);
 }
 
 export async function loadAutoShopDirectoryBySlug(slug: string): Promise<AutoShopDirectory | null> {

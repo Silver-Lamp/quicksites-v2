@@ -27,12 +27,13 @@
 // so a draft holding unreviewed edits would ship them. Geo pitch sites are machine-built and not
 // hand-edited, which is why this is acceptable here and would not be for a customer's site.
 import { loadEnv, makeRest, republishTemplate } from './lib/republishTemplate.mjs';
+import { tenantRoot } from './lib/tenantRoot.mjs';
 
 const args = process.argv.slice(2);
 const APPLY = args.includes('--apply');
 const LIMIT = Number(args[args.indexOf('--limit') + 1] || 0) || Infinity;
 const ONLY = args.includes('--only') ? args[args.indexOf('--only') + 1] : null;
-const PLATFORM = 'quicksites.ai';
+const PLATFORM = tenantRoot();
 
 const env = loadEnv();
 const rest = makeRest(env);

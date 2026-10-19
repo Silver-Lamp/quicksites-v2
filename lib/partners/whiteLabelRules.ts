@@ -11,10 +11,10 @@
 // steps into a checklist the partner completes themselves.
 
 /** Hosts a partner may never claim as their portal — ours, the menu surface, previews. */
+import { tenantSiteDomains } from '@/lib/sites/tenantRoot';
+
 export const RESERVED_HOST_SUFFIXES = [
-  'quicksites.ai',
-  'cedarsites.com',
-  'pointsevenstudio.com',
+  ...tenantSiteDomains(), // the brand, the tenant root once set, the reseller roots
   'delivered.menu',
   'deliveredmenu.com',
   'vercel.app',

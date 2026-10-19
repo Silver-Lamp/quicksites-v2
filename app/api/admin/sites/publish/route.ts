@@ -10,6 +10,7 @@ import { mayPublishOnGrace } from '@/lib/guest/publishGrace';
 import { pendingEmailFor, startPublishGrace } from '@/lib/guest/publishGraceServer';
 import { NEEDS_SIGNUP_CODE } from '@/lib/auth/guestSignup';
 import { recordGuestPublishEvent } from '@/lib/analytics/guestFunnelServer';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -46,9 +47,9 @@ function deriveDomainFromTemplate(tpl: any) {
   const metaDomain = meta?.domain ?? null;
   const rootDomain = (data as any)?.domain ?? null;
 
-  // NOTE: slug is only a fallback for *.quicksites.ai, never written here.
+  // NOTE: slug is only a fallback for the platform subdomain, never written here.
   const slug = canonSlug(tpl?.slug) || canonSlug(tpl?.template_name);
-  const fallback = slug ? `${slug}.quicksites.ai` : null;
+  const fallback = slug ? tenantSiteHost(slug) : null;
 
   return (metaCustom || metaDomain || rootDomain || fallback) ?? null;
 }

@@ -20,9 +20,10 @@ import { cookies } from 'next/headers';
 import AbBeacon from '@/components/home/ab-beacon';
 import { AB_PREVIEW_MARK, applySiteVariantB, forcedVariant, pickSiteVariant, previewPathVariant, siteAbCookie, siteExperimentId } from '@/lib/ab/siteAb';
 import { getSiteAb } from '@/lib/ab/siteAbDb';
+import { platformSiteRoots, siteSlugFromHost, tenantRoot, tenantSiteHosts } from '@/lib/sites/tenantRoot';
 
 const QS_DEBUG = process.env.QSITES_DEBUG === '1';
-const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'quicksites.ai';
+const BASE_DOMAIN = tenantRoot();
 
 function qlog(msg: string, extra?: any) {
   if (!QS_DEBUG) return;
@@ -160,14 +161,16 @@ async function findSiteByHost(hostNoPort: string): Promise<SiteRow | null> {
 
   if (site) return site as SiteRow;
 
-  // 2) *.BASE_DOMAIN
-  if (hostNoPort.endsWith(`.${BASE_DOMAIN}`)) {
-    const sub = hostNoPort.replace(/^www\./, '').slice(0, -(`.${BASE_DOMAIN}`).length);
-    // default_subdomain exact match
+  // 2) a platform subdomain — on the tenant root, or on the brand root while rows still name it
+  const platformSub = siteSlugFromHost(hostNoPort.replace(/^www\./, ''), platformSiteRoots());
+  if (platformSub) {
+    const sub = platformSub;
+    // default_subdomain exact match (legacy rows were written as `<sub>.<brand root>`)
     const { data: byDefault } = await supabaseAdmin
       .from('sites')
       .select('id, slug, domain, default_subdomain, template_id, published_snapshot_id')
-      .eq('default_subdomain', `${sub}.${BASE_DOMAIN}`)
+      .in('default_subdomain', tenantSiteHosts(sub))
+      .limit(1)
       .maybeSingle();
     if (byDefault) return byDefault as SiteRow;
 

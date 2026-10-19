@@ -12,6 +12,7 @@
 // question (kind='question') rather than only reply — because an unanswered question is the
 // thing the client's page pins to the top.
 import * as React from 'react';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 type Msg = {
   id: string;
@@ -193,7 +194,7 @@ export default function OperatorThread({
           {templates.map((t, i) => (
             <li key={t.id}>
               <a
-                href={`https://${t.slug}.quicksites.ai/`}
+                href={`${tenantSiteUrl(t.slug)}/`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`rounded-lg border px-3 py-1.5 text-sm transition hover:border-sky-500/40 ${

@@ -47,8 +47,10 @@ describe('the URL shape a browser can be pointed at', () => {
   it('builds an absolute https URL', () => {
     // /api/public/showcase could not serve this: its `href` mixes absolute external domains
     // with relative paths like /sites/local, so there is no single field to open.
-    expect(code).toMatch(/https:\/\/\$\{t\.slug\}\$\{ORIGIN_SUFFIX\}\//);
-    expect(code).toMatch(/const ORIGIN_SUFFIX = '\.quicksites\.ai'/);
+    // The origin comes from the tenant-root registry (lib/sites/tenantRoot.ts) — `https://<slug>.<root>/`
+    // — so the feed moves with the fleet when tenant sites leave the brand domain, with no edit here.
+    expect(code).toMatch(/url: `\$\{tenantSiteUrl\(t\.slug\)\}\/`/);
+    expect(code).toMatch(/import \{ tenantSiteUrl \} from '@\/lib\/sites\/tenantRoot'/);
   });
 
   it('skips a template with no slug rather than emitting https://undefined', () => {

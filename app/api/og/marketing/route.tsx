@@ -6,6 +6,7 @@
 // defaults to the homepage message. Text-only (no image fetch) so it always
 // renders.
 import { ImageResponse } from 'next/og';
+import { BRAND_ROOT } from '@/lib/sites/tenantRoot';
 
 export const runtime = 'edge';
 
@@ -25,7 +26,7 @@ export function GET(req: Request) {
   // Brand-aware: a reseller org can pass ?brand / ?accent / ?domain to get its
   // own card; defaults are QuickSites.
   const brand = clamp(searchParams.get('brand'), 40) || 'QuickSites';
-  const domain = clamp(searchParams.get('domain'), 60) || 'quicksites.ai';
+  const domain = clamp(searchParams.get('domain'), 60) || BRAND_ROOT;
   const accent = safeAccent(searchParams.get('accent'));
   const initial = brand.charAt(0).toUpperCase() || 'Q';
   const eyebrow = clamp(searchParams.get('eyebrow'), 60) || domain;

@@ -7,6 +7,7 @@ import { ExternalLink, RefreshCw } from 'lucide-react';
 import type { Template } from '@/types/template';
 import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 import toast from 'react-hot-toast';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 type Props = { template: Template };
 
@@ -23,7 +24,7 @@ export default function LivePreviewPane({ template }: Props) {
     }
     // 2) Subdomain (if published)
     if (template.slug && template.published) {
-      return `https://${template.slug}.quicksites.ai`;
+      return tenantSiteUrl(template.slug);
     }
     // 3) Shared preview (volatile)
     if (sharedUrl) return sharedUrl;

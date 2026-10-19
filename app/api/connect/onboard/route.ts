@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe/server';
 import { resolveMerchantFeeDefault } from '@/lib/commerce/pricingPolicy';
 import { requireMerchantOwner } from '@/lib/auth/requireUser';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -120,7 +121,7 @@ async function handle(req: NextRequest) {
     if (gate.user.email) prefill.email = gate.user.email;
 
     const businessName = ((m as any)?.display_name as string | undefined)?.trim();
-    const siteUrl = slug ? `https://${slug}.quicksites.ai` : undefined;
+    const siteUrl = slug ? tenantSiteUrl(slug) : undefined;
     if (businessName || siteUrl) {
       prefill.business_profile = {
         ...(businessName ? { name: businessName } : {}),

@@ -4,10 +4,11 @@ import { createMiddlewareSupabaseClient } from '@/lib/supabase/middlewareClient'
 import type { Database } from '@/types/supabase';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import type { TemplateData } from '@/types/template';
+import { tenantRoot } from '@/lib/sites/tenantRoot';
 
 // ---------- config / small caches ----------
 const previewToken = process.env.SITE_PREVIEW_TOKEN || 'secret123';
-const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'quicksites.ai';
+const BASE_DOMAIN = tenantRoot();
 
 const CACHE_TTL = 60_000;         // 60s
 const LOG_DEDUP_TTL = 5 * 60_000; // 5m

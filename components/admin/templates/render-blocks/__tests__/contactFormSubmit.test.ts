@@ -25,7 +25,10 @@ describe('contact form submission under the form_submissions RLS policies', () =
   });
   it('derives the site slug from /sites/<slug> before the host (the host-only rule filed platform-path leads under "www")', () => {
     expect(src).toMatch(/\/\^\\\/sites\\\/\(\[\^\/\?#\]\+\)\/\.exec\(window\.location\.pathname\)/);
-    expect(src.indexOf('fromPath')).toBeLessThan(src.indexOf("host.endsWith('.quicksites.ai')"));
+    // The host branch reads the slug through the tenant-root registry (lib/sites/tenantRoot.ts),
+    // never a spelled-out brand suffix — and it still comes AFTER the path read.
+    expect(src).toMatch(/siteSlugFromHost\(host\)/);
+    expect(src.indexOf('fromPath')).toBeLessThan(src.indexOf('siteSlugFromHost(host)'));
   });
   it('never updates form_submissions from the browser; the email route records the fate with the service role', () => {
     const insertAt = src.indexOf(".from('form_submissions')");

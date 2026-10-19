@@ -22,6 +22,7 @@
 // eslint-disable-next-line no-restricted-imports
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
+import { tenantSiteHost } from './lib/tenantRoot.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d = null) => {
@@ -58,7 +59,7 @@ const { data: tpl, error } = await db
 if (error) throw new Error(error.message);
 if (!tpl) throw new Error(`No template with slug "${SLUG}".`);
 
-const host = (tpl.custom_domain || '').trim() || `${SLUG}.quicksites.ai`;
+const host = (tpl.custom_domain || '').trim() || tenantSiteHost(SLUG);
 
 // ── Preflight ────────────────────────────────────────────────────────────────────────────────
 // Which formats are actually live RIGHT NOW at the public route. Only those get repointed; a

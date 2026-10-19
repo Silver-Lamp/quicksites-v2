@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Sparkles, Rocket, Users, ArrowRight } from 'lucide-react';
 
 import PortfolioGalleryClient from '@/app/orgs/[slug]/portfolio/client-gallery';
+import { isBrandHost } from '@/lib/sites/tenantRoot';
 
 export const revalidate = 60;
 
@@ -77,7 +78,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const h = await headers();
   const host = (h.get('x-forwarded-host') || h.get('host') || '').split(':')[0];
   const domain =
-    branding?.domain || (host && !/(^|\.)quicksites\.ai$/.test(host) && host !== 'localhost' ? host : undefined);
+    branding?.domain || (host && !isBrandHost(host) && host !== 'localhost' ? host : undefined);
   const headline = branding?.hero?.headline || `${name}`;
   const subhead =
     branding?.hero?.subhead || 'Websites & online stores, built and hosted for you.';

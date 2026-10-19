@@ -13,6 +13,7 @@ import { RebuildPitchBadge } from '@/components/admin/templates/rebuild-pitch-ba
 import DraftOutreachLinksRow from '@/components/admin/templates/draft-outreach-links';
 import NextStepButton from '@/components/admin/templates/next-step-button';
 import type { NextStep } from '@/lib/outreach/readiness';
+import { tenantSiteHosts } from '@/lib/sites/tenantRoot';
 
 export type GscStat = { clicks: number; impressions: number };
 
@@ -21,7 +22,8 @@ function gscKeysForRow(r: Row): string[] {
   const keys: string[] = [];
   const custom = (r.custom_domain || r.domain || '').trim();
   if (custom) keys.push(normalizeGscDomain(custom));
-  if (r.slug) keys.push(normalizeGscDomain(`${r.slug}.quicksites.ai`));
+  // Both platform hosts: a GSC row keyed on the brand host must still match after the move.
+  for (const h of tenantSiteHosts(r.slug)) keys.push(normalizeGscDomain(h));
   return keys.filter(Boolean);
 }
 

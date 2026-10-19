@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import type { Template } from '@/types/template';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 function sanitizeSlug(base: string) {
   return String(base || '')
@@ -69,7 +70,7 @@ export default function SlugPanel({
 
   const isSite = !!(template as any)?.is_site;
   const urlPreview = isSite
-    ? `https://${(slugLocal || 'your-subdomain')}.quicksites.ai`
+    ? tenantSiteUrl(slugLocal || 'your-subdomain')
     : `https://quicksites.ai/templates/${slugLocal || 'slug'}`;
 
   async function saveSlug(current: string) {

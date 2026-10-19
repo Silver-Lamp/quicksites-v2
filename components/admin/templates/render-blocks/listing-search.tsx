@@ -11,6 +11,7 @@
 import type { Block } from '@/types/blocks';
 import SectionShell from '@/components/ui/section-shell';
 import { useEffect, useState } from 'react';
+import { siteSlugFromHost } from '@/lib/sites/tenantRoot';
 
 type ThemeMode = 'light' | 'dark';
 type Listing = {
@@ -63,9 +64,7 @@ export default function ListingSearchRender({
   useEffect(() => {
     try {
       const host = window.location.hostname.toLowerCase();
-      const slug = host.endsWith('.quicksites.ai')
-        ? host.split('.')[0]
-        : host.replace(/^www\./, '').split('.')[0];
+      const slug = siteSlugFromHost(host) ?? host.replace(/^www\./, '').split('.')[0];
       setSiteSlug(slug);
       setIsEditor(window.location.pathname.startsWith('/admin/templates'));
     } catch {}

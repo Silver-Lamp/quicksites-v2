@@ -24,6 +24,7 @@
 // separate decision with a real prerequisite; see the note in the PR.
 
 import { pageUrlKey } from '@/lib/sites/redirects';
+import { siteSlugFromHost } from '@/lib/sites/tenantRoot';
 
 /** Request header carrying the path the visitor actually requested, set by `middleware.ts`. */
 export const PUBLIC_PATH_HEADER = 'x-qsites-public-path';
@@ -123,23 +124,12 @@ export function canonicalOriginFromMeta(meta: unknown): string | null {
   return `https://${u.host.toLowerCase()}`;
 }
 
-/** Domains where the leftmost label is a site slug (mirrors `PLATFORM_DOMAINS` in middleware.ts). */
-export const PLATFORM_SITE_DOMAINS = ['quicksites.ai', 'cedarsites.com', 'pointsevenstudio.com'];
-
 /**
- * Site slug for a platform-subdomain host — `sandon.quicksites.ai` → `sandon`.
- * Returns null for an apex, a custom domain, or the reserved `www`/`app` labels.
+ * Site slug for a platform-subdomain host — `sandon.quicksites.ai` → `sandon`. Lives in the ONE
+ * tenant-root registry (lib/sites/tenantRoot.ts) with the middleware's list; re-exported here for
+ * the importers that always found it on this module.
  */
-export function siteSlugFromHost(host: string): string | null {
-  const h = (host || '').toLowerCase().replace(/\.$/, '').split(':')[0];
-  for (const base of PLATFORM_SITE_DOMAINS) {
-    if (!h.endsWith(`.${base}`)) continue;
-    const left = h.slice(0, -(base.length + 1)).split('.')[0];
-    if (!left || left === 'www' || left === 'app') return null;
-    return left;
-  }
-  return null;
-}
+export { siteSlugFromHost };
 
 /**
  * Public path of one page WITHIN a site, on the site's own host.

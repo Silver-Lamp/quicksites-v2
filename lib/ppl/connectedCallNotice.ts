@@ -5,7 +5,7 @@
 // our own, see the entry route). V'Z Towing rang their own line back four times looking for the
 // customer they had just spoken to. So every call the business took now ends with a text that
 // carries the number. Pure decision + copy; the after-dial route runs it in `after()`.
-import { classifyDial } from '@/lib/ppl/forwardHealth';
+import { classifyDial, CONNECTED_MIN_SECONDS } from '@/lib/ppl/forwardHealth';
 import { isOwnBusinessCaller, last10 } from '@/lib/ppl/ownNumberCall';
 
 export type ConnectedCallRow = {
@@ -42,12 +42,30 @@ const usDisplay = (e164: string): string => {
   return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : e164;
 };
 
+/**
+ * Under this many seconds the call was a `brief` one (the same boundary `classifyDial` uses): the
+ * business picked up and it was over almost at once. The number still goes out, but without an
+ * instruction to call back.
+ *
+ * ⚠️ Why (2026-10-19, owner): a 310 number rang vashon-plumbing.com at 8:17 on a Sunday, Midsound
+ * answered, the call lasted 5 s — the robocall shape — and the text told a business pitched the
+ * day before to "call them back". Accurate, and the wrong advice. A short call gets the facts
+ * (number, time, "5 seconds") and the explanation of their phone log; the call-back line is for
+ * a call that was actually a conversation.
+ */
+export const SHORT_CALL_SECONDS = CONNECTED_MIN_SECONDS;
+
 export function connectedCallSmsText(args: { domain: string; callerPhone: string; durationSeconds: number | null; at?: Date | string; tz?: string }): string {
   const tz = args.tz ?? 'America/Los_Angeles';
   const d = args.at ? (typeof args.at === 'string' ? new Date(args.at) : args.at) : new Date();
   const when = Number.isNaN(d.getTime()) ? '' : new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit' }).format(d);
-  const dur = typeof args.durationSeconds === 'number' && args.durationSeconds > 0 ? `, ${args.durationSeconds} s` : '';
+  const secs = typeof args.durationSeconds === 'number' && args.durationSeconds > 0 ? args.durationSeconds : null;
+  const number = usDisplay(args.callerPhone);
   // Says exactly what we know: which site, which number, when, how long. No "lead", no judgement
   // of what was said — the business was on the call; we were not.
-  return `${args.domain}: the call you just took${when ? ` (${when}${dur})` : ''} came from ${usDisplay(args.callerPhone)}. Call them back on that number — your phone shows our forwarding line instead.`;
+  if (secs !== null && secs < SHORT_CALL_SECONDS) {
+    return `${args.domain}: a ${secs}-second call${when ? ` at ${when}` : ''} came in from ${number} and ended almost at once. That is the number, in case you want it — your phone shows our forwarding line instead.`;
+  }
+  const dur = secs !== null ? `, ${secs} s` : '';
+  return `${args.domain}: the call you just took${when ? ` (${when}${dur})` : ''} came from ${number}. Call them back on that number — your phone shows our forwarding line instead.`;
 }

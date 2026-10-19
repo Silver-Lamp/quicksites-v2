@@ -380,6 +380,7 @@ function ByText({ plan, dealKey, setDealKey }: { plan: PitchPlan; dealKey: DealK
               <p className="mt-1 text-[11px] text-muted-foreground">No automatic reply was sent. Call them, opening with what they wrote; if they want to pay, Resend the pay link on "They said yes".</p>
             </div>
           )}
+          <QuickText campaignId={plan.campaignId} toLabel={`${plan.facts.business} (${plan.facts.domain})`} onSent={load} />
           <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
             <button type="button" disabled={busy !== null || !!f.calledAt} onClick={() => act('called')} className="rounded border border-border px-3 py-1 hover:bg-muted disabled:opacity-50">{f.calledAt ? `Called ${when(f.calledAt)}` : 'Mark: I called'}</button>
             <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="what they said…" className="min-w-[14rem] flex-1 rounded border border-border bg-background px-2 py-1" />
@@ -391,6 +392,33 @@ function ByText({ plan, dealKey, setDealKey }: { plan: PitchPlan; dealKey: DealK
         </>
       )}
       {msg && <p role="status" className="rounded border border-border bg-muted px-2 py-1">{msg}</p>}
+    </div>
+  );
+}
+
+/** Write a text to the business from here (the thread above shows it after). Same route as /admin/texts. */
+function QuickText({ campaignId, toLabel, onSent }: { campaignId: string; toLabel: string; onSent: () => void }) {
+  const [body, setBody] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  async function send() {
+    const text = body.trim();
+    if (!text || !window.confirm(`Send this text to ${toLabel}?\n\n${text}`)) return;
+    setBusy(true);
+    const r = await fetch('/api/admin/ppl/text-business', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaignId, body: text }) });
+    const j = await r.json().catch(() => null);
+    if (r.ok && j?.ok) { setMsg(`Sent to ${j.to}. A copy is in your email.`); setBody(''); onSent(); } else setMsg(`Not sent: ${j?.error || r.status}${j?.detail ? ` — ${j.detail}` : ''}`);
+    setBusy(false);
+  }
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Write them a text</div>
+      <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} maxLength={600} placeholder={`To ${toLabel}…`} className="mt-1 w-full rounded border border-border bg-background px-2 py-1 text-sm" />
+      <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+        <span>{body.length}/600 · from the number they already know · STOP honoured · recorded and emailed to you</span>
+        <button type="button" disabled={busy || !body.trim()} onClick={send} className="ml-auto rounded bg-primary px-3 py-1 text-xs text-primary-foreground disabled:opacity-50">{busy ? 'Sending…' : 'Send text'}</button>
+      </div>
+      {msg && <p role="status" className="mt-1 rounded border border-border bg-muted px-2 py-1">{msg}</p>}
     </div>
   );
 }

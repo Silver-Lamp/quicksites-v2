@@ -86,6 +86,17 @@ describe('computeSlots', () => {
     expect(dates).not.toContain('2026-10-19');
     expect(dates).not.toContain('2026-10-24');
   });
+  it('a day whose last start is inside the lead time is not offered (a 24 h lead must not open on an empty "today")', () => {
+    const appt = bookingSettingsFrom({ meta: { booking: { mode: 'appointment', tz: 'America/Los_Angeles', windows: { mon: [{ open: '09:00', close: '17:00' }], tue: [{ open: '09:00', close: '17:00' }] }, slot_minutes: 30, lead_minutes: 1440 } } });
+    // Monday 2026-10-19, 08:00 Pacific: Monday's last start (16:30) is inside the 24 h lead; Tuesday's is not.
+    const dates = bookableDates(appt, 10, new Date('2026-10-19T15:00:00Z'));
+    expect(dates[0]).toBe('2026-10-20');
+    expect(dates).not.toContain('2026-10-19');
+    // The same Monday at 07:00 the day before is still on offer.
+    expect(bookableDates(appt, 10, new Date('2026-10-18T14:00:00Z'))[0]).toBe('2026-10-19');
+    // A one-hour lead at 08:00 keeps today (the restaurant fixture is unchanged above).
+    expect(bookableDates({ ...appt, leadMinutes: 60 }, 10, new Date('2026-10-19T15:00:00Z'))[0]).toBe('2026-10-19');
+  });
 });
 
 describe('strings', () => {

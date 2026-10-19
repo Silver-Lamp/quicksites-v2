@@ -102,13 +102,30 @@ export function dayTimes(settings: BookingSettings, date: string, now = new Date
   return out;
 }
 
-/** The dates a guest may pick: today onward, up to `days` ahead, skipping closed ones. */
+/**
+ * The dates a guest may pick: today onward, up to `days` ahead, skipping closed ones — and
+ * skipping a day whose LAST bookable start is already inside the lead time. With a 24-hour lead
+ * (Katie Bee's organizing site, 2026-10-19) "today" was always the first day offered and always
+ * read "No free times that day": a true sentence that looks like a broken widget. A day with no
+ * start the guest can still take is not a day to offer; `dayTimes` decides the same way.
+ */
 export function bookableDates(settings: BookingSettings, days = 30, now = new Date()): string[] {
   const out: string[] = [];
+  const earliest = addMinutes(now, settings.leadMinutes).getTime();
+  const step = settings.slotMinutes * 60_000;
   for (let i = 0; i < days; i++) {
     const d = formatInTimeZone(addMinutes(now, i * 24 * 60), settings.tz, 'yyyy-MM-dd');
     if (settings.closedDates.includes(d)) continue;
-    if (!(settings.windows[weekdayOf(d, settings.tz)] ?? []).length) continue;
+    const windows = settings.windows[weekdayOf(d, settings.tz)] ?? [];
+    if (!windows.length) continue;
+    const lastStart = Math.max(
+      ...windows.map((w) => {
+        const open = zonedInstant(d, w.open, settings.tz).getTime();
+        const close = zonedInstant(d, w.close, settings.tz).getTime();
+        return open + Math.floor((close - open - 1) / step) * step; // the last grid point before close
+      }),
+    );
+    if (lastStart < earliest) continue;
     out.push(d);
   }
   return out;

@@ -77,12 +77,22 @@ export const GOODS_INDUSTRY = NON_FOOD_INDUSTRY.goods;
 export const NON_FOOD_COPY = {
   goods: { cta: "See what's for sale", nav: 'For sale', where: 'Where' },
   services: { cta: 'See prices', nav: 'Prices', where: 'Where' },
+  // A services post that published NO prices (Katie Bee's organizing flyer, 2026-10-19: six
+  // categories, no rates) — "Prices" over a list with none is a heading for something the person
+  // did not say. Chosen by `nonFoodCopy()` when no item carries a price.
+  services_unpriced: { cta: 'See services', nav: 'Services', where: 'Where' },
   // A ticketed dinner / pop-up: it HAS a menu, but nobody orders from it — they reserve a seat.
   // Filed under a non-food industry so the order-ahead pill and "take online orders" pitch stay
   // off (Lil Mamas at Landhaus, 2026-10-11: a ten-seat dinner, RSVP by email).
   event: { cta: 'Reserve a seat', nav: 'Menu', where: 'Where' },
 } as const;
 export const GOODS_COPY = NON_FOOD_COPY.goods;
+
+/** The chrome words for a non-food kind — a services list with no price on any item is labelled "Services", never "Prices". */
+export function nonFoodCopy(kind: 'goods' | 'services' | 'event', items: PostItem[]): { cta: string; nav: string; where: string } {
+  if (kind === 'services' && !items.some((i) => String(i.price ?? '').trim())) return NON_FOOD_COPY.services_unpriced;
+  return NON_FOOD_COPY[kind];
+}
 export const ALLOWED_BLOCKS = new Set(['hero', 'menu', 'location', 'hours', 'story', 'gallery', 'header', 'footer']);
 
 const DAYS: HoursDaySpec['day'][] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -134,7 +144,7 @@ export function assemblePostTemplate(p: PostSpec) {
   if (!spec.contact?.address) strip.add('location');
   const nonFood = p.kind === 'goods' || p.kind === 'services' || p.kind === 'event' ? p.kind : null;
   const goods = nonFood !== null;
-  const words = nonFood ? NON_FOOD_COPY[nonFood] : null;
+  const words = nonFood ? nonFoodCopy(nonFood, p.items) : null;
   for (const pg of tpl.data.pages ?? []) {
     for (const key of ['blocks', 'content_blocks'] as const) {
       if (!Array.isArray(pg[key])) continue;

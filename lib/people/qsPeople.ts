@@ -26,6 +26,7 @@ export type QsPerson = {
 export const QS_PEOPLE: QsPerson[] = [
   { key: 'craig', name: 'Craig', relation: 'Vashon Island flyer rep: hourly + lifetime share, hours logged on /admin/rep-hours', pitchPath: '/for-craig', group: 'team', code: 'craig' },
   { key: 'abdou', name: 'Abdou', relation: 'Vashon Island rep: builds no-website businesses their site from /for-abdou; starter kit at /starter-kit/abdou', pitchPath: '/for-abdou', group: 'partner', code: 'abdou' },
+  { key: 'katie', name: 'Katie Bee', relation: 'Vashon professional organizer: spec site with booking + payments (built from her post 2026-10-19); referrer for QuickSites and for HJ Cornerstone', pitchPath: '/for-katie', group: 'partner', code: 'katie' },
   { key: 'amber', name: 'Amber', relation: 'Vashon: a permitted commissary kitchen (the Eagles) for PorchHearth cooks', pitchPath: '/for-amber', group: 'partner', code: 'amber' },
   { key: 'amy', name: 'Amy', relation: 'Team: the QuickSites brief beside the Cornerstone Display rollout', pitchPath: '/for-amy', group: 'team' },
   { key: 'angela', name: 'Angela', relation: 'Laguna Beach live-music work: QuickSites side of the pitch', pitchPath: '/for-angela', group: 'partner', code: 'angela' },

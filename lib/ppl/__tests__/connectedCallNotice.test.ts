@@ -32,6 +32,16 @@ describe('connectedCallSmsText', () => {
     expect(t).toBe('renton-towing.com: the call you just took (2:53 PM, 30 s) came from (253) 345-1344. Call them back on that number — your phone shows our forwarding line instead.');
     expect(t).not.toMatch(/lead/i);
   });
+  it('a call under 15 s gives the number and the length, and does NOT say "call them back" (the 5 s Sunday call on vashon-plumbing, 2026-10-19)', () => {
+    const t = connectedCallSmsText({ domain: 'vashon-plumbing.com', callerPhone: '+13102926856', durationSeconds: 5, at: '2026-10-19T15:17:20Z' });
+    expect(t).toBe('vashon-plumbing.com: a 5-second call at 8:17 AM came in from (310) 292-6856 and ended almost at once. That is the number, in case you want it — your phone shows our forwarding line instead.');
+    expect(t).not.toMatch(/call them back/i);
+    expect(t).not.toMatch(/lead|robocall|spam/i); // we do not know who it was, and we do not say
+    // The boundary is classifyDial's: 15 s is a conversation, 14 is not; an unknown length keeps the full text.
+    expect(connectedCallSmsText({ domain: 'x.com', callerPhone: '+13102926856', durationSeconds: 15 })).toMatch(/Call them back/);
+    expect(connectedCallSmsText({ domain: 'x.com', callerPhone: '+13102926856', durationSeconds: 14 })).not.toMatch(/Call them back/);
+    expect(connectedCallSmsText({ domain: 'x.com', callerPhone: '+13102926856', durationSeconds: null })).toMatch(/Call them back/);
+  });
 });
 
 describe('the wiring (source guards)', () => {

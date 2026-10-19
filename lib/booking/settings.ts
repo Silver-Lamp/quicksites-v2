@@ -23,7 +23,23 @@ export type BookingSettings = {
   locale: 'it' | 'en';
   /** Shown to a guest when a party is too big or no slot fits. */
   phone: string | null;
+  /**
+   * `table` (a restaurant: tables, parties, lunch/dinner) or `appointment` (ONE provider — an
+   * organizer, a consultant: the party is always one, the "table" is the person, times group as
+   * morning/afternoon). Same engine, same rows; the vocabulary and the guests picker change.
+   * Katie Bee's organizing site (2026-10-19) is the first.
+   */
+  mode: BookingMode;
+  /**
+   * A PREVIEW site: the widget runs end to end but no booking is written and the route refuses
+   * one — for an unclaimed spec site whose hours are placeholders the business never set. Nothing
+   * may be booked against availability a person did not give us. Cleared when the owner claims
+   * and sets real hours.
+   */
+  preview: boolean;
 };
+
+export type BookingMode = 'table' | 'appointment';
 
 export type WeekdayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 export const WEEKDAYS: WeekdayKey[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -71,13 +87,17 @@ export function bookingSettingsFrom(data: any): BookingSettings {
   const fromHours = any ? null : windowsFromHoursBlock(data);
   const localeRaw = String(b.locale ?? data?.meta?.locale ?? '').toLowerCase();
   const phone = String(b.phone ?? data?.meta?.contact?.phone ?? '').trim() || null;
+  const mode: BookingMode = b.mode === 'appointment' ? 'appointment' : 'table';
   return {
+    mode,
+    preview: b.preview === true,
     tz: typeof b.tz === 'string' && b.tz ? b.tz : typeof data?.meta?.contact?.tz === 'string' ? data.meta.contact.tz : 'Europe/Rome',
     windows: fromHours ?? windows,
     seatingMinutes: clampInt(b.seating_minutes, 30, 240, 90),
     slotMinutes: clampInt(b.slot_minutes, 5, 60, 15),
     leadMinutes: clampInt(b.lead_minutes, 0, 1440, 60),
-    maxParty: clampInt(b.max_party, 1, 40, 8),
+    // One provider books one person at a time; a stored max_party on an appointment site is ignored.
+    maxParty: mode === 'appointment' ? 1 : clampInt(b.max_party, 1, 40, 8),
     closedDates: Array.isArray(b.closed_dates) ? b.closed_dates.filter((d: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) : [],
     locale: localeRaw === 'it' ? 'it' : 'en',
     phone,

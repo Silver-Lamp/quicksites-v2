@@ -7,15 +7,15 @@
 import * as React from 'react';
 import { formatInTimeZone } from 'date-fns-tz';
 import { addDays } from 'date-fns';
-import { bookingStrings, longDate, type BookingLocale } from '@/lib/booking/i18n';
+import { bookingStrings, longDate, type BookingLocale, type BookingStringsMode } from '@/lib/booking/i18n';
 
 type TableInfo = { id: string; label: string; seats: number };
 type Booking = { id: string; table_id: string; party_size: number; starts_at: string; ends_at: string; guest_name: string; guest_phone: string | null; status: string; source: string; notes: string | null };
 
 const inputCls = 'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground';
 
-export default function BookingsClient({ templateId, locale, tz, tables, maxParty }: { templateId: string; locale: BookingLocale; tz: string; tables: TableInfo[]; maxParty: number }) {
-  const t = bookingStrings(locale);
+export default function BookingsClient({ templateId, locale, mode = 'table', tz, tables, maxParty }: { templateId: string; locale: BookingLocale; mode?: BookingStringsMode; tz: string; tables: TableInfo[]; maxParty: number }) {
+  const t = bookingStrings(locale, mode);
   const today = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd');
   const tomorrow = formatInTimeZone(addDays(new Date(), 1), tz, 'yyyy-MM-dd');
   const [date, setDate] = React.useState(today);

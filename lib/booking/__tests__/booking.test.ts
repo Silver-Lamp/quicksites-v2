@@ -9,8 +9,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { bookingSettingsFrom, hasBookableWindows, windowsFromHoursBlock } from '@/lib/booking/settings';
-import { computeSlots, bookableDates, weekdayOf, zonedInstant } from '@/lib/booking/slots';
-import { BOOKING_STRING_KEYS, BOOKING_STRING_KEYS_IT, bookingStrings, longDate } from '@/lib/booking/i18n';
+import { computeSlots, bookableDates, weekdayOf, zonedInstant, serviceOf } from '@/lib/booking/slots';
+import { APPOINTMENT_OVERLAY_KEYS, APPOINTMENT_OVERLAY_KEYS_IT, BOOKING_STRING_KEYS, BOOKING_STRING_KEYS_IT, bookingStrings, longDate } from '@/lib/booking/i18n';
 import { stripComments } from '@/test/stripComments';
 
 const read = (p: string) => stripComments(fs.readFileSync(path.join(process.cwd(), p), 'utf8'));
@@ -98,6 +98,54 @@ describe('strings', () => {
     expect(bookingStrings('xx').title).toBe('Book a table');
     expect(longDate('2026-10-16', 'it', 'Europe/Rome')).toMatch(/venerdì 16 ottobre/);
     expect(longDate('2026-10-16', 'en', 'Europe/Rome')).toMatch(/Friday, October 16/);
+  });
+});
+
+describe('appointment mode — one provider (Katie Bee Organizing, 2026-10-19)', () => {
+  const appt = bookingSettingsFrom({ meta: { booking: { mode: 'appointment', preview: true, tz: 'America/Los_Angeles', windows: { mon: [{ open: '09:00', close: '17:00' }] }, max_party: 8, locale: 'en' } } });
+  it('the party is pinned to one and preview is read; a restaurant site is unchanged', () => {
+    expect(appt.mode).toBe('appointment');
+    expect(appt.maxParty).toBe(1);
+    expect(appt.preview).toBe(true);
+    expect(settings.mode).toBe('table');
+    expect(settings.preview).toBe(false);
+    expect(bookingSettingsFrom({ meta: { booking: { mode: 'anything-else' } } }).mode).toBe('table');
+  });
+  it('the vocabulary is an OVERLAY: only keys the base has, both languages the same keys, and no table talk', () => {
+    expect(APPOINTMENT_OVERLAY_KEYS.every((k) => BOOKING_STRING_KEYS.includes(k))).toBe(true);
+    expect([...APPOINTMENT_OVERLAY_KEYS_IT].sort()).toEqual([...APPOINTMENT_OVERLAY_KEYS].sort());
+    const t = bookingStrings('en', 'appointment');
+    expect(t.title).toBe('Book a time');
+    expect(t.lunch).toBe('Morning');
+    expect(t.dinner).toBe('Afternoon');
+    expect(t.confirmed({ time: '10:00', dateLong: 'Monday, October 20', party: 1, table: 'Katie' })).toBe('Monday, October 20 at 10:00. See you then.');
+    expect(t.emailBody({ restaurant: 'Katie Bee Organizing', dateLong: 'Monday, October 20', time: '10:00', party: 1, table: 'Katie', phone: null })).not.toMatch(/table/i);
+    const spoken = Object.values(t).filter((v): v is string => typeof v === 'string').join(' ');
+    expect(spoken).not.toMatch(/\btables?\b/i);
+    // the restaurant strings are untouched
+    expect(bookingStrings('en').title).toBe('Book a table');
+    expect(bookingStrings('it', 'appointment').title).toBe('Prenota un orario');
+  });
+  it('times group morning/afternoon at noon for a provider, lunch/dinner at 16:00 for a restaurant', () => {
+    expect(serviceOf({ open: '11:30' }, 'appointment')).toBe('lunch');
+    expect(serviceOf({ open: '13:00' }, 'appointment')).toBe('dinner');
+    expect(serviceOf({ open: '13:00' })).toBe('lunch');
+    expect(serviceOf({ open: '16:00' })).toBe('dinner');
+  });
+  it('the widget hides the guests picker, never posts on a preview site; the route refuses a preview booking before any row', () => {
+    const w = read('components/admin/templates/render-blocks/table-booking.tsx');
+    expect(w).toMatch(/const appointment = settings\.mode === 'appointment'/);
+    expect(w).toMatch(/\{appointment \? null : \(\s*<label/);
+    expect(w).toMatch(/bookingStrings\(settings\.locale, settings\.mode\)/);
+    const previewAt = w.indexOf('if (settings.preview) {');
+    expect(previewAt).toBeGreaterThan(0);
+    expect(previewAt).toBeLessThan(w.indexOf('fetch(`/api/booking/${templateId}/book`'));
+    expect(w).toMatch(/t\.previewBanner\(/);
+    const r = read('app/api/booking/[templateId]/book/route.ts');
+    const refuseAt = r.indexOf('site.settings.preview');
+    expect(refuseAt).toBeGreaterThan(0);
+    expect(refuseAt).toBeLessThan(r.indexOf('createBooking('));
+    expect(r).toMatch(/mode: site\.settings\.mode/);
   });
 });
 

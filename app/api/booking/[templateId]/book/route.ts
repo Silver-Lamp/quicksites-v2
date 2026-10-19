@@ -65,6 +65,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ templateId
 
   const site = await loadBookingSite(templateId);
   if (!site || !hasBookableWindows(site.settings)) return NextResponse.json({ error: 'not_bookable' }, { status: 404 });
+  // A PREVIEW site (an unclaimed spec site with placeholder hours) books nothing, whoever asks:
+  // the widget never posts here, and a hand-made request is refused the same way.
+  if (site.settings.preview) return NextResponse.json({ error: 'preview' }, { status: 403 });
 
   const slots = await availability(site, date, party);
   const slot = slots.find((s) => s.starts_at === new Date(startsAt).toISOString() && s.table_id === tableId) ?? slots.find((s) => s.starts_at === new Date(startsAt).toISOString());
@@ -77,7 +80,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ templateId
   if (!simulation) {
     after(async () => {
       const restaurantEmail = String((tplRow as any)?.data?.meta?.contact?.email ?? (tplRow as any)?.data?.meta?.contact_email ?? '').trim() || null;
-      await notifyBooking({ booking: r.booking, tableLabel: slot.label, restaurant: site.name, restaurantEmail, restaurantPhone: site.settings.phone, tz: site.settings.tz, locale: site.settings.locale }).catch(() => undefined);
+      await notifyBooking({ booking: r.booking, tableLabel: slot.label, restaurant: site.name, restaurantEmail, restaurantPhone: site.settings.phone, tz: site.settings.tz, locale: site.settings.locale, mode: site.settings.mode }).catch(() => undefined);
     });
   }
 

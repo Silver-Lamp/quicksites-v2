@@ -4,7 +4,7 @@
 // site's contact email). Plain text in the guest's language (lib/booking/i18n.ts). Best-effort:
 // a failed email never fails the booking — the row is the booking, the email is a courtesy.
 import { sendEmail } from '@/lib/email';
-import { bookingStrings, longDate, type BookingLocale } from '@/lib/booking/i18n';
+import { bookingStrings, longDate, type BookingLocale, type BookingStringsMode } from '@/lib/booking/i18n';
 import { formatInTimeZone } from 'date-fns-tz';
 import type { BookingRow } from '@/lib/booking/db';
 
@@ -18,9 +18,11 @@ export async function notifyBooking(input: {
   restaurantPhone: string | null;
   tz: string;
   locale: BookingLocale;
+  /** `appointment` speaks of a time with a person, not a table (lib/booking/i18n.ts overlay). */
+  mode?: BookingStringsMode;
 }): Promise<{ guest: boolean; owner: boolean }> {
   const { booking: b } = input;
-  const t = bookingStrings(input.locale);
+  const t = bookingStrings(input.locale, input.mode ?? 'table');
   const date = formatInTimeZone(new Date(b.starts_at), input.tz, 'yyyy-MM-dd');
   const time = formatInTimeZone(new Date(b.starts_at), input.tz, 'HH:mm');
   const dateLong = longDate(date, input.locale, input.tz);

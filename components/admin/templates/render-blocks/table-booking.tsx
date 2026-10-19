@@ -33,7 +33,7 @@ import { phonePlaceholder, phoneRegionForSite } from '@/lib/phone/region';
 
 type Props = { block?: Block; content?: Block['content']; template?: any; previewOnly?: boolean };
 type SlotView = { starts_at: string; ends_at: string; table_id: string; label: string; time: string };
-type Done = { id: string; time: string; dateLong: string; party: number; table: string; startsAt: string; endsAt: string; email: string | null; simulation: boolean };
+type Done = { id: string; time: string; dateLong: string; party: number; table: string; startsAt: string; endsAt: string; email: string | null; simulation: boolean; preview: boolean };
 
 const s = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 const inputCls = 'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground';
@@ -43,7 +43,10 @@ export default function RenderTableBooking({ block, content, template, previewOn
   const c: any = content ?? block?.content ?? {};
   const templateId: string | null = template?.id ?? null;
   const settings = React.useMemo(() => bookingSettingsFrom(template?.data ?? template ?? {}), [template]);
-  const t = bookingStrings(settings.locale);
+  // ONE provider (settings.mode === 'appointment'): the party is one, the guests picker is hidden,
+  // and the words are "a time with Katie", not "a table" (lib/booking/i18n.ts overlay).
+  const appointment = settings.mode === 'appointment';
+  const t = bookingStrings(settings.locale, settings.mode);
   const dates = React.useMemo(() => bookableDates(settings), [settings]);
   const ready = !!templateId && hasBookableWindows(settings) && dates.length > 0;
   const phoneExample = React.useMemo(() => phonePlaceholder(phoneRegionForSite(template)), [template]);
@@ -51,7 +54,7 @@ export default function RenderTableBooking({ block, content, template, previewOn
   const address: string = s(template?.data?.meta?.contact?.address);
 
   const [date, setDate] = React.useState<string>('');
-  const [party, setParty] = React.useState<number>(2);
+  const [party, setParty] = React.useState<number>(appointment ? 1 : 2);
   const [slots, setSlots] = React.useState<SlotView[] | null>(null);
   const [times, setTimes] = React.useState<DayTime[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -115,8 +118,10 @@ export default function RenderTableBooking({ block, content, template, previewOn
     if (!isEditorContext(previewOnly)) return null;
     return (
       <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-        <div className="text-base">🍽️</div>
-        Table booking — add opening windows (meta.booking or an Hours block) and tables, and the booking form appears here. Nothing shows on your live site until you do.
+        <div className="text-base">{appointment ? '📅' : '🍽️'}</div>
+        {appointment
+          ? 'Appointment booking — add the hours you take bookings (meta.booking or an Hours block) and the form appears here. Nothing shows on your live site until you do.'
+          : 'Table booking — add opening windows (meta.booking or an Hours block) and tables, and the booking form appears here. Nothing shows on your live site until you do.'}
       </div>
     );
   }
@@ -124,6 +129,12 @@ export default function RenderTableBooking({ block, content, template, previewOn
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!chosen) return;
+    // A PREVIEW site books nothing: the hours are placeholders the business never gave us, so the
+    // walk-through ends in a confirmation that says so, and nothing is sent (the route refuses too).
+    if (settings.preview) {
+      setDone({ id: '', time: chosen.time, dateLong: longDate(date, settings.locale, settings.tz), party, table: chosen.label, startsAt: chosen.starts_at, endsAt: chosen.ends_at, email: null, simulation: false, preview: true });
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -155,6 +166,7 @@ export default function RenderTableBooking({ block, content, template, previewOn
         endsAt: String(j?.booking?.ends_at ?? chosen.ends_at),
         email: email.trim() || null,
         simulation: j?.simulation === true,
+        preview: false,
       });
     } catch {
       setError(t.failed);
@@ -217,11 +229,15 @@ export default function RenderTableBooking({ block, content, template, previewOn
     <section id="book" className="py-10">
       <h2 className="text-2xl font-bold tracking-tight text-foreground">{title}</h2>
       <p className="mt-2 text-sm text-muted-foreground">{intro}</p>
+      {settings.preview ? (
+        <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-foreground">{t.previewBanner({ name: restaurantName })}</p>
+      ) : null}
 
       {done ? (
         <div ref={doneRef} tabIndex={-1} role="status" aria-live="polite" className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <div className="text-lg font-semibold text-foreground">{t.confirmedTitle}</div>
           <p className="mt-1 text-sm text-foreground">{t.confirmed(done)}</p>
+          {done.preview ? <p className="mt-1 text-sm font-medium text-amber-300">{t.previewConfirmed}</p> : null}
           {done.id ? (
             <p className="mt-2 text-sm text-foreground">
               {t.reference}: <span className="font-mono font-semibold tracking-wider">{bookingReference(done.id)}</span>
@@ -246,7 +262,7 @@ export default function RenderTableBooking({ block, content, template, previewOn
         </div>
       ) : (
         <form onSubmit={submit} className="mt-6 grid grid-cols-1 gap-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid gap-3 ${appointment ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <label className="block text-sm">
               <span className={labelCls}>{t.date}</span>
               <select className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} disabled={previewOnly}>
@@ -257,16 +273,18 @@ export default function RenderTableBooking({ block, content, template, previewOn
                 ))}
               </select>
             </label>
-            <label className="block text-sm">
-              <span className={labelCls}>{t.party}</span>
-              <select className={inputCls} value={party} onChange={(e) => setParty(Number(e.target.value))} disabled={previewOnly}>
-                {Array.from({ length: settings.maxParty + 1 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>
-                    {n === settings.maxParty + 1 ? `${n}+` : n}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {appointment ? null : (
+              <label className="block text-sm">
+                <span className={labelCls}>{t.party}</span>
+                <select className={inputCls} value={party} onChange={(e) => setParty(Number(e.target.value))} disabled={previewOnly}>
+                  {Array.from({ length: settings.maxParty + 1 }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>
+                      {n === settings.maxParty + 1 ? `${n}+` : n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
 
           {tooBig ? (
@@ -282,7 +300,7 @@ export default function RenderTableBooking({ block, content, template, previewOn
             <div>
               <div className={labelCls}>{t.time}</div>
               {previewOnly ? (
-                <p className="text-sm text-muted-foreground">19:00 · 19:30 · 20:00 · 20:30 …</p>
+                <p className="text-sm text-muted-foreground">{appointment ? '09:00 · 09:30 · 10:00 · 10:30 …' : '19:00 · 19:30 · 20:00 · 20:30 …'}</p>
               ) : loading || slots === null ? (
                 <p className="text-sm text-muted-foreground">{t.loading}</p>
               ) : times.length === 0 ? (

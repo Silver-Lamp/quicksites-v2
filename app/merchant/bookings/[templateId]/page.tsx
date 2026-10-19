@@ -25,7 +25,7 @@ export default async function MerchantBookingsPage({ params }: { params: Promise
   const { data: adminRow } = await supabaseAdmin.from('admin_users').select('user_id').eq('user_id', user.id).maybeSingle();
   if (!adminRow && site.ownerId !== user.id) return <div className="p-8 text-sm text-muted-foreground">This site is not yours.</div>;
   const tables = await loadTables(templateId);
-  const t = bookingStrings(site.settings.locale);
+  const t = bookingStrings(site.settings.locale, site.settings.mode);
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-semibold text-foreground">{t.ownerTitle}</h1>
@@ -41,7 +41,7 @@ export default async function MerchantBookingsPage({ params }: { params: Promise
         ) : null}
       </p>
       <div className="mt-6">
-        <BookingsClient templateId={templateId} locale={site.settings.locale} tz={site.settings.tz} tables={tables.map((x) => ({ id: x.id, label: x.label, seats: x.seats }))} maxParty={Math.max(site.settings.maxParty, ...tables.map((x) => x.seats), 1)} />
+        <BookingsClient templateId={templateId} locale={site.settings.locale} mode={site.settings.mode} tz={site.settings.tz} tables={tables.map((x) => ({ id: x.id, label: x.label, seats: x.seats }))} maxParty={Math.max(site.settings.maxParty, ...tables.map((x) => x.seats), 1)} />
       </div>
       {/* The owner-consented link to HiveJournal's floor plan + food cost (lib/booking/partnerLink.ts). */}
       <div className="mt-8">

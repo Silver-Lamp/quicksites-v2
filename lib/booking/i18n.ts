@@ -57,6 +57,9 @@ const STRINGS = {
     emailBody: (p: { restaurant: string; dateLong: string; time: string; party: number; table: string; phone: string | null }) =>
       `Your table at ${p.restaurant} is booked: ${p.party} ${p.party === 1 ? 'guest' : 'guests'} on ${p.dateLong} at ${p.time} (table ${p.table}).${p.phone ? ` To change it, call ${p.phone}.` : ''}`,
     ownerEmailSubject: (p: { restaurant: string }) => `New booking — ${p.restaurant}`,
+    // preview sites (lib/booking/settings.ts `preview`): the widget runs, nothing is recorded
+    previewBanner: (p: { name: string }) => `Preview — the times shown are placeholders. Booking goes live when ${p.name || 'the owner'} claims this site and sets real hours.`,
+    previewConfirmed: 'This was a preview. Nothing was booked.',
   },
   it: {
     title: 'Prenota un tavolo',
@@ -105,14 +108,73 @@ const STRINGS = {
     emailBody: (p: { restaurant: string; dateLong: string; time: string; party: number; table: string; phone: string | null }) =>
       `Il tuo tavolo da ${p.restaurant} è prenotato: ${p.party} ${p.party === 1 ? 'persona' : 'persone'} ${p.dateLong} alle ${p.time} (tavolo ${p.table}).${p.phone ? ` Per modificare, chiama il ${p.phone}.` : ''}`,
     ownerEmailSubject: (p: { restaurant: string }) => `Nuova prenotazione — ${p.restaurant}`,
+    previewBanner: (p: { name: string }) => `Anteprima — gli orari mostrati sono indicativi. Le prenotazioni si attivano quando ${p.name || 'il titolare'} rivendica il sito e imposta gli orari reali.`,
+    previewConfirmed: 'Era un\'anteprima. Non è stato prenotato nulla.',
   },
 } as const;
 
-export type BookingStrings = typeof STRINGS.en;
+/** The strings' SHAPE, with each literal widened to `string` so a second vocabulary (the appointment overlay) can fill the same keys. */
+export type BookingStrings = { [K in keyof typeof STRINGS.en]: (typeof STRINGS.en)[K] extends string ? string : (typeof STRINGS.en)[K] };
 
-export function bookingStrings(locale: BookingLocale | string | null | undefined): BookingStrings {
-  return (locale === 'it' ? STRINGS.it : STRINGS.en) as BookingStrings;
+/**
+ * APPOINTMENT vocabulary — one provider, one person, a time rather than a table. An OVERLAY on
+ * the restaurant strings, never a second table: it may only replace keys the base has (pinned by
+ * a test), so a sentence the widget needs always exists in both modes. `table` becomes the word
+ * before the provider's name ("with Katie"); `lunch`/`dinner` become the morning/afternoon group
+ * headings; the guests picker is hidden by the widget, so `party`/`tooBig` are never shown.
+ */
+const APPOINTMENT: Record<BookingLocale, Partial<BookingStrings>> = {
+  en: {
+    title: 'Book a time',
+    intro: 'Pick a day and a time that suits you.',
+    party: 'People',
+    noTimes: 'No free times that day.',
+    tooBig: 'Please call to arrange that.',
+    submit: 'Book this time',
+    confirmedTitle: 'Time booked',
+    confirmed: (p) => `${p.dateLong} at ${p.time}. See you then.`,
+    loading: 'Looking for free times…',
+    lunch: 'Morning',
+    dinner: 'Afternoon',
+    changeNoPhone: 'To change or cancel, get in touch.',
+    guests: (n) => `${n} ${n === 1 ? 'person' : 'people'}`,
+    table: 'with',
+    emailSubject: (p) => `Your appointment with ${p.restaurant}`,
+    emailBody: (p) => `Your appointment with ${p.restaurant} is booked for ${p.dateLong} at ${p.time}.${p.phone ? ` To change it, call ${p.phone}.` : ''}`,
+    ownerEmailSubject: (p) => `New appointment — ${p.restaurant}`,
+  },
+  it: {
+    title: 'Prenota un orario',
+    intro: 'Scegli un giorno e un orario che ti va bene.',
+    party: 'Persone',
+    noTimes: 'Nessun orario libero quel giorno.',
+    tooBig: 'Per favore chiama per organizzarlo.',
+    submit: 'Prenota questo orario',
+    confirmedTitle: 'Orario prenotato',
+    confirmed: (p) => `${p.dateLong} alle ${p.time}. A presto.`,
+    loading: 'Cerco orari liberi…',
+    lunch: 'Mattina',
+    dinner: 'Pomeriggio',
+    changeNoPhone: 'Per modificare o annullare, contattaci.',
+    guests: (n) => `${n} ${n === 1 ? 'persona' : 'persone'}`,
+    table: 'con',
+    emailSubject: (p) => `Il tuo appuntamento con ${p.restaurant}`,
+    emailBody: (p) => `Il tuo appuntamento con ${p.restaurant} è prenotato per ${p.dateLong} alle ${p.time}.${p.phone ? ` Per modificare, chiama il ${p.phone}.` : ''}`,
+    ownerEmailSubject: (p) => `Nuovo appuntamento — ${p.restaurant}`,
+  },
+};
+
+export type BookingStringsMode = 'table' | 'appointment';
+
+export function bookingStrings(locale: BookingLocale | string | null | undefined, mode: BookingStringsMode = 'table'): BookingStrings {
+  const loc: BookingLocale = locale === 'it' ? 'it' : 'en';
+  const base = STRINGS[loc] as BookingStrings;
+  return mode === 'appointment' ? ({ ...base, ...APPOINTMENT[loc] } as BookingStrings) : base;
 }
+
+/** The keys the appointment overlay touches (en) — a test pins them to a subset of the base keys. */
+export const APPOINTMENT_OVERLAY_KEYS = Object.keys(APPOINTMENT.en);
+export const APPOINTMENT_OVERLAY_KEYS_IT = Object.keys(APPOINTMENT.it);
 
 /** `2026-10-18` → "sabato 18 ottobre" / "Saturday, October 18". */
 export function longDate(date: string, locale: BookingLocale, tz: string): string {

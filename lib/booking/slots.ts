@@ -67,9 +67,14 @@ export function computeSlots(input: { date: string; party: number; settings: Boo
 export type Service = 'lunch' | 'dinner';
 export type DayTime = { time: string; starts_at: string; service: Service };
 
-/** A window opening before 16:00 is lunch; later is dinner. The widget groups chips by this. */
-export function serviceOf(w: { open: string }): Service {
-  return String(w.open) < '16:00' ? 'lunch' : 'dinner';
+/**
+ * A window opening before 16:00 is lunch; later is dinner. The widget groups chips by this.
+ * In appointment mode the same two groups are MORNING (before noon) and AFTERNOON — the strings
+ * overlay renames them; the engine keeps one pair of names.
+ */
+export function serviceOf(w: { open: string }, mode: BookingSettings['mode'] = 'table'): Service {
+  const split = mode === 'appointment' ? '12:00' : '16:00';
+  return String(w.open) < split ? 'lunch' : 'dinner';
 }
 
 /**
@@ -88,7 +93,7 @@ export function dayTimes(settings: BookingSettings, date: string, now = new Date
   for (const w of windows) {
     const open = zonedInstant(date, w.open, settings.tz);
     const close = zonedInstant(date, w.close, settings.tz);
-    const service = serviceOf(w);
+    const service = serviceOf(w, settings.mode);
     for (let t = open; t < close; t = addMinutes(t, settings.slotMinutes)) {
       if (t < earliest) continue;
       out.push({ time: formatInTimeZone(t, settings.tz, 'HH:mm'), starts_at: t.toISOString(), service });

@@ -56,6 +56,10 @@ export type PurchaseOptions = {
   renew?: boolean;
   /** Attach apex + www to the Vercel project after purchase (default true). */
   attach?: boolean;
+  /** How long to wait for the registrar ORDER to settle before giving up (default 90 s). */
+  orderWaitMs?: number;
+  /** Poll interval for the order (default 5 s; tests shorten it). */
+  orderPollMs?: number;
 };
 
 export type PurchaseResult = {
@@ -65,6 +69,8 @@ export type PurchaseResult = {
   attached: boolean;
   priceUsd: number | null;
   reason?: string;
+  /** The registrar order id, when a buy was submitted — the thing to re-check when `reason` is `order_pending`. */
+  orderId?: string;
 };
 
 export const SUGGEST_TLDS = ['com', 'net', 'co', 'io', 'org', 'us'] as const;
@@ -177,13 +183,22 @@ async function vercelCheckAvailability(apex: string): Promise<DomainAvailability
   return { domain: apex, available, priceUsd, periodYears, premium };
 }
 
-/** POST /v1/registrar/domains/{domain}/buy — registers the domain into the account/team. */
+/**
+ * POST /v1/registrar/domains/{domain}/buy — submits an ORDER to register the domain.
+ *
+ * ⚠️ A 2xx HERE IS A RECEIPT FOR THE ORDER, NOT THE DOMAIN. The response is `{ orderId }` and
+ * the order settles afterwards at GET /v1/registrar/orders/{orderId} (`draft` → `completed` |
+ * `failed`). On 2026-10-19 the tenant-root purchase (qspages.com) got a 200, this function
+ * reported `ok`, the caller attached the domain to the project and reported "bought $11.25" —
+ * and the order had failed ten seconds later with `payment-failed`. Twenty minutes of probing a
+ * domain that was never registered followed. Callers must wait for the order (`waitForOrder`).
+ */
 async function vercelBuy(
   apex: string,
   contact: RegistrantContact,
   expectedPriceUsd: number | null,
   renew: boolean
-): Promise<{ ok: boolean; status: number; reason?: string }> {
+): Promise<{ ok: boolean; status: number; reason?: string; orderId?: string }> {
   // The new registrar API requires expectedPrice (min 0.01) + the contact nested under
   // contactInformation (state/zip naming, ISO-2 country, E.164 phone e.g. "+1.4155551234").
   if (typeof expectedPriceUsd !== 'number' || expectedPriceUsd <= 0) {
@@ -211,9 +226,46 @@ async function vercelBuy(
     `/v1/registrar/domains/${encodeURIComponent(apex)}/buy`,
     { method: 'POST', body: JSON.stringify(body) }
   );
-  if (res.ok) return { ok: true, status: res.status };
+  if (res.ok) return { ok: true, status: res.status, orderId: res.data?.orderId ? String(res.data.orderId) : undefined };
   const reason = res.data?.error?.message || res.data?.message || res.data?.code || `Vercel buy ${res.status}`;
   return { ok: false, status: res.status, reason };
+}
+
+type RegistrarOrder = {
+  orderId?: string;
+  status?: string; // 'draft' | 'pending' | 'completed' | 'failed' (observed)
+  error?: { code?: string; message?: string };
+  domains?: Array<{ domainName?: string; status?: string; price?: number }>;
+};
+
+/**
+ * GET /v1/registrar/orders/{orderId} until the order is terminal or the time budget runs out.
+ * Pure polling; never throws. `settled: false` means "still pending when we stopped looking" —
+ * which is NOT "failed" and NOT "bought", and the caller must say so.
+ */
+export async function waitForOrder(
+  orderId: string,
+  opts: { waitMs?: number; pollMs?: number } = {}
+): Promise<{ settled: boolean; status: string; errorCode?: string; order?: RegistrarOrder }> {
+  const waitMs = opts.waitMs ?? 90_000;
+  const pollMs = Math.max(1, opts.pollMs ?? 5_000);
+  const deadline = Date.now() + waitMs;
+  let last: RegistrarOrder | undefined;
+  for (;;) {
+    try {
+      const res = await vercelFetch<RegistrarOrder>(`/v1/registrar/orders/${encodeURIComponent(orderId)}`);
+      if (res.ok) last = res.data;
+    } catch {
+      /* transient; keep polling until the budget runs out */
+    }
+    const status = String(last?.status ?? 'unknown').toLowerCase();
+    if (status === 'completed' || status === 'succeeded' || status === 'success') return { settled: true, status, order: last };
+    if (status === 'failed' || status === 'cancelled' || status === 'canceled' || status === 'error') {
+      return { settled: true, status, errorCode: last?.error?.code || last?.error?.message || 'unknown', order: last };
+    }
+    if (Date.now() >= deadline) return { settled: false, status, order: last };
+    await new Promise((r) => setTimeout(r, pollMs));
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -382,6 +434,27 @@ export async function purchaseDomain(
     return { ok: false, domain: apex, purchased: false, attached: false, priceUsd: avail.priceUsd, reason: bought.reason };
   }
 
+  // The buy returned an ORDER. Wait for it: a failed order (payment-failed, 2026-10-19) must read
+  // as not bought, and a still-pending one as pending — never as a domain we own.
+  if (!bought.orderId) {
+    return { ok: false, domain: apex, purchased: false, attached: false, priceUsd: avail.priceUsd, reason: 'buy_returned_no_order_id' };
+  }
+  const order = await waitForOrder(bought.orderId, { waitMs: opts.orderWaitMs, pollMs: opts.orderPollMs });
+  if (!order.settled) {
+    return { ok: false, domain: apex, purchased: false, attached: false, priceUsd: avail.priceUsd, reason: 'order_pending', orderId: bought.orderId };
+  }
+  if (order.status !== 'completed' && order.status !== 'succeeded' && order.status !== 'success') {
+    return {
+      ok: false,
+      domain: apex,
+      purchased: false,
+      attached: false,
+      priceUsd: avail.priceUsd,
+      reason: `order_failed:${order.errorCode ?? order.status}`,
+      orderId: bought.orderId,
+    };
+  }
+
   // Attach to the project so the site serves immediately. DNS is auto-managed
   // by Vercel for domains registered here, so no manual records are needed.
   let attached = false;
@@ -396,7 +469,7 @@ export async function purchaseDomain(
     }
   }
 
-  return { ok: true, domain: apex, purchased: true, attached, priceUsd: avail.priceUsd };
+  return { ok: true, domain: apex, purchased: true, attached, priceUsd: avail.priceUsd, orderId: bought.orderId };
 }
 
 /* -------------------------------------------------------------------------- */

@@ -3,6 +3,7 @@
 // The thin I/O around `forwardCandidates.ts`: load the campaigns that have no forward-to, the
 // prospects that could be one, and who has already said STOP — then let the pure module decide.
 // All the judgement lives there; this file only fetches.
+import { prospectOnIsland } from '@/lib/ppl/islandFence';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
 import { latestWindowTotals, type HarvestRow } from '@/lib/gsc/latestWindow';
@@ -169,9 +170,11 @@ export async function suggestForwardTargets(
     const others = self
       ? new Map([...forwardedElsewhere].filter(([phone]) => phone !== self))
       : forwardedElsewhere;
+    // ⚠️ An island campaign may only be pointed at a business on the island (lib/ppl/islandFence.ts):
+    // distance is no fence across water, and "Whidbey Island" names no prospect row at all.
     return recommendForwardTargets(
       c,
-      all.filter((p) => p.industry_key === c.industry_key),
+      all.filter((p) => p.industry_key === c.industry_key && prospectOnIsland(c.city, p.city) !== false),
       {
         optedOut,
         unresponsive,

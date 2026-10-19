@@ -5,7 +5,7 @@
 // because it has a customer-read lead ≥90 s today, not because its name was typed here.
 import Link from 'next/link';
 import type { CorpusSummary, LineRow } from '@/lib/ppl/corpus';
-import { DEMAND_MIN_IMPRESSIONS, NUMBER_MONTHLY_USD } from '@/lib/ppl/corpus';
+import { DEMAND_MIN_IMPRESSIONS, NUMBER_MONTHLY_USD, RELEASE_AFTER_DAYS } from '@/lib/ppl/corpus';
 import { buildPitchPlan } from '@/lib/ppl/pitchPlan';
 import PplPitchCallTool from '@/components/admin/ppl-pitch-call-tool';
 
@@ -144,6 +144,10 @@ export default function PplCorpusSection({ s }: { s: CorpusSummary }) {
         <Card title="Noise lines — mostly vendors and robocalls, no customer yet">
           <LineList rows={s.noiseLines} empty="None." note={(l) => `${l.junk} of ${l.calls} calls junk${l.ageDays != null ? `, ${l.ageDays} days old` : ''}${l.impressions28d != null ? `, ${l.impressions28d} impressions / 28 d` : ''}`} />
           <p className="mt-2 text-xs text-muted-foreground">New, unranked domains draw prospectors, not customers. Judge a line after it ranks and has impressions.</p>
+        </Card>
+        <Card title={`Lines to release — ${RELEASE_AFTER_DAYS}+ days, no customer ever, under ${DEMAND_MIN_IMPRESSIONS} impressions in 28 d`} tone={s.releaseCandidates.length ? 'warn' : undefined}>
+          <LineList rows={s.releaseCandidates} empty="None — every line this old has drawn a customer or has demand." note={(l) => `${l.ageDays} days, ${l.calls} call${l.calls === 1 ? '' : 's'} (${l.junk} junk), ${l.impressions28d ?? 0} impressions / 28 d`} />
+          <p className="mt-2 text-xs text-muted-foreground">A line costs ~${NUMBER_MONTHLY_USD}/mo in dollars and the business's patience in junk calls. Release from “Tracked campaigns” below after a look — a person decides, never this list; a line a paying account rides is never listed.</p>
         </Card>
       </div>
 

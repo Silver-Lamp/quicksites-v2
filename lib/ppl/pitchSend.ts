@@ -17,6 +17,7 @@ import { PPL_DEFAULTS } from '@/lib/ppl/rules';
 import { pitchText1, pitchText2, type PitchFunnel } from '@/lib/ppl/pitchText';
 import { last10 } from '@/lib/ppl/ownNumberCall';
 import { classifyDial } from '@/lib/ppl/forwardHealth';
+import { cityListFor } from '@/lib/ppl/islandFence';
 
 export type PitchCampaign = GeoCampaign & Partial<Record<'pitch_deal' | 'pitch_texted_at' | 'pitch_followup_at' | 'pitch_followup_kind' | 'pitch_repoint_prospect_id' | 'pitch_repoint_by' | 'pitch_called_at' | 'pitch_result' | 'pitch_notes' | 'pitch_sent_by' | 'pitch_intervene_emailed_at' | 'pitch_paid_emailed_at' | 'pitch_alternative_prospect_id' | 'pitch_alternative_vetted_at' | 'pitch_vet_reminded_on', string | null>> & { pitch_alternative_rejected?: string[] | null };
 
@@ -72,7 +73,8 @@ export async function alternativeShop(c: PitchCampaign, exclude: string[] = c.pi
     .from('outreach_prospects')
     .select('id, business_name, phone, rating, review_count')
     .eq('region', c.region ?? 'WA')
-    .eq('city', c.city)
+    // An island campaign ("Whidbey Island") draws from the island's towns, never a city-equality that matches nobody.
+    .in('city', cityListFor(c.city))
     .eq('industry_key', c.industry_key)
     .eq('lead_tier', 'no_website')
     .not('phone', 'is', null)

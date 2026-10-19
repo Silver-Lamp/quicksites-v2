@@ -58,10 +58,23 @@ Plus, for all tiers: an abuse address, a takedown-within-hours runbook, and one-
   written, and the alias read makes the backfill unnecessary.
 - **Gate:** `tenant_root` on `/status` (`lib/config/health.ts`), `.env.example` entry.
 
+**The owner picked `qspages.com` (2026-10-18 evening).** ⚠️ **Two purchase attempts on
+2026-10-19 both ended `payment-failed` at the Vercel registrar** (orders `draft` → `failed`
+within ten seconds; three domains had bought fine on the same card three hours earlier). The
+first attempt went through `purchaseDomain`, which reported "bought $11.25" on the buy
+endpoint's 200 — a receipt for the ORDER, not the domain — and the next twenty minutes probed
+a host that was never registered. `purchaseDomain` now waits on
+`GET /v1/registrar/orders/{orderId}` and reports `order_failed:<code>` / `order_pending`
+(`lib/domains/__tests__/purchaseOrder.test.ts`). The three project-domain entries
+(`qspages.com`, `www`, `*.qspages.com`) are attached and will verify by themselves once the
+registration lands. **Owner: check the team's payment method in Vercel → Settings → Billing,
+then re-run `scripts/_scratch/tenant-root-buy.mts --apply` (it prints the order and polls it)
+or buy `qspages.com` in the Vercel dashboard.** Then steps 3–6 below.
+
 **To switch on (owner, in this order — the order is the whole point):**
 1. Buy the root (≈$11; the Vercel registrar is already enabled on this team). Candidates free
    on 2026-10-18 by RDAP: `qsitehost.com`, `qsitepages.com`, `quicksitehost.com`,
-   `qspages.com`, `sitesbyqs.com`, `qs-sites.com`, `qsite.site`. `qsites.com` is taken.
+   `qspages.com` (chosen), `sitesbyqs.com`, `qs-sites.com`, `qsite.site`. `qsites.com` is taken.
    ⚠️ Not a `.ai` and not a name that reads as the brand: the point is that a flag on it is a
    flag on hosting, not on QuickSites.
 2. Attach `<root>`, `www.<root>` and `*.<root>` to the Vercel project (the same three entries

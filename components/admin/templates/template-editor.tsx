@@ -18,6 +18,7 @@ import type { Block } from '@/types/blocks';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { toast } from 'react-hot-toast';
 import { usePageCountDebugger } from '@/hooks/usePageCountDebugger';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 // ---------- helpers ----------
 function getPages(t: any) {
@@ -143,12 +144,12 @@ export default function TemplateEditor({
       const pub = await publishSnapshot((template as any).id, sid);             // publish
 
       // Give the operator a way straight to the live site. Prefer the always-reachable
-      // *.quicksites.ai subdomain (a custom/geo domain may be "planned" and not resolving
+      // platform subdomain (a custom/geo domain may be "planned" and not resolving
       // yet); fall back to whatever domain the publish endpoint settled on.
       const slug = (template as any)?.slug as string | undefined;
       const pubDomain = (pub as any)?.domain as string | undefined;
       const liveUrl =
-        slug ? `https://${slug}.quicksites.ai`
+        slug ? tenantSiteUrl(slug)
         : pubDomain && !pubDomain.endsWith('.local.quicksites') ? `https://${pubDomain}`
         : null;
       if (liveUrl) setPublishedUrl(liveUrl);
@@ -201,13 +202,13 @@ export default function TemplateEditor({
 
   // Live URL for the persistent "View live site" link: this session's publish takes
   // precedence, else derive one for an already-published site (custom domain first,
-  // then the *.quicksites.ai subdomain — mirrors LivePreviewPane).
+  // then the platform subdomain — mirrors LivePreviewPane).
   const liveUrl = useMemo(() => {
     if (publishedUrl) return publishedUrl;
     const t = template as any;
     if (!t?.published) return null;
     if (t.custom_domain) return `https://${t.custom_domain}`;
-    if (t.slug) return `https://${t.slug}.quicksites.ai`;
+    if (t.slug) return tenantSiteUrl(t.slug);
     return null;
   }, [publishedUrl, template]);
 

@@ -23,6 +23,7 @@ import {
   Clock,
   ExternalLink,
 } from 'lucide-react';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 type VersionRow = {
   id: string;                 // version id OR snapshot id (fallback)
@@ -131,7 +132,7 @@ export default function VersionsDropdown({
   const liveUrl = useMemo(() => {
     if (domain) return `https://${domain}`;
     if (defaultSubdomain) return `https://${defaultSubdomain}`;
-    if (baseSlug) return `https://${baseSlug}.quicksites.ai`;
+    if (baseSlug) return tenantSiteUrl(baseSlug);
     return null;
   }, [domain, defaultSubdomain, baseSlug]);
 

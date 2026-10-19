@@ -4,6 +4,7 @@ import { Resend } from 'resend';
 import { lazyClient } from '@/lib/lazyClient';
 import { json } from '@/lib/api/json';
 import { orgEmailBrand } from '@/lib/email';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 const resend = lazyClient(() => new Resend(process.env.RESEND_API_KEY));
 
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
   const { email, name, slug, templateName } = await req.json();
 
   const dashboardLink = `https://quicksites.ai/edit/${slug}`;
-  const publicLink = `https://${slug}.quicksites.ai`;
+  const publicLink = tenantSiteUrl(slug);
 
   try {
     // White-label: reseller orgs send under their own brand (docs/WHITE_LABEL_PLAN Slice 1).

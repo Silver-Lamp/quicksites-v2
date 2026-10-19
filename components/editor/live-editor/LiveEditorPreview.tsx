@@ -11,9 +11,10 @@ import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { platformSiteRoots, siteSlugFromHost, tenantRoot, tenantSiteHosts } from '@/lib/sites/tenantRoot';
 
 const QS_DEBUG = process.env.QSITES_DEBUG === '1';
-const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'quicksites.ai';
+const BASE_DOMAIN = tenantRoot();
 
 function qlog(msg: string, extra?: any) {
   if (!QS_DEBUG) return;
@@ -155,14 +156,15 @@ async function findSiteByHost(hostNoPort: string): Promise<SiteRow | null> {
 
   if (site) return site as SiteRow;
 
-  // 2) *.BASE_DOMAIN → try default_subdomain then slug
-  if (hostNoPort.endsWith(`.${BASE_DOMAIN}`)) {
-    const sub = hostNoPort.replace(/^www\./, '').slice(0, -(`.${BASE_DOMAIN}`).length);
-    // Try default_subdomain == exact host
+  // 2) a platform subdomain (tenant root, or the brand root while rows still name it) → default_subdomain then slug
+  const platformSub = siteSlugFromHost(hostNoPort.replace(/^www\./, ''), platformSiteRoots());
+  if (platformSub) {
+    const sub = platformSub;
     const { data: byDefault } = await supabaseAdmin
       .from('sites')
       .select('id, slug, domain, default_subdomain, template_id, published_snapshot_id')
-      .eq('default_subdomain', `${sub}.${BASE_DOMAIN}`)
+      .in('default_subdomain', tenantSiteHosts(sub))
+      .limit(1)
       .maybeSingle();
     if (byDefault) return byDefault as SiteRow;
 

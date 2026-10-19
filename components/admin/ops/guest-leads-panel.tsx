@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { GuestLead } from '@/lib/admin/guestContacts';
 import type { GuestFunnel } from '@/lib/admin/guestFunnel';
 import { KpiTile } from '@/components/admin/ops/ops-widgets';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 
 /**
  * The "Reachable" tile plus its panel, as one unit: the tile toggles, the panel spans the full
@@ -129,7 +130,7 @@ function LeadRow({ lead: l }: { lead: GuestLead }) {
   // answers 404 for the operator too — this row used to link there and read as "their site is
   // live". The host is shown as text (it is what the postcard prints and where the site WILL be);
   // the link opens the draft in the editor, which an admin may open for any template.
-  const siteHost = l.slug ? `${l.slug}.quicksites.ai` : null;
+  const siteHost = l.slug ? tenantSiteHost(l.slug) : null;
   const editorUrl = `/admin/templates/${l.templateId}`;
   const subject = encodeURIComponent(`Your ${l.businessName} website — an apology from QuickSites`);
   const [showCard, setShowCard] = useState(false);

@@ -25,6 +25,7 @@ import {
 import { useVerifyDomain } from '@/hooks/useVerifyDomain';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
+import { tenantRoot, tenantSiteHost } from '@/lib/sites/tenantRoot';
 
 /* -------------------- Lightweight dialog (no external deps) -------------------- */
 function ConfirmDialog({
@@ -72,7 +73,7 @@ function ConfirmDialog({
             <AlertDescription className="text-white/80">
               <strong>Soft</strong> keeps the <code>published_sites</code> row but clears
               <code> domain</code> and <code> snapshot_id</code> and marks it <code>unpublished</code>.<br />
-              <strong>Hard</strong> deletes the row entirely (frees <code>*.quicksites.ai</code> immediately).
+              <strong>Hard</strong> deletes the row entirely (frees <code>{`*.${tenantRoot()}`}</code> immediately).
             </AlertDescription>
           </Alert>
 
@@ -325,7 +326,7 @@ export default function DomainPanel({
       ? String((template as any).domain).trim()
       : null;
 
-  const defaultSubdomain = previewSlug ? `${previewSlug}.quicksites.ai` : 'your-subdomain.quicksites.ai';
+  const defaultSubdomain = tenantSiteHost(previewSlug || 'your-subdomain');
 
   const prodPreview = isSite
     ? `https://${publishedDomain || defaultSubdomain}`

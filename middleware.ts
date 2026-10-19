@@ -27,6 +27,7 @@ import {
   lemonYumAppRedirect,
 } from '@/lib/lemonade/lemonYum';
 import { PUBLIC_PATH_HEADER } from '@/lib/seo/canonicalUrl';
+import { BRAND_ROOT, isTenantRootApex, legacyTenantRedirectHost, tenantSiteDomains } from '@/lib/sites/tenantRoot';
 
 /**
  * Carry the path the visitor actually requested into the rewritten render.
@@ -87,8 +88,8 @@ const APP_HOSTS = new Set<string>([
   'app.pointsevenstudio.com',
 ]);
 
-/** Known platform domains where subdomain = site slug. */
-const PLATFORM_DOMAINS = ['quicksites.ai', 'cedarsites.com', 'pointsevenstudio.com'];
+/** Known platform domains where subdomain = site slug — ONE registry, lib/sites/tenantRoot.ts. */
+const PLATFORM_DOMAINS = tenantSiteDomains();
 
 /** Known org-level domains → org slug */
 const ORG_DOMAINS: Record<string, string> = {
@@ -500,6 +501,20 @@ export async function middleware(req: NextRequest) {
     return withCookies(res);
   }
 
+  // --- Tenant root move (docs/INFRA_SPLIT_PLAN.md) ---
+  // Once NEXT_PUBLIC_TENANT_ROOT names a root other than the brand, a tenant site reached on the OLD
+  // host (`<slug>.quicksites.ai`) is sent to its new home permanently, and the new root's own
+  // apex/www — nobody's site — goes to the brand homepage. Both are inert while the root is unset.
+  {
+    const moved = legacyTenantRedirectHost(hostname);
+    if (moved) {
+      return NextResponse.redirect(new URL(`${pathname}${req.nextUrl.search || ''}`, `https://${moved}`), 308);
+    }
+    if (isTenantRootApex(hostname)) {
+      return NextResponse.redirect(new URL('/', `https://www.${BRAND_ROOT}`), 308);
+    }
+  }
+
   // --- Partner white-label portal hosts (org_domains, kind='admin') ---
   // A reseller's own `app.theirbrand.com` is an APP host for that org: /login, /join/<code>,
   // /admin render under their brand (resolveOrg() maps the same host → org for the branding).
@@ -521,7 +536,7 @@ export async function middleware(req: NextRequest) {
     return withCookies(res);
   }
 
-  // --- Platform subdomain (*.quicksites.ai, etc) ---
+  // --- Platform subdomain (*.<tenant root>, *.quicksites.ai while sites are still there, reseller roots) ---
   const platSlug = platformSubdomainSlug(hostname);
   if (platSlug) {
     const extra = pathname === '/' ? '/home' : pathname;

@@ -13,9 +13,10 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import PreviewBridge from '@/app/preview/preview-bridge';
 import PreviewState from '@/app/preview/PreviewState';
 import PreviewWatermark from '@/components/sites/preview-watermark';
+import { platformSiteRoots, siteSlugFromHost, tenantRoot, tenantSiteHosts } from '@/lib/sites/tenantRoot';
 
 const QS_DEBUG = process.env.QSITES_DEBUG === '1';
-const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'quicksites.ai';
+const BASE_DOMAIN = tenantRoot();
 
 function qlog(msg: string, extra?: any) {
   if (!QS_DEBUG) return;
@@ -351,13 +352,14 @@ async function loadSiteForRequest(opts: {
     if (!site) site = await manualByDomain(variants);
   }
 
-  if (!site && hostNoPort.endsWith(`.${BASE_DOMAIN}`)) {
-    const sub = hostNoPort.replace(/^www\./, '').slice(0, -(`.${BASE_DOMAIN}`).length);
+  const platformSub = siteSlugFromHost(hostNoPort.replace(/^www\./, ''), platformSiteRoots());
+  if (!site && platformSub) {
+    const sub = platformSub;
     site = previewVersionId
       ? await manualBySlugOrBase(sub, previewVersionId)
       : (await (async () => {
           let r = await safeSelectWithDowngrade(s1, (from, sel) =>
-            from.select(sel).eq('archived', false).eq('default_subdomain', `${sub}.${BASE_DOMAIN}`)
+            from.select(sel).eq('archived', false).in('default_subdomain', tenantSiteHosts(sub))
           );
           if (r.data) return r.data as any;
           r = await safeSelectWithDowngrade(s1, (from, sel) =>

@@ -26,6 +26,7 @@
 // and sufficient; deleting the file is neither.
 
 import fs from 'node:fs';
+import { tenantSiteHost } from './lib/tenantRoot.mjs';
 
 const args = process.argv.slice(2);
 const APPLY = args.includes('--apply');
@@ -199,7 +200,7 @@ if (legacy?.published_snapshot_id) {
   }
 }
 
-const host = (tpl.custom_domain || `${tpl.slug}.quicksites.ai`).replace(/^https?:\/\//, '');
+const host = (tpl.custom_domain || tenantSiteHost(tpl.slug)).replace(/^https?:\/\//, '');
 await new Promise((r) => setTimeout(r, 4000));
 const res = await fetch(`https://${host}`, { redirect: 'follow' });
 const html = await res.text();

@@ -9,10 +9,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
 import { analyzeSiteOnPage } from '@/lib/seo/coach/onPage';
 import type { SiteSeoSignals, GscSiteSummary } from '@/lib/seo/coach/types';
+import { tenantSiteHost, tenantSiteHosts } from '@/lib/sites/tenantRoot';
 
 type AnyClient = SupabaseClient<any, any, any>;
 
-const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'quicksites.ai';
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
 export type CoachSiteRow = {
@@ -28,7 +28,7 @@ export type CoachSiteRow = {
 export function resolveSiteDomain(t: { custom_domain?: string | null; domain?: string | null; slug: string | null }): string | null {
   const custom = (t.custom_domain || t.domain || '').trim();
   if (custom) return custom;
-  return t.slug ? `${t.slug}.${BASE_DOMAIN}` : null;
+  return t.slug ? tenantSiteHost(t.slug) : null;
 }
 
 /** Normalized GSC-matching keys for a site (custom domain + platform subdomain). */
@@ -36,7 +36,7 @@ export function siteGscKeys(t: { custom_domain?: string | null; domain?: string 
   const keys = new Set<string>();
   const custom = (t.custom_domain || t.domain || '').trim();
   if (custom) keys.add(normalizeGscDomain(custom));
-  if (t.slug) keys.add(normalizeGscDomain(`${t.slug}.${BASE_DOMAIN}`));
+  for (const h of tenantSiteHosts(t.slug)) keys.add(normalizeGscDomain(h));
   return Array.from(keys).filter(Boolean);
 }
 

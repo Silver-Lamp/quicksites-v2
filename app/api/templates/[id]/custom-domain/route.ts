@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,7 @@ function normalizeApex(input: string) {
 
 function platformDomainForSlug(slug?: string | null) {
   const s = String(slug || '').trim().toLowerCase();
-  return s ? `${s}.quicksites.ai` : null;
+  return s ? tenantSiteHost(s) : null;
 }
 
 export async function POST(
@@ -115,7 +116,7 @@ export async function POST(
 
     // 4) Reflect change into published_sites.domain (best-effort, service role)
     //    - If a published row exists for this template: update domain
-    //    - If clearing: revert domain to <slug>.quicksites.ai (never NULL)
+    //    - If clearing: revert domain to the platform subdomain (never NULL)
     //    - If no published row yet, skip (user will publish later)
     let appliedDomain: string | null = null;
     let publishedRowExists = false;

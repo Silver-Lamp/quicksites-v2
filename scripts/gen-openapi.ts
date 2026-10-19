@@ -1,4 +1,8 @@
-import { OpenAPIGenerator } from '@asteasolutions/zod-to-openapi';
+// ⚠️ zod-to-openapi v5+ replaced `OpenAPIGenerator(config, 'json')` with a registry + a versioned
+// generator. This file imported the old name against the installed v7 for months and threw at
+// import time on every run of the "Lint OpenAPI" workflow (red since 2026-06-30 on main; it only
+// fires on path triggers, so nobody saw it until a lib/api/ edit tripped it on 2026-10-18).
+import { OpenAPIRegistry, OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
 
 import { z } from 'zod';
 import fs from 'node:fs';
@@ -14,17 +18,10 @@ type RouteSpec = {
 };
 
 export function generateOpenApi(routes: RouteSpec[], title = 'API', version = '1.0.0') {
-  const generator = new OpenAPIGenerator(
-    {
-      openapi: '3.0.0',
-      info: { title, version },
-      paths: {},
-    },
-    'json'
-  );
+  const registry = new OpenAPIRegistry();
 
   for (const route of routes) {
-    generator.registerPath({
+    registry.registerPath({
       method: route.method.toLowerCase() as any,
       path: route.path,
       summary: route.summary,
@@ -54,5 +51,6 @@ export function generateOpenApi(routes: RouteSpec[], title = 'API', version = '1
     });
   }
 
-  return generator.generateDocument();
+  const generator = new OpenApiGeneratorV3(registry.definitions);
+  return generator.generateDocument({ openapi: '3.0.0', info: { title, version } });
 }

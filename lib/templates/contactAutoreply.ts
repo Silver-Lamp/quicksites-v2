@@ -8,6 +8,7 @@
 // editor's "Auto-reply" section); defaults depend on the form's mode. Pure: the route calls it.
 import { contactFormMode, type ContactFormMode } from '@/lib/forms/contactFormMode';
 import { pickContactEmail } from '@/lib/templates/contactRecipient';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 
 export type AutoreplyResolved = {
   enabled: boolean;
@@ -53,7 +54,7 @@ export function siteHostOf(row: unknown): string {
   const cd = str((row as any)?.custom_domain);
   if (cd) return cd;
   const slug = str((row as any)?.slug);
-  return slug ? `${slug}.quicksites.ai` : '';
+  return slug ? tenantSiteHost(slug) : '';
 }
 
 /** Defaults by form mode — the merchant's words win whenever they typed any. */

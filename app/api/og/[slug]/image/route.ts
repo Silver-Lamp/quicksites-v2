@@ -29,6 +29,7 @@
 import { renderOgImage } from '@/lib/og/renderOgImage';
 import { createClient } from '@supabase/supabase-js';
 import { sniffImageContentType, extensionForContentType } from '@/lib/og/imageContentType';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -81,7 +82,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
 
   const rendered = await renderOgImage({
     title: branding?.name || slug,
-    content: `${slug}.quicksites.ai`,
+    content: tenantSiteHost(slug),
     theme: branding?.theme || 'dark',
     brand: branding?.brand || 'green',
     logo_url: branding?.logo_url,

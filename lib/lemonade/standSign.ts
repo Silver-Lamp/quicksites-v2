@@ -18,6 +18,7 @@
 // which the grown-up chose and can change.
 import QRCode from 'qrcode';
 import { lemonYumSiteUrl } from '@/lib/lemonade/lemonYum';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 export type StandSignModel = {
   /** The stand's public site URL — what the QR resolves to. */
@@ -54,7 +55,7 @@ export function standUrlFor(t: { slug?: string | null; custom_domain?: string | 
   // aloud, and reliably linkified in phone messaging apps (a `.com`, unlike delivered.menu's
   // gTLD — see docs/LEMONYUM_PLAN.md §1). Falls back to the platform subdomain while inert, so
   // signs printed today keep working after the domain is pointed.
-  return lemonYumSiteUrl(slug) ?? `https://${slug}.quicksites.ai`;
+  return lemonYumSiteUrl(slug) ?? tenantSiteUrl(slug);
 }
 
 /**

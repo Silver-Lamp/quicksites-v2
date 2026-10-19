@@ -7,13 +7,13 @@
 // people. Showing the subdomain to someone who bought a domain reads as "the thing I paid for
 // isn't wired up", and any link we generate from it teaches the wrong URL to whoever we send it to.
 
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
+
 export type SiteAddress = {
   custom_domain?: string | null;
   default_subdomain?: string | null;
   slug?: string | null;
 };
-
-const PLATFORM_BASE = 'quicksites.ai';
 
 /** The host a visitor should be given, or null if the site has no address at all. */
 export function publicSiteHost(site: SiteAddress): string | null {
@@ -23,9 +23,9 @@ export function publicSiteHost(site: SiteAddress): string | null {
     .replace(/\/+$/, '');
   if (custom) return custom;
   const sub = (site.default_subdomain ?? '').trim();
-  if (sub) return sub.includes('.') ? sub : `${sub}.${PLATFORM_BASE}`;
+  if (sub) return sub.includes('.') ? sub : tenantSiteHost(sub);
   const slug = (site.slug ?? '').trim();
-  return slug ? `${slug}.${PLATFORM_BASE}` : null;
+  return slug ? tenantSiteHost(slug) : null;
 }
 
 export function publicSiteUrl(site: SiteAddress): string | null {

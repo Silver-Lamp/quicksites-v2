@@ -31,11 +31,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { KEY_TO_LABEL } from '@/lib/industries';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const ORIGIN_SUFFIX = '.quicksites.ai';
 
 /** Prefer the canonical label; fall back to a readable form so an unknown key never renders raw. */
 function labelFor(key: string): string {
@@ -79,7 +78,7 @@ export async function GET() {
     .filter((t: any) => t.slug && liveIds.has(t.id))
     .map((t: any) => ({
       slug: t.slug,
-      url: `https://${t.slug}${ORIGIN_SUFFIX}/`,
+      url: `${tenantSiteUrl(t.slug)}/`,
       industry: t.industry ?? null,
       industryLabel: t.industry ? labelFor(t.industry) : null,
       name: t.template_name ?? null,

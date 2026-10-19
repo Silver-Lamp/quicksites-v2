@@ -13,6 +13,7 @@ import { contactInterestsFor } from '@/lib/industries/contactInterests';
 import { contactFormMode, emailOnlyCopy, validateEmailOnly } from '@/lib/forms/contactFormMode';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { siteSlugFromHost } from '@/lib/sites/tenantRoot';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -195,7 +196,8 @@ export default function ContactFormRender({
           const fromPath = /^\/sites\/([^/?#]+)/.exec(window.location.pathname)?.[1];
           if (fromPath) return decodeURIComponent(fromPath);
           const host = window.location.hostname.toLowerCase();
-          if (host.endsWith('.quicksites.ai')) return host.split('.')[0];
+          const fromHost = siteSlugFromHost(host);
+          if (fromHost) return fromHost;
           const parts = host.replace(/^www\./, '').split('.');
           return parts.length >= 2 ? parts[0] : host;
         })()

@@ -20,6 +20,7 @@
 //   npx tsx --env-file=.env.local scripts/capture-collab-previews.ts <collab-id>
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
+import { tenantSiteUrl } from '../lib/sites/tenantRoot';
 
 const BUCKET = 'previews';
 
@@ -51,7 +52,7 @@ async function main() {
     if (!t?.slug) continue;
 
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-    const url = `https://${t.slug}.quicksites.ai/`;
+    const url = `${tenantSiteUrl(t.slug)}/`;
     try {
       await page.goto(url, { waitUntil: 'networkidle', timeout: 60_000 });
       // Let fonts settle; a screenshot mid-swap shows a layout the visitor never sees.

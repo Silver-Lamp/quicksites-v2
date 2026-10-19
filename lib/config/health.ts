@@ -486,6 +486,22 @@ export const CONFIG_GATES: ConfigGate[] = [
   },
   {
     /**
+     * ⚠️ WHILE THIS IS OFF, EVERY TENANT SITE SHARES THE ADMIN'S REGISTRABLE DOMAIN. Google Safe
+     * Browsing flags a registrable domain, not a subdomain: one phishing page on one tenant site
+     * puts a red interstitial on every `<slug>.quicksites.ai`, the editor and the homepage.
+     * docs/INFRA_SPLIT_PLAN.md step 1. Registry: lib/sites/tenantRoot.ts.
+     */
+    key: 'tenant_root',
+    label: 'Tenant sites on their own root (off the brand domain)',
+    enabledBy: 'NEXT_PUBLIC_TENANT_ROOT',
+    enabledWhen: (raw) => !!(raw && raw.trim()),
+    requires: [],
+    degradeOnly: true,
+    breaks:
+      'Tenant sites keep serving at <slug>.quicksites.ai — the same registrable domain as the admin and the marketing site, so a Safe Browsing flag on any tenant page reaches everything. Nothing breaks. Set it ONLY after *.<root> and <root> are attached to the Vercel project: once set, the middleware 308s every <slug>.quicksites.ai request to <slug>.<root>, so a root nobody serves is a fleet-wide redirect to nowhere. NEXT_PUBLIC_ → a REBUILD, not a redeploy.',
+  },
+  {
+    /**
      * ⚠️ THE APP'S OWN PUBLIC URL. Reads as trivia until something needs to hand an ABSOLUTE
      * url to a third party — then its absence is a 500 at the worst possible moment.
      *

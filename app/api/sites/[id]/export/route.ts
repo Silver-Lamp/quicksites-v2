@@ -24,6 +24,7 @@ import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { exportBanner, injectStyle, inlineCssAssets, inlineImages } from '@/lib/sites/exportSite';
 import { menuSiteUrl, menuEnabled } from '@/lib/menu/deliveredMenu';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -99,7 +100,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     ? `https://${(tpl as any).custom_domain}/`
     : onMenuHost
       ? `${menuSiteUrl(slug)}/`
-      : `https://${slug}.quicksites.ai/`;
+      : `${tenantSiteUrl(slug)}/`;
 
   let html: string;
   try {

@@ -68,6 +68,12 @@ jobs:
       - name: Build
         run: npm run build
         env:
+          # ⚠️ The build sits at Node's default ~4 GB heap: on 2026-10-19 it OOM'd twice on a PR
+          # that added one small admin page ("Ineffective mark-compacts near heap limit",
+          # Mark-Compact at 4087 MB) while Vercel built the same commit fine. The runner has the
+          # RAM; Node just was not allowed to use it. A second OOM here is a real growth problem,
+          # not a flake — look at what grew.
+          NODE_OPTIONS: --max-old-space-size=6144
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
           SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key

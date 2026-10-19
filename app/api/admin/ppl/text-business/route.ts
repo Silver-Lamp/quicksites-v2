@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { requireAdmin } from '@/lib/auth/requireUser';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { sendSms } from '@/lib/sms/sendSms';
+import { isOptedOut } from '@/lib/ppl/forwardNotice';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,8 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   const campaign = await getGeoCampaign(parsed.data.campaignId).catch(() => null);
   if (!campaign?.forward_to) return NextResponse.json({ error: 'no_forward_to' }, { status: 404 });
+  // STOP is STOP, from the browser too.
+  if (await isOptedOut(campaign.forward_to).catch(() => false)) return NextResponse.json({ error: 'opted_out', detail: 'This business replied STOP; nothing more goes to it by text.' }, { status: 409 });
   const res = await sendSms(campaign.forward_to, parsed.data.body, { reason: 'operator_text', campaignId: campaign.id });
   return NextResponse.json({ ok: res.ok, error: res.error ?? null, to: campaign.forward_to, domain: campaign.domain ?? null, by: gate.user.email ?? gate.user.id });
 }

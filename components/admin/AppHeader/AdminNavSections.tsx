@@ -450,6 +450,13 @@ const NAV_ADMIN: NavItem[] = [
   },
   {
     type: 'item',
+    label: 'Texts',
+    href: '/admin/texts',
+    icon: <Phone size={18} />,
+    adminOnly: true,
+  },
+  {
+    type: 'item',
     label: 'Demo narration',
     href: '/admin/demo-narration',
     icon: <Mic size={18} />,

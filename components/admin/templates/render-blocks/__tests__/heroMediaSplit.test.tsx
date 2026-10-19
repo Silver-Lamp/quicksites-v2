@@ -38,6 +38,31 @@ describe('hero media_split', () => {
     fireEvent.play(container.querySelector('video')!);
     expect(container.querySelectorAll('[data-tilted]')[0].getAttribute('data-tilted')).toBe('0');
   });
+  it('a picture card with title/text is a button that surfaces the text on tap and straightens; a plain picture is just a picture (Katie Bee, 2026-10-19)', () => {
+    const withText = [
+      { kind: 'image', url: 'https://x.test/pantry.jpg', title: 'Home', text: 'I love helping people bring more peace and clarity to their homes.' },
+      { kind: 'image', url: 'https://x.test/plain.jpg', caption: 'Plain' },
+    ];
+    const { container } = render(<HeroBlock block={block({ ...content, media: withText })} template={{ data: { meta: {} } } as any} />);
+    const btn = container.querySelector('button[data-media-reveal]') as HTMLButtonElement;
+    expect(btn).not.toBeNull();
+    expect(btn.getAttribute('data-media-reveal')).toBe('closed');
+    expect(btn.getAttribute('aria-expanded')).toBe('false');
+    // the plain card has no button and no cue
+    expect(container.querySelectorAll('button[data-media-reveal]')).toHaveLength(1);
+    expect(container.querySelector('img[src="https://x.test/plain.jpg"]')?.closest('button')).toBeNull();
+    fireEvent.click(btn);
+    expect(btn.getAttribute('data-media-reveal')).toBe('open');
+    expect(btn.getAttribute('aria-expanded')).toBe('true');
+    expect(btn.textContent).toContain('I love helping people bring more peace and clarity to their homes.');
+    expect(btn.closest('[data-tilted]')?.getAttribute('data-tilted')).toBe('0'); // straightens while open
+    fireEvent.click(btn);
+    expect(btn.getAttribute('data-media-reveal')).toBe('closed');
+    expect(btn.closest('[data-tilted]')?.getAttribute('data-tilted')).toBe('1');
+    // parse + schema carry the fields
+    expect(parseHeroMedia({ media: withText })[0]).toMatchObject({ kind: 'image', title: 'Home' });
+    expect((blockContentSchemaMap as any).hero.schema.safeParse({ ...content, media: withText }).success).toBe(true);
+  });
   it('without media it falls back to the inline hero rather than an empty second column', () => {
     const { container } = render(<HeroBlock block={block({ ...content, media: [] })} template={{ data: { meta: {} } } as any} />);
     expect(container.querySelector('[data-hero-layout="media_split"]')).toBeNull();

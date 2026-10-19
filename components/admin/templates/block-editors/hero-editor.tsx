@@ -1554,14 +1554,23 @@ export default function HeroEditor({
                       bumpPreview();
                     };
                     return (
-                      <div key={i} className="grid grid-cols-1 gap-2 rounded border border-white/10 p-2 sm:grid-cols-[6rem_1fr_1fr_1fr]">
-                        <select className={selectDark} value={it.kind ?? 'video'} onChange={(e) => setItem({ kind: e.target.value })}>
-                          <option value="video">Video</option>
-                          <option value="image">Photo</option>
-                        </select>
-                        <input className={inputDark} value={it.url ?? ''} onChange={(e) => setItem({ url: e.target.value })} placeholder={`Card ${i + 1} URL (https://…)`} />
-                        <input className={inputDark} value={it.poster ?? ''} onChange={(e) => setItem({ poster: e.target.value })} placeholder="Poster image URL (video)" />
-                        <input className={inputDark} value={it.caption ?? ''} onChange={(e) => setItem({ caption: e.target.value })} placeholder="Caption" />
+                      <div key={i} className="space-y-2 rounded border border-white/10 p-2">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[6rem_1fr_1fr_1fr]">
+                          <select className={selectDark} value={it.kind ?? 'video'} onChange={(e) => setItem({ kind: e.target.value })}>
+                            <option value="video">Video</option>
+                            <option value="image">Photo</option>
+                          </select>
+                          <input className={inputDark} value={it.url ?? ''} onChange={(e) => setItem({ url: e.target.value })} placeholder={`Card ${i + 1} URL (https://…)`} />
+                          <input className={inputDark} value={it.poster ?? ''} onChange={(e) => setItem({ poster: e.target.value })} placeholder="Poster image URL (video)" />
+                          <input className={inputDark} value={it.caption ?? ''} onChange={(e) => setItem({ caption: e.target.value })} placeholder="Caption (under the card)" />
+                        </div>
+                        {(it.kind ?? 'video') === 'image' ? (
+                          // A photo card can open on tap and show a title + a few lines over the picture.
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_2fr]">
+                            <input className={inputDark} value={it.title ?? ''} onChange={(e) => setItem({ title: e.target.value })} placeholder="Tap-to-reveal title (optional)" />
+                            <input className={inputDark} value={it.text ?? ''} onChange={(e) => setItem({ text: e.target.value })} placeholder="Text shown when the photo is tapped (optional)" />
+                          </div>
+                        ) : null}
                       </div>
                     );
                   })}

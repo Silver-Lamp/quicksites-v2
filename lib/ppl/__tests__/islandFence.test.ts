@@ -38,5 +38,7 @@ describe('source guards — both consumers keep to the island', () => {
     const src = read('lib/ppl/pitchSend.ts');
     expect(src).toMatch(/\.in\('city', cityListFor\(c\.city\)\)/);
     expect(src).not.toMatch(/\.eq\('city', c\.city\)/);
+    // …and never names a business another line already rings as "next in line".
+    expect(src).toMatch(/ringsElsewhere\.has\(last10\(p\.phone\)\)/);
   });
 });

@@ -8,6 +8,7 @@
 import { classifyDial } from '@/lib/ppl/forwardHealth';
 import { isOwnBusinessCaller } from '@/lib/ppl/ownNumberCall';
 import { latestWindowTotals } from '@/lib/gsc/latestWindow';
+import { cityListFor } from '@/lib/ppl/islandFence';
 
 /** Twilio local number, per month (docs/PPL_VERTICAL.md §9 status table). Minutes are negligible at today's volume. */
 export const NUMBER_MONTHLY_USD = 1.15;
@@ -23,6 +24,7 @@ export type CorpusCampaign = {
   id: string;
   domain: string;
   city: string | null;
+  region?: string | null;
   industry_key: string | null;
   rank_status: string | null;
   rank_position: number | null;
@@ -142,7 +144,17 @@ export type CorpusSummary = {
   numberCostMonthlyUsd: number;
   connectedMinutesAll: number;
   distinctCallers: number;
-  supply: { pageOne: number; pageOneWithNumber: number; demandWithoutNumber: Array<{ domain: string; impressions28d: number; clicks28d: number; rankStatus: string | null; rankPosition: number | null; city: string | null; industry: string | null }> };
+  supply: {
+    pageOne: number;
+    pageOneWithNumber: number;
+    /**
+     * Domains with demand and no line. `forwardCandidates` = swept no-website businesses with a
+     * phone in the campaign's city (an island campaign counts its towns) and trade — a line with
+     * none to ring is not READY, however many impressions it has (owner, 2026-10-18: the card
+     * had offered three Boston-area lines with nobody to forward to).
+     */
+    demandWithoutNumber: Array<{ domain: string; impressions28d: number; clicks28d: number; rankStatus: string | null; rankPosition: number | null; city: string | null; industry: string | null; forwardCandidates: number }>;
+  };
   pitchNow: LineRow[];
   nonAnswerers: LineRow[];
   noiseLines: LineRow[];
@@ -178,7 +190,10 @@ function addOutcome(o: Outcomes, c: CorpusCall) {
 const JUNK_READS = new Set(['vendor_or_sales', 'robocall', 'wrong_number']);
 const OWN_READS = new Set(['own_business', 'operator_test']);
 
-export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: CorpusCall[]; gsc: CorpusGsc[]; nowMs?: number; windowDays?: number }): CorpusSummary {
+/** A swept no-website business with a phone — only the three fields the forward-candidate count needs. */
+export type CorpusProspect = { city: string | null; region: string | null; industry_key: string | null };
+
+export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: CorpusCall[]; gsc: CorpusGsc[]; prospects?: CorpusProspect[]; nowMs?: number; windowDays?: number }): CorpusSummary {
   const nowMs = input.nowMs ?? Date.now();
   const windowDays = input.windowDays ?? 30;
   const sinceMs = nowMs - windowDays * 86_400_000;
@@ -299,7 +314,12 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
     .map((c) => ({ c, g: gscByHost.get(hostOf(c.domain)) }))
     .filter(({ g }) => (g?.impressions ?? 0) >= DEMAND_MIN_IMPRESSIONS)
     .sort((a, b) => (b.g?.impressions ?? 0) - (a.g?.impressions ?? 0))
-    .map(({ c, g }) => ({ domain: c.domain, impressions28d: g?.impressions ?? 0, clicks28d: g?.clicks ?? 0, rankStatus: c.rank_status, rankPosition: c.rank_position, city: c.city, industry: c.industry_key }));
+    .map(({ c, g }) => {
+      const towns = new Set(cityListFor(c.city).map((t) => t.toLowerCase()));
+      const sameRegion = (p: CorpusProspect) => !p.region || !c.region || p.region.toLowerCase() === c.region.toLowerCase();
+      const forwardCandidates = (input.prospects ?? []).filter((p) => p.industry_key === c.industry_key && sameRegion(p) && towns.has(String(p.city ?? '').toLowerCase())).length;
+      return { domain: c.domain, impressions28d: g?.impressions ?? 0, clicks28d: g?.clicks ?? 0, rankStatus: c.rank_status, rankPosition: c.rank_position, city: c.city, industry: c.industry_key, forwardCandidates };
+    });
 
   const numbers = input.campaigns.filter((c) => c.tracking_number).length;
 
@@ -332,7 +352,7 @@ export function summariseCorpus(input: { campaigns: CorpusCampaign[]; calls: Cor
 export async function loadPplCorpus(nowMs = Date.now()): Promise<CorpusSummary> {
   const { supabaseAdmin } = await import('@/lib/supabase/admin');
   const [{ data: campaigns }, { data: calls }, { data: gsc }] = await Promise.all([
-    supabaseAdmin.from('geo_industry_campaigns').select('id, domain, city, industry_key, rank_status, rank_position, tracking_number, forward_to, forward_to_name, domain_status, created_at, template_id, pitch_deal, pitch_texted_at, pitch_followup_at, pitch_followup_kind, pitch_repoint_prospect_id, pitch_repoint_by, pitch_called_at, pitch_result'),
+    supabaseAdmin.from('geo_industry_campaigns').select('id, domain, city, region, industry_key, rank_status, rank_position, tracking_number, forward_to, forward_to_name, domain_status, created_at, template_id, pitch_deal, pitch_texted_at, pitch_followup_at, pitch_followup_kind, pitch_repoint_prospect_id, pitch_repoint_by, pitch_called_at, pitch_result'),
     supabaseAdmin.from('call_logs').select('geo_campaign_id, from_number, forwarded_to, handling, call_status, call_duration, created_at, recording_url, voicemail_speech, voicemail_verdict, analysis, outcome_survey_sent_at, outcome_reported').not('geo_campaign_id', 'is', null).order('created_at', { ascending: false }).limit(5000),
     // Only recent captures are needed to find each host's latest window.
     supabaseAdmin.from('gsc_queries').select('domain, end_date, impressions, clicks').gte('end_date', new Date(nowMs - 10 * 86_400_000).toISOString().slice(0, 10)).limit(50000),
@@ -344,7 +364,14 @@ export async function loadPplCorpus(nowMs = Date.now()): Promise<CorpusSummary> 
     const { data: pros } = await supabaseAdmin.from('outreach_prospects').select('id, business_name').in('id', repointIds);
     for (const p of pros ?? []) nameById.set(p.id, p.business_name);
   }
+  // Swept no-website businesses with a phone, for the "ready vs nobody swept" split. Narrowed to
+  // the trades that could matter; counted per campaign in summariseCorpus through the island fence.
+  const industries = Array.from(new Set((campaigns ?? []).map((c: any) => c.industry_key).filter(Boolean)));
+  const { data: prospects } = industries.length
+    ? await supabaseAdmin.from('outreach_prospects').select('city, region, industry_key').eq('lead_tier', 'no_website').not('phone', 'is', null).in('industry_key', industries).limit(5000)
+    : { data: [] as CorpusProspect[] };
   return summariseCorpus({
+    prospects: (prospects ?? []) as CorpusProspect[],
     campaigns: ((campaigns ?? []) as CorpusCampaign[]).map((c) => ({ ...c, pitch_repoint_name: c.pitch_repoint_prospect_id ? nameById.get(c.pitch_repoint_prospect_id) ?? null : null })),
     calls: ((calls ?? []) as Array<Omit<CorpusCall, 'read'> & { analysis: { read?: string } | null }>).map((c) => ({ ...c, read: typeof c.analysis?.read === 'string' ? c.analysis.read : null })),
     gsc: ((gsc ?? []) as Array<{ domain: string; end_date: string; impressions: number | null; clicks: number | null }>).map((g) => ({ domain: g.domain, end_date: g.end_date, impressions: g.impressions ?? 0, clicks: g.clicks ?? 0 })),

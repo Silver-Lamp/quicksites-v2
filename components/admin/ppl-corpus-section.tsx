@@ -125,17 +125,33 @@ export default function PplCorpusSection({ s }: { s: CorpusSummary }) {
             <p className="text-muted-foreground">No line has a customer-read call of 90 s or more yet. The pitch is “here is what you received”; wait for the evidence.</p>
           )}
         </Card>
-        <Card title={`Demand with no number — ≥${DEMAND_MIN_IMPRESSIONS} impressions in the latest 28 days, no line`} tone={s.supply.demandWithoutNumber.length ? 'warn' : undefined}>
-          {s.supply.demandWithoutNumber.length ? (
-            <>
-              <ul className="columns-2 text-xs">
-                {s.supply.demandWithoutNumber.map((r) => (
-                  <li key={r.domain}>{r.domain} <span className="text-muted-foreground">({r.impressions28d} impr{r.rankStatus === 'page1' ? `, p1 ${num(r.rankPosition)}` : ''})</span></li>
-                ))}
-              </ul>
-              <p className="mt-2 text-xs text-muted-foreground">Rank is not demand: a position-1.3 domain with 4 impressions is first for a query nobody types. Directories and restaurants are excluded. Adding all {s.supply.demandWithoutNumber.length} ≈ ${(s.supply.demandWithoutNumber.length * NUMBER_MONTHLY_USD).toFixed(2)}/mo; a line needs a swept business to forward to. Attach from “Tracked campaigns” below.</p>
-            </>
-          ) : <p className="text-muted-foreground">Every trade domain with measurable demand carries a number.</p>}
+        <Card title={`Demand with no number — ≥${DEMAND_MIN_IMPRESSIONS} impressions in the latest 28 days, no line`} tone={s.supply.demandWithoutNumber.some((r) => r.forwardCandidates > 0) ? 'warn' : undefined}>
+          {(() => {
+            const ready = s.supply.demandWithoutNumber.filter((r) => r.forwardCandidates > 0);
+            const nobody = s.supply.demandWithoutNumber.filter((r) => r.forwardCandidates === 0);
+            const pos = (r: { rankPosition: number | null }) => (r.rankPosition == null ? 'unranked' : `pos ${num(Math.round(r.rankPosition))}`);
+            return (
+              <>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Ready — demand and a swept business to ring</div>
+                {ready.length ? (
+                  <ul className="mt-1 text-xs">
+                    {ready.map((r) => (
+                      <li key={r.domain}>{r.domain} <span className="text-muted-foreground">({r.impressions28d} impr, {pos(r)}, {r.forwardCandidates} no-site {r.forwardCandidates === 1 ? 'business' : 'businesses'} swept)</span></li>
+                    ))}
+                  </ul>
+                ) : <p className="mt-1 text-xs text-muted-foreground">None. A line is ready only when there is somebody on the ground to answer it.</p>}
+                <div className="mt-3 text-[11px] uppercase tracking-wide text-muted-foreground">Demand, nobody swept — sweep the city first, not a number</div>
+                {nobody.length ? (
+                  <ul className="mt-1 columns-2 text-xs">
+                    {nobody.map((r) => (
+                      <li key={r.domain}>{r.domain} <span className="text-muted-foreground">({r.impressions28d} impr, {pos(r)})</span></li>
+                    ))}
+                  </ul>
+                ) : <p className="mt-1 text-xs text-muted-foreground">None.</p>}
+                <p className="mt-2 text-xs text-muted-foreground">Rank is not demand: a position-1.3 domain with 4 impressions is first for a query nobody types, and seven impressions at position 80 is nobody scrolling that far. Our customer-producing lines sat at 15 and 48 impressions. Directories and restaurants are excluded. A ready line ≈ ${NUMBER_MONTHLY_USD}/mo; test-dial the business from an ordinary phone before pointing. Attach from “Tracked campaigns” below.</p>
+              </>
+            );
+          })()}
         </Card>
         <Card title="Destinations that do not answer — test-dial from an ordinary phone before re-pointing" tone={s.nonAnswerers.length ? 'bad' : undefined}>
           <LineList rows={s.nonAnswerers} empty="No destination with 3+ dials and no answer." note={(l) => `0 of ${l.dials} answered`} />

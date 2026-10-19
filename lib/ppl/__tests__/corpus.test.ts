@@ -61,6 +61,20 @@ describe('summariseCorpus', () => {
     expect(s.noiseLines.map((l) => l.domain)).toEqual(['vashon-roofing.com']);
     // demand, not rank: ashland (page 1, 4 impressions) is NOT supply; a ranking domain with 12 is
     expect(s.supply.demandWithoutNumber.map((r) => r.domain)).toEqual(['lynn-ranking.com']);
+    // No prospects passed → nobody swept → not READY, however many impressions.
+    expect(s.supply.demandWithoutNumber[0].forwardCandidates).toBe(0);
+    // A swept no-website tow in Lynn makes it ready; a different trade or city does not; an island
+    // campaign counts its towns (a Clinton electrician is a candidate for "Whidbey Island").
+    const withProspects = summariseCorpus({
+      campaigns: [...camps, { id: 'wi', domain: 'whidbey-island-electrician.com', city: 'Whidbey Island', region: 'WA', industry_key: 'electrical', rank_status: 'ranking', rank_position: 30, tracking_number: null, forward_to: null, forward_to_name: null, domain_status: 'registered', created_at: iso(10) }],
+      calls,
+      gsc: [{ domain: 'sc-domain:lynn-ranking.com', end_date: '2026-10-13', impressions: 12, clicks: 1 }, { domain: 'sc-domain:whidbey-island-electrician.com', end_date: '2026-10-13', impressions: 9, clicks: 0 }],
+      prospects: [{ city: 'Lynn', region: 'MA', industry_key: 'towing' }, { city: 'Lynn', region: 'MA', industry_key: 'plumbing' }, { city: 'Saugus', region: 'MA', industry_key: 'towing' }, { city: 'Clinton', region: 'WA', industry_key: 'electrical' }, { city: 'Mukilteo', region: 'WA', industry_key: 'electrical' }],
+      nowMs: now,
+    });
+    const byDomain = Object.fromEntries(withProspects.supply.demandWithoutNumber.map((r) => [r.domain, r.forwardCandidates]));
+    expect(byDomain['lynn-ranking.com']).toBe(1);
+    expect(byDomain['whidbey-island-electrician.com']).toBe(1);
     expect(s.supply.pageOne).toBe(3);
     expect(s.supply.pageOneWithNumber).toBe(1);
   });

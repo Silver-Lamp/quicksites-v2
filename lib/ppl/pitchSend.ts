@@ -141,7 +141,7 @@ export async function sendPitchText1(campaignId: string, opts: { dealKey?: DealK
   const { url, created } = await depositLink(c, dealKey, business);
   const lead = await latestLead(c.id);
   const text = pitchText1({ domain: c.domain, lead, deal: dealKey, checkoutUrl: url, termsUrl: `${publicBaseUrl()}/leads/terms` });
-  const r = await sendSms(c.forward_to!, text);
+  const r = await sendSms(c.forward_to!, text, { reason: 'pitch_text1', campaignId: c.id });
   if (!r.ok) return { ok: false, error: 'send_failed', detail: r.error ?? null };
   const now = new Date().toISOString();
   // Pick the next business in line NOW, so the owner can vet them before the follow-up names them.
@@ -167,7 +167,7 @@ export async function sendPitchText2(campaignId: string, opts: { by: SentBy; all
   const alt = stored ? { id: stored.id, name: stored.name } : null;
   const now = new Date();
   const t2 = pitchText2({ domain: c.domain, deal: dealKey, checkoutUrl: url, alternative: alt ? { name: alt.name } : null, sentAt: now });
-  const r = await sendSms(c.forward_to!, t2.text);
+  const r = await sendSms(c.forward_to!, t2.text, { reason: `pitch_text2_${t2.kind}`, campaignId: c.id });
   if (!r.ok) return { ok: false, error: 'send_failed', detail: r.error ?? null };
   await supabaseAdmin.from('geo_industry_campaigns').update({
     pitch_followup_at: now.toISOString(), pitch_followup_kind: t2.kind, pitch_repoint_prospect_id: alt?.id ?? null,
@@ -184,7 +184,7 @@ export async function resendPitchLink(campaignId: string, opts: { dealKey?: Deal
   const { url, created } = await depositLink(c, dealKey, c.forward_to_name || 'the business on the line');
   const d = DEALS[dealKey];
   const text = `QuickSites: here is the link again for ${c.domain} — ${dealKey === 'next' ? `${usd(d.cplCents)} for the next call, then ${usd(d.cplCents)} as each one comes in` : `${d.leads} calls for ${usd(d.depositCents)}`}: ${url} Reply STOP to stop.`;
-  const r = await sendSms(c.forward_to!, text);
+  const r = await sendSms(c.forward_to!, text, { reason: 'pitch_resend_link', campaignId: c.id });
   if (!r.ok) return { ok: false, error: 'send_failed', detail: r.error ?? null };
   if (!funnelOf(c).deal) await supabaseAdmin.from('geo_industry_campaigns').update({ pitch_deal: dealKey, updated_at: new Date().toISOString() }).eq('id', c.id);
   return { ok: true, text, to: c.forward_to!, accountCreated: created };

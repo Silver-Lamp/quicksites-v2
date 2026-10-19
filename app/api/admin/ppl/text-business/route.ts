@@ -20,6 +20,6 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: 'invalid', issues: parsed.error.issues }, { status: 400 });
   const campaign = await getGeoCampaign(parsed.data.campaignId).catch(() => null);
   if (!campaign?.forward_to) return NextResponse.json({ error: 'no_forward_to' }, { status: 404 });
-  const res = await sendSms(campaign.forward_to, parsed.data.body);
+  const res = await sendSms(campaign.forward_to, parsed.data.body, { reason: 'operator_text', campaignId: campaign.id });
   return NextResponse.json({ ok: res.ok, error: res.error ?? null, to: campaign.forward_to, domain: campaign.domain ?? null, by: gate.user.email ?? gate.user.id });
 }

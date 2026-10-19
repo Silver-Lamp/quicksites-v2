@@ -53,7 +53,10 @@ export function MediaCards({ items, tilt = true, maxWidth = 300 }: { items: Hero
                   ) : null}
                   <span
                     aria-hidden={!open[i]}
-                    className={`absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/55 to-black/10 p-5 text-white transition-opacity duration-300 ${open[i] ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+                    // Extra bottom padding on phones: the site's floating claim bar sits over the bottom of
+                    // whichever card is open at that scroll position (owner, 2026-10-19), so the last line
+                    // and "Tap to close" clear it.
+                    className={`absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/85 via-black/55 to-black/10 px-5 pt-5 pb-16 text-white transition-opacity duration-300 sm:pb-8 ${open[i] ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
                   >
                     {v.title ? <span className="block text-lg font-semibold leading-snug">{v.title}</span> : null}
                     {v.text ? <span className="mt-2 block text-sm leading-relaxed text-white/90">{v.text}</span> : null}

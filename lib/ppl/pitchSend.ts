@@ -6,7 +6,7 @@
 // forward-to, the funnel is stamped. Text 2: the real alternative shop (or none) decides the
 // wording. Never the caller; STOP honoured; every send recorded with who sent it.
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { getGeoCampaign, type GeoCampaign } from '@/lib/outreach/geoCampaigns';
+import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { getPplAccountByCampaign, createPplAccount, type PplAccount } from '@/lib/ppl/accounts';
 import { createDepositCheckout } from '@/lib/ppl/billing';
 import { isOptedOut } from '@/lib/ppl/forwardNotice';
@@ -21,6 +21,18 @@ import { classifyDial } from '@/lib/ppl/forwardHealth';
 export type PitchCampaign = GeoCampaign & Partial<Record<'pitch_deal' | 'pitch_texted_at' | 'pitch_followup_at' | 'pitch_followup_kind' | 'pitch_repoint_prospect_id' | 'pitch_repoint_by' | 'pitch_called_at' | 'pitch_result' | 'pitch_notes' | 'pitch_sent_by' | 'pitch_intervene_emailed_at' | 'pitch_paid_emailed_at' | 'pitch_alternative_prospect_id' | 'pitch_alternative_vetted_at' | 'pitch_vet_reminded_on', string | null>> & { pitch_alternative_rejected?: string[] | null };
 
 export type SentBy = 'operator' | 'cron';
+
+/**
+ * ⚠️ READ THE WHOLE ROW. `getGeoCampaign` selects a fixed column list that predates the pitch
+ * columns, so through it every pitch field is undefined: the console never showed "Text 1
+ * sent", the `already_texted` guard was inert, and a second press would have sent the business
+ * the same text again (found on the first real send, Ken's, 2026-10-18). Every reader on this
+ * path uses this.
+ */
+export async function loadPitchCampaign(campaignId: string): Promise<PitchCampaign | null> {
+  const { data } = await supabaseAdmin.from('geo_industry_campaigns').select('*').eq('id', campaignId).maybeSingle();
+  return (data as PitchCampaign | null) ?? null;
+}
 
 export function funnelOf(c: PitchCampaign): PitchFunnel {
   return {
@@ -91,7 +103,7 @@ export async function vetAlternative(campaignId: string): Promise<boolean> {
 
 /** Not suitable: move to the next candidate (or none), unvetted. */
 export async function rejectAlternative(campaignId: string): Promise<{ next: { id: string; name: string; phone: string } | null }> {
-  const c = (await getGeoCampaign(campaignId).catch(() => null)) as PitchCampaign | null;
+  const c = await loadPitchCampaign(campaignId).catch(() => null);
   if (!c) return { next: null };
   const rejected = Array.from(new Set([...(c.pitch_alternative_rejected ?? []), ...(c.pitch_alternative_prospect_id ? [c.pitch_alternative_prospect_id] : [])]));
   const next = await alternativeShop(c, rejected);
@@ -120,7 +132,7 @@ async function guard(c: PitchCampaign): Promise<SendResult | null> {
 }
 
 export async function sendPitchText1(campaignId: string, opts: { dealKey?: DealKey; by: SentBy }): Promise<SendResult> {
-  const c = (await getGeoCampaign(campaignId).catch(() => null)) as PitchCampaign | null;
+  const c = await loadPitchCampaign(campaignId).catch(() => null);
   if (!c) return { ok: false, error: 'not_found' };
   const g = await guard(c); if (g) return g;
   if (c.pitch_texted_at) return { ok: false, error: 'already_texted' };
@@ -140,7 +152,7 @@ export async function sendPitchText1(campaignId: string, opts: { dealKey?: DealK
 }
 
 export async function sendPitchText2(campaignId: string, opts: { by: SentBy; allowUnvetted?: boolean }): Promise<SendResult> {
-  const c = (await getGeoCampaign(campaignId).catch(() => null)) as PitchCampaign | null;
+  const c = await loadPitchCampaign(campaignId).catch(() => null);
   if (!c) return { ok: false, error: 'not_found' };
   const g = await guard(c); if (g) return g;
   if (!c.pitch_texted_at) return { ok: false, error: 'text1_not_sent' };
@@ -165,7 +177,7 @@ export async function sendPitchText2(campaignId: string, opts: { by: SentBy; all
 }
 
 export async function resendPitchLink(campaignId: string, opts: { dealKey?: DealKey }): Promise<SendResult> {
-  const c = (await getGeoCampaign(campaignId).catch(() => null)) as PitchCampaign | null;
+  const c = await loadPitchCampaign(campaignId).catch(() => null);
   if (!c) return { ok: false, error: 'not_found' };
   const g = await guard(c); if (g) return g;
   const dealKey: DealKey = opts.dealKey ?? (funnelOf(c).deal as DealKey | null) ?? 'next';

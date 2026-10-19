@@ -73,6 +73,14 @@ describe('source guards', () => {
     expect(src).toMatch(/Next business in line/);
     expect(src).toMatch(/NOT yet vetted/);
   });
+  it('every reader on the pitch path loads the WHOLE campaign row — the fixed column list has no pitch fields (a second press re-sent on 2026-10-18)', () => {
+    for (const f of ['lib/ppl/pitchSend.ts', 'app/api/admin/ppl/pitch/route.ts', 'app/api/cron/ppl-pitch/route.ts']) {
+      const src = read(f);
+      expect(src).not.toMatch(/getGeoCampaign\(/);
+    }
+    expect(read('lib/ppl/pitchSend.ts')).toMatch(/from\('geo_industry_campaigns'\)\.select\('\*'\)/);
+    expect(read('app/api/cron/ppl-pitch/route.ts')).toMatch(/\.select\('\*'\)/);
+  });
   it('the button and the cron send through the same functions', () => {
     const route = read('app/api/admin/ppl/pitch/route.ts');
     expect(route).toMatch(/sendPitchText1\(/);

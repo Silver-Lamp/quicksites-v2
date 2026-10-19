@@ -81,8 +81,14 @@ export async function alternativeShop(c: PitchCampaign, exclude: string[] = c.pi
     .order('review_count', { ascending: false, nullsFirst: false })
     .limit(10);
   const cur = last10(c.forward_to);
+  // A business another line already rings is not "next in line" for this one: promising the
+  // septic line to Harbor Plumbing, which already takes the plumbing line, would hand one shop
+  // two lines and a competitor a hollow threat (found on the first island check, 2026-10-18).
+  const { data: taken } = await supabaseAdmin.from('geo_industry_campaigns').select('forward_to').not('forward_to', 'is', null).neq('id', c.id);
+  const ringsElsewhere = new Set((taken ?? []).map((t) => last10(t.forward_to)).filter((d) => d.length >= 7));
   for (const p of data ?? []) {
     if (!p.phone || last10(p.phone) === cur || exclude.includes(p.id)) continue;
+    if (ringsElsewhere.has(last10(p.phone))) continue;
     if (await isOptedOut(p.phone).catch(() => false)) continue;
     return { id: p.id, name: p.business_name, phone: p.phone };
   }

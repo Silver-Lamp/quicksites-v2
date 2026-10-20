@@ -98,8 +98,16 @@ and `components/admin/*` → `is_admin()` policies (reads and writes). The two w
 - `published_sites` / `snapshots` → owner of `template_id` or admin for reads; writes service-role.
   (`snapshots.owner_id` exists; `published_sites.template_id` joins to `templates.owner_id`.)
 
+**Observed by the after-probe (2026-10-20), to settle in PR 3:** `templates`'s
+`public_read_published_sites` policy is `TO anon` only, so a **signed-in** user (including a
+guest, who holds `authenticated`) reading `templates` through the browser client sees 0
+published rows while anon sees 191; the same shows through `templates_effective` /
+`templates_latest` now that they run under caller RLS. The public render is server-side, so
+nothing visible breaks today, but any browser-side read of a published template by a logged-in
+visitor would. Decide whether that policy should be `TO anon, authenticated`.
+
 ### Then
-- Run the probe; paste the before/after tallies into the PR.
+- Run the probe; paste the before/after tallies into the PR. **Done for PR 1 (#1279).**
 - Message PorchHearth with this doc and the probe script (their project has the same class on
   46 tables); they fix their own.
 - Owner re-checks the Advisors page on both projects.

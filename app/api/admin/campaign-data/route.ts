@@ -1,11 +1,20 @@
-// pages/api/admin/campaign-data/route.ts
-export const runtime = 'edge';
+// app/api/admin/campaign-data/route.ts
+//
+// Admin-gated + service role (2026-10-20). It used to run on the edge with the browser client
+// and NO gate: a public endpoint paging `guest_upgrade_events` and `user_action_logs`. Both
+// tables are now RLS-scoped, so the old shape would have answered empty — this makes it an
+// admin route that answers.
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-import { supabase } from '@/admin/lib/supabaseClient';
+import { supabaseAdmin as supabase } from '@/lib/supabase/admin';
+import { requireAdmin } from '@/lib/auth/requireUser';
 import { json } from '@/lib/api/json';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
   const { searchParams } = new URL(req.url);
 
   const page = parseInt(searchParams.get('page') || '0');

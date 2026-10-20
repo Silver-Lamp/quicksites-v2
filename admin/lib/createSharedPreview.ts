@@ -1,11 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
 import { toPng } from 'html-to-image';
 import toast from 'react-hot-toast';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// The cookie-aware browser client: the snapshot row is inserted AS THE OWNER, which is what
+// `snapshots_owner_insert` (migration 20260902) requires. A bare anon-key client carried no
+// session and would be refused.
+import { supabase } from '@/lib/supabase/client';
 
 export async function createSharedPreview({
   templateId,
@@ -56,7 +54,8 @@ export async function createSharedPreview({
     const { data: urlData } = supabase.storage.from('previews').getPublicUrl(filePath);
     const public_url = urlData?.publicUrl;
 
-    const { error: insertError } = await supabase.from('snapshots').insert([
+    // Untyped on purpose: this legacy row shape (shared_at, is_site…) predates the generated types.
+    const { error: insertError } = await (supabase as any).from('snapshots').insert([
       {
         id,
         template_id: templateId,

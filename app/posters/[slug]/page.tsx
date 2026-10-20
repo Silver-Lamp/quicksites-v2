@@ -13,9 +13,11 @@ export const dynamic = 'force-dynamic';
 export default async function Page({ params }: { params: { slug: string } }) {
   const { slug } = params;
 
+  // Explicit columns: the anon-key client is not granted `preclaim_token` (migration 20260901 —
+  // the claim secret is service-role only), and `select('*')` would be refused outright.
   const { data: campaign, error } = await supabase
     .from('support_campaigns')
-    .select('*')
+    .select('id, slug, headline, goal_count, target_action, block_id, created_by, created_at, deleted_at')
     .eq('slug', slug)
     .single();
 

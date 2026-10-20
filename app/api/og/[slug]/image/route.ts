@@ -34,9 +34,12 @@ import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Service role: this route reads `published_sites` and writes `og_image_url` back, and since
+// migration 20260902 that table is owner/admin-scoped — an anon-key client here would read
+// nothing and write nothing, silently (the og-cache upload would still "succeed").
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!,
 );
 
 const BUCKET = 'og-cache';

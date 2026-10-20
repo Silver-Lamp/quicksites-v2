@@ -98,13 +98,24 @@ and `components/admin/*` → `is_admin()` policies (reads and writes). The two w
 - `published_sites` / `snapshots` → owner of `template_id` or admin for reads; writes service-role.
   (`snapshots.owner_id` exists; `published_sites.template_id` joins to `templates.owner_id`.)
 
-**Observed by the after-probe (2026-10-20), to settle in PR 3:** `templates`'s
-`public_read_published_sites` policy is `TO anon` only, so a **signed-in** user (including a
-guest, who holds `authenticated`) reading `templates` through the browser client sees 0
-published rows while anon sees 191; the same shows through `templates_effective` /
-`templates_latest` now that they run under caller RLS. The public render is server-side, so
-nothing visible breaks today, but any browser-side read of a published template by a logged-in
-visitor would. Decide whether that policy should be `TO anon, authenticated`.
+**PR 3 applied 2026-10-20 (migration `20260902`, #1281). 242 / 242 public tables have RLS.**
+- `templates`'s `public_read_published_sites` was `TO anon` only, so a **signed-in** reader
+  (a guest holds `authenticated`) saw 0 published rows while anon saw 191. Now
+  `TO anon, authenticated`; the after-probe reads 191 for both. Published is published for everyone.
+- ⚠️ `admin/lib/supabaseClient.ts` had been a bare `createClient` for a year — every component
+  importing it ran as `anon`, invisible because their tables had no RLS. It is now the
+  cookie-aware `@supabase/ssr` browser client; `createSharedPreview` inserts its snapshot as the
+  owner. Source guard: `lib/repo/__tests__/browserClientsCarrySession.test.ts`.
+- The OG image route reads/writes `published_sites` with the **service role** (an anon client
+  would now read nothing and the write-back would silently update zero rows — the route's own
+  bug #3, back). `/api/admin/campaign-data` was a public edge route paging
+  `guest_upgrade_events`; now `requireAdmin()` + service role on node.
+- Owner branch of `published_sites` / `snapshots`: no live published template is owned by a
+  non-admin, so it was proven on synthetic rows in a rolled-back transaction (owner reads 1/1 and
+  inserts a snapshot; a stranger reads 0/0 and the insert is refused by RLS). The admin branch
+  was proven on real rows (197 / 77 for the operator, 0 for a stranger).
+- `companies.created_by` stays public: the `read company hours` policy is deliberate 2025 code
+  and `created_by` is a uuid, not an email. Revisit only if a reader surfaces it.
 
 **PR 2 applied 2026-10-20 (migration `20260901`, #1280).** Three things seen on the way, none
 changed by it:
@@ -120,12 +131,19 @@ changed by it:
   `preclaim_token` is outside their column grant — by design; a reader lists columns.
 
 ### Then
-- Run the probe; paste the before/after tallies into the PR. **Done for PR 1 (#1279) and PR 2 (#1280).**
+- Run the probe; paste the before/after tallies into the PR. **Done for all three (#1279, #1280, #1281).**
 - Message PorchHearth with this doc and the probe script (their project has the same class on
-  46 tables); they fix their own.
-- Owner re-checks the Advisors page on both projects.
-- Add a **test** that fails when a new migration creates a `public` table without
-  `enable row level security` (grep the migrations), so the list cannot grow back silently.
+  46 tables); they fix their own. **Sent 2026-10-20.**
+- **Owner re-checks the Advisors page on both projects** — the only step left; the advisor runs
+  weekly, so the next email is the confirmation.
+- A **test** fails when a new migration creates a `public` table without
+  `enable row level security` (`lib/repo/__tests__/migrationsEnableRls.test.ts`, migrations
+  ≥ `20260900`), so the list cannot grow back silently. **Done in PR 2.**
+
+Pre-existing, found on the way, NOT fixed here: `/api/admin/compliance/docs/list` 500s (no FK
+`compliance_docs → merchants`), `app/admin/sites/[slug]` queries a `slug` column that does not
+exist on `published_sites`, and `admin/utils/publishSite.ts` is dormant. Each is its own PR when
+that feature is next touched.
 
 ## Why this slipped
 The 2026-07 sweep triaged these as telemetry / public-by-design / needs-design and stopped at

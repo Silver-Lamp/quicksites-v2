@@ -3,11 +3,13 @@
 // produce — a grade is never stored in page content (lib/evidence/grade.ts).
 import type { Study } from '@/lib/evidence/grade';
 import { MULLEIN_CLAIMS, MULLEIN_EVIDENCE_CHECKED, MULLEIN_STUDIES, type TopicClaim } from '@/lib/evidence/topics/mullein';
+import { BLUE_ZONES_CLAIMS, BLUE_ZONES_EVIDENCE_CHECKED, BLUE_ZONES_STUDIES } from '@/lib/evidence/topics/blueZones';
 
 export type EvidenceTopic = { key: string; label: string; checked: string; studies: Study[]; claims: TopicClaim[] };
 
 export const EVIDENCE_TOPICS: Record<string, EvidenceTopic> = {
   mullein: { key: 'mullein', label: 'Mullein', checked: MULLEIN_EVIDENCE_CHECKED, studies: MULLEIN_STUDIES, claims: MULLEIN_CLAIMS },
+  'blue-zones': { key: 'blue-zones', label: 'Blue Zones habits', checked: BLUE_ZONES_EVIDENCE_CHECKED, studies: BLUE_ZONES_STUDIES, claims: BLUE_ZONES_CLAIMS },
 };
 
 export function evidenceTopic(key: string | null | undefined): EvidenceTopic | null {

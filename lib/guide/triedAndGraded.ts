@@ -10,6 +10,8 @@
 export const GUIDE_NAME = 'Tried & Graded';
 export const QUIT_LINE = 'Free help to stop smoking: <a href="https://smokefree.gov">smokefree.gov</a> · 1-800-QUIT-NOW (1-800-784-8669).';
 export const COMMISSION_LINE = 'We earn a commission if you buy through links on this site. It never changes a grade — grades are calculated from the studies by fixed rules.';
+/** Blue Zones, LLC owns the BLUE ZONES and Power 9 marks; every page that names them says this. */
+export const NOT_AFFILIATED_BZ = '“Blue Zones” and “Power 9” are trademarks of Blue Zones, LLC. This site is not affiliated with or endorsed by Blue Zones, LLC; we name the research only to grade it.';
 
 export type GuideBlock =
   | { kind: 'hero'; headline: string; subheadline: string }
@@ -36,7 +38,7 @@ export const GUIDE_PAGES: GuidePage[] = [
           '<p>Where a popular claim has never been tested, we say so, and where we can, we run the test — registered in advance, published whatever it shows.</p>' +
           `<p><em>${COMMISSION_LINE}</em></p>` +
           '<h2>Guides</h2>' +
-          '<ul><li><a href="/mullein-for-smokers">Mullein for smokers: what the evidence says</a></li><li><a href="/does-mullein-work">Does mullein work?</a></li><li><a href="/does-mullein-detox-your-lungs">Does mullein detox your lungs?</a></li><li><a href="/smoking-mullein">Smoking mullein</a></li><li><a href="/mullein-drops-gummies-capsules-tea">Mullein drops, gummies, capsules or tea</a></li><li><a href="/mullein-study">Our mullein study</a></li></ul>',
+          '<ul><li><a href="/mullein-for-smokers">Mullein for smokers: what the evidence says</a></li><li><a href="/does-mullein-work">Does mullein work?</a></li><li><a href="/does-mullein-detox-your-lungs">Does mullein detox your lungs?</a></li><li><a href="/smoking-mullein">Smoking mullein</a></li><li><a href="/mullein-drops-gummies-capsules-tea">Mullein drops, gummies, capsules or tea</a></li><li><a href="/mullein-study">Our mullein study</a></li><li><a href="/are-the-blue-zones-real">Are the Blue Zones real?</a></li><li><a href="/blue-zones-habits-graded">The Blue Zones habits, graded</a></li><li><a href="/blue-zones-habit-experiment">Try a habit as an experiment</a></li></ul>',
       },
     ],
   },
@@ -149,6 +151,66 @@ export const GUIDE_PAGES: GuidePage[] = [
           '<h2>Who it’s for</h2><p>Adults 21 and over who smoke cigarettes daily and have had a cough for two months or more. People with a diagnosed lung disease, who are pregnant, or who cough up blood should talk to their doctor instead.</p>' +
           `<h2>Help to stop</h2><p>Everyone who joins gets quit-smoking support, and stopping during the study is welcome. ${QUIT_LINE}</p>` +
           `<h2>Our conflict</h2><p>${COMMISSION_LINE} That is why the plan, the measure and the analysis are fixed and published before the study starts.</p>`,
+      },
+    ],
+  },
+  {
+    slug: 'are-the-blue-zones-real',
+    navLabel: 'Blue Zones',
+    title: 'Are the Blue Zones Real? The Age-Record Debate, Both Sides',
+    description: 'Do people in the Blue Zones really live longer, or are the records wrong? The critique, the response, and what holds either way.',
+    blocks: [
+      { kind: 'hero', headline: 'Are the Blue Zones real?', subheadline: 'The debate over the age records — both sides, and what holds either way.' },
+      {
+        kind: 'text',
+        html:
+          '<p>The Blue Zones are five places — in Sardinia, Okinawa, Ikaria, Nicoya and Loma Linda — described as having unusually many people living into their nineties and beyond. The idea became books, a Netflix series and a brand. Whether those places really have exceptional longevity is now argued in public, by researchers on both sides.</p>' +
+          '<h2>The critique</h2>' +
+          '<p>Demographer Saul Newman has argued that records of extreme age cluster where record-keeping was poor. In his work, counts of people over 110 in US states fell sharply after birth certificates were introduced, and recorded birthdates bunch on days divisible by five — patterns he links to error and, in places, pension fraud. The work won a 2024 Ig Nobel prize. It was circulated as preprints.</p>' +
+          '<h2>The response</h2>' +
+          '<p>Blue Zones researchers say the ages in the original areas were checked against civil registers and church records going back to the 1800s, and that the critique looked at larger regions than the Blue Zones themselves. A 2025 paper in <em>The Gerontologist</em> (Austad &amp; Pes, “The validity of Blue Zones demography: a response to critiques”) argues the original age claims meet rigorous standards. Newman’s reply: if the first record is wrong, every later record copies it perfectly.</p>' +
+          '<h2>What holds either way</h2>' +
+          '<p>The debate is about whether these places live longest — not about whether the habits are good for you. Those habits have their own studies, and we grade them one by one: <a href="/blue-zones-habits-graded">the Blue Zones habits, graded</a>.</p>' +
+          `<p><em>${NOT_AFFILIATED_BZ}</em></p>`,
+      },
+    ],
+  },
+  {
+    slug: 'blue-zones-habits-graded',
+    title: 'The Blue Zones Diet and Habits, Graded by the Evidence',
+    description: 'Each Blue Zones habit — moving, purpose, plants, the 80% rule, wine, faith, social ties — graded by the studies behind it.',
+    blocks: [
+      { kind: 'hero', headline: 'The Blue Zones habits, graded', subheadline: 'Sensible habits, mostly observational evidence — each one graded on its own studies.' },
+      {
+        kind: 'text',
+        html:
+          '<p>The Blue Zones work distils long-lived places into a short list of habits — the “Power 9”. Most are good, ordinary advice. The question this page answers is narrower: <strong>how strong is the evidence for each one?</strong> Most of it comes from observational studies — people who do the habit compared with people who don’t — which shows a link but can’t prove the habit causes it. Our grades say so.</p>',
+      },
+      { kind: 'evidence', topic: 'blue-zones', claimIds: [], title: 'Each habit, graded' },
+      {
+        kind: 'text',
+        html:
+          '<h2>Not yet graded</h2>' +
+          '<ul><li>Downshift (a daily routine to shed stress)</li><li>Loved ones first (family close by, committed partner)</li></ul>' +
+          '<p>These have research behind them that we have not entered yet. Until we have, we don’t grade them — “not yet graded” is not the same as “no evidence”.</p>' +
+          '<p>Want to test one of these habits on yourself? <a href="/blue-zones-habit-experiment">Try a habit as an experiment</a>.</p>' +
+          `<p><em>${NOT_AFFILIATED_BZ}</em></p>`,
+      },
+    ],
+  },
+  {
+    slug: 'blue-zones-habit-experiment',
+    title: 'Try a Blue Zones Habit as an Experiment',
+    description: 'Pick one habit, one thing to measure, four weeks. A simple way to test a longevity habit on yourself — and log it honestly.',
+    blocks: [
+      { kind: 'hero', headline: 'Try a habit as an experiment', subheadline: 'One habit, one measure, four weeks — logged honestly.' },
+      {
+        kind: 'text',
+        html:
+          '<p>Habits are the easiest longevity advice to test on yourself, because they cost nothing and you can measure something real. Here is the shape of a fair self-test:</p>' +
+          '<ol><li><strong>Pick one habit</strong> — say, a walk after every meal, or one more meal a week with friends.</li><li><strong>Pick one thing to measure</strong> that you can’t talk yourself into: resting heart rate in the morning, hours of sleep from a tracker, daily steps, or a short standard mood questionnaire.</li><li><strong>Measure for a week before you start</strong>, then four weeks with the habit. Same time of day, every day.</li><li><strong>Write down your prediction first</strong> — how much you expect it to change — so the result can surprise you.</li><li><strong>Keep every reading</strong>, including the bad weeks.</li></ol>' +
+          '<p>One person’s four weeks is a log, not proof. Many people logging the same habit the same way starts to say something — that is what we’re building, with HiveJournal. <strong>Not open yet</strong>; this page will say when.</p>' +
+          `<p><em>${NOT_AFFILIATED_BZ}</em></p>`,
       },
     ],
   },

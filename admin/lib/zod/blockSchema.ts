@@ -1020,6 +1020,20 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Graded health claims for one evidence topic (lib/evidence/topics). The block stores WHICH
+  // topic and claims to show, never a grade: the renderer derives each grade from the study
+  // records at render time (lib/evidence/grade.ts), so copy cannot round a grade up.
+  evidence_claims: {
+    label: 'Evidence Grades',
+    icon: '🔬',
+    schema: z.object({
+      topic: z.string().default(''),
+      claim_ids: z.array(z.string()).default([]),
+      title: z.string().optional(),
+      show_studies: z.boolean().default(true),
+    }),
+  },
+
   hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
 
   menu: { label: 'Menu', icon: '🍽️', schema: MenuBlockSchema },

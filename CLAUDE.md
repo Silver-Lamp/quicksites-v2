@@ -2,7 +2,7 @@
 
 > The single orientation doc for humans and AI agents working in this repo.
 > If you read one file before touching code, read this one.
-> Companion docs: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (run it locally) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMMERCE_RUNBOOK.md`](docs/COMMERCE_RUNBOOK.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/PRICING_REDESIGN.md`](docs/PRICING_REDESIGN.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/POD_AUTHOR_PLAN.md`](docs/POD_AUTHOR_PLAN.md) · [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md) · [`docs/MODEL_A_PLAN.md`](docs/MODEL_A_PLAN.md) · [`docs/COMPETITIVE_LANDSCAPE.md`](docs/COMPETITIVE_LANDSCAPE.md) · [`docs/WHITE_LABEL_PLAN.md`](docs/WHITE_LABEL_PLAN.md) · [`docs/CLAIM_VERIFICATION_PLAN.md`](docs/CLAIM_VERIFICATION_PLAN.md) · [`docs/INVENTORY_PLAN.md`](docs/INVENTORY_PLAN.md) · [`docs/CRM_PLAN.md`](docs/CRM_PLAN.md) · [`docs/RANKED_TARGETING_PLAN.md`](docs/RANKED_TARGETING_PLAN.md) · [`docs/GEO_RENTAL_RUNBOOK.md`](docs/GEO_RENTAL_RUNBOOK.md) · [`docs/BLOCKS_BACKLOG.md`](docs/BLOCKS_BACKLOG.md) · [`docs/CUSTOM_SITES.md`](docs/CUSTOM_SITES.md) · [`docs/AUDIENCE_SPLIT_PLAN.md`](docs/AUDIENCE_SPLIT_PLAN.md) · [`docs/CALL_CASCADE_PLAN.md`](docs/CALL_CASCADE_PLAN.md) · [`docs/INFRA_SPLIT_PLAN.md`](docs/INFRA_SPLIT_PLAN.md)
+> Companion docs: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (run it locally) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMMERCE_RUNBOOK.md`](docs/COMMERCE_RUNBOOK.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/PRICING_REDESIGN.md`](docs/PRICING_REDESIGN.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/POD_AUTHOR_PLAN.md`](docs/POD_AUTHOR_PLAN.md) · [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md) · [`docs/MODEL_A_PLAN.md`](docs/MODEL_A_PLAN.md) · [`docs/COMPETITIVE_LANDSCAPE.md`](docs/COMPETITIVE_LANDSCAPE.md) · [`docs/WHITE_LABEL_PLAN.md`](docs/WHITE_LABEL_PLAN.md) · [`docs/CLAIM_VERIFICATION_PLAN.md`](docs/CLAIM_VERIFICATION_PLAN.md) · [`docs/INVENTORY_PLAN.md`](docs/INVENTORY_PLAN.md) · [`docs/CRM_PLAN.md`](docs/CRM_PLAN.md) · [`docs/RANKED_TARGETING_PLAN.md`](docs/RANKED_TARGETING_PLAN.md) · [`docs/GEO_RENTAL_RUNBOOK.md`](docs/GEO_RENTAL_RUNBOOK.md) · [`docs/BLOCKS_BACKLOG.md`](docs/BLOCKS_BACKLOG.md) · [`docs/CUSTOM_SITES.md`](docs/CUSTOM_SITES.md) · [`docs/AUDIENCE_SPLIT_PLAN.md`](docs/AUDIENCE_SPLIT_PLAN.md) · [`docs/CALL_CASCADE_PLAN.md`](docs/CALL_CASCADE_PLAN.md) · [`docs/INFRA_SPLIT_PLAN.md`](docs/INFRA_SPLIT_PLAN.md) · [`docs/LONGEVITY_PLAN.md`](docs/LONGEVITY_PLAN.md)
 
 Last verified: 2026-07-15 · `tsc --noEmit` passes clean.
 
@@ -802,6 +802,19 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   same deterministic seed, so a visitor sees variety and we can reproduce any site's face. A pool
   of one behaves like a hard pin. ⚠️ `sanitizePins` still accepts the **legacy single-string**
   shape, because the 1:1 version shipped first and those rows would otherwise resolve to no font.
+- **Evidence grades + the "Tried & Graded" guide (2026-10-21, owner: "a separate guide site")**:
+  health claims on any page we earn from are graded by `lib/evidence/grade.ts` — **the grade is
+  derived from study records, never typed** (testimonials/company material never raise it; a
+  blinded null on the primary outcome outranks weaker positives; a positive secondary outcome is at
+  most "early"; funding printed, never moves it). Topics live in `lib/evidence/topics/*` (mullein
+  first); the new **`evidence_claims` block** stores only topic + claim ids and computes each grade
+  at render, so a page cannot carry a grade the records don't produce (`evidenceClaims.test.tsx`
+  pins that a typed grade is ignored). The guide's copy is code (`lib/guide/triedAndGraded.ts`,
+  held to the copy rules by test — no "detox/cleanse/repair" assertion, quit help on smokers
+  pages, commission line first on product pages) and built by `scripts/guide/build-tried-and-graded.mts`
+  into an UNPUBLISHED operator template `tried-and-graded`. Plan + mullein study:
+  `docs/LONGEVITY_PLAN.md`, `docs/studies/MULLEIN_SMOKERS_PROTOCOL.md`; shared shape proposed as
+  `crosstalk/contracts/evidence-grade.md`.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **The sidebar used to jump to the top on every navigation (fixed 2026-10-05).** Route-driven
   selection in `AdminNavSections` took the FIRST row whose href was a prefix of the path — a short

@@ -304,6 +304,93 @@ fine. The angle no competitor has: **the urolithin A page carries the open study
 trial's one positive finding (grip endurance — cheap to measure at home), with its result
 published either way.
 
+## 11. Sandon's own Timeline log — an affiliate who publishes his readings (2026-10-21)
+
+Owner: "Timeline is who I'm taking (1 week in) … write it into the plan to be an affiliate logging
+my experience." Started about **2026-10-14** (Mitopure, Timeline).
+
+⚠️ **There is no pre-start baseline**, and nothing can create one after the fact. So the design is
+on/off, not before/after:
+
+| phase | length | what happens |
+|---|---|---|
+| A — on (now) | 6 weeks from the first measurement | weekly readings while taking it |
+| B — off | 4 weeks | stop; keep measuring on the same schedule |
+| A — on | 6 weeks | restart; same schedule |
+
+- **Measures, chosen from the trial:** grip endurance (repetitions to fatigue at a fixed load on a
+  hand dynamometer — the hand result the 66-person trial found), and a measured 6-minute walk
+  monthly (the trial's primary outcome, which did NOT improve — include it anyway). Same time of
+  day, no hard workout in the 24 h before.
+- **Pre-registered in HJ Levers before the first reading:** measures, schedule, and the rule that
+  every reading is published, off weeks included.
+- **Honest labels:** open-label, one person, already taking it → "my log, not evidence". Never
+  presented as a typical result; the guide's grade for urolithin A does not move because of it.
+- **Affiliate:** join Timeline on Awin; every post and the log page carry: *"I take Timeline's
+  Mitopure and earn a commission if you buy through my link. My readings, including the weeks I
+  stopped, are here."* As an endorser he is personally bound by the FTC rules in §2.
+
+## 12. Mullein, for smokers (2026-10-21)
+
+Owner: "mullein gummies/drops is another one to do a study on … for smokers."
+
+**Evidence:** no human trials for respiratory use. Drugs.com (May 2026): clinical trial data are
+lacking to recommend it for any indication. The EU's herbal monograph lists only a *traditional*
+use (sore throat with dry cough and cold) — traditional, not evidence-based. Grade: **No real
+evidence** — which makes it a good candidate for a study that could be the first.
+
+**Demand (US monthly, 2026-10-21):** mullein 135,000 · mullein tea 74,000 · mullein benefits
+22,200 · mullein drops 9,900 · mullein tincture 5,400 · mullein gummies 2,900 · mullein
+supplement 2,400 · mullein for lungs 1,300 · mullein for cough 880 · mullein side effects 880.
+
+⚠️ **The smokers framing has one hard line: never "detox", "cleanse" or "repair" for smokers.**
+That implies the product offsets smoking harm — a health claim with no support, and copy that can
+talk someone out of quitting. The study can be *in* smokers; the page never sells to smokers.
+
+**A study that could answer something:** adult smokers who already have a smoker's cough;
+mullein drops or gummies vs a matched placebo; primary outcome a validated cough questionnaire
+(e.g. the Leicester Cough Questionnaire) plus a morning cough/phlegm diary; 4–8 weeks;
+pre-registered; IRB; people with a diagnosed lung disease excluded or routed through their doctor;
+**every participant given quit-smoking help at enrolment** (1-800-QUIT-NOW). A placebo for drops or
+gummies is easy to match, so this one can be blinded from the start.
+
+## 13. Sunset Escapes — Amy's two spec sites (2026-10-21)
+
+Owner: "yes for amyjurowski … 2 spec websites both under a company name of 'Sunset Escapes' …
+Laguna Beach but no address yet", and "yes to anything SEO". Built the same day as operator-owned
+drafts with booking in preview (no real hours yet), only from what was said — no services list,
+prices, bio, photos or benefit claims were invented:
+
+- `sunset-escapes-red-light` — "Red light therapy in Laguna Beach"
+- `sunset-escapes-sound` — "Sound therapy in Laguna Beach"
+
+Both noindex until Amy claims and publishes. Page titles set for search ("Red Light Therapy in
+Laguna Beach | Sunset Escapes", "Sound Therapy & Sound Baths in Laguna Beach | Sunset Escapes").
+`sunsetescapes.com` has been registered by someone else since 2012 and serves nothing;
+`sunsetescapeslaguna.com` and `sunsetescapes.co` were free on 2026-10-21.
+
+**Local demand is small, and the clicks are in the map pack** (US monthly, 2026-10-21): laguna
+beach spa 590 · sound bath orange county 140 · red light therapy orange county 70 · red light
+therapy newport beach 50 · sound bath laguna beach 50. Both Laguna results pages show a local
+map pack (Laguna Beach Energy Medicine appears in both; OC House of Healing, Dolce MD, Experience
+Divine Vibes, Rana Nadar) above organic results from small studios, Yelp, ClassPass, Eventbrite,
+Facebook and Instagram. The national "near me" demand (33,100 and 18,100) is served by proximity
+in that pack, not by a website.
+
+**SEO, in the order that moves anything:**
+1. **Google Business Profile** — a service-area business needs no public address. One business,
+   one profile, both services on it. This is where the local clicks are.
+2. **Listings where the results pages already point:** Yelp, ClassPass, and Eventbrite for
+   scheduled sound baths (Eventbrite ranks on "sound bath laguna beach").
+3. **Real client reviews** on the profile, asked for after a session — never offered for anything.
+4. **One domain, two pages,** once she's ready: one business splits its authority across two sites,
+   and the profile can link only one. `sunsetescapeslaguna.com` with `/red-light` and `/sound` is
+   the natural shape (owner's call; ~$11).
+5. On publish: LocalBusiness schema (the readiness runner), the canonical nominated to the domain,
+   and Search Console.
+6. Her affiliate content (§9) lives on the guide, not the booking site — the booking site makes no
+   benefit claims.
+
 ## Verified / assumed
 
 **Verified:** StemRegen's white-paper and customer-story pages as read 2026-10-21 (counts above);

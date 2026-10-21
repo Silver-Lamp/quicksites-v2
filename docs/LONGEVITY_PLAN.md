@@ -222,6 +222,88 @@ read on the consent flow before Tier 1 collects anything** — this plan is not 
 - **Shared contract** once both sides agree: the evidence-grade shape and the study enrolment link,
   in `crosstalk/contracts/`.
 
+## 9. The therapy guide — page structure and the evidence grade (2026-10-21)
+
+Owner widened the guide: his sister practises **red light therapy** and **sound therapy** and wants
+to do affiliate marketing for both; he wants to know whether the new **mitochondria** supplements
+work. One format grades all of them.
+
+**The grade is derived, never typed** — `lib/evidence/grade.ts` (pure, `lib/evidence/__tests__/
+grade.test.ts`), shared shape proposed as `crosstalk/contracts/evidence-grade.md`. Six grades:
+Established · Promising · Tested — no effect found · Early evidence · Lab studies only · No real
+evidence. Testimonials and company material never raise a grade; a blinded null on the primary
+outcome outranks weaker positives; a positive secondary outcome is at most "early"; funding is
+always printed and never changes the grade.
+
+**Every topic page, in this order:**
+1. The question in plain words, and the short answer with its grade.
+2. A claims table: each claim → grade → one generated sentence per study.
+3. What isn't known; safety (eye protection for red light; who shouldn't take what).
+4. The commission line, then products — each product graded on its own evidence, not its
+   ingredient's (a brand that never tested its own capsule doesn't inherit someone else's trial).
+5. "Test it yourself": a measurable outcome and an HJ Levers protocol link.
+6. A practitioner's view — labelled as her experience, with her affiliate disclosure.
+7. Sources, and the date the evidence was last checked.
+
+**Where the three topics stand (read 2026-10-21; the grades come from the function once entered):**
+
+| topic | strongest | weakest |
+|---|---|---|
+| Red light (photobiomodulation) | chemo oral mucositis, clinical protocols (review of 10 trials, 759 patients); pattern hair loss with FDA-cleared devices (sham-controlled RCTs) | pain: mixed; most consumer panels have no clearance for anything |
+| Sound | singing bowls: 2025 reviews of 14–19 small studies, possible short-term anxiety/sleep benefit, no meta-analysis possible | 528 Hz / solfeggio: no support (HJ's Frequencies spec already refuses the claim) |
+| Mitochondria | urolithin A: one 66-person blinded RCT, hand/leg endurance improved (secondary) | urolithin A primary outcomes (6-minute walk, muscle ATP) null; NMN/NR raise NAD+, clinical results small and mixed, nothing on aging |
+
+**The sister's affiliate work**, under the affiliate convention: disclosure on every post; no
+disease or "healing frequency" claims (FTC applies to her personally as an endorser, and
+practitioners are the endorsers regulators look at hardest). Her practice is a separate thing: a
+QuickSites site with the one-provider booking mode built for Katie Bee (#1274). Search demand for
+her trades is local and large — `red light therapy near me` 33,100/mo, `sound bath near me`
+18,100 (re-run `scripts/urolithin-search-volume.mts`). Building it needs her own words (practice
+name, city, services, whether she publishes prices, hours, photos) — the build-from-a-post rule:
+nothing invented under a real person's business.
+
+## 10. Urolithin A — affiliate, not resale (2026-10-21)
+
+**Who sells it.** The ingredient (Mitopure) belongs to Amazentis; its own consumer brand is
+**Timeline**; Nestlé Health Science holds rights and uses it in its brands (Pure Encapsulations,
+Celltrient), while Amazentis kept co-exclusive rights for online supplement sales (2019–2023
+press). In 2023 Timeline publicly questioned urolithin A products sold on Amazon (NutraIngredients).
+
+**Affiliate routes found:** Timeline on **Awin** (merchant profile: 10% standard commission, 30-day
+cookie); a **GRIN** discount-code programme (GRIN marks it "not brand verified"). Confirm terms
+with Timeline directly. **Not resale:** Stripe restricts nutraceuticals and one bad merchant freezes
+the platform (§4); the brand sells direct and through Nestlé; and the Amazon episode shows the
+counterfeit/under-dosing risk a reseller would carry.
+
+**Search demand (US, monthly, 2026-10-21, `scripts/urolithin-search-volume.mts`):**
+
+| query | volume | CPC |
+|---|---|---|
+| urolithin a | 33,100 | $6.50 |
+| urolithin a supplement | 22,200 | $6.50 |
+| mitopure | 12,100 | $5.72 |
+| urolithin a benefits | 3,600 | $3.56 |
+| mitopure reviews | 2,900 | $5.71 |
+| mitochondria supplement | 2,900 | $4.59 |
+| best urolithin a supplement | 1,600 | $8.65 |
+| urolithin a side effects | 1,600 | $7.03 |
+| best supplements for mitochondria | 1,000 | $4.85 |
+| *for scale:* nmn supplement / nad supplement / nr supplement | 165,000 / 90,500 / 40,500 | |
+
+**Who ranks now** (three SERP reads, same date): every page opens with an AI overview; the organic
+results are Amazon, iHerb, YouTube, Reddit, Wikipedia, a trade-news site, and **small independent
+sites** (a clinic blog, a longevity-news site, a small reviewer). No dominant reviewer. A sourced,
+graded review page has a real chance on `mitopure reviews`, `urolithin a side effects`,
+`urolithin a benefits` and `best urolithin a supplement` — the questions where honesty is the
+product. Head terms (`urolithin a`) are a long shot.
+
+**SEO shape:** content on the guide's own domain (one topic page + a comparison of products that do
+and don't use the trial-tested ingredient + a side-effects page), not exact-match domains — our
+fleet's 92 domains earned 18 clicks. Affiliate terms ban paid search on the brand name; organic is
+fine. The angle no competitor has: **the urolithin A page carries the open study** that re-tests the
+trial's one positive finding (grip endurance — cheap to measure at home), with its result
+published either way.
+
 ## Verified / assumed
 
 **Verified:** StemRegen's white-paper and customer-story pages as read 2026-10-21 (counts above);

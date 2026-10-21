@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 import { supabase } from '@/lib/supabase/client';
 import AdminSidebarLayout from '@/components/admin/layout/admin-sidebar-layout';
 
@@ -31,7 +32,7 @@ export default function SiteDirectory() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {site.slug}.quicksites.ai
+                {tenantSiteHost(site.slug)}
               </a>
             </div>
             {site.branding_profiles?.logo_url && (

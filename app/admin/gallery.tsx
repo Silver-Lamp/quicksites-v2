@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 
@@ -31,7 +32,7 @@ export default function GalleryPage() {
                 <img src={site.branding_profiles.logo_url} className="w-8 h-8 rounded-full" />
               )}
             </div>
-            <p className="text-xs text-muted-foreground mb-1">{site.slug}.quicksites.ai</p>
+            <p className="text-xs text-muted-foreground mb-1">{tenantSiteHost(site.slug)}</p>
             <p className="text-xs italic text-gray-400">Language: {site.language || 'en'}</p>
           </Link>
         ))}

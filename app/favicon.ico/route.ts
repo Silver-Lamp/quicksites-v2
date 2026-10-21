@@ -1,12 +1,15 @@
 // app/favicon.ico/route.ts
+import { tenantSiteHosts } from '@/lib/sites/tenantRoot';
+
 export const runtime = 'nodejs';
 
 // Map host -> favicon path (under /public)
 const CUSTOMS = new Map<string, string>([
   ['pnw-exteriorcleaning.com',        '/favicons/pnw-exterior-favicon.ico'],
   ['www.pnw-exteriorcleaning.com',    '/favicons/pnw-exterior-favicon.ico'],
-  // preview/stage hosts (add/remove as needed)
-  ['pnw-exteriorcleaning.quicksites.ai', '/favicons/pnw-exterior-favicon.ico'],
+  // The site's platform hosts — every root it has been served on (the tenant root and, while the
+  // 308 is in place, the brand root), read from the registry rather than spelled here.
+  ...tenantSiteHosts('pnw-exteriorcleaning').map((h) => [h, '/favicons/pnw-exterior-favicon.ico'] as [string, string]),
   // ['pnw-exteriorcleaning.vercel.app', '/favicons/pnw-exterior-favicon.ico'],
 ]);
 

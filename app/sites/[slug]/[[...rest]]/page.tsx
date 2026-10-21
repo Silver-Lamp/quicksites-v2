@@ -18,7 +18,7 @@ import { loadCityMenuFeed, menuFinderCampaignId } from '@/lib/menu/cityMenuIndex
 import {
   PUBLIC_PATH_HEADER,
   absoluteUrl,
-  canonicalOriginFromMeta,
+  defaultCanonicalOrigin,
   pathOnNominatedOrigin,
   publicPathFor,
   stripHomeSegment,
@@ -62,6 +62,8 @@ type SiteRow = {
   id: string;
   slug: string | null;
   domain: string | null;
+  /** `templates.custom_domain` (template path only; the legacy `sites` row carries `domain`). */
+  custom_domain?: string | null;
   template_id: string | null;
   published_snapshot_id: string | null;
 };
@@ -187,7 +189,7 @@ const loadSiteRowBySlugOrTemplate = cache(async (slug: string): Promise<SiteRow 
   // 2) template by slug
   let tpl = await supabaseAdmin
     .from('templates')
-    .select('id, slug, data, domain')
+    .select('id, slug, data, domain, custom_domain')
     .eq('slug', slug)
     .maybeSingle();
 
@@ -197,7 +199,7 @@ const loadSiteRowBySlugOrTemplate = cache(async (slug: string): Promise<SiteRow 
   if (!tpl.error && !tpl.data) {
     const fam = await supabaseAdmin
       .from('templates')
-      .select('id, slug, data, domain, base_slug, business_name, published, created_at')
+      .select('id, slug, data, domain, custom_domain, base_slug, business_name, published, created_at')
       .eq('base_slug', slug)
       .limit(50);
     const pick = !fam.error && Array.isArray(fam.data) ? pickTemplateForBase(fam.data as any[]) : null;
@@ -238,6 +240,7 @@ const loadSiteRowBySlugOrTemplate = cache(async (slug: string): Promise<SiteRow 
     id: tplId,
     slug: (tpl.data as any).slug ?? slug,
     domain: tplDomain,
+    custom_domain: ((tpl.data as any).custom_domain as string | null | undefined) ?? null,
     template_id: tplId,
     published_snapshot_id,
   };
@@ -473,9 +476,17 @@ export async function generateMetadata({
   // A site reachable on several hosts may nominate ONE (`meta.canonical_origin`, written only by
   // a script that verified the host serves this page — lib/seo/canonicalUrl.ts). The path is still
   // the one the visitor requested; only the origin is swapped, so every page of the site defers to
-  // its twin on the nominated host rather than all pages collapsing onto one URL.
+  // its twin on the nominated host rather than all pages collapsing onto one URL. A platform-only
+  // site that nominated nothing defers to its host on the tenant root once one is configured
+  // (`defaultCanonicalOrigin`), so the `www.quicksites.ai/sites/<slug>` copy stops claiming to be
+  // the original.
   const meta = (normalized as any)?.meta ?? (normalized as any)?.data?.meta;
-  const canonicalOrigin = canonicalOriginFromMeta(meta);
+  const canonicalOrigin = defaultCanonicalOrigin({
+    meta,
+    slug: siteRow.slug ?? slug,
+    domain: siteRow.domain,
+    custom_domain: siteRow.custom_domain ?? null,
+  });
   const md = generatePageMetadata({
     site: normalized as any,
     pageSlug,

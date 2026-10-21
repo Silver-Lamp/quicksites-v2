@@ -44,11 +44,13 @@ describe('canonicalOriginFromMeta', () => {
 describe('the public site render honours it', () => {
   // A unit test cannot see a deleted call site; reading the file can. The menu-host route is the
   // one that serves the duplicate (`<apex>.delivered.menu`), so it is the one that must consult it.
-  it('generateMetadata in app/sites consults canonicalOriginFromMeta', () => {
+  it('generateMetadata in app/sites consults the nomination (via defaultCanonicalOrigin since 2026-10-21)', () => {
     const src = fs.readFileSync(
       path.join(process.cwd(), 'app/sites/[slug]/[[...rest]]/page.tsx'),
       'utf8',
     );
-    expect(src).toMatch(/canonicalOriginFromMeta\(/);
+    // defaultCanonicalOrigin reads `meta.canonical_origin` first (lib/seo/canonicalUrl.ts); the
+    // route must pass the meta to it. Either spelling proves the nomination is consulted.
+    expect(src).toMatch(/defaultCanonicalOrigin\(\{\s*meta,|canonicalOriginFromMeta\(/);
   });
 });

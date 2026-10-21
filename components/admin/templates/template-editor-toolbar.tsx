@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
 import {
@@ -414,7 +415,7 @@ export function TemplateEditorToolbar({
           <p className="text-xs text-muted-foreground">
             {/* `/templates/<slug>` was printed here for months and never existed as a route. */}
             Site address once published:{' '}
-            <code className="bg-muted px-2 py-1 rounded">https://{slugPreview || '<slug>'}.quicksites.ai</code>
+            <code className="bg-muted px-2 py-1 rounded">{tenantSiteUrl(slugPreview || '<slug>')}</code>
             {currentId && (
               <>
                 {' '}· preview now:{' '}

@@ -394,6 +394,18 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   or a voicemail judged `not_lead` whose transcript NAMES a vendor (deterministic patterns —
   "over at Angie", HomeAdvisor, Thumbtack…; "Hi, this is Angie, my sink is leaking" is a customer
   and a test pins it). Lifted, never deleted. `handling='screened'` in the log and the alert.
+  **And a BLOCK list beside it (2026-10-21, owner: "repeat robocallers being reported from 2
+  calls today, can we start a block list and just block or drop them")**: `caller_screens.mode`
+  (`20260903`) — `block` is rejected UNANSWERED (`<Reject/>`: no prompt, no recording, no text,
+  no email; the cron marks the row alerted silently, the analysis skips it, `parentEndWrite` says
+  `ended`). Onto it two ways, never the model alone: Block on `/admin/call-logs`, or
+  `repeatPatternDecision` — ≥5 sub-15-second calls across ≥2 of our lines in 30 days, none
+  connected, no spoken message, from OUR call records (the AI read says "robocall" too, but the
+  read is an inference and the pattern is evidence). ⚠️ **Found on the way: the `handling` check
+  constraint (`20260865`) never admitted `screened` or `own_business`, so every screened and
+  own-business call since 10-15 failed its best-effort log upsert and was never written** —
+  widened; `handlingValues.test.ts` reads every `handling:` literal the routes write against the
+  newest constraint migration, because a route and a constraint can disagree with no error anywhere.
   ⚠️ Still open and
   **not** a code question: the page asserts a company that does not exist. The two honest shapes
   are a **directory** (our own dome-cohort rule: *"a directory is not a business"*) or a site that

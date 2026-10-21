@@ -3,10 +3,94 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { vendorVoicemailMatch, shouldAutoScreen, screenKey, screenPromptTwiml, SCREEN_PROMPT } from '@/lib/ppl/callerScreen';
+import {
+  vendorVoicemailMatch,
+  shouldAutoScreen,
+  screenKey,
+  screenPromptTwiml,
+  SCREEN_PROMPT,
+  rejectTwiml,
+  repeatPatternDecision,
+  REPEAT_MIN_CALLS,
+  REPEAT_CONNECTED_SECONDS,
+  type PriorCall,
+} from '@/lib/ppl/callerScreen';
+import { missedCallDecision } from '@/lib/ppl/missedCallNotice';
+import { parentEndWrite } from '@/lib/ppl/parentCallEnd';
 import { stripComments } from '@/test/stripComments';
 
 const read = (p: string) => stripComments(fs.readFileSync(path.join(process.cwd(), p), 'utf8'));
+
+const NOW = Date.parse('2026-10-21T19:00:00Z');
+const short = (daysAgo: number, to: string, over: Partial<PriorCall> = {}): PriorCall => ({
+  to_number: to,
+  call_status: 'abandoned',
+  call_duration: 4,
+  handling: 'forward',
+  recording_url: null,
+  voicemail_speech: null,
+  created_at: new Date(NOW - daysAgo * 86_400_000).toISOString(),
+  ...over,
+});
+
+describe('repeatPatternDecision — our own records prove a dialer, never the AI read', () => {
+  it('blocks +12067102328\'s shape: many sub-5-second abandoned calls across two lines, no message', () => {
+    const prior = [short(9, '+1A'), short(7, '+1B'), short(3, '+1A'), short(0.2, '+1B'), short(0.1, '+1A'), short(0.05, '+1A')];
+    const v = repeatPatternDecision(prior, NOW);
+    expect(v.block).toBe(true);
+    if (v.block) expect(v.evidence).toMatch(/6 calls to 2 of our lines/);
+  });
+  it('a business rung five times on ONE line is a customer trying, not a dialer', () => {
+    const prior = Array.from({ length: REPEAT_MIN_CALLS + 1 }, (_, i) => short(i, '+1A'));
+    expect(repeatPatternDecision(prior, NOW)).toEqual({ block: false, reason: 'one_line' });
+  });
+  it('one connected call disqualifies the pattern', () => {
+    const prior = [short(5, '+1A'), short(4, '+1B'), short(3, '+1A'), short(2, '+1B'), short(1, '+1A', { call_status: 'dial-completed', call_duration: REPEAT_CONNECTED_SECONDS + 30 })];
+    expect(repeatPatternDecision(prior, NOW)).toEqual({ block: false, reason: 'a_call_connected' });
+  });
+  it('one spoken voicemail disqualifies the pattern; a no-speech recording (fax tone) does not', () => {
+    const base = [short(5, '+1A'), short(4, '+1B'), short(3, '+1A'), short(2, '+1B')];
+    expect(repeatPatternDecision([...base, short(1, '+1A', { recording_url: 'https://r', voicemail_speech: 'speech' })], NOW)).toEqual({ block: false, reason: 'a_message_was_left' });
+    expect(repeatPatternDecision([...base, short(1, '+1A', { recording_url: 'https://r', voicemail_speech: 'no_speech' })], NOW).block).toBe(true);
+    // An un-transcribed recording is unknown, not "no speech": never block on it.
+    expect(repeatPatternDecision([...base, short(1, '+1A', { recording_url: 'https://r', voicemail_speech: null })], NOW)).toEqual({ block: false, reason: 'a_message_was_left' });
+  });
+  it('too few calls in the window, and calls outside it do not count', () => {
+    expect(repeatPatternDecision([short(1, '+1A'), short(2, '+1B'), short(3, '+1A'), short(4, '+1B')], NOW)).toEqual({ block: false, reason: 'too_few_calls' });
+    expect(repeatPatternDecision([short(1, '+1A'), short(2, '+1B'), short(3, '+1A'), short(4, '+1B'), short(40, '+1A')], NOW)).toEqual({ block: false, reason: 'too_few_calls' });
+  });
+  it('calls we already blocked are not evidence (they prove only that we blocked them)', () => {
+    const prior = [short(5, '+1A'), short(4, '+1B'), short(3, '+1A'), short(2, '+1B'), short(1, '+1A', { handling: 'blocked' })];
+    expect(repeatPatternDecision(prior, NOW)).toEqual({ block: false, reason: 'too_few_calls' });
+  });
+});
+
+describe('a blocked call touches nothing downstream', () => {
+  it('rejects unanswered: no Say, no Record', () => {
+    const x = rejectTwiml();
+    expect(x).toContain('<Reject');
+    expect(x).not.toMatch(/<Say|<Record|<Dial/);
+  });
+  it('the missed-call text never fires for a blocked row', () => {
+    const row = { handling: 'blocked', call_status: 'ended', call_duration: 0, forwarded_to: null, recording_url: null, voicemail_notified_at: null, missed_call_notified_at: null };
+    expect(missedCallDecision(row, { status: 'completed' })).toEqual({ send: false, reason: 'not_a_forward' });
+  });
+  it('the parent end is `ended`, never `abandoned` — nobody was offered a bridge', () => {
+    expect(parentEndWrite({ call_status: 'ringing', handling: 'blocked' }, { status: 'busy', durationSec: 0 })?.call_status).toBe('ended');
+    expect(parentEndWrite({ call_status: 'ringing', handling: 'screened' }, { status: 'completed', durationSec: 20 })?.call_status).toBe('ended');
+  });
+  it('the entry route rejects a block BEFORE the PPL gate and runs the repeat check; the alert cron never emails or analyses a blocked row', () => {
+    const route = read('app/api/twilio/geo/[campaignId]/route.ts');
+    const blockAt = route.indexOf("screen.mode === 'block'");
+    const pplAt = route.indexOf('pplEnabled(');
+    expect(blockAt).toBeGreaterThan(0);
+    expect(pplAt).toBeGreaterThan(blockAt);
+    expect(route).toMatch(/blockIfRepeatPattern\(/);
+    const cron = read('app/api/cron/call-alert/route.ts');
+    expect(cron.match(/handling\.is\.null,handling\.neq\.blocked/g)?.length).toBe(2);
+    expect(cron).toMatch(/\.eq\('handling', 'blocked'\)[\s\S]*?\.is\('alerted_at', null\)/);
+  });
+});
 
 describe('vendorVoicemailMatch — the vendor must name itself in the caller\'s own words', () => {
   it('matches the two Angi voicemails we actually received', () => {

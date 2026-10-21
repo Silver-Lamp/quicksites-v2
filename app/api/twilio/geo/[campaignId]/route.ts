@@ -18,8 +18,8 @@ import { cascadeGreetingTwiml } from '@/lib/ppl/cascade';
 import { voicemailFirstPromptTwiml, voicemailGreetingUrl } from '@/lib/ppl/voicemail';
 import { cascadeEnabled } from '@/lib/ppl/cascadeFlag';
 import { connectingAnnouncement } from '@/lib/ppl/forwardAnnounce';
-import { screenPromptTwiml } from '@/lib/ppl/callerScreen';
-import { activeScreen } from '@/lib/ppl/callerScreenDb';
+import { rejectTwiml, screenPromptTwiml } from '@/lib/ppl/callerScreen';
+import { activeScreen, blockIfRepeatPattern } from '@/lib/ppl/callerScreenDb';
 import { KEY_TO_LABEL } from '@/lib/industries';
 import { isOwnBusinessCaller, ownBusinessSmsBody, ownBusinessTwiml, type LastCaller } from '@/lib/ppl/ownNumberCall';
 import { sendSms } from '@/lib/sms/sendSms';
@@ -98,8 +98,24 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
   try {
     const screen = await activeScreen(searchParams.get('From'));
     if (screen) {
+      // ⚠️ A BLOCKED NUMBER IS REJECTED UNANSWERED (owner, 2026-10-21: "start a block list and
+      // just block or drop them"). No prompt, no recording, no text, no alert — the row is logged
+      // so the decision is visible on /admin/call-logs, and nothing downstream acts on it.
+      if (screen.mode === 'block') {
+        await logCall({ forwarded_to: null, handling: 'blocked' });
+        return xml(rejectTwiml());
+      }
       await logCall({ forwarded_to: null, handling: 'screened' });
       return xml(screenPromptTwiml({ recordActionUrl: `${base}/api/twilio/geo/${encodeURIComponent(campaignId)}/voicemail` }));
+    }
+    // Not on the list: does this number's OWN history on our lines prove a dialer? Five or more
+    // sub-15-second calls across two or more of our tracking numbers in 30 days, none connected,
+    // no message left (lib/ppl/callerScreen.ts#repeatPatternDecision — our records, never the AI
+    // read alone). If so it is blocked from this call on, with the evidence on the row.
+    const repeat = await blockIfRepeatPattern(searchParams.get('From'), callSid);
+    if (repeat.block) {
+      await logCall({ forwarded_to: null, handling: 'blocked' });
+      return xml(rejectTwiml());
     }
   } catch {
     /* fall through to the normal path */

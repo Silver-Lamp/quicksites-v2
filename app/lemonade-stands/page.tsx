@@ -19,6 +19,7 @@
 // name, photo or address. A stand page is already a public note that a particular kid is at a
 // particular house on a particular afternoon.
 import Link from 'next/link';
+import { tenantSiteHost, tenantSiteUrl } from '@/lib/sites/tenantRoot';
 import SiteHeader from '@/components/site/site-header';
 import SiteFooter from '@/components/site/site-footer';
 import { marketingOg } from '@/lib/marketingOg';
@@ -62,7 +63,8 @@ export const metadata = {
  * well as quicksites.ai — a relative link would send a LemonYum visitor to a stand that does
  * not exist on that host.
  */
-const EXAMPLE_STAND_URL = 'https://renton-lemonade.quicksites.ai/';
+const EXAMPLE_STAND_SLUG = 'renton-lemonade';
+const EXAMPLE_STAND_URL = `${tenantSiteUrl(EXAMPLE_STAND_SLUG)}/`;
 
 const BUILDER_URL =
   `${(process.env.NEXT_PUBLIC_APP_URL || 'https://www.quicksites.ai').replace(/\/+$/, '')}` +
@@ -283,7 +285,7 @@ export default function LemonadeStandsPage() {
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-5 py-4">
                 <div className="min-w-0">
                   <div className="font-semibold">Renton Lemonade</div>
-                  <div className="truncate text-sm text-zinc-500">renton-lemonade.quicksites.ai</div>
+                  <div className="truncate text-sm text-zinc-500">{tenantSiteHost(EXAMPLE_STAND_SLUG)}</div>
                 </div>
                 <span className="shrink-0 text-sm font-semibold text-amber-700 group-hover:underline">
                   See the live stand →

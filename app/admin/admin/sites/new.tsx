@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 import { useRouter } from 'next/navigation';
 import debounce from 'lodash.debounce';
 import { supabase } from '@/lib/supabase/client';
@@ -196,7 +197,7 @@ export default function NewSitePage() {
           />
           {form.slug && (
             <p className="text-sm text-muted-foreground mt-1">
-              URL Preview: <code>{form.slug}.quicksites.ai</code>{' '}
+              URL Preview: <code>{tenantSiteHost(form.slug)}</code>{' '}
               {slugAvailable && <span className="text-green-500 ml-2">✅ Available</span>}
             </p>
           )}

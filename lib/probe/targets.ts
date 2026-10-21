@@ -6,9 +6,10 @@
 //
 // Every entry carries `because`, so a red run explains itself at 3am without archaeology.
 import type { Check } from './checks';
+import { tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
-/** Confirmed by the owner as a stable subject that will stay up (2026-08-18). */
-export const TENANT_SUBJECT = 'https://renton-lemonade.quicksites.ai/';
+/** Confirmed by the owner as a stable subject that will stay up (2026-08-18). On the tenant root since 2026-10-21. */
+export const TENANT_SUBJECT = `${tenantSiteUrl('renton-lemonade')}/`;
 
 export const CHECKS: Check[] = [
   {

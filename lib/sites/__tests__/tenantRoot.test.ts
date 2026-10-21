@@ -159,6 +159,16 @@ const SHAPES: Array<{ name: string; re: RegExp }> = [
   // A DEFAULT or CONSTANT host: `= 'quicksites.ai'`, `?? 'quicksites.ai'`, `|| '.quicksites.ai'`,
   // `['quicksites.ai', …]`. The app's own URL (`'https://www.quicksites.ai'`) is not a tenant host.
   { name: "a host constant/default 'quicksites.ai' / '.quicksites.ai'", re: /(=|\?\?|\|\||\[)\s*['"]\.?quicksites\.ai['"]/ },
+  // ⚠️ Added 2026-10-21, the day the root moved: the four shapes above all passed while the
+  // homepage showcase caption still printed `{s.slug}.quicksites.ai` as JSX TEXT, five admin pages
+  // did the same, a page carried the literal `'https://renton-lemonade.quicksites.ai/'`, and the
+  // favicon route keyed a map on `'pnw-exteriorcleaning.quicksites.ai'`. None is a template
+  // literal, an endsWith, a regex or a bare-root constant. A guard that matches the shapes you
+  // thought of blesses the ones you did not; these are the ones the move found.
+  { name: 'JSX text `{expr}.quicksites.ai`', re: /\}\.quicksites\.ai/ },
+  // `www.` and `app.` are the app's own hosts (RESERVED_LABELS in the registry), never a tenant.
+  { name: "a literal tenant host/URL '<label>.quicksites.ai' (www/app are the app, not a tenant)", re: /['"`](https?:\/\/)?(?!www\.|app\.)[a-z0-9-]+\.quicksites\.ai(\/[^'"`]*)?['"`]/ },
+  { name: 'JSX text `>label.quicksites.ai<`', re: />\s*(?!www\.|app\.)[a-z0-9-]+\.quicksites\.ai\s*</ },
 ];
 
 describe('source guard — only lib/sites/tenantRoot.ts spells the tenant root', () => {
@@ -191,6 +201,11 @@ describe('source guard — only lib/sites/tenantRoot.ts spells the tenant root',
       'const m = host.match(/^([a-z0-9-]+)\\.quicksites\\.ai$/);',
       "const PLATFORM_BASE = 'quicksites.ai';",
       "const ORIGIN_SUFFIX = '.quicksites.ai';",
+      // The shapes the 2026-10-21 move found still printing the old host:
+      '<span className="text-xs">{s.slug}.quicksites.ai</span>',
+      "const EXAMPLE_STAND_URL = 'https://renton-lemonade.quicksites.ai/';",
+      "['pnw-exteriorcleaning.quicksites.ai', '/favicons/x.ico'],",
+      '<div className="truncate">renton-lemonade.quicksites.ai</div>',
     ];
     for (const s of samples) expect(SHAPES.some((x) => x.re.test(stripComments(s)))).toBe(true);
     // Not violations: the app's own URL, a comment naming the old host, a brand check on a
@@ -201,6 +216,10 @@ describe('source guard — only lib/sites/tenantRoot.ts spells the tenant root',
       "metadataBase: new URL('https://quicksites.ai')",
       "(process.env.NEXT_PUBLIC_APP_URL || 'https://www.quicksites.ai').replace(/\\/+$/, '')",
       "// inside the editor (/admin/templates/*).\nconst x = 1;\n// `foo.quicksites.ai`",
+      // The app's own host in prose or a referral link is not a tenant host.
+      '<span className="font-mono">www.quicksites.ai/?ref={REF_CODE}</span>',
+      "alternateName: 'QuickSites.ai'",
+      "const APP_HOSTS = ['app.quicksites.ai', 'www.quicksites.ai'];",
     ]) {
       expect(SHAPES.some((x) => x.re.test(stripComments(ok)))).toBe(false);
     }

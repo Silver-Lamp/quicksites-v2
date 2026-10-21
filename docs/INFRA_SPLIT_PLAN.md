@@ -37,7 +37,30 @@ Plus, for all tiers: an abuse address, a takedown-within-hours runbook, and one-
 
 ## Steps and status
 
-### 1. A tenant root that is not `quicksites.ai` — **code merged 2026-10-18, inert until set**
+### 1. A tenant root that is not `quicksites.ai` — **LIVE 2026-10-21 on `qspages.com`**
+
+**Carried out 2026-10-21 (owner: "vercel card should be valid now").** Bought for $11.25 (order
+`01M5FN4BSAREKK1EE1HPQPC470`, `draft → purchasing → completed` in 20 s), zone at Vercel, the three
+project entries verified. ⚠️ **No certificate was issued for 25 minutes and nothing said so**: the
+entries had been attached on 10-19, two days BEFORE the registration landed, and Vercel issues a
+certificate when a domain is added — it does not retry a pre-registration attempt. `v8/certs?domain=`
+listed none; HTTP answered 404 (the app) while HTTPS closed the handshake. Detaching and re-adding
+the three entries issued all three certificates within 15 s. **Attach after the registration
+completes, or re-add.** Then `NEXT_PUBLIC_TENANT_ROOT=qspages.com` (production + preview),
+`vercel redeploy` of the production build (3.5 min). Measured after: `/status` `tenant_root: ready`;
+`sandon.quicksites.ai/about?x=1` → 308 `sandon.qspages.com/about?x=1`; `qspages.com` and `www` → 308
+the brand homepage; `sandon.qspages.com` 200, self-canonical; `nosuchsite.qspages.com` 404;
+`graftontowing.com` unchanged; the operator pages (`/admin/templates`, the editor, `/admin/outreach`)
+print no old-host text; the editor's preview pane builds its link from the registry.
+⚠️ **The source guard had blessed nine spots that still printed the old host** — found by reading
+the served homepage after the switch, not by any test: the showcase caption `{s.slug}.quicksites.ai`
+(JSX TEXT, not a template literal), five admin pages doing the same, the publish-success panel
+and the editor toolbar's "Site address once published", a literal `'https://renton-lemonade.quicksites.ai/'`
+on `/lemonade-stands` and in the probe targets, and the favicon route's host map. None matched the
+four shapes the guard knew (`${…}.quicksites.ai`, `endsWith`, a regex, a bare-root constant). All
+read the registry now, and the guard gained the three missing shapes with samples that must trip
+them (`www.`/`app.` are the app and stay allowed). A guard matches the shapes you thought of; the
+move is what finds the rest. **Step 6 became a renderer rule** (see 6).
 
 - **Registry:** `lib/sites/tenantRoot.ts` — ONE import-free module (safe in `'use client'` files
   and the Edge middleware), read at call time. `tenantRoot()` = `NEXT_PUBLIC_TENANT_ROOT` else
@@ -86,8 +109,19 @@ or buy `qspages.com` in the Vercel dashboard.** Then steps 3–6 below.
    (expect the site, self-canonical to the new host), a custom-domain site (unchanged), the
    editor's "View live site" link, the admin templates list, the homepage showcase, one claim
    postcard preview (`/admin/outreach`), and `/status` (`tenant_root: ready`).
-6. Nominate canonicals for platform-only published sites if Google already indexed the old host
-   (`scripts/nominate-custom-domain-canonicals.mjs` reads the root from env).
+6. ~~Nominate canonicals for platform-only published sites~~ — **a renderer rule instead
+   (2026-10-21).** Google had indexed 52 of the 109 `www.quicksites.ai/sites/<slug>` copies the
+   inspection sweep knows, and `nominate-custom-domain-canonicals.mjs` covers custom-domain sites
+   only; a per-site nomination for the 103 platform-only published sites would be ~100 data writes
+   that each republish a draft (a customer's unreviewed edits riding along with a canonical).
+   `lib/seo/canonicalUrl.ts#defaultCanonicalOrigin`: nomination wins; no root → self (unchanged);
+   a custom domain of its own → self; otherwise `https://<slug>.<root>`. Applied in the `/sites`
+   route, so every served copy changed without a republish; `publicIndexUrl` submits the tenant
+   host to IndexNow by the same bar. Pinned by `lib/seo/__tests__/defaultCanonicalOrigin.test.ts`.
+   ⚠️ **Follow-up (owner or a script with the operator GSC token): a Search Console property for
+   `qspages.com`** — the indexing sweep inspects pages on their canonical origin, and it has no
+   property for the new root yet, so the 103 sites drop out of `/admin/seo/indexing` until one
+   exists (DNS TXT verification; the zone is at Vercel).
 
 ### 2. A second Vercel project (own ventures vs clients) — not started
 The geo sites and B Hard go with the ventures. A project split is a DNS move per domain

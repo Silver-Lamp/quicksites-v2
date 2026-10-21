@@ -12,6 +12,7 @@
 // wired before the key is provisioned.
 
 import { menuSiteUrl } from '@/lib/menu/deliveredMenu';
+import { tenantRootConfigured, tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 const ENDPOINT = 'https://api.indexnow.org/indexnow';
 
@@ -45,6 +46,10 @@ export function publicIndexUrl(t: {
     const url = menuSiteUrl(t.slug);
     if (/^https?:\/\//.test(url)) return url; // menuSiteUrl → relative /preview when the base domain is unset
   }
+  // A tenant root is set only after `*.<root>` is attached and answers (docs/INFRA_SPLIT_PLAN.md),
+  // so `<slug>.<root>` is a host we KNOW resolves — the same bar the two branches above clear.
+  // With no root configured the platform subdomain stays unsubmitted, as before.
+  if (t.slug && tenantRootConfigured()) return tenantSiteUrl(t.slug) || null;
   return null;
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 
@@ -82,7 +83,7 @@ export default function CreateSitePage() {
             required
           />
           <p className="text-xs text-gray-500 mt-1">
-            URL will be: <code>{slug}.quicksites.ai</code>
+            URL will be: <code>{tenantSiteHost(slug)}</code>
           </p>
         </div>
 

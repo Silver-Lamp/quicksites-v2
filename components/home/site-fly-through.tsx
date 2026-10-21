@@ -24,6 +24,7 @@
 // server component importing a value from it receives a client-reference proxy, not the value.
 // That is exactly how the first deploy rendered nothing (see the lib module's header).
 import { FLY_COUNT, FLY_LANES, type FlySite } from '@/lib/home/flyThrough';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 
 const CSS = `
 @keyframes qs-fly {
@@ -73,7 +74,7 @@ export default function SiteFlyThrough({ sites }: { sites: FlySite[] }) {
               <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
               <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
               <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
-              <span className="ml-2 truncate text-[8px] text-zinc-500">{s.slug}.quicksites.ai</span>
+              <span className="ml-2 truncate text-[8px] text-zinc-500">{tenantSiteHost(s.slug)}</span>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img

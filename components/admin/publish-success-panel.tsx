@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui';
+import { tenantSiteHost } from '@/lib/sites/tenantRoot';
 import QRCode from 'react-qr-code';
 import QRCodeLib from 'qrcode';
 import PersonaTestingPromo from '@/components/promo/persona-testing-promo';
@@ -13,7 +14,7 @@ export function PublishSuccessPanel({ slug, url }: { slug: string; url: string }
       <div className="flex justify-center mt-2">
         <div className="flex flex-col items-center space-y-2">
           <QRCode value={url} size={128} />
-          <span className="text-sm text-gray-300">{slug}.quicksites.ai</span>
+          <span className="text-sm text-gray-300">{tenantSiteHost(slug)}</span>
         </div>
       </div>
       <div className="pt-2">

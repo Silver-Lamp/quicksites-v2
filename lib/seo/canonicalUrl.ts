@@ -24,7 +24,7 @@
 // separate decision with a real prerequisite; see the note in the PR.
 
 import { pageUrlKey } from '@/lib/sites/redirects';
-import { siteSlugFromHost } from '@/lib/sites/tenantRoot';
+import { platformSiteRoots, siteSlugFromHost, tenantRootConfigured, tenantSiteUrl } from '@/lib/sites/tenantRoot';
 
 /** Request header carrying the path the visitor actually requested, set by `middleware.ts`. */
 export const PUBLIC_PATH_HEADER = 'x-qsites-public-path';
@@ -122,6 +122,45 @@ export function canonicalOriginFromMeta(meta: unknown): string | null {
   if (u.username || u.password || u.search || u.hash) return null;
   if (u.pathname !== '/' && u.pathname !== '') return null;
   return `https://${u.host.toLowerCase()}`;
+}
+
+/**
+ * The origin a site's pages canonicalise to, for a site that nominated nothing.
+ *
+ * ⚠️ WHY THIS EXISTS (2026-10-21, the tenant-root move — docs/INFRA_SPLIT_PLAN.md step 6). Once
+ * tenant sites moved to `<slug>.qspages.com`, the copy at `www.quicksites.ai/sites/<slug>` kept
+ * declaring ITSELF canonical, and Google had already indexed 52 of those copies. Left alone, the
+ * brand domain stays the address of record for every platform-only site — the blast radius the
+ * move exists to shrink. Nominating a host per site would mean a data write on ~100 live sites
+ * (and shipping whatever unreviewed draft each holds), so this is a RULE in the renderer instead:
+ *
+ *   nominated `meta.canonical_origin`  → that (unchanged; the preflighted script wrote it)
+ *   no tenant root configured          → null (self-referencing, as before the move)
+ *   a custom domain of its own         → null (self-referencing on whichever host you are on;
+ *                                        cross-host consolidation stays a per-site nomination)
+ *   otherwise                          → `https://<slug>.<tenant root>`
+ *
+ * The tenant host is the one platform host proven to serve (the root is set only after the
+ * wildcard answers), so pointing at it is the truth the self-referencing rule above protects.
+ * A platform host in `domain` (`<slug>.quicksites.ai`, how `published_sites.domain` was written)
+ * is NOT a custom domain. A reseller host (`<slug>.cedarsites.com`) IS treated as the site's own,
+ * because the reseller root is the reseller's blast radius and is not moved.
+ */
+export function defaultCanonicalOrigin(site: {
+  meta: unknown;
+  slug: string | null | undefined;
+  domain?: string | null;
+  custom_domain?: string | null;
+}): string | null {
+  const nominated = canonicalOriginFromMeta(site.meta);
+  if (nominated) return nominated;
+  if (!tenantRootConfigured()) return null;
+  const roots = platformSiteRoots();
+  const ownHost = [site.custom_domain, site.domain]
+    .map((d) => String(d ?? '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, ''))
+    .find((d) => d && siteSlugFromHost(d, roots) === null);
+  if (ownHost) return null;
+  return tenantSiteUrl(site.slug) || null;
 }
 
 /**

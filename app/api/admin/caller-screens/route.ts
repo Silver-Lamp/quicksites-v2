@@ -1,7 +1,8 @@
 // /api/admin/caller-screens — the operator's side of caller screening (lib/ppl/callerScreen*.ts).
 //   GET                                      → { screens: [...] } (active and released)
-//   POST { number, evidence?, call_id? }     → screen a number (reason 'operator')
-//   POST { number, release: true, note? }    → lift a screen
+//   POST { number, evidence?, call_id?, mode? } → screen ('screen', default: offered voicemail) or
+//                                              block ('block': rejected unanswered) a number (reason 'operator')
+//   POST { number, release: true, note? }    → lift a screen or a block
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireUser';
 import { listScreens, releaseNumber, screenNumber } from '@/lib/ppl/callerScreenDb';
@@ -30,9 +31,11 @@ export async function POST(req: NextRequest) {
     const r = await releaseNumber({ number, releasedBy: gate.user.id, note: typeof body.note === 'string' ? body.note : null });
     return NextResponse.json(r, { status: r.ok ? 200 : 404 });
   }
+  const mode = body.mode === 'block' ? 'block' : 'screen';
   const r = await screenNumber({
     number,
     reason: 'operator',
+    mode,
     evidence: typeof body.evidence === 'string' ? body.evidence : null,
     sourceCallId: typeof body.call_id === 'string' && /^[0-9a-f-]{36}$/i.test(body.call_id) ? body.call_id : null,
     createdBy: gate.user.id,

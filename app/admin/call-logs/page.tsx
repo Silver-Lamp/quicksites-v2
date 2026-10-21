@@ -85,8 +85,11 @@ export default async function CallLogsPage() {
 
         {active.size > 0 && (
           <p className="text-xs text-zinc-400">
-            <span className="text-rose-300">{active.size} screened number{active.size === 1 ? '' : 's'}</span> — sent to voicemail instead of the business:{' '}
-            {[...active.values()].map((s) => `${formatUsPhone(s.number)} (${s.reason === 'vendor_voicemail' ? 'named a lead-gen vendor on a voicemail' : 'screened by hand'})`).join(' · ')}
+            <span className="text-rose-300">{[...active.values()].filter((s) => s.mode !== 'block').length} screened</span> (sent to voicemail instead of the business) ·{' '}
+            <span className="text-zinc-200">{[...active.values()].filter((s) => s.mode === 'block').length} blocked</span> (rejected unanswered):{' '}
+            {[...active.values()]
+              .map((s) => `${formatUsPhone(s.number)} (${s.mode === 'block' ? 'blocked' : 'screened'} — ${s.reason === 'vendor_voicemail' ? 'named a lead-gen vendor on a voicemail' : s.reason === 'repeat_pattern' ? 'repeat pattern on our lines' : 'by hand'})`)
+              .join(' · ')}
           </p>
         )}
 
@@ -120,11 +123,19 @@ export default async function CallLogsPage() {
                       {log.from_number ? (
                         <span className="ml-2 inline-flex items-center gap-1 font-sans">
                           {active.has(screenKey(log.from_number) ?? '') ? (
-                            <span className="rounded bg-rose-500/15 px-1.5 py-0.5 text-[11px] text-rose-300" title={active.get(screenKey(log.from_number) ?? '')?.evidence ?? 'screened'}>
-                              screened
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-[11px] ${active.get(screenKey(log.from_number) ?? '')?.mode === 'block' ? 'bg-zinc-500/20 text-zinc-200' : 'bg-rose-500/15 text-rose-300'}`}
+                              title={active.get(screenKey(log.from_number) ?? '')?.evidence ?? 'listed'}
+                            >
+                              {active.get(screenKey(log.from_number) ?? '')?.mode === 'block' ? 'blocked' : 'screened'}
                             </span>
                           ) : null}
-                          <ScreenNumberButton number={log.from_number} callId={log.id} screened={active.has(screenKey(log.from_number) ?? '')} evidence={log.voicemail_summary ?? log.analysis_summary ?? null} />
+                          <ScreenNumberButton
+                            number={log.from_number}
+                            callId={log.id}
+                            listed={active.has(screenKey(log.from_number) ?? '') ? (active.get(screenKey(log.from_number) ?? '')?.mode === 'block' ? 'block' : 'screen') : null}
+                            evidence={log.voicemail_summary ?? log.analysis_summary ?? null}
+                          />
                         </span>
                       ) : null}
                     </td>

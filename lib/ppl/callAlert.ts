@@ -79,7 +79,7 @@ export function outcomeOf(row: CallRow): DialOutcome {
  */
 export function outcomeLine(row: CallRow): string | null {
   // Neither dials, so neither has a dial outcome to report.
-  if (row.handling === 'voicemail_first' || row.handling === 'screened') return null;
+  if (row.handling === 'voicemail_first' || row.handling === 'screened' || row.handling === 'blocked') return null;
   const outcome = outcomeOf(row);
   const dur = row.call_duration ? ` · ${row.call_duration}s` : '';
   return OUTCOME_LABEL[outcome] + dur;
@@ -113,6 +113,10 @@ export function handlingLabel(row: CallRow): string {
       if (row.voicemail_speech === 'speech' && t) return `${base} · they said: "${t.length > 160 ? `${t.slice(0, 157)}…` : t}"${verdictSuffix(row)}`;
       return `${base} · no message left`;
     }
+    case 'blocked':
+      // Rejected unanswered (lib/ppl/callerScreen.ts, mode 'block'). Never emailed on its own —
+      // the cron marks these alerted silently — but a digest that happens to include one says so.
+      return 'Blocked — rejected unanswered (on the block list)';
     case 'cascade':
       return 'Offered to the cascade pool';
     default:

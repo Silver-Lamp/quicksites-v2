@@ -28,7 +28,11 @@ export function parentEndWrite(
   if (PARENT_ENDED_STATUSES.has(current)) return null; // our own earlier write stands
   if (!OPEN_STATUSES.has(current)) return null; // a dial outcome stands
   if (!TERMINAL.has(parent.status.trim().toLowerCase())) return null; // nothing to conclude yet
-  const out: ParentEndWrite = { call_status: row?.handling === 'voicemail_first' ? 'ended' : 'abandoned' };
+  // `abandoned` means the caller hung up before a bridge. A voicemail-first, screened or blocked
+  // call never offered a bridge, so its end is simply `ended` — reading it as abandoned would
+  // make a rejected dialer look like a customer who gave up waiting.
+  const neverBridged = row?.handling === 'voicemail_first' || row?.handling === 'screened' || row?.handling === 'blocked';
+  const out: ParentEndWrite = { call_status: neverBridged ? 'ended' : 'abandoned' };
   if (parent.durationSec !== null && Number.isFinite(parent.durationSec)) out.call_duration = parent.durationSec;
   return out;
 }

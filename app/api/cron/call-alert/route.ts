@@ -70,6 +70,9 @@ async function handle(req: NextRequest) {
         .from('call_logs')
         .select(ANALYSIS_COLS)
         .is('analyzed_at', null)
+        // A blocked call was rejected unanswered: nothing to read, no ~1¢ model call. `neq`
+        // alone drops NULL handling (SQL three-valued logic), so the null branch is explicit.
+        .or('handling.is.null,handling.neq.blocked')
         .lt('created_at', settledBefore)
         .gte('created_at', notOlderThan)
         .order('created_at', { ascending: false })
@@ -95,6 +98,7 @@ async function handle(req: NextRequest) {
         'id, call_sid, from_number, to_number, forwarded_to, call_status, call_duration, handling, custom_domain, created_at, voicemail_speech, voicemail_transcript, voicemail_verdict, voicemail_verdict_reason, missed_call_notified_at, missed_call_notify_result, analysis_summary, analysis',
       )
       .is('alerted_at', null)
+      .or('handling.is.null,handling.neq.blocked')
       .lt('created_at', settledBefore)
       .gte('created_at', notOlderThan)
       .order('created_at', { ascending: false })
@@ -102,28 +106,45 @@ async function handle(req: NextRequest) {
     if (error) throw new Error(`call_logs read failed: ${error.message}`);
 
     const rows = (data ?? []) as CallRow[];
-    if (rows.length === 0) return NextResponse.json({ ok: true, alerted: 0, analysed });
+    let subject: string | null = null;
+    let preview: string | null = null;
+    if (rows.length > 0) {
+      // `text` is built too, but sendEmail takes only html — it is returned below so a cron_runs
+      // record shows what went out without digging through the provider.
+      const built = buildCallAlertEmail(rows, publicBaseUrl());
+      await sendEmail({ to: to.join(','), subject: built.subject, html: built.html });
 
-    // `text` is built too, but sendEmail takes only html — it is returned below so a cron_runs
-    // record shows what went out without digging through the provider.
-    const { subject, html, text } = buildCallAlertEmail(rows, publicBaseUrl());
-    await sendEmail({ to: to.join(','), subject, html });
+      // ⚠️ Marked only AFTER the send resolves. Marking first would turn one transient Resend
+      // failure into a lead nobody ever hears about — the exact outcome this cron exists to stop.
+      const { error: markErr } = await db
+        .from('call_logs')
+        .update({ alerted_at: new Date().toISOString() })
+        .in('id', rows.map((r) => r.id));
+      if (markErr) throw new Error(`alerted_at write failed after sending: ${markErr.message}`);
+      subject = built.subject;
+      preview = built.text.slice(0, 500);
+    }
 
-    // ⚠️ Marked only AFTER the send resolves. Marking first would turn one transient Resend
-    // failure into a lead nobody ever hears about — the exact outcome this cron exists to stop.
-    const { error: markErr } = await db
+    // ⚠️ BLOCKED CALLS ARE NEVER EMAILED (owner, 2026-10-21: the whole point of the block list is
+    // to stop being told about the same dialer four times a day). They are marked alerted
+    // silently — after the real send above, so this write can never be mistaken for it — and
+    // stay visible on /admin/call-logs.
+    const { data: silenced } = await db
       .from('call_logs')
       .update({ alerted_at: new Date().toISOString() })
-      .in('id', rows.map((r) => r.id));
-    if (markErr) throw new Error(`alerted_at write failed after sending: ${markErr.message}`);
+      .eq('handling', 'blocked')
+      .is('alerted_at', null)
+      .gte('created_at', notOlderThan)
+      .select('id');
+    const blockedSilenced = silenced?.length ?? 0;
 
     return NextResponse.json({
       ok: true,
       alerted: rows.length,
       analysed,
+      blockedSilenced,
       to: to.length,
-      subject,
-      preview: text.slice(0, 500),
+      ...(subject ? { subject, preview } : {}),
     });
   });
 }

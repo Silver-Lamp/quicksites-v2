@@ -102,6 +102,13 @@ describe('describeEvidence', () => {
       'Double-blind randomized trial, 66 people, 16 weeks (2022) — secondary outcome: improved. Funder not checked.',
     );
   });
+  it('only a controlled trial is compared with placebo; large sizes are readable', () => {
+    const obs = study('o', { design: 'observational', n: 4838825, year: 2023 });
+    expect(describeEvidence({ studyId: 'o', primary: true, result: 'no_difference' }, obs)).toBe(
+      'Observational study, 4,838,825 people (2023) — primary outcome: no difference found. Funder not checked.',
+    );
+    expect(describeEvidence({ studyId: 'liu2022', primary: true, result: 'no_difference' }, LIU)).toMatch(/no difference from placebo/);
+  });
   it('never invents a sample size, and marks material that does not count', () => {
     const w = study('w', { design: 'company_material', peerReviewed: false, funder: 'manufacturer' });
     expect(describeEvidence({ studyId: 'w', primary: true, result: 'improved' }, w)).toBe(

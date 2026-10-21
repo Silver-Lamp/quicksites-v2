@@ -111,12 +111,23 @@ const DESIGN_WORDS: Record<StudyDesign, string> = {
   testimonial: 'customer testimonial',
 };
 
-const RESULT_WORDS: Record<OutcomeResult, string> = {
-  improved: 'improved',
-  no_difference: 'no difference from placebo',
-  worse: 'worse than placebo',
-  not_reported: 'result not reported',
-};
+// Only a controlled trial has a placebo to differ from. An observational study, a review or lab work
+// says "no difference found" — "no difference from placebo" under an observational study (the first
+// render of the alcohol meta-analysis, 2026-10-21) describes a comparison that never happened.
+const CONTROLLED: ReadonlySet<StudyDesign> = new Set(['rct_blinded', 'meta_analysis_rct']);
+function resultWords(result: OutcomeResult, design: StudyDesign): string {
+  const placebo = CONTROLLED.has(design);
+  switch (result) {
+    case 'improved':
+      return 'improved';
+    case 'no_difference':
+      return placebo ? 'no difference from placebo' : 'no difference found';
+    case 'worse':
+      return placebo ? 'worse than placebo' : 'worse';
+    default:
+      return 'result not reported';
+  }
+}
 
 /**
  * One plain sentence per study, for the guide: "Double-blind randomized trial, 66 people, 16 weeks
@@ -124,11 +135,11 @@ const RESULT_WORDS: Record<OutcomeResult, string> = {
  * missing n says "size not stated" rather than inventing one.
  */
 export function describeEvidence(e: ClaimEvidence, s: Study): string {
-  const size = typeof s.n === 'number' ? `${s.n} ${s.design === 'animal' ? 'animals' : 'people'}` : 'size not stated';
+  const size = typeof s.n === 'number' ? `${s.n.toLocaleString('en-US')} ${s.design === 'animal' ? 'animals' : 'people'}` : 'size not stated';
   const dur = typeof s.durationWeeks === 'number' ? `, ${s.durationWeeks} weeks` : '';
   const role = e.primary ? 'primary outcome' : 'secondary outcome';
   const funder = s.funder === 'unknown' ? 'funder not checked' : `funded by ${s.funder === 'manufacturer' ? 'the manufacturer' : s.funder === 'mixed' ? 'mixed sources' : 'independent sources'}`;
   const design = DESIGN_WORDS[s.design];
   const counts = NEVER_COUNTS.has(s.design) ? ' Not counted toward the grade.' : '';
-  return `${design[0].toUpperCase()}${design.slice(1)}, ${size}${dur} (${s.year}) — ${role}: ${RESULT_WORDS[e.result]}. ${funder[0].toUpperCase()}${funder.slice(1)}.${counts}`;
+  return `${design[0].toUpperCase()}${design.slice(1)}, ${size}${dur} (${s.year}) — ${role}: ${resultWords(e.result, s.design)}. ${funder[0].toUpperCase()}${funder.slice(1)}.${counts}`;
 }

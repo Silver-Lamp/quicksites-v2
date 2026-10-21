@@ -23,7 +23,21 @@ export type GuidePage = { slug: string; navLabel?: string; title: string; descri
 const STUDY_PENDING =
   '<p><strong>The study is not open yet.</strong> It opens only after an independent ethics board approves the plan, and the plan is registered publicly before anyone joins. This page will say when.</p>';
 
-export const GUIDE_PAGES: GuidePage[] = [
+/**
+ * Owner, 2026-10-21: "remove commission notice when no products are yet in play". The commission
+ * line appears ONLY while affiliate product links are live on the site. A disclosure for a
+ * relationship that does not exist yet is noise; a missing disclosure once links go live is an FTC
+ * problem — so flipping this to true is the one switch that adds both the links' context and the
+ * notice, and the tests pin both states.
+ */
+export const AFFILIATE_LINKS_LIVE = false;
+
+export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
+  const commissionP = opts.affiliateLinksLive ? `<p><em>${COMMISSION_LINE}</em></p>` : '';
+  const conflict = opts.affiliateLinksLive
+    ? `<h2>Our conflict</h2><p>${COMMISSION_LINE} That is why the plan, the measure and the analysis are fixed and published before the study starts.</p>`
+    : '<h2>Fixed before it starts</h2><p>The plan, the measure and the analysis are fixed and published before the study starts, so the result cannot be shaped after the fact.</p>';
+  return [
   {
     slug: 'home',
     title: 'Tried & Graded — health claims, graded by the evidence',
@@ -36,7 +50,7 @@ export const GUIDE_PAGES: GuidePage[] = [
           '<h2>How this site works</h2>' +
           '<p>Every claim gets a grade, and nobody here types it. We record each study — its design, its size, who paid for it, and whether the claim was what the study set out to test — and a fixed set of rules turns that into one of six grades. To change a grade, the evidence has to change. <a href="/how-we-grade">How we grade</a>.</p>' +
           '<p>Where a popular claim has never been tested, we say so, and where we can, we run the test — registered in advance, published whatever it shows.</p>' +
-          `<p><em>${COMMISSION_LINE}</em></p>` +
+          commissionP +
           '<h2>Guides</h2>' +
           '<ul><li><a href="/mullein-for-smokers">Mullein for smokers: what the evidence says</a></li><li><a href="/does-mullein-work">Does mullein work?</a></li><li><a href="/does-mullein-detox-your-lungs">Does mullein detox your lungs?</a></li><li><a href="/smoking-mullein">Smoking mullein</a></li><li><a href="/mullein-drops-gummies-capsules-tea">Mullein drops, gummies, capsules or tea</a></li><li><a href="/mullein-study">Our mullein study</a></li><li><a href="/are-the-blue-zones-real">Are the Blue Zones real?</a></li><li><a href="/blue-zones-habits-graded">The Blue Zones habits, graded</a></li><li><a href="/blue-zones-habit-experiment">Try a habit as an experiment</a></li></ul>',
       },
@@ -127,7 +141,7 @@ export const GUIDE_PAGES: GuidePage[] = [
       {
         kind: 'text',
         html:
-          `<p><em>${COMMISSION_LINE}</em></p>` +
+          commissionP +
           '<p>None of these forms has been tested for cough in a human trial, so none can be recommended for it. If you choose to try mullein, these are the differences that matter:</p>' +
           '<ul><li><strong>Tea</strong> — the traditional form; cheapest; strain it well.</li><li><strong>Drops (tincture or glycerite)</strong> — concentrated extract; check the ratio and whether it contains alcohol.</li><li><strong>Gummies</strong> — usually the least mullein per serving, plus sugar.</li><li><strong>Capsules</strong> — dried leaf or extract in a measured dose; the form our study uses.</li></ul>' +
           '<h2>What to look for</h2><ul><li>A third-party certificate of analysis (identity, heavy metals, microbes).</li><li>The part of the plant and the amount per serving on the label.</li><li>No promises to “detox”, “cleanse” or “repair” lungs — a label that makes one is making a claim no study supports.</li></ul>' +
@@ -150,7 +164,7 @@ export const GUIDE_PAGES: GuidePage[] = [
           '<h2>How it works</h2><ul><li>Two four-week periods with a two-week break between: mullein capsules in one, placebo in the other, in random order. Nobody — including us — knows which is which until the end.</li><li>Cough is measured with the Leicester Cough Questionnaire, a standard tool used in cough research.</li><li>A short daily cough diary, and cigarettes per day — so the study would also notice if taking a supplement made anyone smoke more.</li></ul>' +
           '<h2>Who it’s for</h2><p>Adults 21 and over who smoke cigarettes daily and have had a cough for two months or more. People with a diagnosed lung disease, who are pregnant, or who cough up blood should talk to their doctor instead.</p>' +
           `<h2>Help to stop</h2><p>Everyone who joins gets quit-smoking support, and stopping during the study is welcome. ${QUIT_LINE}</p>` +
-          `<h2>Our conflict</h2><p>${COMMISSION_LINE} That is why the plan, the measure and the analysis are fixed and published before the study starts.</p>`,
+          conflict,
       },
     ],
   },
@@ -220,15 +234,18 @@ export const GUIDE_PAGES: GuidePage[] = [
     title: 'How We Grade Health Claims',
     description: 'The six grades, the rules that produce them, and why testimonials never count.',
     blocks: [
-      { kind: 'hero', headline: 'How we grade', subheadline: 'Six grades, fixed rules, no exceptions for products we earn from.' },
+      { kind: 'hero', headline: 'How we grade', subheadline: opts.affiliateLinksLive ? 'Six grades, fixed rules, no exceptions for products we earn from.' : 'Six grades, fixed rules, no exceptions.' },
       {
         kind: 'text',
         html:
           '<p>Each claim lists the studies behind it. Each study is recorded with its design, size, length, funder, and whether the claim was what it set out to test. A program turns that into a grade. Nobody picks the word.</p>' +
           '<ul><li><strong>Established</strong> — two or more placebo-controlled trials found it on their main outcome, or a pooled analysis of such trials did.</li><li><strong>Promising</strong> — one placebo-controlled trial found it on its main outcome.</li><li><strong>Tested — no effect found</strong> — a placebo-controlled trial tested it as its main outcome and found nothing.</li><li><strong>Early evidence</strong> — human studies without a placebo, or a result on a measure the trial wasn’t built around.</li><li><strong>Lab studies only</strong> — animals or cells.</li><li><strong>No real evidence</strong> — testimonials, company material, tradition, or nothing.</li></ul>' +
           '<h2>The rules we hold ourselves to</h2><ul><li>Testimonials and company white papers never raise a grade.</li><li>A trial that tested a claim and found nothing outranks weaker positive results.</li><li>Who funded a study is always shown, and never changes the grade.</li><li>Every page shows the date its evidence was last checked.</li></ul>' +
-          `<p><em>${COMMISSION_LINE}</em></p>`,
+          commissionP,
       },
     ],
   },
-];
+  ];
+}
+
+export const GUIDE_PAGES: GuidePage[] = guidePages({ affiliateLinksLive: AFFILIATE_LINKS_LIVE });

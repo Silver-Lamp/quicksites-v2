@@ -3,7 +3,9 @@
  */
 // The guide's copy rules (docs/longevity/MULLEIN_PAGES.md). A health page is the one place a phrase
 // is a claim; these fail before a page ships.
-import { COMMISSION_LINE, GUIDE_PAGES, QUIT_LINE } from '@/lib/guide/triedAndGraded';
+import { COMMISSION_LINE, GUIDE_NAME, GUIDE_PAGES, NOT_AFFILIATED_BZ, QUIT_LINE } from '@/lib/guide/triedAndGraded';
+import { gradeClaim } from '@/lib/evidence/grade';
+import { BLUE_ZONES_CLAIMS, BLUE_ZONES_STUDIES } from '@/lib/evidence/topics/blueZones';
 
 const html = (p: (typeof GUIDE_PAGES)[number]) =>
   p.blocks.map((b) => (b.kind === 'text' ? b.html : b.kind === 'hero' ? `${b.headline} ${b.subheadline}` : '')).join(' ') + ` ${p.title} ${p.description}`;
@@ -49,6 +51,20 @@ describe('Tried & Graded copy rules', () => {
     const p = GUIDE_PAGES.find((x) => x.slug === 'mullein-drops-gummies-capsules-tea')!;
     const first = p.blocks.find((b) => b.kind === 'text') as { html: string };
     expect(first.html.indexOf(COMMISSION_LINE)).toBe(first.html.indexOf('<p><em>') + '<p><em>'.length);
+  });
+  it('every page naming Blue Zones carries the non-affiliation line, and the brand is never ours', () => {
+    for (const p of GUIDE_PAGES) if (/blue zones/i.test(text(html(p))) && p.slug !== 'home') expect(html(p)).toContain(NOT_AFFILIATED_BZ);
+    expect(GUIDE_NAME).not.toMatch(/blue zone|power 9/i);
+  });
+  it('the Blue Zones habits grade as observational at best, and wine as no evidence of benefit', () => {
+    const g = (id: string) => gradeClaim(BLUE_ZONES_CLAIMS.find((c) => c.id === id)!.evidence, BLUE_ZONES_STUDIES);
+    for (const id of ['move', 'purpose', 'plants', 'eighty-percent', 'belong', 'social-ties', 'right-tribe']) expect(g(id)).toBe('early');
+    expect(g('wine')).toBe('no_evidence');
+  });
+  it('habits with no study entered are listed as not yet graded, never graded "no evidence"', () => {
+    const p = GUIDE_PAGES.find((x) => x.slug === 'blue-zones-habits-graded')!;
+    expect(html(p)).toMatch(/Not yet graded/);
+    expect(BLUE_ZONES_CLAIMS.every((c) => c.evidence.length > 0)).toBe(true);
   });
   it('the study page never says it is open until it is', () => {
     const p = GUIDE_PAGES.find((x) => x.slug === 'mullein-study')!;

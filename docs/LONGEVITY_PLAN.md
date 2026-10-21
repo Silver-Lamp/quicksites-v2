@@ -400,6 +400,66 @@ in that pack, not by a website.
 6. Her affiliate content (§9) lives on the guide, not the booking site — the booking site makes no
    benefit claims.
 
+## 14. Blue Zones — affiliation, honestly (2026-10-21)
+
+Owner: "plan to affiliate ourselves with 'blue zones' work as well, given the longevity core".
+
+**What Blue Zones is, commercially.** A brand, not a public body of research: **Blue Zones, LLC**
+owns the marks — BLUE ZONES, Power 9 and LIVE BETTER, LONGER are its trademarks, used by others
+"under license" (Justia trademark records; the American College of Lifestyle Medicine's page). It
+**licenses the brand** for products and partnerships (its own site invites licensing inquiries),
+sells books and Blue Zones Kitchen frozen meals at retail, partnered with Rouxbe on a cooking course,
+and certifies workplaces and health professionals (the certified-professional designation is
+revocable at Blue Zones' discretion). **No public affiliate programme was found.** Who owns the LLC
+today was not confirmed in this read.
+
+**How we can affiliate, from least to most permission needed:**
+1. **Link and cite, with ordinary affiliate links for the books** (bookshop.org or Amazon) — no
+   permission needed. Refer to the research by name (nominative use); never "Blue Zones" in our
+   domain, logo or product names, and a plain line: *not affiliated with or endorsed by Blue Zones,
+   LLC*.
+2. **Partner programmes that already sell Blue Zones products** — e.g. Rouxbe's course — if *they*
+   run an affiliate programme (not checked).
+3. **A licence or partnership** with Blue Zones, LLC (their inquiry route). This is where a real
+   offer lives: *we run open, pre-registered habit studies on the Power 9 and publish the results,
+   whatever they are.* Same no-veto clause as §3.
+4. **Amy** could look at the Blue Zones Certified Health Professional route (via ACLM) — her call,
+   and its terms bind what she may say.
+
+**The evidence picture is contested, and that is the content.**
+- **The longevity claim itself is disputed.** Saul Newman's work (2019 and 2024 preprints; the 2024
+  Ig Nobel) argues extreme-age records cluster where record-keeping is poor — supercentenarian counts
+  fell sharply when US states introduced birth certificates, and recorded birthdates bunch on days
+  divisible by five. Blue Zones researchers called it irresponsible and say they validated ages
+  against civil and church records back to the 1800s; a *Gerontologist* paper argues the original
+  Blue Zones age claims meet rigorous standards; Newman's reply is that a wrong first certificate is
+  copied perfectly into every later record. Both sides go on the page.
+- **The advice is mostly reasonable and mostly observational.** Plant-heavy eating, daily
+  movement, purpose, social ties — the Power 9 — rest largely on cohort and population studies, which
+  our grade calls **Early evidence** at best for any single claim. The guide says so per claim, as
+  for every other topic; "reasonable habits" and "proven to add years" are different sentences.
+- **No products to grade:** "blue zones supplements" has no search demand (0/mo) and Blue Zones
+  sells food, books and programmes, not pills — which fits the guide better than most brands.
+
+**Search demand (US monthly, 2026-10-21, `scripts/bluezones-search-volume.mts`):** blue zones 40,500 ·
+blue zone(s) diet 12,100 · what are the blue zones 2,900 · blue zones recipes 2,900 · blue zones
+kitchen 2,400 · live to 100 secrets of the blue zones 1,900 · okinawa diet 1,900 · longevity diet
+1,900 · blue zones netflix 1,600 · blue zones book 1,000 · blue zones project 1,000 · blue zones power
+9 590 · blue zones debunked 480 (+ myth 70, fake 40). **Who ranks:** "blue zones debunked" — a Swiss
+insurer's blog, PubMed Central, EurekAlert, Reddit, Instagram, bluezones.com, YouTube (thin and
+winnable for a fair two-sided page); "blue zone diet" — BBC Good Food, GoodRx, a seniors-meals
+company, Facebook, small food blogs (fair odds).
+
+**Pages for the guide** (copy rules unchanged; the affiliate line before the first book link):
+- **"Are the Blue Zones real?"** — the age-validation dispute, both sides, sourced. Targets
+  debunked/myth/fake and "what are the blue zones".
+- **"The Blue Zones diet: what the evidence says"** — each habit graded on its own studies.
+- **"The Power 9, graded"** — one row per habit, each an `evidence_claims` topic once its studies are
+  entered (`lib/evidence/topics/blue-zones.ts`, next).
+- **"Try a Blue Zones habit as an experiment"** — a HiveJournal Levers protocol (Tier 1): pick one
+  habit, a measurable outcome (resting heart rate, sleep, a mood scale, steps), four weeks, logged
+  publicly. Habits, not products — the cleanest citizen science on the site.
+
 ## Verified / assumed
 
 **Verified:** StemRegen's white-paper and customer-story pages as read 2026-10-21 (counts above);

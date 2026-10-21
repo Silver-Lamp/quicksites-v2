@@ -790,6 +790,8 @@ export const DEFAULT_BLOCK_CONTENT = {
     headline: 'Volunteer for the Campaign',
     description: 'Join the team to canvass, phone bank, or host a yard sign.',
   },
+  // Empty topic → renders nothing in public, a hint in the editor.
+  evidence_claims: { topic: '', claim_ids: [], show_studies: true },
   story: {
     sections: [
       {

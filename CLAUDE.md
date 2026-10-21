@@ -802,6 +802,19 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   same deterministic seed, so a visitor sees variety and we can reproduce any site's face. A pool
   of one behaves like a hard pin. ⚠️ `sanitizePins` still accepts the **legacy single-string**
   shape, because the 1:1 version shipped first and those rows would otherwise resolve to no font.
+- **Evidence grades + the "Tried & Graded" guide (2026-10-21, owner: "a separate guide site")**:
+  health claims on any page we earn from are graded by `lib/evidence/grade.ts` — **the grade is
+  derived from study records, never typed** (testimonials/company material never raise it; a
+  blinded null on the primary outcome outranks weaker positives; a positive secondary outcome is at
+  most "early"; funding printed, never moves it). Topics live in `lib/evidence/topics/*` (mullein
+  first); the new **`evidence_claims` block** stores only topic + claim ids and computes each grade
+  at render, so a page cannot carry a grade the records don't produce (`evidenceClaims.test.tsx`
+  pins that a typed grade is ignored). The guide's copy is code (`lib/guide/triedAndGraded.ts`,
+  held to the copy rules by test — no "detox/cleanse/repair" assertion, quit help on smokers
+  pages, commission line first on product pages) and built by `scripts/guide/build-tried-and-graded.mts`
+  into an UNPUBLISHED operator template `tried-and-graded`. Plan + mullein study:
+  `docs/LONGEVITY_PLAN.md`, `docs/studies/MULLEIN_SMOKERS_PROTOCOL.md`; shared shape proposed as
+  `crosstalk/contracts/evidence-grade.md`.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **The sidebar used to jump to the top on every navigation (fixed 2026-10-05).** Route-driven
   selection in `AdminNavSections` took the FIRST row whose href was a prefix of the path — a short

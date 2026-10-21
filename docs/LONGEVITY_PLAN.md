@@ -71,6 +71,34 @@ pitch: *we will run the trial your white papers don't have.*
   are testing. That is precisely the rule-7 case; the pre-registration and the no-veto clause are
   what keep the result from being re-derived only by the party it flatters.
 
+### 3b. Measuring circulating stem cells — what to pin in the pre-registration (2026-10-21)
+
+Owner asked whether to recruit from roughly the same latitude/longitude. **Randomization already
+balances geography between arms**, so location is not the safeguard; it is a convenience and a
+noise reducer. In order of how much each matters:
+
+1. **Draw timing.** Circulating progenitor counts vary across the day, and the claim being tested
+   is an acute release after a dose. Every draw at a fixed local clock time and a fixed interval
+   after dosing.
+2. **No strenuous exercise for 24–48 h before each draw.** Exercise mobilizes progenitor cells on
+   its own; without this rule the result measures who went running.
+3. **One central lab, one gating protocol** (a standard CD34+ flow-cytometry method). Counts are a
+   few cells per microlitre; lab-to-lab differences can swamp an effect. Tubes must reach the lab
+   inside its stability window — which is the practical reason to **recruit regionally**.
+4. **Crossover design** (product and placebo periods, washout between): each person is their own
+   control, cutting the sample size needed.
+5. **Stratify, don't restrict.** If recruiting across regions, randomize within latitude band and
+   enrolment season. Longitude alone matters only through clock time; exclude or record altitude.
+6. **Covariates recorded and named in advance:** baseline 25(OH)D (vitamin D blood level), age,
+   smoking, recent illness, medications that affect blood-cell production. At Seattle's latitude
+   vitamin D falls sharply in winter — balance enrolment season across arms.
+
+Context for the vitamin D link: the receptor is on several progenitor lines and lab work shows
+effects, but the one placebo-controlled human trial found (Yiu et al. 2013, *Atherosclerosis*,
+PMID 23298824 — 100 people with type 2 diabetes, 5,000 IU/day, 12 weeks) raised blood vitamin D
+substantially and **did not change circulating EPC counts**. That trial is the template for the
+test this plan proposes.
+
 ## 4. Commerce: refer, don't resell
 
 - **Affiliate links through the manufacturer's own program**, not inventory. They take the payment,
@@ -122,6 +150,42 @@ clearly separated and disclosed, "if you're curious about supplements marketed f
 here's the evidence and here's our open study." Per-state pages only where GSC later shows the
 state, and only after reading the SERP (`scripts/serp-check.mts`): this is YMYL, the local pack is
 clinics, and §"Niche discovery" says search for the structure, not the trade.
+
+### 5b. State-level "stem cell therapy" domains for trial recruitment — not defensible as framed
+
+Owner asked (2026-10-21) whether it is defensible to buy state-level exact-match domains "for those
+who might want to do a trial of other cohorts in their state, and we just happen to pick up traffic
+for people doing 'near me' searches". **As framed, no** — and "happen to" is the part that fails,
+because the domain name is chosen for that traffic:
+
+- **The domain is the claim.** A visitor who searched "stem cell therapy" and lands on
+  `<state>stemcelltherapy.com` reads it as therapy. The FTC judges the *net impression*; a site
+  named for a treatment that offers a supplement study implies the supplement is, or substitutes
+  for, the treatment.
+- **It recruits from the wrong population, in the wrong frame of mind.** Those searchers mostly have
+  a diagnosis and are looking for treatment. Research ethics calls this *therapeutic misconception*
+  — a participant believing research is care — and an IRB reviews recruitment materials, domain
+  included, specifically for it. The circulating-cell study wants healthy adults; most of this
+  traffic would be excluded at screening anyway.
+- **Google's doorway-page policy** targets many near-identical pages or domains built to rank for
+  place-plus-query variants that funnel to one destination. Fifty state domains for one study is
+  that shape. Google's 2019 carve-out for clinical-trial recruitment covers **ads** for trials of
+  the experimental technique itself, not organic doorways for a supplement study.
+- **It probably wouldn't rank.** This is health content (Google's highest-scrutiny category), the
+  local results are clinics, exact-match domains carry little weight, and our own geo fleet shows
+  how little a new domain earns: 92 domains, 2,903 impressions, 18 clicks (CLAUDE.md, "Niche
+  discovery"). Real volume for these terms is unknown (§5's zeros).
+
+**The defensible version** names each thing for what it is:
+- A **therapy guide** may use the therapy name, because it answers the therapy question: what is
+  FDA-approved, what clinics in the state sell and charge, red flags, questions to ask. **No
+  affiliate links on it.** It may mention, separately and plainly, that a supplement study exists
+  and is not a treatment. One guide with state sections, or a state page only where Search Console
+  later shows real demand, after reading the SERP (`scripts/serp-check.mts`).
+- **Study recruitment** goes where the matching population already is: `stemregen reviews`,
+  `stem cell supplement(s)`, `longevity supplements` searchers, HJ users, and the manufacturer's own
+  customers — people curious about the supplement, not people seeking a cure. Recruitment copy is
+  IRB-approved before it is published.
 
 **The demand that fits the affiliate model is the supplement demand, not the therapy demand:**
 `stemregen reviews` (1,300), `stem cell supplement(s)` (1,000), `longevity supplements` (5,400).

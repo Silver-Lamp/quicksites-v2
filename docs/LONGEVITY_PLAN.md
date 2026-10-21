@@ -354,6 +354,15 @@ pre-registered; IRB; people with a diagnosed lung disease excluded or routed thr
 **every participant given quit-smoking help at enrolment** (1-800-QUIT-NOW). A placebo for drops or
 gummies is easy to match, so this one can be blinded from the start.
 
+**Pursued (owner: "pursue mullein SEO w/ trials", 2026-10-21).** The evidence is entered as data
+(`lib/evidence/topics/mullein.ts` — cough and the smokers claim grade "No real evidence", pinned by
+test); the study is drafted as a pre-registration (`docs/studies/MULLEIN_SMOKERS_PROTOCOL.md` —
+capsule crossover, primary outcome the Leicester Cough Questionnaire, ~60 enrolled); the six search
+pages and the hub copy are drafted (`docs/longevity/MULLEIN_PAGES.md`). Best first target:
+**"mullein for smokers" — 3,600/mo with a weak page one** (a symptom checker, Instagram, eBay,
+YouTube, Amazon). Blocked on the brand decision (§7.2) and, before recruiting, an IRB and a
+privacy-lawyer read.
+
 ## 13. Sunset Escapes — Amy's two spec sites (2026-10-21)
 
 Owner: "yes for amyjurowski … 2 spec websites both under a company name of 'Sunset Escapes' …

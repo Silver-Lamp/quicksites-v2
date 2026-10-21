@@ -4,6 +4,7 @@
 // The grade is derived, never typed (lib/evidence/grade.ts). These cases are the ones a guide that
 // earns commission would be tempted to round up.
 import { describeEvidence, gradeClaim, GRADE_LABEL, type Study } from '@/lib/evidence/grade';
+import { MULLEIN_CLAIMS, MULLEIN_STUDIES } from '@/lib/evidence/topics/mullein';
 
 const study = (id: string, over: Partial<Study> = {}): Study => ({
   id,
@@ -75,6 +76,23 @@ describe('gradeClaim', () => {
   });
   it('every grade has a reader-facing label', () => {
     for (const g of ['established', 'promising', 'early', 'lab_only', 'tested_no_effect', 'no_evidence'] as const) expect(GRADE_LABEL[g]).toBeTruthy();
+  });
+});
+
+describe('mullein, as recorded (lib/evidence/topics/mullein.ts)', () => {
+  const grade = (id: string) => {
+    const c = MULLEIN_CLAIMS.find((x) => x.id === id)!;
+    return gradeClaim(c.evidence, MULLEIN_STUDIES);
+  };
+  it('cough and the smokers claim have no evidence — the pages may never say otherwise', () => {
+    expect(grade('cough')).toBe('no_evidence');
+    expect(grade('smokers-lungs')).toBe('no_evidence');
+  });
+  it('the six-ingredient ear-drop trial is never credited to mullein', () => {
+    expect(grade('ear-pain-combo')).toBe('no_evidence');
+  });
+  it('every claim carries a plain-language note', () => {
+    for (const c of MULLEIN_CLAIMS) expect(c.note.length).toBeGreaterThan(20);
   });
 });
 

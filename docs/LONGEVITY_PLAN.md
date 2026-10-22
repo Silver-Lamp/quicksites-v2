@@ -1,6 +1,43 @@
 # Longevity: affiliate products + citizen science that can actually say "it works" — or "it doesn't"
 
-**Status: PLAN, nothing built (2026-10-21).** Owner asks, in order: (1) a `/longevity` path on
+## ▶ Where to resume (state at end of 2026-10-21 — re-check before trusting)
+
+**Built and live:** **https://www.triedandgraded.com** (Tried & Graded) — 13 pages: mullein (6),
+Blue Zones (3), urolithin A + the owner's log (2), home, how-we-grade. Grades are derived at render
+from `lib/evidence/topics/*` by the `evidence_claims` block (`lib/evidence/grade.ts`). Copy lives in
+`lib/guide/triedAndGraded.ts`, held to the copy rules by `lib/guide/__tests__`. Search Console verified
+(`sc-domain:triedandgraded.com`). Commission notice OFF (`AFFILIATE_LINKS_LIVE = false`).
+Re-derive the page list: `curl -sL https://www.triedandgraded.com/sitemap.xml | grep -c '<loc>'`.
+
+**To change copy:** edit `lib/guide/triedAndGraded.ts` → merge → `npx tsx --env-file=.env.local
+scripts/guide/build-tried-and-graded.mts --apply` → `scripts/guide/publish-tried-and-graded.mts`
+(the build commits the draft; the publish re-mints what visitors see). ⚠️ The template slug must stay
+`triedandgraded` — a custom domain is served from `/sites/<domain label>`.
+
+**Also built:** Amy's two spec drafts under "Sunset Escapes" (§13; noindex, booking in preview,
+claim links with the owner). Owner's Timeline log page (§11) — no readings yet.
+
+**Waiting on the owner, in order:**
+1. **Send the Timeline email** — `docs/longevity/TIMELINE_EMAIL.md` — and **apply on Impact** as a
+   publisher. If Timeline won't accept un-editable grades (nulls included), walk away (§10).
+2. **First grip-endurance reading** (hand dynamometer) — send readings to be published on the log page.
+3. On Timeline approval: add product links, set `AFFILIATE_LINKS_LIVE = true` (the notice returns
+   first on the products page — pinned).
+4. **Mullein study** (§12, `docs/studies/MULLEIN_SMOKERS_PROTOCOL.md`): a commercial IRB, a
+   privacy-lawyer read of the consent flow (Washington's My Health My Data Act), a capsule + matched
+   placebo with certificates, statistician sign-off, the LCQ licence. Recruitment stays closed until then.
+5. **Blue Zones, LLC** licence approach (§14) — owner's call; nothing sent.
+6. **StemRegen** (§2–4) — nothing sent; the pitch is a placebo-controlled trial with a no-veto clause.
+7. **HiveJournal** was sent the `/longevity` proposal and the mullein-diary ask (crosstalk, 2026-10-21) —
+   check `crosstalk/inbox/quicksites/` for replies.
+
+**Next build steps when resuming:** enter "downshift" and "loved ones first" studies (Blue Zones,
+listed "not yet graded"); add red light therapy and sound-therapy topics (§9 evidence notes) for
+Amy's affiliate work; the urolithin A 2019 first-in-human study once its design is confirmed.
+
+---
+
+**Original status: PLAN, nothing built (2026-10-21).** Owner asks, in order: (1) a `/longevity` path on
 HiveJournal, "integrated with the Huberman Labs type plan of citizen science", carrying affiliate
 links to research-backed longevity products; (2) "build [StemRegen] a better reselling platform on
 quicksites, one that also has citizen science so that we can prove whether these things work"; (3)

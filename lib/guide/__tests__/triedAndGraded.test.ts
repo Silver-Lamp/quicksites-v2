@@ -3,7 +3,7 @@
  */
 // The guide's copy rules (docs/longevity/MULLEIN_PAGES.md). A health page is the one place a phrase
 // is a claim; these fail before a page ships.
-import { COMMISSION_LINE, GUIDE_NAME, GUIDE_PAGES, NOT_AFFILIATED_BZ, QUIT_LINE } from '@/lib/guide/triedAndGraded';
+import { AFFILIATE_LINKS_LIVE, COMMISSION_LINE, GUIDE_NAME, GUIDE_PAGES, guidePages, NOT_AFFILIATED_BZ, QUIT_LINE } from '@/lib/guide/triedAndGraded';
 import { gradeClaim } from '@/lib/evidence/grade';
 import { BLUE_ZONES_CLAIMS, BLUE_ZONES_STUDIES } from '@/lib/evidence/topics/blueZones';
 
@@ -47,10 +47,17 @@ describe('Tried & Graded copy rules', () => {
   it('every page that names smokers or smoking carries quit help', () => {
     for (const p of GUIDE_PAGES) if (/smok/i.test(html(p)) && p.slug !== 'home' && p.slug !== 'how-we-grade' && p.slug !== 'mullein-drops-gummies-capsules-tea' && p.slug !== 'does-mullein-work') expect(html(p)).toContain(QUIT_LINE);
   });
-  it('the products page states the commission before anything else on it', () => {
-    const p = GUIDE_PAGES.find((x) => x.slug === 'mullein-drops-gummies-capsules-tea')!;
+  it('with no affiliate links live, no page carries the commission notice (owner, 2026-10-21)', () => {
+    for (const p of guidePages({ affiliateLinksLive: false })) expect(html(p)).not.toContain(COMMISSION_LINE);
+  });
+  it('the live site matches the switch, and today the switch is off', () => {
+    expect(AFFILIATE_LINKS_LIVE).toBe(false);
+    for (const p of GUIDE_PAGES) expect(html(p)).not.toContain(COMMISSION_LINE);
+  });
+  it('once affiliate links go live, the products page states the commission before anything else on it', () => {
+    const p = guidePages({ affiliateLinksLive: true }).find((x) => x.slug === 'mullein-drops-gummies-capsules-tea')!;
     const first = p.blocks.find((b) => b.kind === 'text') as { html: string };
-    expect(first.html.indexOf(COMMISSION_LINE)).toBe(first.html.indexOf('<p><em>') + '<p><em>'.length);
+    expect(first.html.startsWith(`<p><em>${COMMISSION_LINE}</em></p>`)).toBe(true);
   });
   it('every page naming Blue Zones carries the non-affiliation line, and the brand is never ours', () => {
     for (const p of GUIDE_PAGES) if (/blue zones/i.test(text(html(p))) && p.slug !== 'home') expect(html(p)).toContain(NOT_AFFILIATED_BZ);

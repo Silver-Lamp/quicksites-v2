@@ -88,6 +88,55 @@ export function experimentCard(e: { claimBy: string; claim: string; design: stri
   );
 }
 
+/**
+ * A HISTORY TIMELINE row (owner, 2026-10-22: "transcribe the last 3 mov files … make a timeline and
+ * facts history page"). The source was a ~9-minute promotional video on Royal Rife; each of its
+ * claims is set against the documented record. Every row carries a status and a source, and the
+ * status is the point: "documented" (a record exists), "claimed" (the story says it; we found no
+ * record), "contradicted" (a record says otherwise).
+ */
+export type HistoryStatus = 'documented' | 'claimed' | 'contradicted';
+export type HistoryRow = { year: string; text: string; status: HistoryStatus; source: string };
+const HISTORY_LABEL: Record<HistoryStatus, string> = { documented: 'Documented', claimed: 'Claimed — no record found', contradicted: 'Contradicted by the record' };
+const HISTORY_TINT: Record<HistoryStatus, string> = { documented: 'bg-emerald-500/15 border-emerald-500/40', claimed: 'bg-amber-500/15 border-amber-500/40', contradicted: 'bg-rose-500/15 border-rose-500/40' };
+export function historyTimeline(rows: HistoryRow[]): string {
+  return (
+    '<ol class="not-prose my-8 border-l border-zinc-900/15">' +
+    rows
+      .map(
+        (r) =>
+          `<li class="relative ml-5 pb-7"><span class="absolute -left-[25px] top-1.5 h-2.5 w-2.5 rounded-full bg-zinc-900/40"></span>` +
+          `<div class="flex flex-wrap items-center gap-2"><span class="text-sm font-semibold tabular-nums">${r.year}</span>` +
+          `<span class="rounded-full border px-2 py-0.5 text-[11px] font-semibold ${HISTORY_TINT[r.status]}" data-history-status="${r.status}">${HISTORY_LABEL[r.status]}</span></div>` +
+          `<p class="mt-1.5 leading-relaxed">${r.text}</p><p class="mt-1 text-xs opacity-60">Source: ${r.source}</p></li>`,
+      )
+      .join('') +
+    '</ol>'
+  );
+}
+
+export const RIFE_HISTORY_CHECKED = '2026-10-22';
+export const RIFE_HISTORY: HistoryRow[] = [
+  { year: '1888', text: 'Royal Raymond Rife is born on 16 May in Elkhorn, Nebraska.', status: 'documented', source: 'biographical record (Wikipedia, “Royal Rife”)' },
+  { year: 'c. 1904', text: 'The story says he was admitted to Johns Hopkins at 16 and later trained at Zeiss. No record of either has been found; investigators describe his educational titles and Zeiss experience as unsubstantiated.', status: 'claimed', source: 'the video; no university or employer record located' },
+  { year: '1929–31', text: 'Rife builds microscopes and films microbes with time-lapse; newspapers and Popular Science cover his work.', status: 'documented', source: 'San Diego Union (1929), Popular Science (June 1931)' },
+  { year: '1931', text: 'The New York Times reports a Rife microscope said to magnify 17,000 times. The video says 60,000. Magnification is not resolution: a visible-light microscope cannot resolve viruses at any magnification, because light’s wavelength (roughly 200 nm) is larger than most viruses.', status: 'contradicted', source: 'New York Times (22 Nov 1931); optics — University of Wisconsin–Madison analysis (2017)' },
+  { year: '1931', text: 'Kendall and Rife publish observations of typhoid bacteria in a “filterable” form in California and Western Medicine. Later findings contradict these observations.', status: 'documented', source: 'California and Western Medicine (Dec 1931)' },
+  { year: '1930s', text: 'Rife says specific frequencies — a “mortal oscillatory rate” — make microbes disintegrate. No published, independently replicated study shows this.', status: 'claimed', source: 'Rife’s own accounts; no controlled replication found' },
+  { year: '1934', text: 'A clinic organised by Dr Milbank Johnson treats 16 cancer patients; the story says 14 were “clinically cured” in three months. The figure comes from Rife’s own report. The patient records were never published, and Johnson reportedly wrote in 1935 that the results were “not conclusive”.', status: 'claimed', source: 'Rife’s report; no clinic records published' },
+  { year: '1938', text: 'The San Diego Evening Tribune reports Rife’s claim to “devitalize disease organisms” — and that he stopped short of claiming a cure for cancer.', status: 'documented', source: 'San Diego Evening Tribune (6 May 1938)' },
+  { year: '1930s–40s', text: 'The story says the AMA’s Morris Fishbein offered to buy Rife out, then sent people with bribes and threats, and that Rife’s lab was vandalised and his research destroyed. Fishbein was a real and combative AMA figure; we found no record of these specific events.', status: 'claimed', source: 'the video and later promotional retellings' },
+  { year: '1939–69', text: 'The story attributes a lab fire, a poisoning (of Dr Johnson, who died in 1944) and a hotel-bed fire to suppression of Rife’s work. We found no source for any of these beyond promotional retellings.', status: 'claimed', source: 'promotional retellings only' },
+  { year: '1960–61', text: 'The story says Rife’s later partners were prosecuted for medical fraud and imprisoned. We have not located court records to confirm the details.', status: 'claimed', source: 'the video; court records not located' },
+  { year: '1971', text: 'Rife dies on 5 August in El Cajon, California, aged 83 — penniless, and blaming organised medicine, per his obituary. The video says he was given a lethal dose of Valium in hospital; no record we found states the cause of death.', status: 'documented', source: 'Daily Californian obituary (11 Aug 1971); cause of death not in the record' },
+  { year: '1987', text: 'Barry Lynes publishes The Cancer Cure That Worked, the book behind most of today’s Rife story. The American Cancer Society calls its claims implausible.', status: 'documented', source: 'the book; American Cancer Society' },
+  { year: '1994', text: 'The American Cancer Society’s journal reviews electronic cancer devices, Rife devices among them, and finds no evidence they work.', status: 'documented', source: 'CA: A Cancer Journal for Clinicians (1994)' },
+  { year: '1996–2009', text: 'Sellers of Rife devices are convicted of health fraud in the US — including felony convictions in 1996 and 26 felony counts against one seller in 2009.', status: 'documented', source: 'FDA Consumer; court reporting' },
+  { year: '2000', text: 'An Australian newspaper links Rife machines to the deaths of cancer patients who relied on them.', status: 'documented', source: 'Sydney Morning Herald (30 Dec 2000)' },
+  { year: '2001 · 2020', text: 'The US Federal Trade Commission sues a seller over claims that its Rife-style devices protect against viruses and bacteria (2001), and warns another over COVID-19 claims for frequency programmes (2020).', status: 'documented', source: 'FTC complaint (2001); FTC warning letter (2020)' },
+  { year: '2026', text: 'Rife, Tested: an open, blinded test in a dish — yeast, a driven coil and an identical sham, counted blind. Never on a person or an animal.', status: 'documented', source: 'HiveJournal protocol' },
+];
+
 function guideCard(href: string, kicker: string, title: string, line: string): string {
   return `<a href="${href}" class="block rounded-lg border border-zinc-900/10 bg-white/60 p-5 no-underline transition hover:border-zinc-900/30"><span class="block text-[11px] font-semibold uppercase tracking-[0.18em] opacity-60">${kicker}</span><span class="mt-2 block text-lg font-medium leading-snug">${title}</span><span class="mt-1 block text-sm opacity-70">${line}</span></a>`;
 }
@@ -388,6 +437,7 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<div class="not-prose mt-6 grid gap-4 sm:grid-cols-2">' +
           guideCard('/havn-hat', 'Open experiment · EMF clothing', 'Does the HAVN hat do anything?', 'A meter test, then 12 blinded nights against a plain beanie.') +
           guideCard('/rife-tested', 'Open experiment · frequencies', 'Rife, tested: does a frequency kill a microbe?', 'A blinded test in a dish — never on a person.') +
+          guideCard('/rife-history', 'History', 'Royal Rife: the story vs the record', 'Every claim in a popular video, checked against the documents.') +
           guideCard('/mullein-study', 'Planned study', 'Mullein for smoker’s cough', 'Placebo-controlled; opens after ethics approval.') +
           guideCard('/my-urolithin-a-log', 'Self-test', 'One person’s urolithin A log', 'On, off, on — every reading published.') +
           '</div>',
@@ -438,9 +488,31 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           eyebrow('What is known today') +
           '<h2>A long history of claims, and of regulators</h2>' +
           '<p>Rife devices are named after Royal Rife, who claimed in the 1930s that frequencies could destroy microbes. Sellers have repeated versions of that claim since. The US Federal Trade Commission sued one seller in 2001 over ads claiming protection against viruses and bacteria, and in 2020 warned another over COVID-19 claims for frequency programmes. We found no modern controlled study showing a Rife device kills microbes.</p>' +
+          '<p>The full story — and which parts of it are documented — is in <a href="/rife-history">Royal Rife: the story vs the record</a>.</p>' +
           '<p>That is why this test happens in a dish and nowhere else: if a frequency did kill a microbe, a dish is the simplest place to see it, and nobody is put at risk finding out.</p>' +
           '<h2>What this page will never say</h2>' +
           '<p>That a frequency treats, prevents or cures anything in a person. Even a positive result in a dish would not show that.</p>',
+      },
+    ],
+  },
+  {
+    slug: 'rife-history',
+    title: 'Royal Rife: The Story vs the Record — A Timeline',
+    description: 'A popular video says Royal Rife “cured cancer” and was silenced. Each claim, checked: documented, only claimed, or contradicted by the record.',
+    blocks: [
+      { kind: 'hero', headline: 'Royal Rife: the story vs the record', subheadline: 'Every claim in a popular video, set against what is documented.' },
+      {
+        kind: 'text',
+        html:
+          '<p>A widely shared video tells the story of Royal Raymond Rife: a brilliant scientist who built a microscope that could see viruses, found frequencies that made microbes explode, cured 14 of 16 “hopeless” cancer patients in 1934 — and was silenced by the American Medical Association. We transcribed it and checked each claim against the record.</p>' +
+          '<p>Each entry below is marked <strong>documented</strong> (a record exists), <strong>claimed</strong> (the story says it; we found no record), or <strong>contradicted</strong> (a record says otherwise). Where we found nothing, we say so — that is not the same as proving it false.</p>' +
+          eyebrow(`Timeline · checked ${RIFE_HISTORY_CHECKED}`) +
+          historyTimeline(RIFE_HISTORY) +
+          eyebrow('What this adds up to') +
+          '<h2>A real inventor, a story that grew</h2>' +
+          '<p>Rife was real, built real microscopes, and was covered by real newspapers. The cancer cure is not in the record: the one clinic’s results come from his own report, its records were never published, and in 1938 a newspaper that covered him noted he stopped short of claiming a cure. The suppression story — bribes, fires, poisonings — appears in retellings, mostly after a 1987 book, not in documents we could find.</p>' +
+          '<p><strong>If you or someone you love has cancer, please talk to an oncologist.</strong> People have died relying on Rife devices instead of treatment.</p>' +
+          '<p>Whether a frequency can kill a microbe at all is a question a dish can answer, safely. <a href="/rife-tested">That test is open to anyone</a>.</p>',
       },
     ],
   },

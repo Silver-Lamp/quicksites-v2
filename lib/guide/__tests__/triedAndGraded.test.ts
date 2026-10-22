@@ -3,7 +3,7 @@
  */
 // The guide's copy rules (docs/longevity/MULLEIN_PAGES.md). A health page is the one place a phrase
 // is a claim; these fail before a page ships.
-import { AFFILIATE_LINKS_LIVE, COMMISSION_LINE, GUIDE_NAME, GUIDE_PAGES, GUIDE_THEME, guidePages, guideStats, NOT_AFFILIATED_BZ, QUIT_LINE } from '@/lib/guide/triedAndGraded';
+import { AFFILIATE_LINKS_LIVE, COMMISSION_LINE, GUIDE_NAME, GUIDE_PAGES, GUIDE_THEME, guidePages, guideStats, NOT_AFFILIATED_BZ, QUIT_LINE, RIFE_HISTORY } from '@/lib/guide/triedAndGraded';
 import { gradeClaim } from '@/lib/evidence/grade';
 import { BLUE_ZONES_CLAIMS, BLUE_ZONES_STUDIES } from '@/lib/evidence/topics/blueZones';
 import { UROLITHIN_A_CLAIMS, UROLITHIN_A_STUDIES } from '@/lib/evidence/topics/urolithinA';
@@ -96,6 +96,19 @@ describe('Tried & Graded copy rules', () => {
     const unquoted = text(html(GUIDE_PAGES.find((x) => x.slug === 'havn-hat')!)).replace(/“[^”]*”/g, '');
     expect(unquoted).not.toMatch(/\b(the hat|the havn hat|havn) (works|improves|protects|blocks)\b/i);
     expect(text(html(GUIDE_PAGES.find((x) => x.slug === 'rife-tested')!))).toMatch(/never on a person/i);
+  });
+  it('the Rife history: every row has a status and a source, and no row asserts a cure', () => {
+    expect(RIFE_HISTORY.length).toBeGreaterThan(10);
+    for (const r of RIFE_HISTORY) {
+      expect(['documented', 'claimed', 'contradicted']).toContain(r.status);
+      expect(r.source.length).toBeGreaterThan(5);
+    }
+    const p = GUIDE_PAGES.find((x) => x.slug === 'rife-history')!;
+    const t = text(html(p)).replace(/“[^”]*”/g, '');
+    expect(t).not.toMatch(/\b(rife|the device|the machine|frequencies?) (cured|cures|kills|destroys)\b/i);
+    expect(html(p)).toMatch(/talk to an oncologist/);
+    expect(html(p)).toContain('data-history-status="claimed"');
+    expect(html(p)).toContain('data-history-status="contradicted"');
   });
   it('urolithin A: the grades the trials produce, nulls included', () => {
     const g = (id: string) => gradeClaim(UROLITHIN_A_CLAIMS.find((c) => c.id === id)!.evidence, UROLITHIN_A_STUDIES);

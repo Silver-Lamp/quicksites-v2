@@ -6,6 +6,7 @@
 import { AFFILIATE_LINKS_LIVE, COMMISSION_LINE, GUIDE_NAME, GUIDE_PAGES, guidePages, NOT_AFFILIATED_BZ, QUIT_LINE } from '@/lib/guide/triedAndGraded';
 import { gradeClaim } from '@/lib/evidence/grade';
 import { BLUE_ZONES_CLAIMS, BLUE_ZONES_STUDIES } from '@/lib/evidence/topics/blueZones';
+import { UROLITHIN_A_CLAIMS, UROLITHIN_A_STUDIES } from '@/lib/evidence/topics/urolithinA';
 
 const html = (p: (typeof GUIDE_PAGES)[number]) =>
   p.blocks.map((b) => (b.kind === 'text' ? b.html : b.kind === 'hero' ? `${b.headline} ${b.subheadline}` : '')).join(' ') + ` ${p.title} ${p.description}`;
@@ -67,6 +68,24 @@ describe('Tried & Graded copy rules', () => {
     const g = (id: string) => gradeClaim(BLUE_ZONES_CLAIMS.find((c) => c.id === id)!.evidence, BLUE_ZONES_STUDIES);
     for (const id of ['move', 'purpose', 'plants', 'eighty-percent', 'belong', 'social-ties', 'right-tribe']) expect(g(id)).toBe('early');
     expect(g('wine')).toBe('no_evidence');
+  });
+  it('urolithin A: the grades the trials produce, nulls included', () => {
+    const g = (id: string) => gradeClaim(UROLITHIN_A_CLAIMS.find((c) => c.id === id)!.evidence, UROLITHIN_A_STUDIES);
+    expect(g('endurance')).toBe('early'); // secondary outcomes only
+    expect(g('strength')).toBe('early');
+    expect(g('walking')).toBe('tested_no_effect'); // a blinded primary null outranks a secondary positive
+    expect(g('power')).toBe('tested_no_effect');
+    expect(g('blood-vessels')).toBe('tested_no_effect');
+    expect(g('immune')).toBe('promising'); // one blinded trial, primary biomarker outcome
+  });
+  it('the log page invents no reading, and says what it cannot show', () => {
+    const p = GUIDE_PAGES.find((x) => x.slug === 'my-urolithin-a-log')!;
+    expect(html(p)).toMatch(/No readings yet/);
+    expect(html(p)).toMatch(/a log, not evidence/);
+    expect(text(html(p))).not.toMatch(/\b\d+\s*(reps|repetitions)\b/i);
+  });
+  it('the urolithin A page names who paid for the trials', () => {
+    expect(html(GUIDE_PAGES.find((x) => x.slug === 'urolithin-a')!)).toMatch(/paid for by the maker/);
   });
   it('habits with no study entered are listed as not yet graded, never graded "no evidence"', () => {
     const p = GUIDE_PAGES.find((x) => x.slug === 'blue-zones-habits-graded')!;

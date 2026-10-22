@@ -52,7 +52,7 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<p>Where a popular claim has never been tested, we say so, and where we can, we run the test — registered in advance, published whatever it shows.</p>' +
           commissionP +
           '<h2>Guides</h2>' +
-          '<ul><li><a href="/mullein-for-smokers">Mullein for smokers: what the evidence says</a></li><li><a href="/does-mullein-work">Does mullein work?</a></li><li><a href="/does-mullein-detox-your-lungs">Does mullein detox your lungs?</a></li><li><a href="/smoking-mullein">Smoking mullein</a></li><li><a href="/mullein-drops-gummies-capsules-tea">Mullein drops, gummies, capsules or tea</a></li><li><a href="/mullein-study">Our mullein study</a></li><li><a href="/are-the-blue-zones-real">Are the Blue Zones real?</a></li><li><a href="/blue-zones-habits-graded">The Blue Zones habits, graded</a></li><li><a href="/blue-zones-habit-experiment">Try a habit as an experiment</a></li></ul>',
+          '<ul><li><a href="/mullein-for-smokers">Mullein for smokers: what the evidence says</a></li><li><a href="/does-mullein-work">Does mullein work?</a></li><li><a href="/does-mullein-detox-your-lungs">Does mullein detox your lungs?</a></li><li><a href="/smoking-mullein">Smoking mullein</a></li><li><a href="/mullein-drops-gummies-capsules-tea">Mullein drops, gummies, capsules or tea</a></li><li><a href="/mullein-study">Our mullein study</a></li><li><a href="/urolithin-a">Does urolithin A (Mitopure) work?</a></li><li><a href="/my-urolithin-a-log">One person’s urolithin A log</a></li><li><a href="/are-the-blue-zones-real">Are the Blue Zones real?</a></li><li><a href="/blue-zones-habits-graded">The Blue Zones habits, graded</a></li><li><a href="/blue-zones-habit-experiment">Try a habit as an experiment</a></li></ul>',
       },
     ],
   },
@@ -225,6 +225,56 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<ol><li><strong>Pick one habit</strong> — say, a walk after every meal, or one more meal a week with friends.</li><li><strong>Pick one thing to measure</strong> that you can’t talk yourself into: resting heart rate in the morning, hours of sleep from a tracker, daily steps, or a short standard mood questionnaire.</li><li><strong>Measure for a week before you start</strong>, then four weeks with the habit. Same time of day, every day.</li><li><strong>Write down your prediction first</strong> — how much you expect it to change — so the result can surprise you.</li><li><strong>Keep every reading</strong>, including the bad weeks.</li></ol>' +
           '<p>One person’s four weeks is a log, not proof. Many people logging the same habit the same way starts to say something — that is what we’re building, with HiveJournal. <strong>Not open yet</strong>; this page will say when.</p>' +
           `<p><em>${NOT_AFFILIATED_BZ}</em></p>`,
+      },
+    ],
+  },
+  {
+    slug: 'urolithin-a',
+    navLabel: 'Urolithin A',
+    title: 'Does Urolithin A (Mitopure) Work? Every Trial, Graded',
+    description: 'Urolithin A in human trials: what improved, what didn’t, and who paid — each claim graded by the same fixed rules.',
+    blocks: [
+      { kind: 'hero', headline: 'Does urolithin A work?', subheadline: 'Four placebo-controlled trials. Some results held, some didn’t. Each claim graded.' },
+      {
+        kind: 'text',
+        html:
+          '<p>Urolithin A is a compound your gut bacteria can make from foods like pomegranate — some people make plenty, many make little. It is sold as a supplement, mainly as <strong>Mitopure</strong>, an ingredient made by Amazentis and sold under its own brand, Timeline. The idea behind it: it helps cells clear out worn-out mitochondria, the parts that make energy.</p>' +
+          '<p><strong>The short answer:</strong> it has more real human trials than most supplements — four placebo-controlled trials between 2022 and 2026. The results are mixed. Several measures improved; several main outcomes did not. Three of the four trials were paid for by the maker; we show that next to every result.</p>',
+      },
+      { kind: 'evidence', topic: 'urolithin-a', claimIds: [], title: 'Each claim, graded' },
+      {
+        kind: 'text',
+        html:
+          '<h2>What no trial has measured</h2>' +
+          '<p>No human trial has tested whether urolithin A slows aging or adds years of life. The longest trials ran four months. Lifespan results come from animal studies only.</p>' +
+          '<h2>Is it safe?</h2>' +
+          '<p>Across these trials, side effects were no different from placebo at the doses tested (up to 1,000 mg a day, up to four months). Longer-term safety in people hasn’t been studied. Talk to a doctor first if you are pregnant, take other medicines, or have a medical condition.</p>' +
+          '<h2>A test of our own</h2>' +
+          '<p>The founder of this site is taking Mitopure and logging it on a schedule set in advance — on, off, then on again — measuring the one thing the trials found most often: muscle endurance. <a href="/my-urolithin-a-log">The log, including the weeks off</a>.</p>' +
+          commissionP,
+      },
+    ],
+  },
+  {
+    slug: 'my-urolithin-a-log',
+    title: 'Urolithin A: One Person’s On/Off Log, Published in Full',
+    description: 'The founder of this site takes Mitopure and logs grip endurance on a schedule set in advance — on, off, on — with every reading published.',
+    blocks: [
+      { kind: 'hero', headline: 'One person’s urolithin A log', subheadline: 'On, off, then on again. Every reading published, including the weeks off.' },
+      {
+        kind: 'text',
+        html:
+          '<p>Sandon, who runs this site, started taking Mitopure (Timeline) in mid-October 2026. There was no reading before he started, and one can’t be made after the fact — so instead of a before-and-after, this log switches it off and on again and compares the stretches.</p>' +
+          '<h2>The plan, set before the first reading</h2>' +
+          '<ul><li><strong>On</strong> for 6 weeks, measuring weekly.</li><li><strong>Off</strong> for 4 weeks, measuring on the same schedule.</li><li><strong>On</strong> again for 6 weeks.</li></ul>' +
+          '<h2>What’s measured</h2>' +
+          '<ul><li><strong>Grip endurance</strong> — repetitions to fatigue at a fixed load on a hand dynamometer. This mirrors the hand-muscle endurance result in the 2022 trial of older adults.</li><li><strong>A 6-minute walk</strong> on a measured course, monthly. That was the same trial’s main outcome, and it did not improve — it is included anyway.</li></ul>' +
+          '<p>Same time of day each time, and no hard workout in the 24 hours before.</p>' +
+          '<h2>The readings</h2>' +
+          '<p><em>No readings yet — the first one will appear here, and every one after it, including the off weeks.</em></p>' +
+          '<h2>What this can and can’t show</h2>' +
+          '<p>One person who knows what he’s taking is a log, not evidence. It can’t move the grades on <a href="/urolithin-a">the urolithin A page</a>, and it isn’t a typical result. What it can do is show, in public and in advance, what an honest self-test looks like.</p>' +
+          commissionP,
       },
     ],
   },

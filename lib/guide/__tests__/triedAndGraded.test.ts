@@ -46,7 +46,7 @@ describe('Tried & Graded copy rules', () => {
     expect(GUIDE_PAGES.find((p) => p.slug === 'mullein-for-smokers')!.blocks.some((b) => b.kind === 'evidence')).toBe(true);
   });
   it('every page that names smokers or smoking carries quit help', () => {
-    for (const p of GUIDE_PAGES) if (/smok/i.test(html(p)) && p.slug !== 'home' && p.slug !== 'how-we-grade' && p.slug !== 'mullein-drops-gummies-capsules-tea' && p.slug !== 'does-mullein-work') expect(html(p)).toContain(QUIT_LINE);
+    for (const p of GUIDE_PAGES) if (/smok/i.test(html(p)) && p.slug !== 'home' && p.slug !== 'experiments' && p.slug !== 'how-we-grade' && p.slug !== 'mullein-drops-gummies-capsules-tea' && p.slug !== 'does-mullein-work') expect(html(p)).toContain(QUIT_LINE);
   });
   it('with no affiliate links live, no page carries the commission notice (owner, 2026-10-21)', () => {
     for (const p of guidePages({ affiliateLinksLive: false })) expect(html(p)).not.toContain(COMMISSION_LINE);
@@ -83,6 +83,19 @@ describe('Tried & Graded copy rules', () => {
     expect(GUIDE_THEME.neutral).toBe('warm');
     expect(GUIDE_THEME.accentColor).not.toMatch(/^red-/);
     for (const p of GUIDE_PAGES) expect(text(html(p))).not.toMatch(/timeline\.com|time—line|doctor recommended|#1/i);
+  });
+  it('open experiments are never graded, never affiliate-linked, and say they are untested (HiveJournal, 2026-10-22)', () => {
+    for (const slug of ['havn-hat', 'rife-tested']) {
+      const p = GUIDE_PAGES.find((x) => x.slug === slug)!;
+      expect(p.blocks.some((b) => b.kind === 'evidence')).toBe(false);
+      expect(html(p)).toMatch(/data-experiment-status="untested"/);
+      expect(html(p)).toMatch(/not verified by us/);
+      expect(html(p)).not.toMatch(/havnwear\.com|amazon\.|[?&](ref|aff|tag|utm_)[a-z_]*=/i);
+    }
+    // The maker's claim is quoted and attributed; outside the quotation the page asserts nothing.
+    const unquoted = text(html(GUIDE_PAGES.find((x) => x.slug === 'havn-hat')!)).replace(/“[^”]*”/g, '');
+    expect(unquoted).not.toMatch(/\b(the hat|the havn hat|havn) (works|improves|protects|blocks)\b/i);
+    expect(text(html(GUIDE_PAGES.find((x) => x.slug === 'rife-tested')!))).toMatch(/never on a person/i);
   });
   it('urolithin A: the grades the trials produce, nulls included', () => {
     const g = (id: string) => gradeClaim(UROLITHIN_A_CLAIMS.find((c) => c.id === id)!.evidence, UROLITHIN_A_STUDIES);

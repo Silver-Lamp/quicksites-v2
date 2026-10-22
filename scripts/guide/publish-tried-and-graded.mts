@@ -11,7 +11,10 @@ import { supabaseAdmin as db } from '@/lib/supabase/admin';
 import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
 
 const OPERATOR_ID = 'fbde34ec-16e7-4dfe-94b5-ca2cc4d448d2';
-const SLUG = 'tried-and-graded';
+// ⚠️ A custom domain is served from /sites/<domain label> (middleware.ts, 'Arbitrary custom domain → slug
+// from apex label'), so the slug MUST equal the domain's label: triedandgraded.com → 'triedandgraded'.
+// Published first as 'tried-and-graded' and every page 404'd on the domain until renamed (2026-10-21).
+const SLUG = 'triedandgraded';
 const APEX = 'triedandgraded.com';
 const HOST = `www.${APEX}`;
 

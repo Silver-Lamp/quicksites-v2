@@ -1,6 +1,8 @@
 // scripts/guide/build-tried-and-graded.mts — build (or rebuild the content of) the evidence guide
 // site from lib/guide/triedAndGraded.ts. Operator-owned, UNPUBLISHED: only an admin sees it until
-// the owner picks a domain and publishes (publishing health content is the owner's call).
+// the owner picks a domain and publishes (publishing health content is the owner's call). LIVE since
+// 2026-10-21: after --apply, run scripts/guide/publish-tried-and-graded.mts — this commits the DRAFT only,
+// and visitors are served the published snapshots.
 //
 // ⚠️ Run only after the `evidence_claims` block is DEPLOYED — a draft holding a block type the
 // running code doesn't know throws `Invalid block` when the editor or renderer normalises it.
@@ -13,7 +15,10 @@ import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
 import { GUIDE_NAME, GUIDE_PAGES, type GuideBlock } from '@/lib/guide/triedAndGraded';
 
 const APPLY = process.argv.includes('--apply');
-const SLUG = 'tried-and-graded';
+// ⚠️ A custom domain is served from /sites/<domain label> (middleware.ts, 'Arbitrary custom domain → slug
+// from apex label'), so the slug MUST equal the domain's label: triedandgraded.com → 'triedandgraded'.
+// Published first as 'tried-and-graded' and every page 404'd on the domain until renamed (2026-10-21).
+const SLUG = 'triedandgraded';
 const OPERATOR_ID = 'fbde34ec-16e7-4dfe-94b5-ca2cc4d448d2';
 
 function block(b: GuideBlock): any {

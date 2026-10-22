@@ -812,7 +812,13 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   pins that a typed grade is ignored). The guide's copy is code (`lib/guide/triedAndGraded.ts`,
   held to the copy rules by test — no "detox/cleanse/repair" assertion, quit help on smokers
   pages, commission line first on product pages) and built by `scripts/guide/build-tried-and-graded.mts`
-  into an UNPUBLISHED operator template `tried-and-graded`. Plan + mullein study:
+  into the operator template `triedandgraded`, **LIVE at https://www.triedandgraded.com since 2026-10-21**
+  (apex 308 → www; Search Console verified; `AFFILIATE_LINKS_LIVE=false` hides the commission notice
+  until product links exist). ⚠️ **A custom domain is served from `/sites/<domain label>`** (middleware's
+  apex-label fallback), so a template bound to a custom domain MUST have slug = the domain's label —
+  published first as `tried-and-graded`, every page 404'd until renamed via `app.set_template_slug`
+  (+ the legacy `sites.slug`). After changing copy: `build-tried-and-graded.mts --apply` then
+  `publish-tried-and-graded.mts` (the build commits the draft; the publish re-mints the served copies). Plan + mullein study:
   `docs/LONGEVITY_PLAN.md`, `docs/studies/MULLEIN_SMOKERS_PROTOCOL.md`; shared shape proposed as
   `crosstalk/contracts/evidence-grade.md`.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).

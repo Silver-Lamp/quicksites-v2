@@ -43,16 +43,19 @@ export default function EvidenceClaimsRender({ block, content, previewOnly }: { 
   const showStudies = c.show_studies !== false;
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-8 text-foreground" data-evidence-topic={topic.key}>
-      {c.title ? <h2 className="mb-2 text-2xl font-bold">{c.title}</h2> : null}
-      <p className="mb-4 text-xs text-muted-foreground">Evidence checked {topic.checked}. Grades are calculated from the studies listed, by fixed rules.</p>
-      <ul className="space-y-3">
+    // Rows divided by hairlines rather than filled cards, a small uppercase label over the title —
+    // the quieter layout of the Tried & Graded design pass (docs/longevity/TRIEDANDGRADED_DESIGN.md).
+    <section className="mx-auto w-full max-w-3xl px-4 py-10 text-foreground" data-evidence-topic={topic.key}>
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{topic.label} · evidence checked {topic.checked}</p>
+      {c.title ? <h2 className="mb-1 text-2xl font-medium tracking-tight">{c.title}</h2> : null}
+      <p className="mb-6 text-sm text-muted-foreground">Grades are calculated from the studies listed, by fixed rules.</p>
+      <ul className="divide-y divide-border border-y border-border">
         {claims.map((cl) => {
           const g = gradeClaim(cl.evidence, topic.studies);
           return (
-            <li key={cl.id} className="rounded-xl border border-border bg-card p-4 text-card-foreground">
+            <li key={cl.id} className="py-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold">{cl.claim}</span>
+                <span className="text-lg font-medium leading-snug">{cl.claim}</span>
                 <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold text-foreground ${BADGE[g]}`} data-grade={g}>
                   {GRADE_LABEL[g]}
                 </span>

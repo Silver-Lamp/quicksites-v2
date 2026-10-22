@@ -3,7 +3,7 @@
  */
 // The guide's copy rules (docs/longevity/MULLEIN_PAGES.md). A health page is the one place a phrase
 // is a claim; these fail before a page ships.
-import { AFFILIATE_LINKS_LIVE, COMMISSION_LINE, GUIDE_NAME, GUIDE_PAGES, guidePages, NOT_AFFILIATED_BZ, QUIT_LINE } from '@/lib/guide/triedAndGraded';
+import { AFFILIATE_LINKS_LIVE, COMMISSION_LINE, GUIDE_NAME, GUIDE_PAGES, GUIDE_THEME, guidePages, guideStats, NOT_AFFILIATED_BZ, QUIT_LINE } from '@/lib/guide/triedAndGraded';
 import { gradeClaim } from '@/lib/evidence/grade';
 import { BLUE_ZONES_CLAIMS, BLUE_ZONES_STUDIES } from '@/lib/evidence/topics/blueZones';
 import { UROLITHIN_A_CLAIMS, UROLITHIN_A_STUDIES } from '@/lib/evidence/topics/urolithinA';
@@ -68,6 +68,21 @@ describe('Tried & Graded copy rules', () => {
     const g = (id: string) => gradeClaim(BLUE_ZONES_CLAIMS.find((c) => c.id === id)!.evidence, BLUE_ZONES_STUDIES);
     for (const id of ['move', 'purpose', 'plants', 'eighty-percent', 'belong', 'social-ties', 'right-tribe']) expect(g(id)).toBe('early');
     expect(g('wine')).toBe('no_evidence');
+  });
+  it('the home stats are derived from the records, not typed', () => {
+    const s = guideStats();
+    expect(s.studies).toBeGreaterThan(10);
+    expect(s.testedNoEffect).toBeGreaterThanOrEqual(3);
+    const home = html(GUIDE_PAGES.find((p) => p.slug === 'home')!);
+    expect(home).toContain(`>${s.studies}<`);
+    expect(home).toContain(`>${s.claims}<`);
+    expect(home).toContain(`>${s.testedNoEffect}<`);
+  });
+  it('the design pass borrows a look, not a brand: a light warm theme with our own accent', () => {
+    expect(GUIDE_THEME.darkMode).toBe('light');
+    expect(GUIDE_THEME.neutral).toBe('warm');
+    expect(GUIDE_THEME.accentColor).not.toMatch(/^red-/);
+    for (const p of GUIDE_PAGES) expect(text(html(p))).not.toMatch(/timeline\.com|time—line|doctor recommended|#1/i);
   });
   it('urolithin A: the grades the trials produce, nulls included', () => {
     const g = (id: string) => gradeClaim(UROLITHIN_A_CLAIMS.find((c) => c.id === id)!.evidence, UROLITHIN_A_STUDIES);

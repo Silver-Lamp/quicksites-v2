@@ -21,7 +21,7 @@ describe('evidence_claims block', () => {
     const { container } = render(<EvidenceClaims block={block({ topic: 'mullein', claim_ids: ['cough', 'smokers-lungs'] })} />);
     const grades = Array.from(container.querySelectorAll('[data-grade]')).map((n) => n.getAttribute('data-grade'));
     expect(grades).toEqual(['no_evidence', 'no_evidence']);
-    expect(container.textContent).toMatch(/Evidence checked 2026-10-21/);
+    expect(container.textContent).toMatch(/evidence checked 2026-10-21/i);
   });
   it('a grade typed into the block content is ignored — the records decide', () => {
     const { container } = render(<EvidenceClaims block={block({ topic: 'mullein', claim_ids: ['cough'], grade: 'established' })} />);

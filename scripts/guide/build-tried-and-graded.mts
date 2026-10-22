@@ -12,7 +12,7 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
-import { GUIDE_NAME, GUIDE_PAGES, type GuideBlock } from '@/lib/guide/triedAndGraded';
+import { GUIDE_NAME, GUIDE_PAGES, GUIDE_THEME, type GuideBlock } from '@/lib/guide/triedAndGraded';
 
 const APPLY = process.argv.includes('--apply');
 // ⚠️ A custom domain is served from /sites/<domain label> (middleware.ts, 'Arbitrary custom domain → slug
@@ -60,10 +60,11 @@ function buildData() {
   const home = GUIDE_PAGES[0];
   return {
     data: {
-      meta: { siteTitle: GUIDE_NAME, business_name: GUIDE_NAME, title: home.title, description: home.description, guide: { source: 'lib/guide/triedAndGraded.ts' } },
+      // The design pass (docs/longevity/TRIEDANDGRADED_DESIGN.md): warm light theme, no backdrop layer.
+      meta: { siteTitle: GUIDE_NAME, business_name: GUIDE_NAME, title: home.title, description: home.description, guide: { source: 'lib/guide/triedAndGraded.ts' }, theme: GUIDE_THEME, backdrop: { style: 'none', intensity: 0 } },
       pages,
       services: [],
-      color_mode: 'dark',
+      color_mode: 'light',
       headerBlock: header,
       footerBlock: footer,
     },
@@ -88,7 +89,7 @@ async function main() {
     template_name: GUIDE_NAME,
     slug: SLUG,
     data,
-    color_mode: 'dark',
+    color_mode: 'light',
     header_block: header,
     footer_block: footer,
     is_site: false,

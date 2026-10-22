@@ -7,7 +7,67 @@
 // Grades are NEVER written here: pages embed an `evidence_claims` block and the grade is derived
 // from lib/evidence/topics at render.
 
+import { gradeClaim } from '@/lib/evidence/grade';
+import { EVIDENCE_TOPICS } from '@/lib/evidence/topics';
+
 export const GUIDE_NAME = 'Tried & Graded';
+
+/**
+ * The look, borrowed in spirit from timeline.com (owner, 2026-10-21: "a case study to borrow design
+ * elements from … not a blatant ripoff but similar styling"; docs/longevity/TRIEDANDGRADED_DESIGN.md):
+ * a warm light page, a clean grotesk heading face, one restrained accent (emerald, not their red),
+ * soft cards, airy banded sections. Applied by scripts/guide/build-tried-and-graded.mts.
+ */
+export const GUIDE_THEME = {
+  id: 'tried-and-graded',
+  name: 'Tried & Graded',
+  accentColor: 'emerald-700',
+  accent2Color: 'stone-700',
+  neutral: 'warm',
+  surface: 'soft',
+  darkMode: 'light',
+  fontPair: 'sora-inter',
+  fontFamily: 'sans',
+  borderRadius: 'lg',
+  layout: { rhythm: 'banded', density: 'airy', sectionWidth: 'wide', heroLayout: 'centered', featureVariant: 'grid' },
+} as const;
+
+/** Small uppercase section label (Timeline's "COMPARE US TO OTHER" device). */
+export const eyebrow = (t: string) => `<p class="not-prose mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] opacity-60">${t}</p>`;
+
+/**
+ * The home page's numbers, DERIVED from the evidence records at build time — never typed
+ * (crosstalk/contracts/re-derivable-claims-standard.md). Adding a study or a topic changes them.
+ */
+export function guideStats() {
+  const topics = Object.values(EVIDENCE_TOPICS);
+  const studies = topics.reduce((n, t) => n + t.studies.length, 0);
+  const claims = topics.flatMap((t) => t.claims.map((c) => gradeClaim(c.evidence, t.studies)));
+  return {
+    topics: topics.length,
+    studies,
+    claims: claims.length,
+    testedNoEffect: claims.filter((g) => g === 'tested_no_effect').length,
+  };
+}
+
+function statsRow(): string {
+  const s = guideStats();
+  const cell = (n: number | string, label: string) =>
+    `<div class="border-t border-zinc-900/15 pt-3"><div class="text-4xl font-medium tracking-tight">${n}</div><div class="mt-1 text-sm opacity-70">${label}</div></div>`;
+  return (
+    '<div class="not-prose my-10 grid grid-cols-2 gap-6 sm:grid-cols-4">' +
+    cell(s.studies, 'Studies read and recorded') +
+    cell(s.claims, 'Claims graded by fixed rules') +
+    cell(s.testedNoEffect, 'Claims tested and found to do nothing') +
+    cell(6, 'Grades. Nobody picks the word.') +
+    '</div>'
+  );
+}
+
+function guideCard(href: string, kicker: string, title: string, line: string): string {
+  return `<a href="${href}" class="block rounded-lg border border-zinc-900/10 bg-white/60 p-5 no-underline transition hover:border-zinc-900/30"><span class="block text-[11px] font-semibold uppercase tracking-[0.18em] opacity-60">${kicker}</span><span class="mt-2 block text-lg font-medium leading-snug">${title}</span><span class="mt-1 block text-sm opacity-70">${line}</span></a>`;
+}
 export const QUIT_LINE = 'Free help to stop smoking: <a href="https://smokefree.gov">smokefree.gov</a> · 1-800-QUIT-NOW (1-800-784-8669).';
 export const COMMISSION_LINE = 'We earn a commission if you buy through links on this site. It never changes a grade — grades are calculated from the studies by fixed rules.';
 /** Blue Zones, LLC owns the BLUE ZONES and Power 9 marks; every page that names them says this. */
@@ -47,12 +107,24 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
       {
         kind: 'text',
         html:
-          '<h2>How this site works</h2>' +
-          '<p>Every claim gets a grade, and nobody here types it. We record each study — its design, its size, who paid for it, and whether the claim was what the study set out to test — and a fixed set of rules turns that into one of six grades. To change a grade, the evidence has to change. <a href="/how-we-grade">How we grade</a>.</p>' +
+          statsRow() +
+          eyebrow('How this works') +
+          '<h2>Every claim gets a grade, and nobody here types it.</h2>' +
+          '<p>We record each study — its design, its size, who paid for it, and whether the claim was what the study set out to test — and a fixed set of rules turns that into one of six grades. To change a grade, the evidence has to change. <a href="/how-we-grade">How we grade</a>.</p>' +
           '<p>Where a popular claim has never been tested, we say so, and where we can, we run the test — registered in advance, published whatever it shows.</p>' +
           commissionP +
-          '<h2>Guides</h2>' +
-          '<ul><li><a href="/mullein-for-smokers">Mullein for smokers: what the evidence says</a></li><li><a href="/does-mullein-work">Does mullein work?</a></li><li><a href="/does-mullein-detox-your-lungs">Does mullein detox your lungs?</a></li><li><a href="/smoking-mullein">Smoking mullein</a></li><li><a href="/mullein-drops-gummies-capsules-tea">Mullein drops, gummies, capsules or tea</a></li><li><a href="/mullein-study">Our mullein study</a></li><li><a href="/urolithin-a">Does urolithin A (Mitopure) work?</a></li><li><a href="/my-urolithin-a-log">One person’s urolithin A log</a></li><li><a href="/are-the-blue-zones-real">Are the Blue Zones real?</a></li><li><a href="/blue-zones-habits-graded">The Blue Zones habits, graded</a></li><li><a href="/blue-zones-habit-experiment">Try a habit as an experiment</a></li></ul>',
+          eyebrow('Guides') +
+          '<h2>What we’ve graded</h2>' +
+          '<div class="not-prose mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' +
+          guideCard('/urolithin-a', 'Urolithin A · Mitopure', 'Does urolithin A work?', 'Four placebo-controlled trials. Some results held, some didn’t.') +
+          guideCard('/mullein-for-smokers', 'Mullein', 'Mullein for smokers', 'Nobody has tested it. That’s why we’re running a study.') +
+          guideCard('/blue-zones-habits-graded', 'Blue Zones', 'The Blue Zones habits, graded', 'Sensible habits, mostly observational evidence.') +
+          guideCard('/are-the-blue-zones-real', 'Blue Zones', 'Are the Blue Zones real?', 'The age-record debate, both sides.') +
+          guideCard('/does-mullein-work', 'Mullein', 'Does mullein work?', 'Every common claim, graded.') +
+          guideCard('/my-urolithin-a-log', 'Self-test', 'One person’s urolithin A log', 'On, off, on — every reading published.') +
+          '</div>' +
+          '<p class="not-prose mt-6 text-sm opacity-70">Also: <a class="underline" href="/does-mullein-detox-your-lungs">does mullein detox your lungs?</a> · <a class="underline" href="/smoking-mullein">smoking mullein</a> · <a class="underline" href="/mullein-drops-gummies-capsules-tea">drops, gummies, capsules or tea</a> · <a class="underline" href="/mullein-study">our mullein study</a> · <a class="underline" href="/blue-zones-habit-experiment">try a habit as an experiment</a></p>' +
+          '<blockquote class="not-prose my-12 border-l-2 border-emerald-700 pl-5 font-serif text-2xl leading-snug">“A trial that tested a claim and found nothing outranks a weaker study that found something.”<span class="mt-3 block font-sans text-sm opacity-60">One of the six rules — <a class="underline" href="/how-we-grade">how we grade</a></span></blockquote>',
       },
     ],
   },

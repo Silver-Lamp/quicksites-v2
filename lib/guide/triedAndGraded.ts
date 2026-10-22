@@ -65,6 +65,29 @@ function statsRow(): string {
   );
 }
 
+
+/**
+ * An OPEN EXPERIMENT card (HiveJournal, 2026-10-22: "add the HAVN hat experiment and Rife, Tested").
+ * A claim nobody has tested yet is not graded at all — the grade function needs studies, and a
+ * "No real evidence" badge would be a statement about research when it is only a statement about
+ * runs. The card says what is claimed and by whom, how it will be tested, who pays (nobody with a
+ * stake), and that no result exists yet — dated, because a count in prose rots
+ * (re-derivable-claims-standard). Live counts come later from HJ's read-only summary endpoint.
+ */
+export const EXPERIMENTS_CHECKED = '2026-10-22';
+export function experimentCard(e: { claimBy: string; claim: string; design: string; runHref: string; runLabel: string }): string {
+  return (
+    '<div class="not-prose my-8 rounded-lg border border-zinc-900/15 p-5">' +
+    '<div class="flex flex-wrap items-center justify-between gap-2"><span class="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-60">Open experiment</span>' +
+    `<span class="rounded-full border border-zinc-500/40 bg-zinc-500/15 px-2.5 py-0.5 text-xs font-semibold" data-experiment-status="untested">Not yet tested — no completed runs as of ${EXPERIMENTS_CHECKED}</span></div>` +
+    `<p class="mt-3 text-sm opacity-70">Claim under test, in ${e.claimBy}’s own words — not verified by us:</p>` +
+    `<p class="mt-1 text-lg font-medium leading-snug">“${e.claim}”</p>` +
+    `<dl class="mt-4 grid gap-2 text-sm sm:grid-cols-2"><div><dt class="opacity-60">How it is tested</dt><dd>${e.design}</dd></div><div><dt class="opacity-60">Who pays</dt><dd>Nobody with a stake — independent, no affiliate link on the product under test.</dd></div></dl>` +
+    `<a href="${e.runHref}" class="mt-5 inline-block rounded-md border border-zinc-900/30 px-4 py-2 text-sm font-semibold no-underline hover:border-zinc-900/60">${e.runLabel} →</a>` +
+    '</div>'
+  );
+}
+
 function guideCard(href: string, kicker: string, title: string, line: string): string {
   return `<a href="${href}" class="block rounded-lg border border-zinc-900/10 bg-white/60 p-5 no-underline transition hover:border-zinc-900/30"><span class="block text-[11px] font-semibold uppercase tracking-[0.18em] opacity-60">${kicker}</span><span class="mt-2 block text-lg font-medium leading-snug">${title}</span><span class="mt-1 block text-sm opacity-70">${line}</span></a>`;
 }
@@ -122,6 +145,7 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           guideCard('/are-the-blue-zones-real', 'Blue Zones', 'Are the Blue Zones real?', 'The age-record debate, both sides.') +
           guideCard('/does-mullein-work', 'Mullein', 'Does mullein work?', 'Every common claim, graded.') +
           guideCard('/my-urolithin-a-log', 'Self-test', 'One person’s urolithin A log', 'On, off, on — every reading published.') +
+          guideCard('/experiments', 'Open experiments', 'Claims nobody has tested — yet', 'The HAVN hat and Rife frequencies: blinded tests anyone can run.') +
           '</div>' +
           '<p class="not-prose mt-6 text-sm opacity-70">Also: <a class="underline" href="/does-mullein-detox-your-lungs">does mullein detox your lungs?</a> · <a class="underline" href="/smoking-mullein">smoking mullein</a> · <a class="underline" href="/mullein-drops-gummies-capsules-tea">drops, gummies, capsules or tea</a> · <a class="underline" href="/mullein-study">our mullein study</a> · <a class="underline" href="/blue-zones-habit-experiment">try a habit as an experiment</a></p>' +
           '<blockquote class="not-prose my-12 border-l-2 border-emerald-700 pl-5 font-serif text-2xl leading-snug">“A trial that tested a claim and found nothing outranks a weaker study that found something.”<span class="mt-3 block font-sans text-sm opacity-60">One of the six rules — <a class="underline" href="/how-we-grade">how we grade</a></span></blockquote>',
@@ -347,6 +371,76 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<h2>What this can and can’t show</h2>' +
           '<p>One person who knows what he’s taking is a log, not evidence. It can’t move the grades on <a href="/urolithin-a">the urolithin A page</a>, and it isn’t a typical result. What it can do is show, in public and in advance, what an honest self-test looks like.</p>' +
           commissionP,
+      },
+    ],
+  },
+  {
+    slug: 'experiments',
+    navLabel: 'Experiments',
+    title: 'Open Experiments: Claims Nobody Has Tested Yet',
+    description: 'Popular claims with no independent test behind them — and blinded experiments anyone can run, published whichever way they come out.',
+    blocks: [
+      { kind: 'hero', headline: 'Open experiments', subheadline: 'Claims nobody has tested yet. Blinded tests anyone can run, published either way.' },
+      {
+        kind: 'text',
+        html:
+          '<p>Some claims have no trial behind them at all — not a bad one, none. We don’t grade those; a grade needs evidence. Instead we list the claim, who makes it, and an experiment designed to test it: pre-registered, blinded where it can be, and published whatever it shows. The experiments run on HiveJournal, where anyone can copy one and submit a result.</p>' +
+          '<div class="not-prose mt-6 grid gap-4 sm:grid-cols-2">' +
+          guideCard('/havn-hat', 'Open experiment · EMF clothing', 'Does the HAVN hat do anything?', 'A meter test, then 12 blinded nights against a plain beanie.') +
+          guideCard('/rife-tested', 'Open experiment · frequencies', 'Rife, tested: does a frequency kill a microbe?', 'A blinded test in a dish — never on a person.') +
+          guideCard('/mullein-study', 'Planned study', 'Mullein for smoker’s cough', 'Placebo-controlled; opens after ethics approval.') +
+          guideCard('/my-urolithin-a-log', 'Self-test', 'One person’s urolithin A log', 'On, off, on — every reading published.') +
+          '</div>',
+      },
+    ],
+  },
+  {
+    slug: 'havn-hat',
+    title: 'Does the HAVN Hat Do Anything? An Open, Blinded Experiment',
+    description: 'HAVN says its WaveStopper fabric blocks over 99.7% of phone and Wi-Fi signals and helps sleep. Nobody has tested that independently. Here is the test.',
+    blocks: [
+      { kind: 'hero', headline: 'Does the HAVN hat do anything?', subheadline: 'The claims, what is known, and a blinded experiment anyone can run.' },
+      {
+        kind: 'text',
+        html:
+          experimentCard({
+            claimBy: 'HAVN',
+            claim: 'Its WaveStopper fabric blocks over 99.7% of RF from phones, Wi-Fi and Bluetooth, and it improves sleep and cognition.',
+            design: 'Part one measures the radio signal reaching the head with a meter — no hat, a plain beanie, the HAVN hat. Part two is 12 nights, blinded, against an identical-looking plain beanie, with the outcome fixed in advance and a guess at which hat was which before unblinding.',
+            runHref: 'https://www.hivejournal.com/dreampro/templates/193a92b0-ed8a-4c31-88fc-02ee72815a4a',
+            runLabel: 'Run it yourself on HiveJournal',
+          }) +
+          eyebrow('What is known today') +
+          '<h2>Two different claims, two different questions</h2>' +
+          '<p><strong>The shielding claim is physics, and testable at home.</strong> Silver-mesh fabric can block radio signals; the question is how much, at which frequencies, and whether a hat that leaves the neck and face open changes what reaches the head. The figures in circulation — 99% in one press release, 99.7% in a listing, a per-frequency table in a review — trace back to the company; the test labs are described only as “military-grade”, and we found no named, independent report.</p>' +
+          '<p><strong>The sleep and cognition claim is a health claim, and it has no controlled study</strong> that we could find — only customer reviews. A plain beanie feels the same on your head, which is exactly why part two is blinded against one.</p>' +
+          '<h2>What we will and won’t do</h2>' +
+          '<ul><li>We won’t say it works or doesn’t until results exist.</li><li>We don’t link to the hat with an affiliate tag — earning from a product we are testing would be a conflict.</li><li>When runs come in, this page will show them, failures included.</li></ul>',
+      },
+    ],
+  },
+  {
+    slug: 'rife-tested',
+    title: 'Rife, Tested: Does a Frequency Kill a Microbe in a Dish?',
+    description: 'Rife-device sellers say specific frequencies destroy microbes. A blinded test in a dish — yeast, a driven coil versus an identical sham — never on a person.',
+    blocks: [
+      { kind: 'hero', headline: 'Rife, tested', subheadline: 'Does a frequency kill a microbe in a dish? A blinded test, never on a person.' },
+      {
+        kind: 'text',
+        html:
+          experimentCard({
+            claimBy: 'sellers of Rife frequency devices',
+            claim: 'A specific frequency, delivered by the device, destroys a specific microbe.',
+            design: 'A blinded test in a dish: yeast cultures exposed to a driven coil or to an identical sham coil, with the counting done by someone who doesn’t know which was which. Never on a person or an animal.',
+            runHref: 'https://www.hivejournal.com/rife-tested',
+            runLabel: 'Read the protocol on HiveJournal',
+          }) +
+          eyebrow('What is known today') +
+          '<h2>A long history of claims, and of regulators</h2>' +
+          '<p>Rife devices are named after Royal Rife, who claimed in the 1930s that frequencies could destroy microbes. Sellers have repeated versions of that claim since. The US Federal Trade Commission sued one seller in 2001 over ads claiming protection against viruses and bacteria, and in 2020 warned another over COVID-19 claims for frequency programmes. We found no modern controlled study showing a Rife device kills microbes.</p>' +
+          '<p>That is why this test happens in a dish and nowhere else: if a frequency did kill a microbe, a dish is the simplest place to see it, and nobody is put at risk finding out.</p>' +
+          '<h2>What this page will never say</h2>' +
+          '<p>That a frequency treats, prevents or cures anything in a person. Even a positive result in a dish would not show that.</p>',
       },
     ],
   },

@@ -116,9 +116,14 @@ describe('the bottom tray is simpler for a guest', () => {
     expect(src).toMatch(/\{!isGuest && \([\s\S]{0,400}Hide toolbar \(T\)/);
   });
 
-  it('hides page settings and the draft badge from a guest', () => {
+  it('hides page settings from a guest; the Draft badge is gone for everyone (2026-10-23 — the top bar\'s publish-state pill says it)', () => {
     expect(src).toMatch(/\{!isGuest && \([\s\S]{0,300}Page Settings/);
-    expect(src).toMatch(/\{!isGuest && \([\s\S]{0,300}bg-yellow-600/);
+    expect(src).not.toMatch(/bg-yellow-600/);
+  });
+
+  it('the bottom Save and save status are a guest\'s only (an owner has the sticky top bar)', () => {
+    expect(src).toMatch(/\{isGuest && \(\s*<Button[\s\S]{0,600}data-tour="publish"/);
+    expect(src).toMatch(/dispatchEvent\(new CustomEvent\('qs:save-state'/);
   });
 
   it('keeps the guest sign-up button — the one control that matters', () => {

@@ -227,6 +227,16 @@ export function TemplateEditorToolbar({
     handleRename();
   };
 
+  const [queueState, setQueueState] = React.useState<{ dirty: boolean; pending: boolean; error: string | null }>({ dirty: false, pending: false, error: null });
+  React.useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent).detail || {};
+      setQueueState({ dirty: !!d.dirty, pending: !!d.pending, error: d.error ? String(d.error) : null });
+    };
+    window.addEventListener('qs:save-state', on);
+    return () => window.removeEventListener('qs:save-state', on);
+  }, []);
+
   const renderAutosaveBadge = () => {
     if (autosaveStatus === 'saved') {
       return <span className="inline-flex items-center gap-1 text-xs text-emerald-400"><CheckCircle2 className="h-3.5 w-3.5" /> Saved</span>;
@@ -276,7 +286,9 @@ export function TemplateEditorToolbar({
     <>
       {/* Top bar — hidden for guests (see globals.css [data-guest]); they have the
           "building as a guest" banner + the bottom editor toolbar instead. */}
-      <div className="qs-editor-actionbar mb-4 flex flex-wrap items-center justify-between gap-3">
+      {/* STICKY (owner, 2026-10-23): Save / Publish / Preview stay on screen while the canvas
+          scrolls — they replaced the bottom bar's save controls for owners. */}
+      <div className="qs-editor-actionbar sticky top-0 z-40 -mx-2 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-b-lg border-b border-white/10 bg-neutral-950/85 px-2 py-2 backdrop-blur">
         {/* Left: Back + Title/Rename */}
         <div className="flex min-w-0 items-center gap-2">
           {onBack && (
@@ -371,7 +383,11 @@ export function TemplateEditorToolbar({
               A "✓ Saved" badge beside a "Save" button asked the owner to reconcile two things; the
               button now SAYS the state — Saved / Saving… / Retry save / Save — and still saves on click. */}
           {handleSaveDraft && (() => {
-            const st = busy ? 'saving' : autosaveStatus === 'pending' ? 'saving' : autosaveStatus;
+            // The bottom toolbar's commit queue is the authority on a failed or pending save.
+            const st = queueState.error ? 'error'
+              : busy || queueState.pending || autosaveStatus === 'pending' ? 'saving'
+              : queueState.dirty ? 'dirty'
+              : autosaveStatus;
             const saved = st === 'saved';
             const err = st === 'error';
             return (
@@ -380,7 +396,7 @@ export function TemplateEditorToolbar({
                 size="sm"
                 onClick={handleSaveDraft}
                 disabled={busy || archiving}
-                title={saved ? 'All changes saved — click to save again' : err ? 'The last save failed — click to try again' : 'Save current draft'}
+                title={saved ? 'All changes saved — click to save again' : err ? `The last save failed${queueState.error ? `: ${queueState.error}` : ''} — click to try again` : 'Save current draft (⌘/Ctrl+S)'}
                 className={
                   saved
                     ? 'gap-2 border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20'
@@ -400,7 +416,7 @@ export function TemplateEditorToolbar({
 
           {/* It saves first, as before; the word is the outcome the owner wants (owner, 2026-10-23). */}
           {onSaveAndPublish && (
-            <Button type="button" size="sm" onClick={onSaveAndPublish} disabled={busy || archiving} title="Save your changes and put them on the live site" className="gap-2">
+            <Button type="button" size="sm" data-tour="publish" onClick={onSaveAndPublish} disabled={busy || archiving} title="Save your changes and put them on the live site" className="gap-2">
               <Rocket className="h-4 w-4" />
               {busy ? 'Publishing…' : 'Publish'}
             </Button>

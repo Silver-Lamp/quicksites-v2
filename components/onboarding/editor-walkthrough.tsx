@@ -42,13 +42,15 @@ type Rect = { top: number; left: number; width: number; height: number };
 
 function rectFor(anchor: string): Rect | null {
   if (typeof document === 'undefined') return null;
-  const el = document.querySelector(`[data-tour="${anchor}"]`);
-  if (!el) return null;
-  const r = (el as HTMLElement).getBoundingClientRect();
-  // A zero-size box is present-but-not-rendered (collapsed tray, hidden panel) — treat it as
-  // absent, or the spotlight lands on a 0x0 point in the corner.
-  if (r.width < 4 || r.height < 4) return null;
-  return { top: r.top, left: r.left, width: r.width, height: r.height };
+  // The FIRST VISIBLE match: an anchor can exist twice (the top bar's Publish for an owner, the
+  // bottom bar's Save for a guest, whose top bar is display:none). A zero-size box is
+  // present-but-not-rendered (collapsed tray, hidden panel) — skip it, or the spotlight lands on
+  // a 0x0 point in the corner.
+  for (const el of Array.from(document.querySelectorAll(`[data-tour="${anchor}"]`))) {
+    const r = (el as HTMLElement).getBoundingClientRect();
+    if (r.width >= 4 && r.height >= 4) return { top: r.top, left: r.left, width: r.width, height: r.height };
+  }
+  return null;
 }
 
 export default function EditorWalkthrough({ onDone }: { onDone: () => void }) {

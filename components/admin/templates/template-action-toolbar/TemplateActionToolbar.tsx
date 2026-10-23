@@ -222,6 +222,14 @@ export default function TemplateActionToolbar({
 
   /* commit queue */
   const { queueFullSave, pending, error: saveError } = useCommitQueue(tplRef);
+  // The top action bar's Save button shows THIS queue's state (owner, 2026-10-23: the bottom
+  // bar's own Save / "saved" / Draft were removed for owners as redundant) — so a failed or
+  // pending save here must reach it, or removing the bottom chip would hide a failure.
+  useEffect(() => {
+    try {
+      window.dispatchEvent(new CustomEvent('qs:save-state', { detail: { dirty, pending: !!pending, error: saveError || null } }));
+    } catch { /* no-op */ }
+  }, [dirty, pending, saveError]);
   const [showShortcuts, setShowShortcuts] = useState(false);
   // Always points at the latest handleSaveClick so the mount-time ⌘/Ctrl+S
   // key handler never fires a stale closure.
@@ -1034,7 +1042,12 @@ useEffect(() => {
                   this text wrapped to ONE WORD PER LINE — a column reading "saved / · / yours /
                   when / you / sign / up" through the middle of the toolbar. The reassurance is
                   well argued above; it was simply being rendered as debris. */}
-              {saveError ? (
+              {/* ⚠️ GUESTS ONLY from here to the Draft badge (owner, 2026-10-23: "remove the
+                  saved/save/draft buttons from the bottom toolbar, as long as they are indeed
+                  redundant"). For an owner the top bar's Save button now shows this same queue's
+                  state (qs:save-state) and the publish-state pill answers Draft vs live. A guest
+                  has no top bar ([data-guest] .qs-editor-actionbar), so a guest keeps these. */}
+              {isGuest && (saveError ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 mr-1" title={saveError}>
                   <AlertTriangle className="w-3.5 h-3.5" /> Not saved
                 </span>
@@ -1043,9 +1056,10 @@ useEffect(() => {
                   {autosaveStatus}
                   {isGuest ? ' · yours when you sign up' : ''}
                 </span>
-              ) : isGuest && !dirty ? (
+              ) : !dirty ? (
                 <span className="text-[11px] text-zinc-400 mr-1 whitespace-nowrap">Saved · yours when you sign up</span>
-              ) : null}
+              ) : null)}
+              {isGuest && (
               <Button
                 size="sm"
                 variant={dirty || saveError ? 'outline' : 'ghost'}
@@ -1057,6 +1071,7 @@ useEffect(() => {
               >
                 {pending ? 'Saving…' : saveError ? 'Retry save' : dirty ? 'Save' : (<span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" />Saved</span>)}
               </Button>
+              )}
             </div>
 
             {/* Status + undo/redo */}
@@ -1065,11 +1080,6 @@ useEffect(() => {
                   someone who has just typed a business name — and the save chip beside it already
                   answers the only question they have. An owner needs published-vs-draft at a
                   glance; a guest needs one less yellow badge. */}
-              {!isGuest && (
-                <span className={`text-xs px-2 py-1 rounded ${status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'}`}>
-                  {status}
-                </span>
-              )}
 
               <div className="relative">
                 <Button size="icon" variant="ghost" onClick={undo} title={`Undo (${stats.past}) • ⌘Z`}>

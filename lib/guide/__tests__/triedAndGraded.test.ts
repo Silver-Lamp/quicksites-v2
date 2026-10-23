@@ -110,6 +110,19 @@ describe('Tried & Graded copy rules', () => {
     expect(html(p)).toContain('data-history-status="claimed"');
     expect(html(p)).toContain('data-history-status="contradicted"');
   });
+  it('sea moss: the lung claims grade as no evidence, the spray is labelled as not sea moss, and both pages carry quit help', () => {
+    const { SEA_MOSS_CLAIMS, SEA_MOSS_STUDIES } = require('@/lib/evidence/topics/seaMoss');
+    const g = (id: string) => gradeClaim(SEA_MOSS_CLAIMS.find((c: { id: string }) => c.id === id).evidence, SEA_MOSS_STUDIES);
+    expect(g('smokers-lungs')).toBe('no_evidence');
+    expect(g('mucus')).toBe('no_evidence');
+    expect(SEA_MOSS_CLAIMS.find((c: { id: string }) => c.id === 'carrageenan-spray').note).toMatch(/^NOT sea moss/);
+    for (const slug of ['sea-moss-for-smokers', 'does-sea-moss-clear-your-lungs']) {
+      const p = GUIDE_PAGES.find((x) => x.slug === slug)!;
+      expect(html(p)).toContain(QUIT_LINE);
+      expect(text(html(p))).not.toMatch(/\b(sea moss|it) (clears|cleanses|detoxes|supports|heals)\b/i);
+    }
+    expect(html(GUIDE_PAGES.find((x) => x.slug === 'sea-moss-for-smokers')!)).toMatch(/thyroid/);
+  });
   it('urolithin A: the grades the trials produce, nulls included', () => {
     const g = (id: string) => gradeClaim(UROLITHIN_A_CLAIMS.find((c) => c.id === id)!.evidence, UROLITHIN_A_STUDIES);
     expect(g('endurance')).toBe('early'); // secondary outcomes only

@@ -157,7 +157,7 @@ export default function TemplateEditor({
       toast.success(
         () => (
           <span className="flex items-center gap-2">
-            Saved &amp; Published!
+            Published!
             {liveUrl && (
               <a
                 href={liveUrl}
@@ -174,7 +174,7 @@ export default function TemplateEditor({
       );
     } catch (e: any) {
       console.error('[save & publish] failed', e);
-      toast.error(e?.message || 'Save & Publish failed');
+      toast.error(e?.message || 'Publish failed');
     } finally {
       setSaveAndPublishBusy(false);
     }

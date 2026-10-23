@@ -51,7 +51,7 @@ export function PublishStatePill({ templateId, refreshKey, onPublishClick }: { t
       onClick={onPublishClick}
       data-publish-state="changed"
       className="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-200 hover:bg-amber-500/25"
-      title={`The live site (${where}) differs from your latest saved changes. Save & Publish to update it.`}
+      title={`The live site (${where}) differs from your latest saved changes. Publish to update it.`}
     >
       <CloudUpload className="h-3.5 w-3.5" /> Unpublished changes
     </button>

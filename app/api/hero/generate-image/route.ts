@@ -1,4 +1,6 @@
 import { getOpenAI } from '@/lib/ai/openaiClient';
+import { NO_VEHICLES_INSTRUCTION, NO_VEHICLES_NEGATIVES, wantsVehicles } from '@/lib/images/vehicleGuard';
+import { genericServiceNames } from '@/lib/industries/contactInterests';
 import { lazyClient } from '@/lib/lazyClient';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
@@ -115,18 +117,24 @@ export async function POST(req: Request) {
       : style === 'minimal'    ? 'minimal, lots of negative space, subtle gradients'
       : 'high-quality photo, cinematic lighting, crisp focus';
 
-    const serviceHint = finalServices?.length ? `Show context of: ${finalServices.join(', ')}.` : '';
+    // The generic fallback list (Consulting / Installation / Support / Upgrades / Maintenance) is not
+    // the business's services; feeding it in summoned service vans (lib/images/vehicleGuard.ts).
+    const generic = genericServiceNames().join('|');
+    const realServices = Array.isArray(finalServices) && finalServices.join('|') !== generic ? finalServices : [];
+    const serviceHint = realServices.length ? `Show context of: ${realServices.join(', ')}.` : '';
+    const vehiclesOk = wantsVehicles(subject, finalIndustry, realServices.join(' '));
     const locHint = loc ? `Location vibe: ${loc}.` : '';
     const brandHint = biz ? `Subtle brand alignment for "${biz}".` : '';
 
     // Build a *banner-specific* prompt. Treat "hero" as website header, not a person.
-    const subjectOrPreset = (subject && String(subject).trim()) || presetSubjectFor(finalIndustry, finalServices);
+    const subjectOrPreset = (subject && String(subject).trim()) || presetSubjectFor(finalIndustry, realServices);
     const peopleInstruction = `${NO_TEXT_INSTRUCTION} ${NO_PEOPLE_INSTRUCTION}`;
 
     // Fold in optional negatives (OpenAI images API has no separate negative param,
     // so bake them into the instruction text).
     const negatives = [
       NO_PEOPLE_NEGATIVES,
+      vehiclesOk ? '' : NO_VEHICLES_NEGATIVES,
       negative ? String(negative) : '',
     ].filter(Boolean).join('; ');
 
@@ -137,6 +145,7 @@ export async function POST(req: Request) {
       'Wide composition with clear copy space for headline and subheadline.',
       'Clean modern background. No heavy overlaid text in the image.',
       peopleInstruction,
+      vehiclesOk ? '' : NO_VEHICLES_INSTRUCTION,
       serviceHint,
       locHint,
       brandHint,

@@ -28,7 +28,7 @@ import { getIndustryOptions, resolveIndustryKey, toIndustryLabel } from '@/lib/i
 import IndustryPicker from '@/components/admin/templates/industry-picker';
 import { NO_PEOPLE_NEGATIVES } from '@/lib/images/noPeople';
 import { uploadToStorage } from '@/lib/uploadToStorage';
-import MediaPicker from '@/components/admin/media/media-picker';
+import MediaPicker, { type MediaPickerHandle } from '@/components/admin/media/media-picker';
 
 /* ───────────────── helpers ───────────────── */
 
@@ -521,7 +521,7 @@ export default function HeroEditor({
   // (walkthrough, 2026-10-22). Save now notices a description that was never generated and asks.
   const [lastGeneratedSubject, setLastGeneratedSubject] = useState<string | null>(null);
   const [confirmUngenerated, setConfirmUngenerated] = useState(false);
-  const [showLibrary, setShowLibrary] = useState(false);
+  const pickerRef = useRef<MediaPickerHandle | null>(null);
   // Hero canvas: one surface flipped between the editable text and the live render.
   // ⚠️ PREVIEW FIRST. The hero's whole payload is an IMAGE and a headline, and "Suggest All"
   // generates both — but the panel opened on Edit, which shows a URL in a text field. So the
@@ -1451,14 +1451,6 @@ export default function HeroEditor({
                 <div className="grid md:grid-cols-3 gap-3 mt-3">
                   <div className="md:col-span-2">
                     <label className="text-xs text-neutral-300">Image — describe it, then press Generate</label>
-                    {showLibrary && (
-                      <MediaPicker
-                        templateId={template?.id ?? null}
-                        industry={effectiveIndustryKey}
-                        currentUrl={local?.image_url ?? null}
-                        onSelect={(url) => applyHeroImage(url)}
-                      />
-                    )}
                     <input
                       className={selectDark}
                       value={imgSubject}
@@ -1481,14 +1473,10 @@ export default function HeroEditor({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setShowLibrary((v) => !v)}
-                        className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm ${
-                          showLibrary
-                            ? 'border-purple-500/70 bg-purple-500/10 text-purple-200'
-                            : 'border-white/15 text-neutral-100 hover:bg-white/10'
-                        }`}
+                        onClick={() => pickerRef.current?.openUpload()}
+                        className="inline-flex items-center justify-center gap-2 rounded-md border border-white/15 px-3 py-2.5 text-sm text-neutral-100 hover:bg-white/10"
                       >
-                        <Images className="h-4 w-4" /> Upload your own or pick one
+                        <Images className="h-4 w-4" /> Upload your own
                       </button>
                     </div>
                     {subjectNotGenerated && !confirmUngenerated && (
@@ -1497,6 +1485,23 @@ export default function HeroEditor({
                       </div>
                     )}
                     {imgError && <div className="text-xs text-red-300 mt-1">{imgError}</div>}
+
+                    {/* ⚠️ THE LIBRARY IS ALWAYS OPEN (owner, 2026-10-23): "show previously generated
+                        … without having to click on 'pick one'". Every image already made for this
+                        industry (generated only, any owner) and every image this person has made,
+                        one tap to use — a new generation is ~20 s and costs money; a past one is free. */}
+                    <div className="mt-3">
+                      <div className="text-xs text-neutral-400">Or use one already made — tap to use it</div>
+                      <MediaPicker
+                        ref={pickerRef}
+                        templateId={template?.id ?? null}
+                        industry={effectiveIndustryKey}
+                        currentUrl={local?.image_url ?? null}
+                        onSelect={(url) => applyHeroImage(url)}
+                        scopes={['industry', 'org', 'site']}
+                        hideUploadButton
+                      />
+                    </div>
 
                     {/* Thumb + actions */}
                     {local?.image_url && (

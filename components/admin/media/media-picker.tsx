@@ -7,7 +7,7 @@
 // runs through the shared uploadToStorage helper, records it in the registry,
 // then re-fetches and auto-selects it.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Loader2, UploadCloud, ImageIcon } from 'lucide-react';
 import { uploadToStorage } from '@/lib/uploadToStorage';
 import type { MediaScope } from '@/lib/media/mediaAssets';
@@ -23,30 +23,43 @@ type Props = {
   kind?: 'hero' | 'logo' | 'favicon' | 'other';
   /** Override how an uploaded file is stored (e.g. logos → 'logos' bucket). Defaults to uploadToStorage into the hero folder. */
   uploadFile?: (file: File) => Promise<string>;
+  /** Which tabs to offer, in order; the first is the default. Defaults to the classic four. */
+  scopes?: MediaScope[];
+  /** Hide the picker's own small Upload button (the caller renders its own and calls openUpload). */
+  hideUploadButton?: boolean;
 };
 
-const TABS: { scope: MediaScope; label: string }[] = [
-  { scope: 'org-industry', label: 'Same industry' },
-  { scope: 'site', label: 'This site' },
-  { scope: 'org', label: 'All my sites' },
-  { scope: 'public', label: 'Public' },
-];
+export type MediaPickerHandle = { openUpload: () => void };
 
-export default function MediaPicker({
+const LABELS: Record<MediaScope, string> = {
+  industry: 'This industry',
+  'org-industry': 'Same industry',
+  site: 'This site',
+  org: 'All mine',
+  public: 'Public',
+};
+const DEFAULT_SCOPES: MediaScope[] = ['org-industry', 'site', 'org', 'public'];
+
+const MediaPicker = forwardRef<MediaPickerHandle, Props>(function MediaPicker({
   templateId,
   industry,
   currentUrl,
   onSelect,
   kind = 'hero',
   uploadFile,
-}: Props) {
+  scopes = DEFAULT_SCOPES,
+  hideUploadButton = false,
+}, ref) {
   const contain = kind === 'logo' || kind === 'favicon';
-  const [scope, setScope] = useState<MediaScope>('org-industry');
+  const TABS = scopes.map((sc) => ({ scope: sc, label: LABELS[sc] }));
+  const [scope, setScope] = useState<MediaScope>(scopes[0] ?? 'org-industry');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(ref, () => ({ openUpload: () => fileRef.current?.click() }), []);
+  const fellThrough = useRef(false);
 
   const load = useCallback(
     async (activeScope: MediaScope) => {
@@ -59,7 +72,14 @@ export default function MediaPicker({
         const res = await fetch(`/api/media/assets?${qs.toString()}`, { cache: 'no-store' });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body?.error || 'Failed to load images');
-        setAssets(Array.isArray(body.assets) ? body.assets : []);
+        const list = Array.isArray(body.assets) ? body.assets : [];
+        setAssets(list);
+        // An empty first tab on open falls through to the next one once, so the library never
+        // opens on "No images here yet" while the owner's own images sit one click away.
+        if (!list.length && !fellThrough.current && activeScope === scopes[0] && scopes[1]) {
+          fellThrough.current = true;
+          setScope(scopes[1]);
+        }
       } catch (e: any) {
         setError(e?.message || 'Failed to load images');
         setAssets([]);
@@ -67,6 +87,7 @@ export default function MediaPicker({
         setLoading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [templateId, industry, kind]
   );
 
@@ -131,8 +152,10 @@ export default function MediaPicker({
             className="hidden"
             onChange={handleUpload}
           />
+          {uploading && hideUploadButton ? <Loader2 className="h-4 w-4 animate-spin text-neutral-400" /> : null}
           <button
             type="button"
+            hidden={hideUploadButton}
             disabled={uploading || !templateId}
             onClick={() => fileRef.current?.click()}
             className="inline-flex items-center gap-1.5 rounded border border-white/15 px-2 py-1 text-xs text-neutral-200 hover:bg-white/10 disabled:opacity-40"
@@ -186,4 +209,6 @@ export default function MediaPicker({
       </div>
     </div>
   );
-}
+});
+
+export default MediaPicker;

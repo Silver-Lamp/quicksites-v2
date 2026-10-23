@@ -65,6 +65,7 @@ const SERVICE_NAMES: Partial<Record<IndustryKey, string[]>> = {
   salon_spa: ['Haircut & Style', 'Color & Highlights', 'Facials', 'Massage Therapy', 'Manicure & Pedicure'],
   fitness: ['Personal Training', 'Group Classes', 'Nutrition Coaching', 'Yoga/Pilates', 'Membership Plans'],
   photography: ['Portrait Sessions', 'Event Coverage', 'Product Photography', 'Real Estate Photos', 'Editing & Retouch'],
+  consulting: ['Strategy Session', 'Business Planning', 'Operations & Process', 'Marketing & Growth', 'Ongoing Advisory'],
   legal: ['Consultations', 'Contract Drafting', 'Estate Planning', 'Business Formation', 'Litigation Support'],
   medical_dental: ['Cleanings & Exams', 'Fillings', 'Whitening', 'Implants', 'Emergency Care'],
   junk_removal: ['Same-Day Hauling', 'Garage Cleanouts', 'Furniture Removal', 'Curbside Pickup', 'Donation/Recycle'],

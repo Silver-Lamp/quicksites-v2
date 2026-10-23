@@ -193,6 +193,7 @@ const STARTER_NAMES: Partial<Record<IndustryKey, string>> = {
   fitness: 'Northside Strength Club',
   photography: 'Stillwater Photography',
   legal: 'Harbor Law Group',
+  consulting: 'Northbridge Consulting',
   medical_dental: 'Lakeside Family Dental',
   pressure_washing: 'JetStream Pressure Washing',
   junk_removal: 'CleanSlate Junk Removal',

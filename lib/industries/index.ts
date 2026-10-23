@@ -60,6 +60,7 @@ export type IndustryKey =
   | 'custom_apparel'
   | 'author'
   | 'musician'
+  | 'consulting'
   | 'personal'
   | 'faith'
   | 'auto_dealer'
@@ -101,6 +102,9 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'photography',          label: 'Photography' },
   { key: 'legal',                label: 'Legal' },
   { key: 'medical_dental',       label: 'Medical / Dental' },
+  // Consultants and advisers (2026-10-23): a consultant used to be "Other", which re-asked the
+  // site type and printed "Local other you can count on" (Amy's walkthrough, 2026-10-22).
+  { key: 'consulting',           label: 'Consulting' },
 
   // aliases/synonyms (same key, different label)
   { key: 'window_washing',       label: 'Window Cleaning' },
@@ -218,6 +222,8 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   if (direct) return direct;
 
   // loose heuristics
+  // Before 'tow' etc.: "consult" / "advisor" / "coach" name a person who sells advice.
+  if (/\b(consult\w*|advis[eo]r\w*|business coach\w*)\b/.test(x)) return 'consulting';
   if (x.includes('tow')) return 'towing';
   if (x.includes('plumb')) return 'plumbing';
   // roof_cleaning is the exterior-CLEANING vertical — require a cleaning cue, so

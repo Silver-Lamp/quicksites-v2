@@ -80,6 +80,7 @@ export const INDUSTRY_FONT_MOOD: Partial<Record<IndustryKey, FontMood>> = {
 
   // ── elegant: restraint signals seriousness
   legal: 'elegant',
+  consulting: 'modern',
   medical_dental: 'elegant',
   real_estate: 'elegant',
   real_estate_agency: 'elegant',

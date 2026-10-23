@@ -57,6 +57,7 @@ export const INDUSTRY_ALIASES: Partial<Record<IndustryKey, string[]>> = {
   fencing: ['fence', 'gate install'],
   concrete: ['driveway', 'slab', 'foundation', 'masonry'],
   photography: ['photographer', 'photos', 'headshots', 'wedding photos'],
+  consulting: ['consultant', 'advisor', 'adviser', 'business coach', 'strategy', 'coaching', 'small business help'],
   legal: ['lawyer', 'attorney', 'law firm', 'solicitor'],
   medical_dental: ['dentist', 'doctor', 'clinic', 'orthodontist'],
   faith: ['church', 'ministry', 'parish', 'congregation', 'worship'],

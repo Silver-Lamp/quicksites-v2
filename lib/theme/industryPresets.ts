@@ -81,6 +81,7 @@ export const industryPresets: Record<string, SiteTheme> = {
   real_estate: professional('emerald-700'),
   real_estate_agency: professional('emerald-700'),
   legal: professional('slate-700'),
+  consulting: professional('teal-600'),
   medical_dental: professional('teal-600'),
 
   // --- Food / wellness ---

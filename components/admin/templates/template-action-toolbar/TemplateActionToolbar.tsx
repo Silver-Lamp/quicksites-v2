@@ -1,4 +1,6 @@
 'use client';
+import { applyMetaMerge, metaOnlyMerge } from '@/lib/editor/metaMerge';
+import { syncNavInData, type PageChange } from '@/lib/editor/navSync';
 import { consumeNewTemplateFlag } from '@/lib/editor/newTemplateUrl';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -176,6 +178,14 @@ type Props = {
   onApplyTemplate: (next: Template) => void;
   onSetRawJson?: (json: string) => void;
 };
+
+/** Pages tray changes carry their header link with them (lib/editor/navSync.ts). */
+function withNav(t: Template, change: PageChange): Template {
+  const anyT: any = t ?? {};
+  if (!anyT.data || typeof anyT.data !== 'object') return t;
+  const data = syncNavInData(anyT.data, change);
+  return data === anyT.data ? t : ({ ...anyT, data } as Template);
+}
 
 export default function TemplateActionToolbar({
   template,
@@ -487,8 +497,22 @@ useEffect(() => {
       queueFullSave('save');
     };
 
+    // Meta-only merges (the hero editor's site type / industry / "Other" text). See lib/editor/metaMerge.ts.
+    const onMerge = (e: Event) => {
+      const meta = metaOnlyMerge((e as CustomEvent).detail);
+      if (!meta) return;
+      const cur: any = tplRef.current;
+      if (!cur) return;
+      apply({ ...cur, data: applyMetaMerge(cur.data, meta) });
+      queueFullSave('save');
+    };
+
     window.addEventListener('qs:template:apply-patch', onPatch as any);
-    return () => window.removeEventListener('qs:template:apply-patch', onPatch as any);
+    window.addEventListener('qs:template:merge', onMerge as any);
+    return () => {
+      window.removeEventListener('qs:template:apply-patch', onPatch as any);
+      window.removeEventListener('qs:template:merge', onMerge as any);
+    };
   }, [apply, queueFullSave]);
 
   /* save bus — the event nine callers fire and nobody was listening for.
@@ -768,23 +792,25 @@ useEffect(() => {
               onAdd={(newPage) => {
                 fireCapture();
                 const pages = [...getTemplatePagesLoose(tplRef.current), newPage];
-                const next  = withPages(tplRef.current, pages);
+                const next  = withNav(withPages(tplRef.current, pages), { kind: 'add', slug: newPage.slug, title: newPage.title || newPage.slug });
                 apply(next);
                 queueFullSave('autosave');
               }}
               onRename={(oldSlug, nextVals) => {
                 fireCapture();
-                const pages = getTemplatePagesLoose(tplRef.current).map((p: any) =>
+                const before = getTemplatePagesLoose(tplRef.current);
+                const oldTitle = String(before.find((p: any) => p.slug === oldSlug)?.title ?? '');
+                const pages = before.map((p: any) =>
                   p.slug === oldSlug ? { ...p, title: nextVals.title, slug: nextVals.slug } : p
                 );
-                const next = withPages(tplRef.current, pages);
+                const next = withNav(withPages(tplRef.current, pages), { kind: 'rename', oldSlug, oldTitle, slug: nextVals.slug, title: nextVals.title });
                 apply(next);
                 queueFullSave('autosave');
               }}
               onDelete={(slug) => {
                 fireCapture();
                 const pages = getTemplatePagesLoose(tplRef.current).filter((p: any) => p.slug !== slug);
-                const next  = withPages(tplRef.current, pages);
+                const next  = withNav(withPages(tplRef.current, pages), { kind: 'delete', slug });
                 apply(next);
                 queueFullSave('autosave');
               }}

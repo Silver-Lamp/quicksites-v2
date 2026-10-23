@@ -4,7 +4,8 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
-import { requireAdmin } from '@/lib/auth/requireUser';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
+import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -24,9 +25,6 @@ const isMissingColumn = (msg?: string) =>
   String(msg || '').toLowerCase().includes('does not exist');
 
 export async function POST(req: Request) {
-  const gate = await requireAdmin();
-  if (gate instanceof NextResponse) return gate;
-
   try {
     const url = new URL(req.url);
     let body: any = {};
@@ -43,10 +41,14 @@ export async function POST(req: Request) {
 
     if (!templateId) return j({ error: 'templateId required' }, 400);
 
+    // Owner or admin — restoring your own site's history is an editor action (2026-10-23).
+    const gate = await requireTemplateOwner(templateId);
+    if (!gate.ok) return gate.response;
+
     // 1) Verify template exists
     const tpl = await pub
       .from('templates')
-      .select('id, data, template_name, slug, updated_at')
+      .select('id, data, template_name, slug, updated_at, rev')
       .eq('id', templateId)
       .maybeSingle();
     if (tpl.error || !tpl.data) {
@@ -78,31 +80,24 @@ export async function POST(req: Request) {
       .from('template_versions')
       .select('id, full_data, created_at')
       .eq('id', snapshotId)
+      // ⚠️ The version must belong to THIS template: unscoped, a caller could restore another
+      // site's content (any id they had seen) into a site they own.
+      .eq('template_id', templateId)
       .maybeSingle();
     if (ver.error || !ver.data) {
-      dbg('version lookup failed (noop):', ver.error?.message);
-      return j({ ok: true, templateId, snapshotId, storedVia: 'noop' }, 200);
+      return j({ error: 'That version does not belong to this site.' }, 404);
     }
 
     // 4) Attempt to write templates.data = version.full_data
     let storedVia: 'templates_data' | 'noop' = 'noop';
     const newData = ver.data.full_data ?? {};
 
-    const upd = await pub
-      .from('templates')
-      .update({ data: newData } as any)
-      .eq('id', templateId)
-      .select('id')
-      .maybeSingle();
-
-    if (!upd.error) {
-      storedVia = 'templates_data';
-    } else {
-      // Some installations guard direct updates → treat as noop instead of failing the UX
-      if (!isMissingColumn(upd.error.message) && !isMissingRelation(upd.error.message)) {
-        dbg('templates.data restore failed (continuing as noop):', upd.error.message);
-      }
-    }
+    // ⚠️ Through the sanctioned RPC. This used to be a direct UPDATE, which the
+    // guard_templates_update trigger refuses — and the refusal was swallowed as a "noop", so
+    // Restore reported success and restored nothing, for every caller including admins.
+    const commitErr = await commitTemplatePatch(templateId, Number((tpl.data as any).rev ?? 0), { data: newData }, gate.userId);
+    if (commitErr) return j({ error: `Restore failed: ${commitErr}` }, 500);
+    storedVia = 'templates_data';
 
     // 5) Best-effort event log
     try {

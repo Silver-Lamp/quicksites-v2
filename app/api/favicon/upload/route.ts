@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,15 +40,11 @@ export async function POST(req: Request) {
     const { data: auth } = await userClient.auth.getUser();
     if (!auth?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Optional authz check (must be able to SELECT this template under RLS)
-    const { data: canRead, error: readErr } = await userClient
-      .from('templates')
-      .select('id')
-      .eq('id', template_id)
-      .maybeSingle();
-    if (readErr || !canRead) {
-      return NextResponse.json({ error: 'Not allowed to modify this template' }, { status: 403 });
-    }
+    // ⚠️ OWNER or admin. This used to ask only "can you SELECT this template under RLS?" — and
+    // every published site is publicly readable, so any signed-in account (an anonymous guest
+    // session included) could replace the favicon of any live site (found 2026-10-23).
+    const gate = await requireTemplateOwner(template_id);
+    if (!gate.ok) return gate.response;
 
     // Upload PNG to Storage
     const bkt = bucket || 'favicons';
@@ -79,7 +76,7 @@ export async function POST(req: Request) {
 
     const { data: srcTpl, error: srcErr } = await admin
       .from('templates')
-      .select('id, base_slug')
+      .select('id, base_slug, owner_id')
       .eq('id', template_id)
       .single();
 
@@ -88,6 +85,9 @@ export async function POST(req: Request) {
         .from('templates')
         .select('id')
         .eq('base_slug', srcTpl.base_slug)
+        // A sibling is written only when it has the SAME owner: base_slug families are not
+        // ownership boundaries (CLAUDE.md §8), so "the family's latest" can be someone else's site.
+        .eq('owner_id', (srcTpl as any).owner_id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 /** Map DB row -> TemplateEvent the Timeline expects */
 function toEvent(rows: any[]) {
@@ -38,6 +39,11 @@ export async function GET(
 ) {
   try {
     const { id } = await ctx.params;         // 👈 await it
+    // ⚠️ Every saved version's FULL content, so owner or admin only. This answered anyone with no
+    // session at all (found 2026-10-23); template ids are not secret — the A/B stamp prints one on
+    // the public page.
+    const gate = await requireTemplateOwner(id);
+    if (!gate.ok) return gate.response;
     const { data, error } = await supabaseAdmin
       .from('template_versions')             // public schema
       .select('*')

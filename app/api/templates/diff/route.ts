@@ -1,6 +1,7 @@
 // app/api/templates/diff/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!;
@@ -73,7 +74,8 @@ async function loadRef(templateId: string, ref: string) {
     return snap?.data ?? {};
   }
   // otherwise treat as snapshot id
-  const { data: snap, error } = await supabase.from('snapshots').select('data').eq('id', ref).single();
+  // Scoped to this template: an unscoped snapshot id would read any site's content.
+  const { data: snap, error } = await supabase.from('snapshots').select('data').eq('id', ref).eq('template_id', templateId).single();
   if (error) throw error;
   return snap?.data ?? {};
 }
@@ -85,6 +87,9 @@ export async function GET(req: Request) {
   const b = searchParams.get('b'); // same
 
   if (!templateId) return NextResponse.json({ error: 'Missing templateId' }, { status: 400 });
+  // ⚠️ A draft's unpublished content — owner or admin only (answered anyone until 2026-10-23).
+  const gate = await requireTemplateOwner(templateId);
+  if (!gate.ok) return gate.response;
 
   const refA = a || 'draft';
   const refB = b || 'published';

@@ -15,7 +15,7 @@ const VISUAL = new Set<IndustryKey>([
 ]);
 // Trust-sensitive professionals — credibility and consultation lead.
 const TRUST = new Set<IndustryKey>([
-  'legal', 'real_estate', 'medical_dental',
+  'legal', 'real_estate', 'medical_dental', 'consulting',
 ]);
 // Urgency trades — fast help / call-now framing converts.
 const URGENCY = new Set<IndustryKey>([

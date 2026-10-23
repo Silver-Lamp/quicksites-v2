@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
-import { getAdminUser } from '@/lib/auth/getAdminUser';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -22,8 +22,6 @@ function x(err: any) {
 }
 
 async function handle(req: Request, verb: 'GET' | 'POST' | 'DELETE') {
-  if (!(await getAdminUser())) return j({ error: 'forbidden' }, 403);
-
   const url = new URL(req.url);
   const debug = url.searchParams.get('debug') === '1';
 
@@ -54,6 +52,10 @@ async function handle(req: Request, verb: 'GET' | 'POST' | 'DELETE') {
     note('incoming', { method: verb, templateId, mode });
 
     if (!templateId) return j({ error: 'templateId required' }, 400);
+
+    // Owner or admin: taking your own site offline is yours to do (2026-10-23).
+    const gate = await requireTemplateOwner(templateId);
+    if (!gate.ok) return gate.response;
 
     // Make sure the template exists (for better errors and event logging)
     const tplRes = await pub

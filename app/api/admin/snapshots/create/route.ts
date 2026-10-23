@@ -6,7 +6,7 @@ import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { sha256 } from '@/lib/server/templateUtils';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
 import { diffBlocks } from '@/lib/diff/blocks';
-import { requireAdmin } from '@/lib/auth/requireUser';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 const DEBUG = process.env.DEBUG_IDENTITY === '1';
 const dbg = (...args: any[]) => { if (DEBUG) console.log('[SNAPSHOT]', ...args); };
@@ -43,9 +43,6 @@ export async function GET(req: Request) { return handle(req); }
 export async function POST(req: Request) { return handle(req); }
 
 async function handle(req: Request) {
-  const gate = await requireAdmin();
-  if (gate instanceof NextResponse) return gate;
-
   try {
     const url = new URL(req.url);
     const qId = url.searchParams.get('templateId') || url.searchParams.get('id');
@@ -61,6 +58,14 @@ async function handle(req: Request) {
 
     const templateId = (qId || bodyId || '').trim();
     if (!templateId) return j({ error: 'Missing templateId' }, 400);
+
+    // ⚠️ OWNER, not platform admin (2026-10-23). This is the step BEFORE /api/admin/sites/publish in
+    // every Save & Publish, and it stayed admin-only after publish moved to ownership — so a signed-up
+    // customer pressing Save & Publish on their own site got a bare "forbidden" toast and nothing went
+    // live (Amy, recorded walkthrough 2026-10-22). Creating a version is a save, not a publish, so an
+    // anonymous owner may do it too; the publish route decides who may go live.
+    const gate = await requireTemplateOwner(templateId);
+    if (!gate.ok) return gate.response;
 
     const pub = supabaseAdmin.schema('public');
 
@@ -111,7 +116,7 @@ async function handle(req: Request) {
       full_data: tpl.data ?? {},
       diff: bdSlim ?? null,
       commit_message: message ?? null,
-      editor_id: null,          // wire to your session user id if available
+      editor_id: gate.userId,
       forced_revert: false,
       thumbnail_url: null,
     };

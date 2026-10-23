@@ -248,6 +248,14 @@ function useDebouncedSave() {
       m.current = null;
     }, ms) as unknown as number;
   };
+  /** Hold a merge until flushMerge() (blur / Enter / Next) — no timer, so nothing saves mid-word. */
+  const mergeLater = (detail: any) => {
+    if (m.current) {
+      window.clearTimeout(m.current);
+      m.current = null;
+    }
+    mDetail.current = detail;
+  };
   const flushMerge = () => {
     if (m.current) {
       window.clearTimeout(m.current);
@@ -258,7 +266,7 @@ function useDebouncedSave() {
       mDetail.current = null;
     }
   };
-  return { saveSoon, flushSave, mergeSoon, flushMerge };
+  return { saveSoon, flushSave, mergeSoon, mergeLater, flushMerge };
 }
 
 /* —— tiny label guesser for Suggest flow —— */
@@ -311,7 +319,7 @@ export default function HeroEditor({
 }: BlockEditorProps & { template: Template }) {
   const aiRef = useBlockAiFocus<HTMLDivElement>((block as any)?._id ?? (block as any)?.id);
   const [mode, setMode] = useState<'express' | 'advanced'>('express');
-  const { saveSoon, flushSave, mergeSoon, flushMerge } = useDebouncedSave();
+  const { flushSave, mergeLater, flushMerge } = useDebouncedSave();
   const isTypingOther = useRef(false);
 
   // initial local
@@ -689,8 +697,8 @@ export default function HeroEditor({
   useEffect(() => {
     // While actively typing the free-text "Other" field (esp. on mobile), skip the
     // apply-patch broadcast below — it re-renders the preview on every keystroke and
-    // causes focus loss / jank. The onChange handler's debounced mergeSoon already
-    // reflects the value, and blur/Enter flush it. (Guards a value-change render only.)
+    // causes focus loss / jank. The onChange handler holds the value (mergeLater), and
+    // blur / Enter / Next commit it. (Guards a value-change render only.)
     if (isTypingOther.current) return;
     // Treat "other" without text as not chosen
     const effIndustryKey =
@@ -1174,10 +1182,13 @@ export default function HeroEditor({
                       // cannot handle their business.
                       if (industryKey !== 'other' && v.trim()) setIndustryKey('other');
 
-                      // mirror when typing "Other" — debounced so we don't
-                      // re-render the editor/preview on every keystroke
+                      // ⚠️ HELD, NOT SAVED, WHILE TYPING (owner, 2026-10-23: "need debounce when
+                      // typing the other category"). A 300 ms timer here saved "Co" on the way to
+                      // "Consulting" — every pause in a word was a commit and a "Saving…" flash, and
+                      // a half-typed industry steered the image prompt. The value is committed once,
+                      // on blur / Enter / Next (flushMerge + flushSave below).
                       if (industryKey === 'other' || v.trim()) {
-                        mergeSoon({
+                        mergeLater({
                           meta: {
                             site_type: siteType || 'small_business',
                             industry: 'other',
@@ -1185,7 +1196,6 @@ export default function HeroEditor({
                             industry_other: v.trim() || null,
                           },
                         });
-                        saveSoon();
                       }
                     }}
                     onBlur={() => {

@@ -21,7 +21,7 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const SCOPES: MediaScope[] = ['site', 'org-industry', 'org', 'public'];
+const SCOPES: MediaScope[] = ['site', 'industry', 'org-industry', 'org', 'public'];
 
 export async function POST(req: Request) {
   let body: any;

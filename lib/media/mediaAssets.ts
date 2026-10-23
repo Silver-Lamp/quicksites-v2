@@ -12,7 +12,13 @@ import { resolveIndustryKey } from '@/lib/industries';
 // is a post-regen table absent from the generated Database types.
 type Admin = any;
 
-export type MediaScope = 'site' | 'org-industry' | 'org' | 'public';
+/**
+ * `industry` = every AI-GENERATED image of that industry, from any owner (owner, 2026-10-23:
+ * "show all generated ones for that industry"). Generated only — never `uploaded`, which can be
+ * someone's own photo of their shop, their family or their staff. A generated image here contains
+ * no people by construction (lib/images/noPeople.ts), so sharing it reveals nothing about anyone.
+ */
+export type MediaScope = 'site' | 'industry' | 'org-industry' | 'org' | 'public';
 
 export type MediaAsset = {
   id: string;
@@ -166,6 +172,10 @@ export async function listMediaAssets(
   if (opts.scope === 'site') {
     if (!opts.templateId) return [];
     q = q.eq('template_id', opts.templateId);
+  } else if (opts.scope === 'industry') {
+    const key = opts.industry ? resolveIndustryKey(opts.industry) : '';
+    if (!key) return [];
+    q = q.eq('industry', key).eq('source', 'generated');
   } else {
     q = q.or(orFilter());
     if (opts.scope === 'org-industry') {

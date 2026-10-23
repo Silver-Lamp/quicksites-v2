@@ -333,7 +333,9 @@ export function TemplateEditorToolbar({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          {renderAutosaveBadge()}
+          {/* With a Save button, the save state lives IN the button (below); the bare badge is only for
+              toolbars that have no button. */}
+          {!handleSaveDraft && renderAutosaveBadge()}
           <PublishStatePill templateId={currentId} refreshKey={publishStateKey} onPublishClick={onSaveAndPublish} />
 
           {/* Preview leads the action group: "what does this look like?" is the question an
@@ -365,17 +367,42 @@ export function TemplateEditorToolbar({
             </Button>
           )}
 
-          {handleSaveDraft && (
-            <Button type="button" size="sm" onClick={handleSaveDraft} disabled={busy || archiving} title="Save current draft" className="gap-2">
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <SaveIcon className="h-4 w-4" />}
-              {busy ? 'Saving…' : 'Save'}
-            </Button>
-          )}
+          {/* ONE control for saving (owner, 2026-10-23: "integrate the saved text and save button").
+              A "✓ Saved" badge beside a "Save" button asked the owner to reconcile two things; the
+              button now SAYS the state — Saved / Saving… / Retry save / Save — and still saves on click. */}
+          {handleSaveDraft && (() => {
+            const st = busy ? 'saving' : autosaveStatus === 'pending' ? 'saving' : autosaveStatus;
+            const saved = st === 'saved';
+            const err = st === 'error';
+            return (
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveDraft}
+                disabled={busy || archiving}
+                title={saved ? 'All changes saved — click to save again' : err ? 'The last save failed — click to try again' : 'Save current draft'}
+                className={
+                  saved
+                    ? 'gap-2 border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20'
+                    : err
+                      ? 'gap-2 border border-red-500/50 bg-red-500/15 text-red-100 hover:bg-red-500/25'
+                      : 'gap-2'
+                }
+              >
+                {st === 'saving' ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : saved ? <CheckCircle2 className="h-4 w-4" />
+                  : err ? <AlertTriangle className="h-4 w-4" />
+                  : <SaveIcon className="h-4 w-4" />}
+                {st === 'saving' ? 'Saving…' : saved ? 'Saved' : err ? 'Retry save' : 'Save'}
+              </Button>
+            );
+          })()}
 
+          {/* It saves first, as before; the word is the outcome the owner wants (owner, 2026-10-23). */}
           {onSaveAndPublish && (
-            <Button type="button" size="sm" onClick={onSaveAndPublish} disabled={busy || archiving} title="Save and publish snapshot" className="gap-2">
+            <Button type="button" size="sm" onClick={onSaveAndPublish} disabled={busy || archiving} title="Save your changes and put them on the live site" className="gap-2">
               <Rocket className="h-4 w-4" />
-              {busy ? 'Working…' : 'Save & Publish'}
+              {busy ? 'Publishing…' : 'Publish'}
             </Button>
           )}
 

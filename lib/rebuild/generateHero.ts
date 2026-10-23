@@ -14,6 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { NO_PEOPLE_NO_TEXT_CLAUSE } from '@/lib/images/noPeople';
 import type { RebuildSpec } from '@/lib/rebuild/inferSiteSpec';
+import { IMAGE_MODEL } from '@/lib/ai/imageModel';
 
 const ROUTE = '/api/rebuild';
 const HERO_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
@@ -78,11 +79,11 @@ export function heroPrompt(spec: RebuildSpec): string {
 export async function generateRebuildHero(spec: RebuildSpec, userId: string | null): Promise<string | null> {
   try {
     const dataUrl = await meterLLMCall<string | null>(
-      { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: userId, route: ROUTE },
+      { provider: 'openai', model_code: IMAGE_MODEL, modality: 'image', user_id: userId, route: ROUTE },
       async () => {
         const openai = getOpenAI('image');
         const gen = await openai.images.generate({
-          model: 'gpt-image-1',
+          model: IMAGE_MODEL,
           prompt: heroPrompt(spec),
           size: '1536x1024',
           quality: 'medium',

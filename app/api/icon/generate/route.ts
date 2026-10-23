@@ -4,6 +4,7 @@ import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { IMAGE_MODEL } from '@/lib/ai/imageModel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -104,10 +105,10 @@ export async function POST(req: Request) {
     let resp;
     try {
       resp = await meterLLMCall(
-        { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', route: '/api/icon/generate' },
+        { provider: 'openai', model_code: IMAGE_MODEL, modality: 'image', route: '/api/icon/generate' },
         async () => {
           const result = await openai.images.generate({
-            model: 'gpt-image-1',
+            model: IMAGE_MODEL,
             prompt,
             size,
             //   response_format: 'b64_json',

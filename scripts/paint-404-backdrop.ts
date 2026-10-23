@@ -57,7 +57,7 @@ async function main() {
 
   console.log('Painting (gpt-image-1, ~20s)…');
   const gen = await openai.images.generate({
-    model: 'gpt-image-1',
+    model: 'gpt-image-1.5',
     prompt: PROMPT,
     size: '1536x1024',
     quality: 'medium',

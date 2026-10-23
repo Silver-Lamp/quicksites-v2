@@ -8,6 +8,7 @@ import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { randomUUID } from 'crypto';
 import { T_MERCHANTS, T_PRODUCTS, T_TEMPLATES } from '../_lib/env';
+import { IMAGE_MODEL } from '@/lib/ai/imageModel';
 
 // If table doesn't exist, PostgREST returns "relation ... does not exist"
 const RELATION_MISSING =
@@ -304,10 +305,10 @@ async function generateAndUploadPNG(params: {
   const { prompt, size, path } = params;
   try {
     const b64 = await meterLLMCall(
-      { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', route: 'dev/seed/all:uploadPNG' },
+      { provider: 'openai', model_code: IMAGE_MODEL, modality: 'image', route: 'dev/seed/all:uploadPNG' },
       async () => {
         const gen = await openaiImage.images.generate({
-          model: 'gpt-image-1',
+          model: IMAGE_MODEL,
           prompt,
           size,
           // response_format: 'b64_json', // << needed for uploads
@@ -360,10 +361,10 @@ async function generateDataUrlPNG(
   size: '256x256' | '512x512' | '1024x1024' = '1024x1024'
 ): Promise<string | null> {
   const b64 = await meterLLMCall(
-    { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', route: 'dev/seed/all:dataUrlPNG' },
+    { provider: 'openai', model_code: IMAGE_MODEL, modality: 'image', route: 'dev/seed/all:dataUrlPNG' },
     async () => {
       const gen = await openaiImage.images.generate({
-        model: 'gpt-image-1',
+        model: IMAGE_MODEL,
         prompt,
         size,
         // response_format: 'b64_json', // << needed for previews

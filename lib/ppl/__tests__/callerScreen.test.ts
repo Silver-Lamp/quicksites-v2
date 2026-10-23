@@ -48,6 +48,13 @@ describe('repeatPatternDecision — our own records prove a dialer, never the AI
     const prior = [short(5, '+1A'), short(4, '+1B'), short(3, '+1A'), short(2, '+1B'), short(1, '+1A', { call_status: 'dial-completed', call_duration: REPEAT_CONNECTED_SECONDS + 30 })];
     expect(repeatPatternDecision(prior, NOW)).toEqual({ block: false, reason: 'a_call_connected' });
   });
+  it('a SHORT "completed" leg is a voicemail pickup, not a connection — (206) 738-6258, 2026-10-23', () => {
+    const prior = [short(9, '+1A'), short(8, '+1B', { call_status: 'dial-completed', call_duration: 6 }), short(7, '+1C', { call_status: 'dial-completed', call_duration: 10 }), short(3, '+1D', { call_status: 'dial-completed', call_duration: 0 }), short(1, '+1E', { call_status: 'dial-completed', call_duration: 9 })];
+    expect(repeatPatternDecision(prior, NOW).block).toBe(true);
+    // A completed leg with no duration recorded stays a connection (we cannot tell).
+    const unknown = [...prior.slice(0, 4), short(1, '+1E', { call_status: 'dial-completed', call_duration: null })];
+    expect(repeatPatternDecision(unknown, NOW)).toEqual({ block: false, reason: 'a_call_connected' });
+  });
   it('one spoken voicemail disqualifies the pattern; a no-speech recording (fax tone) does not', () => {
     const base = [short(5, '+1A'), short(4, '+1B'), short(3, '+1A'), short(2, '+1B')];
     expect(repeatPatternDecision([...base, short(1, '+1A', { recording_url: 'https://r', voicemail_speech: 'speech' })], NOW)).toEqual({ block: false, reason: 'a_message_was_left' });

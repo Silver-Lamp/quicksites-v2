@@ -130,7 +130,13 @@ export function repeatPatternDecision(prior: PriorCall[], nowMs = Date.now()): R
   for (const c of calls) {
     const s = (c.call_status ?? '').toLowerCase();
     const dur = typeof c.call_duration === 'number' ? c.call_duration : null;
-    if ((dur !== null && dur >= REPEAT_CONNECTED_SECONDS) || s === 'dial-completed' || s === 'answered' || s === 'connected') {
+    // ⚠️ Twilio's "completed" is not "a person talked" — a voicemail pickup completes too (the
+    // classifyDial rule). (206) 738-6258 swept 14 of our lines in 11 days with "completed" legs of
+    // 0, 6, 9 and 10 s, and this line read each one as a connection, so it was never blocked and
+    // a real plumber was texted its number on 2026-10-23. A completed leg counts as connected only
+    // when it lasted REPEAT_CONNECTED_SECONDS, or when no duration was recorded at all.
+    const completed = s === 'dial-completed' || s === 'answered' || s === 'connected';
+    if ((dur !== null && dur >= REPEAT_CONNECTED_SECONDS) || (completed && dur === null)) {
       return { block: false, reason: 'a_call_connected' };
     }
     if (c.voicemail_speech === 'speech' || (c.recording_url && c.voicemail_speech !== 'no_speech')) {

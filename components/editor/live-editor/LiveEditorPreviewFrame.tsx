@@ -779,6 +779,12 @@ export default function LiveEditorPreviewFrame({
         >
           {/* Always inline for stability in editor. The theme scope lives HERE so
               the canvas surface and its blocks resolve from one source — no mix. */}
+          {/* ⚠️ LOAD THE TYPEFACE, NOT JUST ITS NAME. The canvas set --font-heading to the theme's
+              pairing (e.g. Oswald) but never loaded the stylesheet, so the editor fell back to
+              plain sans while the published site — whose TemplateThemeWrapper does load it — showed
+              Oswald. "Did you notice this font is different on this page compared to that page?"
+              (walkthrough, 2026-10-22). Same link the public wrapper renders; React hoists it. */}
+          {resolvedTheme?.fontHref ? <link rel="stylesheet" href={resolvedTheme.fontHref} /> : null}
           <div
             data-theme={siteMode}
             data-qs-themed={resolvedTheme ? '1' : undefined}
@@ -932,6 +938,25 @@ export default function LiveEditorPreviewFrame({
                       );
                     })}
                   </SortableContext>
+                  {/* ⚠️ THE MAIN WAY TO GROW A PAGE WAS A FADED 11px CHIP. "There used to be big
+                      buttons … I want to make that a lot more prominent" (walkthrough, 2026-10-22):
+                      a customer looking for "About" never found the block library. The small
+                      between-block chips stay for inserting in the middle; the end of the page gets
+                      a button you cannot miss. */}
+                  <div className="mt-4 flex justify-center">
+                    <button
+                      type="button"
+                      aria-label="Add a section at the end of this page"
+                      className="flex w-full max-w-xl items-center justify-center gap-2 rounded-xl border-2 border-dashed border-sky-400/40 bg-sky-500/5 px-4 py-4 text-sm font-semibold text-sky-200 transition hover:border-sky-400/70 hover:bg-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const lastId = ids[ids.length - 1];
+                        if (lastId) onRequestAddAfter?.(lastId);
+                      }}
+                    >
+                      <Plus className="h-4 w-4" /> Add a section — about, services, photos, a form and more
+                    </button>
+                  </div>
                 </DndContext>
               )}
 

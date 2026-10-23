@@ -3,6 +3,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { blockMeta } from '@/admin/lib/zod/blockSchema';
+import { blockMatchesQuery } from '@/lib/editor/blockSearch';
 import type { Block } from '@/types/blocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { PICKER_GROUPS, QUICK_PICKS as PICKER_QUICK_PICKS } from '@/lib/blocks/pickerTypes';
@@ -168,9 +169,8 @@ export default function BlockAdderGrouped({
       const matched = group.types.filter((type) => {
         if (blocked.has(type)) return false;
         if (!searchActive) return true;
-        const label = (blockMeta[type as keyof typeof blockMeta]?.label || '').toLowerCase();
-        const t = String(type).toLowerCase();
-        return label.includes(q) || t.includes(q) || (wantsAi && isAiType(type));
+        const label = blockMeta[type as keyof typeof blockMeta]?.label || '';
+        return blockMatchesQuery(String(type), label, q) || (wantsAi && isAiType(type));
       });
 
       return {

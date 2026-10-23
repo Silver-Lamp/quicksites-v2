@@ -200,10 +200,14 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
                 );
               })}
             </div>
+            {/* Unticking here read as "remove this service" and then the sidebar still listed all
+                five — "I gotta make sure that it adjusted everywhere" (walkthrough, 2026-10-22).
+                It is a per-form choice by design; say so where the choice is made. */}
             <p className="text-xs text-neutral-400">
-              Need another option? Add services in the{' '}
+              Ticks choose what <b>this form</b> offers; unticked services stay on your site. To add or remove a
+              service everywhere, use{' '}
               <button type="button" onClick={() => openSidebarPanel('services')} className={sidebarLinkClass}>
-                sidebar settings
+                Available Services
               </button>
               .
             </p>

@@ -35,6 +35,16 @@ const SUBHEADS: Record<IndustryStyle, string[]> = {
   ],
 };
 
+/** Labels that are a category bucket, not a trade a sentence can name. */
+const UNLABELLED = new Set(['other', 'general', 'small business', 'business', 'n/a', 'none']);
+
+/** For a site whose trade we do not know: an invitation, never a claim about the business. */
+const SUBHEADS_NO_LABEL = [
+  'Tell us what you need and we’ll get back to you.',
+  'Questions? Send a message — we’d be glad to help.',
+  'Get in touch and let’s talk about what you need.',
+];
+
 const CTAS: Record<IndustryStyle, string[]> = {
   generic: ['Get a Quote', 'Get a Free Quote', 'Get Started', 'Contact Us'],
   urgency: ['Call Now', 'Get Fast Help', 'Request Service', 'Get a Free Quote'],
@@ -57,8 +67,13 @@ export function pickHeroCopy(opts: {
   // Blend the style pool with the generic pool for extra spread.
   const subs = [...SUBHEADS[style], ...SUBHEADS.generic];
   const ctas = [...CTAS[style], ...CTAS.generic];
-  const label = (opts.label || '').toLowerCase();
+  const label = (opts.label || '').toLowerCase().trim();
   const business = (opts.businessName || '').trim() || opts.label;
+  // ⚠️ NO LABEL, NO {label} SENTENCE. A site created as "Other" was greeted with "Local other you
+  // can count on." (SVE Consulting, 2026-10-22) — the industry KEY printed as if it were a trade.
+  if (!label || UNLABELLED.has(label) || opts.industryKey === 'other') {
+    return { subheadline: pickFrom(SUBHEADS_NO_LABEL, rng), ctaText: pickFrom(CTAS.generic, rng) };
+  }
   const subheadline = pickFrom(subs, rng)
     .replace(/\{label\}/g, label)
     .replace(/\{business\}/g, business);

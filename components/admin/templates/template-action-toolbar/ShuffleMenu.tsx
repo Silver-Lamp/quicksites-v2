@@ -45,6 +45,25 @@ export default function ShuffleMenu({
     };
   }, [open]);
 
+  // ⚠️ STEP ASIDE WHILE A DIALOG IS OPEN. At max z-index, bottom-right, this pill sat exactly on
+  // the Cancel / Save buttons of every block editor and on the Site Settings sheet's footer —
+  // "there's shuffles in the way … this is kind of hidden" (walkthrough, 2026-10-22). A modal owns
+  // the screen; a restyle control has nothing to do while one is open. The pages tray is marked
+  // as a dialog too but sits at the bottom centre and is open most of the time, so it is excluded.
+  const [dialogOpen, setDialogOpen] = useState(false);
+  useEffect(() => {
+    let raf = 0;
+    const check = () => {
+      raf = 0;
+      setDialogOpen(!!document.querySelector('[role="dialog"]:not([data-page-tray]), [aria-modal="true"]:not([data-page-tray])'));
+    };
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(check); };
+    check();
+    const mo = new MutationObserver(schedule);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => { mo.disconnect(); if (raf) cancelAnimationFrame(raf); };
+  }, []);
+
   // Keep the menu open after a pick so you can re-tap the same axis (e.g. keep
   // re-shuffling Layout). It closes only via outside-click, Esc, or the caret.
   const run = (fn: () => void) => () => {
@@ -65,7 +84,7 @@ export default function ShuffleMenu({
        Site Settings sheet. Nothing is lost: Shuffle is also in the toolbar's Theme panel, which
        is reachable by swiping the tray. It stays a delight control on a desktop, where there is
        room for it to float. */
-    <div ref={rootRef} className="hidden sm:block fixed bottom-24 right-6 z-[2147483647] pointer-events-auto">
+    <div ref={rootRef} aria-hidden={dialogOpen || undefined} className={`${dialogOpen ? '!hidden ' : ''}hidden sm:block fixed bottom-24 right-6 z-[2147483647] pointer-events-auto`}>
       {open && (
         <div className="absolute bottom-full right-0 mb-2 w-60 overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900/95 p-1.5 shadow-2xl backdrop-blur">
           <div className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Shuffle just…</div>

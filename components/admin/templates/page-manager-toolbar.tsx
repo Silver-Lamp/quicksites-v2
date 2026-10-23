@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateSlug } from '@/lib/utils/generateSlug';
+import { renamedSlug } from '@/lib/editor/navSync';
 
 type PageLite = {
   id?: string;
@@ -326,7 +327,9 @@ export default function PageManagerToolbar({
   // Commit/Cancel using LOCAL drafts
   function commitRename(oldSlug: string, titleDraft: string, slugDraft: string) {
     const title = titleDraft.trim() || slugDraft.trim() || oldSlug;
-    let finalSlug = generateSlug(slugDraft.trim() || title);
+    const oldTitle = String(list.find((p) => p.slug === oldSlug)?.title ?? '');
+    // A slug the owner never chose follows the title ("About" was living at /new-page).
+    let finalSlug = renamedSlug({ oldSlug, oldTitle, slugDraft, title, slugify: generateSlug });
     finalSlug = uniqueSlug(finalSlug, oldSlug);
 
     setEditingSlug(null);
@@ -369,13 +372,15 @@ export default function PageManagerToolbar({
         <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-white/10">
           <div className="text-sm font-medium opacity-90">Pages</div>
           <div className="flex items-center gap-2">
+            {/* "There's another tiny new button … I gotta make this a lot bigger" (walkthrough,
+                2026-10-22): the way to add a page was a grey chip the size of the Close button. */}
             <button
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1 bg-white/10 hover:bg-white/20 text-sm"
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-sm font-medium text-white"
               onClick={createPage}
               title="Create page"
             >
               <Plus className="w-4 h-4" />
-              New
+              New page
             </button>
             <button
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 bg-white/10 hover:bg-white/20 text-sm"

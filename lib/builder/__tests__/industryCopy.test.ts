@@ -63,3 +63,16 @@ describe('pickFaqItems', () => {
 // pickTestimonials was DELETED (see industryCopy.ts) — it fabricated 5-star reviews
 // interpolating a real business's name. Its test went with it; a test that asserts a
 // generator produces plausible fake reviews is a test that argues for keeping it.
+
+describe('a site with no trade label', () => {
+  it('never prints "other" (or a blank) where a trade belongs', () => {
+    const { pickHeroCopy } = require('@/lib/builder/industryCopy');
+    for (let i = 0; i < 20; i++) {
+      const rng = () => i / 20;
+      for (const [industryKey, label] of [['other', 'Other'], ['other', ''], ['general', 'General']] as const) {
+        const { subheadline } = pickHeroCopy({ industryKey, label, rng });
+        expect(subheadline).not.toMatch(/\bother\b|\bgeneral\b|\s{2}|^\s|Local\s+you/i);
+      }
+    }
+  });
+});

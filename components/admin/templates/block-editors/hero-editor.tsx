@@ -482,12 +482,13 @@ export default function HeroEditor({
   type Step = 1 | 2;
   const hasOtherText = initialOtherText.length > 0;
 
-  const initialStep: Step =
-    (siteType && siteType !== 'small_business') ||
-    (currentIndustryKey && currentIndustryKey !== 'other') ||
-    (siteType === 'small_business' && currentIndustryKey === 'other' && hasOtherText)
-      ? 2
-      : 1;
+  // ⚠️ ASK ONCE. The site type is chosen when the site is created (industry / blank chooser), so
+  // re-asking it at the top of the hero editor is the "two screens asking the same thing" Amy hit
+  // on 2026-10-22 — and because a typed "Other" industry never saved (lib/editor/metaMerge.ts) it
+  // re-asked EVERY time. Any known site type or industry goes straight to the hero; the choice
+  // stays one click away ("Site type · change"). `hasOtherText` is kept for the summary label.
+  void hasOtherText;
+  const initialStep: Step = siteType || currentIndustryKey ? 2 : 1;
 
   const [step, setStep] = useState<Step>(initialStep);
 
@@ -507,6 +508,11 @@ export default function HeroEditor({
     local?.image_subject || `${promptIndustryLabel} website hero banner`,
   );
   const [imgStyle, setImgStyle] = useState<'photo' | 'illustration' | '3d' | 'minimal'>('photo');
+  // ⚠️ TYPING A DESCRIPTION DOES NOT MAKE AN IMAGE. Amy typed a subject and pressed Save — the
+  // obvious move — and got her text saved and no image; Sandon: "I've done that like 10 times"
+  // (walkthrough, 2026-10-22). Save now notices a description that was never generated and asks.
+  const [lastGeneratedSubject, setLastGeneratedSubject] = useState<string | null>(null);
+  const [confirmUngenerated, setConfirmUngenerated] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   // Hero canvas: one surface flipped between the editable text and the live render.
   // ⚠️ PREVIEW FIRST. The hero's whole payload is an IMAGE and a headline, and "Suggest All"
@@ -635,7 +641,15 @@ export default function HeroEditor({
   };
 
   /* ---------- save ---------- */
-  const handleSave = () => {
+  /** A description typed (by the user) since the last generation, which no image reflects yet. */
+  const subjectNotGenerated =
+    imgSubjectTouched && !!imgSubject.trim() && imgSubject.trim() !== lastGeneratedSubject && !imgLoading;
+
+  const handleSave = (opts?: { skipImageCheck?: boolean }) => {
+    if (!opts?.skipImageCheck && subjectNotGenerated) {
+      setConfirmUngenerated(true);
+      return;
+    }
     const mergedLocal = normalizeCta({ ...local }, template);
     const canon = toCanonicalHeroProps(mergedLocal, template);
     const finalPayload = { ...mergedLocal, ...canon };
@@ -900,6 +914,8 @@ export default function HeroEditor({
 
       applyHeroImage(nextUrl);
       recordHeroImage(nextUrl, 'generated');
+      setLastGeneratedSubject(imgSubject.trim());
+      setConfirmUngenerated(false);
 
       console.log('[hero] uploaded image url →', publicUrl || '(data url fallback)');
       toast.success(publicUrl ? 'Hero image generated' : 'Image ready (inline preview)');
@@ -990,8 +1006,17 @@ export default function HeroEditor({
         {/* scrollable content */}
         <div className="flex-1 overflow-y-auto px-4 pb-24 [scrollbar-gutter:stable]">
           {step === 2 && (
-            <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-white/80 mt-3 mb-3">
-              Edit your hero’s text and image below. Switch to <b>Advanced</b> for layout &amp; framing.
+            <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-white/80 mt-3 mb-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>Edit your hero’s text and image below. Switch to <b>Advanced</b> for layout &amp; framing.</span>
+              <button
+                type="button"
+                onClick={() => { setShowMoreTypes(siteType === 'small_business'); setStep(1); }}
+                className="ml-auto text-white/60 underline underline-offset-2 hover:text-white"
+                title="Change what kind of site this is"
+              >
+                {(SITE_TYPES.find((t) => t.key === siteType)?.label ?? 'Site type')}
+                {siteType === 'small_business' && effectiveIndustryLabel ? ` · ${effectiveIndustryLabel}` : ''} · change
+              </button>
             </div>
           )}
 
@@ -1415,34 +1440,7 @@ export default function HeroEditor({
               {mode === 'express' && (
                 <div className="grid md:grid-cols-3 gap-3 mt-3">
                   <div className="md:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs text-neutral-300">Image Subject</label>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setShowLibrary((v) => !v)}
-                          className={`inline-flex items-center gap-1.5 rounded border px-2 py-1 text-xs ${
-                            showLibrary
-                              ? 'border-purple-500/70 text-purple-200 bg-purple-500/10'
-                              : 'border-white/15 text-neutral-200 hover:bg-white/10'
-                          }`}
-                        >
-                          <Images className="h-3.5 w-3.5" /> Library
-                        </button>
-                        <button
-                          onClick={generateHeroImage}
-                          disabled={imgLoading}
-                          className="inline-flex items-center gap-1.5 rounded border-2 border-purple-500/70 text-purple-300 px-2 py-1 text-xs hover:bg-purple-500/10"
-                        >
-                          {imgLoading ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <ImageIcon className="h-3.5 w-3.5" />
-                          )}{' '}
-                          Generate
-                        </button>
-                      </div>
-                    </div>
+                    <label className="text-xs text-neutral-300">Image — describe it, then press Generate</label>
                     {showLibrary && (
                       <MediaPicker
                         templateId={template?.id ?? null}
@@ -1461,6 +1459,33 @@ export default function HeroEditor({
                       }}
                       placeholder={`${promptIndustryLabel} website hero banner`}
                     />
+                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={generateHeroImage}
+                        disabled={imgLoading}
+                        className="inline-flex items-center justify-center gap-2 rounded-md bg-purple-600 px-3 py-2.5 text-sm font-medium text-white hover:bg-purple-500 disabled:opacity-60"
+                      >
+                        {imgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        {imgLoading ? 'Generating… (about 20 s)' : local?.image_url ? 'Generate a new image' : 'Generate image'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowLibrary((v) => !v)}
+                        className={`inline-flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm ${
+                          showLibrary
+                            ? 'border-purple-500/70 bg-purple-500/10 text-purple-200'
+                            : 'border-white/15 text-neutral-100 hover:bg-white/10'
+                        }`}
+                      >
+                        <Images className="h-4 w-4" /> Upload your own or pick one
+                      </button>
+                    </div>
+                    {subjectNotGenerated && !confirmUngenerated && (
+                      <div className="mt-1 text-xs text-amber-300">
+                        Press <b>Generate image</b> to turn this description into a picture.
+                      </div>
+                    )}
                     {imgError && <div className="text-xs text-red-300 mt-1">{imgError}</div>}
 
                     {/* Thumb + actions */}
@@ -1732,7 +1757,14 @@ export default function HeroEditor({
 
           {step === 1 ? (
             <button
-              onClick={() => setStep(2)}
+              onClick={() => {
+                // Commit whatever was typed under "Other" BEFORE moving on — the debounced merge
+                // may not have fired yet, and leaving step 1 must never drop the choice.
+                isTypingOther.current = false;
+                flushMerge();
+                flushSave();
+                setStep(2);
+              }}
               disabled={!step1Valid}
               className="text-sm px-3 py-1.5 rounded bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
               title={
@@ -1744,12 +1776,31 @@ export default function HeroEditor({
               Next
             </button>
           ) : (
-            <button
-              onClick={handleSave}
-              className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700"
-            >
-              Save
-            </button>
+            confirmUngenerated ? (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <span className="text-xs text-amber-200">You described a new image but haven’t generated it.</span>
+                <button
+                  onClick={() => { void generateHeroImage(); }}
+                  disabled={imgLoading}
+                  className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-60"
+                >
+                  {imgLoading ? 'Generating…' : 'Generate image first'}
+                </button>
+                <button
+                  onClick={() => handleSave({ skipImageCheck: true })}
+                  className="text-sm px-3 py-1.5 border border-white/15 rounded hover:bg-white/10"
+                >
+                  Save without it
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => handleSave()}
+                className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Save
+              </button>
+            )
           )}
         </div>
       </div>

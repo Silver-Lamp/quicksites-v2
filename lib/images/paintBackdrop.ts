@@ -26,6 +26,7 @@ import { NO_PEOPLE_NO_TEXT_CLAUSE } from '@/lib/images/noPeople';
 import { compressForWeb } from '@/lib/images/compressForWeb';
 import { readBackdrop, type SiteBackdrop } from '@/lib/theme/backdrops';
 import { republishIfPublished } from '@/lib/templates/republishIfPublished';
+import { IMAGE_MODEL } from '@/lib/ai/imageModel';
 
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
 const ROUTE = 'lib/images/paintBackdrop';
@@ -70,11 +71,11 @@ export async function paintPoolImage(
   const prompt = backdropPrompt({ industryLabel: industryKey.replace(/_/g, ' '), subject: null });
   try {
     const dataUrl = await meterLLMCall<string | null>(
-      { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: actorId, route: `${ROUTE}#pool` },
+      { provider: 'openai', model_code: IMAGE_MODEL, modality: 'image', user_id: actorId, route: `${ROUTE}#pool` },
       async () => {
         const openai = getOpenAI('image');
         const gen = await openai.images.generate({
-          model: 'gpt-image-1',
+          model: IMAGE_MODEL,
           prompt,
           size: '1536x1024',
           quality: 'medium',
@@ -137,11 +138,11 @@ export async function paintSiteBackdrop(
   let dataUrl: string | null = null;
   try {
     dataUrl = await meterLLMCall<string | null>(
-      { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: actorId, route: ROUTE },
+      { provider: 'openai', model_code: IMAGE_MODEL, modality: 'image', user_id: actorId, route: ROUTE },
       async () => {
         const openai = getOpenAI('image');
         const gen = await openai.images.generate({
-          model: 'gpt-image-1',
+          model: IMAGE_MODEL,
           prompt,
           size: '1536x1024',
           quality: 'medium',

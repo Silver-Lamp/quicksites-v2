@@ -14,6 +14,7 @@ import { NO_PEOPLE_NO_TEXT_CLAUSE } from '@/lib/images/noPeople';
 import { randomDemoSpec, type DemoSpec } from '@/lib/builder/randomDemoSpec';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import { LABEL_TO_KEY, KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
+import { IMAGE_MODEL } from '@/lib/ai/imageModel';
 
 const ROUTE = '/api/admin/demos/generate';
 const HERO_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
@@ -241,9 +242,9 @@ export async function generateHero(spec: DemoSpec, userId: string | null): Promi
     NO_PEOPLE_NO_TEXT_CLAUSE;
 
   const dataUrl = await meterLLMCall<string | null>(
-    { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: userId, route: ROUTE },
+    { provider: 'openai', model_code: IMAGE_MODEL, modality: 'image', user_id: userId, route: ROUTE },
     async () => {
-      const gen = await openaiImage().images.generate({ model: 'gpt-image-1', prompt, size: '1536x1024', quality: 'medium' });
+      const gen = await openaiImage().images.generate({ model: IMAGE_MODEL, prompt, size: '1536x1024', quality: 'medium' });
       const b64 = gen.data?.[0]?.b64_json;
       return { value: b64 ? `data:image/png;base64,${b64}` : null, usage: { images: 1 } };
     }

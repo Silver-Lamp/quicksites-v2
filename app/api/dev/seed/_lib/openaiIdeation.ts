@@ -2,6 +2,7 @@ import { openai, openaiImage } from './clients';
 import { resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { INDUSTRY_HINTS } from './industries';
+import { IMAGE_MODEL } from '@/lib/ai/imageModel';
 
 /**
  * Brand + product ideation
@@ -129,7 +130,7 @@ export async function generateDataUrlPNG(
 ): Promise<string | null> {
   const negativePrompt = (negative || '').trim();
   const finalPrompt = negativePrompt ? `${prompt}\n\nExclude: ${negativePrompt}.` : prompt;
-  const model = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
+  const model = process.env.OPENAI_IMAGE_MODEL || IMAGE_MODEL;
 
   const b64 = await meterLLMCall(
     { provider: 'openai', model_code: model, modality: 'image', route: 'dev/seed:generateDataUrlPNG' },

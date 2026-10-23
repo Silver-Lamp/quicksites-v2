@@ -18,6 +18,7 @@ import { inferIndustry } from '@/lib/builder/inferIndustry';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { DemoSpec } from '@/lib/builder/randomDemoSpec';
+import { IMAGE_MODEL } from '@/lib/ai/imageModel';
 
 const HERO_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
 const FAVICON_BUCKET = 'favicons';
@@ -60,9 +61,9 @@ async function generateAndUploadHero(
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const b64 = await meterLLMCall<string | null>(
-        { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: ownerId, route: '/api/templates/[id]/autogenerate' },
+        { provider: 'openai', model_code: IMAGE_MODEL, modality: 'image', user_id: ownerId, route: '/api/templates/[id]/autogenerate' },
         async () => {
-          const gen = await openai.images.generate({ model: 'gpt-image-1', prompt, size: '1536x1024', quality: 'medium' });
+          const gen = await openai.images.generate({ model: IMAGE_MODEL, prompt, size: '1536x1024', quality: 'medium' });
           return { value: gen.data?.[0]?.b64_json ?? null, usage: { images: 1 } };
         },
       );
@@ -125,10 +126,10 @@ async function generateAndUploadLogo(
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const b64 = await meterLLMCall<string | null>(
-        { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: ownerId, route: '/api/templates/[id]/autogenerate' },
+        { provider: 'openai', model_code: IMAGE_MODEL, modality: 'image', user_id: ownerId, route: '/api/templates/[id]/autogenerate' },
         async () => {
           const gen = await openai.images.generate({
-            model: 'gpt-image-1',
+            model: IMAGE_MODEL,
             prompt,
             size: '1024x1024',
             background: 'transparent',

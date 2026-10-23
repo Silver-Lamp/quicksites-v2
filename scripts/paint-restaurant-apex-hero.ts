@@ -47,7 +47,7 @@ async function main() {
   const openai = getOpenAI('image');
   console.log('\nPainting (gpt-image-1, ~20s)…');
   const gen = await openai.images.generate({
-    model: 'gpt-image-1', prompt: PROMPT, size: '1536x1024', quality: 'medium', n: 1,
+    model: 'gpt-image-1.5', prompt: PROMPT, size: '1536x1024', quality: 'medium', n: 1,
   });
   const b64 = gen.data?.[0]?.b64_json;
   if (!b64) throw new Error('No image returned.');

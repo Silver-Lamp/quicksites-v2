@@ -190,13 +190,14 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<div class="not-prose mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' +
           guideCard('/urolithin-a', 'Urolithin A · Mitopure', 'Does urolithin A work?', 'Four placebo-controlled trials. Some results held, some didn’t.') +
           guideCard('/mullein-for-smokers', 'Mullein', 'Mullein for smokers', 'Nobody has tested it. That’s why we’re running a study.') +
+          guideCard('/sea-moss-for-smokers', 'Sea moss', 'Sea moss for a smoker’s lungs', 'No human study, of lungs or anything else.') +
           guideCard('/blue-zones-habits-graded', 'Blue Zones', 'The Blue Zones habits, graded', 'Sensible habits, mostly observational evidence.') +
           guideCard('/are-the-blue-zones-real', 'Blue Zones', 'Are the Blue Zones real?', 'The age-record debate, both sides.') +
           guideCard('/does-mullein-work', 'Mullein', 'Does mullein work?', 'Every common claim, graded.') +
           guideCard('/my-urolithin-a-log', 'Self-test', 'One person’s urolithin A log', 'On, off, on — every reading published.') +
           guideCard('/experiments', 'Open experiments', 'Claims nobody has tested — yet', 'The HAVN hat and Rife frequencies: blinded tests anyone can run.') +
           '</div>' +
-          '<p class="not-prose mt-6 text-sm opacity-70">Also: <a class="underline" href="/does-mullein-detox-your-lungs">does mullein detox your lungs?</a> · <a class="underline" href="/smoking-mullein">smoking mullein</a> · <a class="underline" href="/mullein-drops-gummies-capsules-tea">drops, gummies, capsules or tea</a> · <a class="underline" href="/mullein-study">our mullein study</a> · <a class="underline" href="/blue-zones-habit-experiment">try a habit as an experiment</a></p>' +
+          '<p class="not-prose mt-6 text-sm opacity-70">Also: <a class="underline" href="/does-mullein-detox-your-lungs">does mullein detox your lungs?</a> · <a class="underline" href="/does-sea-moss-clear-your-lungs">does sea moss clear your lungs?</a> · <a class="underline" href="/smoking-mullein">smoking mullein</a> · <a class="underline" href="/mullein-drops-gummies-capsules-tea">drops, gummies, capsules or tea</a> · <a class="underline" href="/mullein-study">our mullein study</a> · <a class="underline" href="/blue-zones-habit-experiment">try a habit as an experiment</a></p>' +
           '<blockquote class="not-prose my-12 border-l-2 border-emerald-700 pl-5 font-serif text-2xl leading-snug">“A trial that tested a claim and found nothing outranks a weaker study that found something.”<span class="mt-3 block font-sans text-sm opacity-60">One of the six rules — <a class="underline" href="/how-we-grade">how we grade</a></span></blockquote>',
       },
     ],
@@ -242,6 +243,57 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
       },
       { kind: 'evidence', topic: 'mullein', claimIds: ['smokers-lungs', 'cough'] },
       { kind: 'text', html: `<h2>What does help</h2><p>Stopping smoking is the only thing shown to let the lungs recover. ${QUIT_LINE}</p><p><a href="/mullein-study">Our mullein study</a> will test the cough question directly.</p>` },
+    ],
+  },
+  {
+    slug: 'sea-moss-for-smokers',
+    navLabel: 'Sea moss for smokers',
+    title: 'Sea Moss for Smokers’ Lungs: What the Evidence Says',
+    description: 'No human study has tested sea moss for the lungs — or for anything. What is known, the seaweed spray that was tested, and what actually helps.',
+    blocks: [
+      { kind: 'hero', headline: 'Sea moss for a smoker’s lungs', subheadline: 'Short answer: nobody has tested it — not for lungs, and not for anything else in people.' },
+      {
+        kind: 'text',
+        html:
+          '<p><strong>Short answer:</strong> no study has given sea moss to people and measured their lungs, their cough or their mucus. We searched the medical literature for any human trial of eating sea moss (Irish moss, <em>Chondrus crispus</em>) and found none. The only randomized trial of it was in dairy cows.</p>' +
+          '<h2>Where the lung claim comes from</h2>' +
+          '<p>Sea moss is a red seaweed, sold as a gel, gummies and capsules. Made into a gel it is thick and soothing to swallow, and it has a long folk history for coughs and chests. Labels promise to clear or cleanse the lungs — but those words come from tradition and marketing, not from a study.</p>' +
+          '<p>Lab studies of red-seaweed sugars (carrageenans) show activity against some viruses in a dish. A dish is not a person, and a virus is not tar in the lungs.</p>',
+      },
+      { kind: 'evidence', topic: 'sea-moss', claimIds: ['smokers-lungs', 'mucus'], title: 'What the research shows' },
+      {
+        kind: 'text',
+        html:
+          '<h2>The seaweed spray that was tested</h2>' +
+          '<p>The closest thing to human evidence is not sea moss at all: a <em>nasal spray</em> made from iota-carrageenan, a purified seaweed extract, tested against colds. Four placebo-controlled trials; one small one met its main measure and three larger ones did not. Sprayed in the nose for a cold, it tells us nothing about a gel swallowed for the lungs.</p>',
+      },
+      { kind: 'evidence', topic: 'sea-moss', claimIds: ['carrageenan-spray'] },
+      {
+        kind: 'text',
+        html:
+          '<h2>Is it safe?</h2>' +
+          '<p>As a food in ordinary amounts, probably — but two things vary by product. <strong>Iodine:</strong> a lab analysis of 30 shop samples found Irish moss low enough that a few grams a day stayed well under the safe limit (<a href="https://pubmed.ncbi.nlm.nih.gov/32803579/">Darias-Rosales 2020</a>), but “sea moss” products can contain other seaweeds with far more. If you have a thyroid condition or take thyroid medicine, ask your doctor first. <strong>Metals:</strong> seaweeds can carry arsenic, cadmium and lead from the water they grow in; look for a product that publishes a batch test.</p>' +
+          '<h2>What does help</h2>' +
+          '<p>No supplement undoes what smoke does to the lungs. The lungs clear themselves through mucus and tiny hair-like cilia, and those start recovering within weeks of stopping. Stopping is the one thing shown to help, and it is never too late.</p>' +
+          `<p>${QUIT_LINE}</p>` +
+          '<p>Related: <a href="/mullein-for-smokers">mullein for smokers</a> — the other herb sold for this, and the study we are running on it.</p>',
+      },
+    ],
+  },
+  {
+    slug: 'does-sea-moss-clear-your-lungs',
+    title: 'Does Sea Moss Clear Your Lungs? What the Evidence Says',
+    description: 'No study has tested what sea moss does for the lungs or measured lung function after taking it. What is known, and what actually helps.',
+    blocks: [
+      { kind: 'hero', headline: 'Does sea moss clear your lungs?', subheadline: 'No study has tested it. Here’s what is known.' },
+      {
+        kind: 'text',
+        html:
+          '<p><strong>No study has tested what sea moss does for the lungs, and no study has measured lung function after taking it.</strong> There is no human trial of eating sea moss for any purpose.</p>' +
+          '<p>Some people find the gel soothing on a sore throat, and that is a real experience. It is also the kind of effect that a warm, thick drink — or a placebo — produces, which is why it would need a proper test before anyone could call it a lung treatment.</p>',
+      },
+      { kind: 'evidence', topic: 'sea-moss', claimIds: ['smokers-lungs', 'mucus'] },
+      { kind: 'text', html: `<h2>What does help</h2><p>Stopping smoking is the only thing shown to let the lungs recover. ${QUIT_LINE}</p><p>More: <a href="/sea-moss-for-smokers">sea moss for smokers — the full evidence</a>.</p>` },
     ],
   },
   {

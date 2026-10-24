@@ -190,6 +190,7 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<h2>What we’ve graded</h2>' +
           '<div class="not-prose mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' +
           guideCard('/body-map', 'Body map', 'Every claim, by part of the body', 'Tap the lungs, the heart, the muscles — see what each claim is graded.') +
+          guideCard('/oregano-oil-parasites', 'Oregano oil · parasites', 'Does a “parasite cleanse” work?', 'One small study of oregano oil, no control group. The ad’s symptom list is not a test.') +
           guideCard('/decalcify-pineal-gland', 'Haritaki · pineal gland', 'Can you decalcify your pineal gland?', 'The ads say a fruit dissolves it. Nobody has ever tested that.') +
           guideCard('/red-light-therapy', 'Red light therapy', 'Does red light therapy work?', 'Clinic lasers for knee arthritis: yes, modestly. A pen from an ad: untested.') +
           guideCard('/urolithin-a', 'Urolithin A · Mitopure', 'Does urolithin A work?', 'Four placebo-controlled trials. Some results held, some didn’t.') +
@@ -569,6 +570,36 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<p>Rife was real, built real microscopes, and was covered by real newspapers. The cancer cure is not in the record: the one clinic’s results come from his own report, its records were never published, and in 1938 a newspaper that covered him noted he stopped short of claiming a cure. The suppression story — bribes, fires, poisonings — appears in retellings, mostly after a 1987 book, not in documents we could find.</p>' +
           '<p><strong>If you or someone you love has cancer, please talk to an oncologist.</strong> People have died relying on Rife devices instead of treatment.</p>' +
           '<p>Whether a frequency can kill a microbe at all is a question a dish can answer, safely. <a href="/rife-tested">That test is open to anyone</a>.</p>',
+      },
+    ],
+  },
+  {
+    slug: 'oregano-oil-parasites',
+    title: 'Oregano Oil for Parasites: The “Parasite Cleanse” Ad, Checked',
+    description: 'An ad lists six “signs” of gut parasites and sells oregano and black seed oil softgels. What the studies show, and how parasites are actually found.',
+    blocks: [
+      { kind: 'hero', headline: 'Does a “parasite cleanse” work?', subheadline: 'Oregano and black seed oil, the ad’s “six signs”, and how parasites are actually found.' },
+      {
+        kind: 'text',
+        html:
+          '<p><strong>Short answer:</strong> there is one small study of oregano oil against gut parasites in people — 14 adults, no comparison group, run by a supplement company — and one old field trial of black seeds against tapeworms in children. Nothing has tested the product in the ad. And the ad’s list of “signs” cannot tell you whether you have parasites; a stool test can.</p>' +
+          '<h2>What the ad says</h2>' +
+          '<p>In 2026 a Facebook advertorial for Maju Superfoods “Oregano Oil + Black Seed Oil” softgels (majusuperfoods.com) was headlined “6 Signs Parasites Are Living in Your Gut (and the 2-softgel fix)”. It lists “bloating, sugar cravings, itching at night, low energy” and “brain fog”; says carvacrol from oregano “supports your body’s defense against them at every life stage” and black seed oil “supports the flush”; says “wormwood only touches adult parasites”; and promises “most people notice a difference within weeks.” We read it on 2026-10-24.</p>' +
+          '<h2>The one sign that is real</h2>' +
+          '<p>Itching around the bottom, worst at night, is the typical sign of <strong>pinworm</strong>, a common worm in children. A doctor confirms it with a simple tape test, and it is treated with over-the-counter or prescription medicine — two doses two weeks apart, for the whole household at once (<a href="https://www.cdc.gov/pinworm/about/index.html">CDC</a>). Bloating, cravings, tiredness and brain fog have many causes and point to none of them in particular.</p>',
+      },
+      { kind: 'evidence', topic: 'oregano-parasites', claimIds: [], title: 'The claims, graded' },
+      {
+        kind: 'text',
+        html:
+          '<h2>The lab report on the page</h2>' +
+          '<p>The ad shows a certificate of analysis from an accredited lab for one batch. The certificate pictured reports microbial tests — bacteria, yeast and mould, all absent or below the limit. That tells you the batch was clean. It does not test whether the product affects parasites, and a clean batch is the least you should expect from any supplement.</p>' +
+          '<h2>“Wormwood only touches adult parasites”</h2>' +
+          '<p>We found no study comparing wormwood with oregano oil on parasite eggs, in either direction.</p>' +
+          '<h2>Reviews</h2>' +
+          '<p>The ad quotes happy customers and a 4.6-star rating. Reviews tell you people liked a product; they cannot tell you it removed a parasite nobody tested for. We do not count testimonials as evidence — <a href="/how-we-grade">how we grade</a>.</p>' +
+          '<h2>If you think you have parasites</h2>' +
+          '<ul><li>See a doctor, who can order a stool test — or a tape test for pinworm.</li><li>If a parasite is found, there are proven medicines for it, matched to the parasite.</li><li>Oregano oil is a strong oil: it can upset the stomach, and people on blood thinners or who are pregnant should ask a doctor first.</li></ul>',
       },
     ],
   },

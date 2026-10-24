@@ -144,6 +144,17 @@ describe('Tried & Graded copy rules', () => {
     const unquoted = text(html(p)).replace(/“[^”]*”/g, '');
     expect(unquoted).not.toMatch(/\b(haritaki|it) (dissolves|decalcifies|removes|pulls)\b/i);
   });
+  it('parasites: the product is ungraded by any study, pinworm is cited to the CDC, and the ad is quoted, never ours', () => {
+    const { OREGANO_PARASITES_CLAIMS, OREGANO_PARASITES_STUDIES } = require('@/lib/evidence/topics/oreganoParasites');
+    const g = (id: string) => gradeClaim(OREGANO_PARASITES_CLAIMS.find((c: { id: string }) => c.id === id).evidence, OREGANO_PARASITES_STUDIES);
+    expect(g('maju-softgels')).toBe('no_evidence');
+    expect(g('symptom-signs')).toBe('no_evidence');
+    const p = GUIDE_PAGES.find((x) => x.slug === 'oregano-oil-parasites')!;
+    expect(html(p)).toMatch(/cdc\.gov\/pinworm/);
+    expect(html(p)).not.toMatch(/href="https?:\/\/[^"]*maju/i);
+    const unquoted = text(html(p)).replace(/“[^”]*”/g, '');
+    expect(unquoted).not.toMatch(/\b(oregano oil|it|black seed oil) (kills|clears|removes|flushes)\b/i);
+  });
   it('urolithin A: the grades the trials produce, nulls included', () => {
     const g = (id: string) => gradeClaim(UROLITHIN_A_CLAIMS.find((c) => c.id === id)!.evidence, UROLITHIN_A_STUDIES);
     expect(g('endurance')).toBe('early'); // secondary outcomes only

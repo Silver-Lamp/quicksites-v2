@@ -11,7 +11,7 @@ import { gradeClaim, type EvidenceGrade } from '@/lib/evidence/grade';
 import { EVIDENCE_TOPICS } from '@/lib/evidence/topics';
 
 export type BodyRegionId =
-  | 'head' | 'ears' | 'nose' | 'throat' | 'lungs' | 'heart' | 'immune' | 'muscles' | 'skin' | 'whole_life';
+  | 'head' | 'ears' | 'nose' | 'throat' | 'lungs' | 'heart' | 'immune' | 'muscles' | 'joints' | 'skin' | 'whole_life';
 
 export type BodyRegion = { id: BodyRegionId; label: string; blurb: string };
 
@@ -25,6 +25,7 @@ export const BODY_REGIONS: BodyRegion[] = [
   { id: 'heart', label: 'Heart & blood vessels', blurb: 'Claims about the heart, circulation and stroke.' },
   { id: 'immune', label: 'Immune system', blurb: 'Claims about immune cells.' },
   { id: 'muscles', label: 'Muscles & movement', blurb: 'Claims about strength, endurance and walking.' },
+  { id: 'joints', label: 'Joints & arthritis', blurb: 'Claims about joint pain and arthritis.' },
   { id: 'skin', label: 'Skin & wound healing', blurb: 'Claims about wounds and skin.' },
   { id: 'whole_life', label: 'Whole life', blurb: 'Habits studied against how long people live — not one body part.' },
 ];
@@ -32,6 +33,7 @@ export const BODY_REGIONS: BodyRegion[] = [
 /** topic key → (claim id → region). Every claim of every topic must appear exactly once. */
 export const CLAIM_REGIONS: Record<string, Record<string, BodyRegionId>> = {
   mullein: { cough: 'throat', 'smokers-lungs': 'lungs', 'ear-pain-combo': 'ears', 'episiotomy-cream': 'skin' },
+  'red-light': { 'knee-oa-pain': 'joints', 'laser-acupuncture': 'joints', 'infrabeam-pen': 'joints', 'skin-collagen': 'skin' },
   'sea-moss': { 'smokers-lungs': 'lungs', mucus: 'lungs', 'carrageenan-spray': 'nose' },
   'urolithin-a': { endurance: 'muscles', walking: 'muscles', strength: 'muscles', power: 'muscles', immune: 'immune', 'blood-vessels': 'heart' },
   'blue-zones': {
@@ -44,6 +46,7 @@ export const CLAIM_REGIONS: Record<string, Record<string, BodyRegionId>> = {
 export const TOPIC_PAGE: Record<string, string> = {
   mullein: '/does-mullein-work',
   'sea-moss': '/sea-moss-for-smokers',
+  'red-light': '/red-light-therapy',
   'urolithin-a': '/urolithin-a',
   'blue-zones': '/blue-zones-habits-graded',
 };

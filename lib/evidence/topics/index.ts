@@ -4,6 +4,7 @@
 import type { Study } from '@/lib/evidence/grade';
 import { MULLEIN_CLAIMS, MULLEIN_EVIDENCE_CHECKED, MULLEIN_STUDIES, type TopicClaim } from '@/lib/evidence/topics/mullein';
 import { BLUE_ZONES_CLAIMS, BLUE_ZONES_EVIDENCE_CHECKED, BLUE_ZONES_STUDIES } from '@/lib/evidence/topics/blueZones';
+import { RED_LIGHT_CLAIMS, RED_LIGHT_EVIDENCE_CHECKED, RED_LIGHT_STUDIES } from '@/lib/evidence/topics/redLight';
 import { SEA_MOSS_CLAIMS, SEA_MOSS_EVIDENCE_CHECKED, SEA_MOSS_STUDIES } from '@/lib/evidence/topics/seaMoss';
 import { UROLITHIN_A_CLAIMS, UROLITHIN_A_EVIDENCE_CHECKED, UROLITHIN_A_STUDIES } from '@/lib/evidence/topics/urolithinA';
 
@@ -12,6 +13,7 @@ export type EvidenceTopic = { key: string; label: string; checked: string; studi
 export const EVIDENCE_TOPICS: Record<string, EvidenceTopic> = {
   mullein: { key: 'mullein', label: 'Mullein', checked: MULLEIN_EVIDENCE_CHECKED, studies: MULLEIN_STUDIES, claims: MULLEIN_CLAIMS },
   'urolithin-a': { key: 'urolithin-a', label: 'Urolithin A (Mitopure)', checked: UROLITHIN_A_EVIDENCE_CHECKED, studies: UROLITHIN_A_STUDIES, claims: UROLITHIN_A_CLAIMS },
+  'red-light': { key: 'red-light', label: 'Red light therapy', checked: RED_LIGHT_EVIDENCE_CHECKED, studies: RED_LIGHT_STUDIES, claims: RED_LIGHT_CLAIMS },
   'sea-moss': { key: 'sea-moss', label: 'Sea moss (Irish moss)', checked: SEA_MOSS_EVIDENCE_CHECKED, studies: SEA_MOSS_STUDIES, claims: SEA_MOSS_CLAIMS },
   'blue-zones': { key: 'blue-zones', label: 'Blue Zones habits', checked: BLUE_ZONES_EVIDENCE_CHECKED, studies: BLUE_ZONES_STUDIES, claims: BLUE_ZONES_CLAIMS },
 };

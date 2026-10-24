@@ -275,9 +275,15 @@ export default function AppHeader() {
             <AvatarMenu />
             <div className="leading-tight">
               <div>{displayAuth.email ?? user?.email ?? ''}</div>
-              <div className="text-zinc-400 text-xs">
-                role: {displayAuth.role ?? (role as string) ?? 'user'}
-              </div>
+              {/* "role: viewer" is the DEFAULT label for every customer account, and under a person
+                  editing their own site it read as "you may only look" (Amy's video, 2026-10-23).
+                  It carries no permission — ownership does — so it is shown only for staff roles. */}
+              {(() => {
+                const r = String(displayAuth.role ?? (role as string) ?? '').toLowerCase();
+                return r && r !== 'viewer' && r !== 'user' ? (
+                  <div className="text-zinc-400 text-xs">role: {r}</div>
+                ) : null;
+              })()}
             </div>
           </div>
         </div>

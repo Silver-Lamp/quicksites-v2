@@ -6,7 +6,9 @@ import { cn } from '@/lib/utils';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { resolveSiteTheme } from '@/lib/theme/resolveSiteTheme';
 import { BLOCK_VARIANTS } from '@/lib/blocks/variants';
-import { Pencil, Trash2, GripVertical, LayoutTemplate, Plus, Sparkles } from 'lucide-react';
+import { Pencil, Trash2, GripVertical, LayoutTemplate, Plus, Sparkles, ArrowRightLeft } from 'lucide-react';
+import { moveBlockToPage } from '@/lib/editor/moveBlockToPage';
+import toast from 'react-hot-toast';
 import { requestBlockAiFocus } from '@/lib/editor/blockAiFocus';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -676,6 +678,41 @@ export default function LiveEditorPreviewFrame({
     [template, pageIdx, optimisticBlocks, setTemplate]
   );
 
+  // Move or copy a block to another page (lib/editor/moveBlockToPage.ts) — the same optimistic
+  // write + apply-patch path as delete, so the toolbar's commit queue saves it.
+  const applySendToPage = React.useCallback(
+    (idx: number, toPageIdx: number, mode: 'move' | 'copy') => {
+      const pagesNow = getPages(template);
+      const res = moveBlockToPage(pagesNow, pageIdx, idx, toPageIdx, mode);
+      if (!res) return;
+      const hasDataPages = Array.isArray(template?.data?.pages);
+      const nextTemplate: any = hasDataPages
+        ? { ...(template || {}), data: { ...((template as any)?.data || {}), pages: res.pages } }
+        : { ...(template || {}), pages: res.pages };
+      if (mode === 'move') {
+        const src = res.pages[pageIdx] ?? {};
+        setOptimisticBlocks((src.content_blocks ?? src.blocks ?? src?.content?.blocks ?? []) as any[]);
+      }
+      flushSync(() => {
+        setTemplate?.(nextTemplate);
+      });
+      try {
+        window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
+          detail: {
+            data: nextTemplate?.data,
+            headerBlock: nextTemplate?.headerBlock,
+            footerBlock: nextTemplate?.footerBlock,
+            template_name: nextTemplate?.template_name,
+          },
+        }));
+      } catch {}
+      const dest = pagesNow[toPageIdx];
+      const name = String(dest?.title || dest?.slug || 'the other page');
+      toast.success(mode === 'move' ? `Moved to ${name}` : `Copied to ${name}`);
+    },
+    [template, pageIdx, setTemplate]
+  );
+
   const onDragStart = React.useCallback((e: DragStartEvent) => {
     setActiveId(String(e.active.id));
   }, []);
@@ -884,6 +921,10 @@ export default function LiveEditorPreviewFrame({
                             applyDeleteAt(i);
                             onRequestDeleteBlock?.(id);
                           }}
+                          pageTargets={getPages(template)
+                            .map((p: any, pi: number) => ({ idx: pi, label: String(p?.title || p?.slug || `Page ${pi + 1}`) }))
+                            .filter((t: { idx: number }) => t.idx !== pageIdx)}
+                          onSendToPage={(toIdx, mode) => applySendToPage(i, toIdx, mode)}
                         >
                           {/* Click-anywhere-to-edit, except on interactive elements */}
                           <div
@@ -1045,6 +1086,8 @@ function SortableRow({
   isActive,
   onEdit,
   onDelete,
+  pageTargets = [],
+  onSendToPage,
   children,
 }: {
   id: string;
@@ -1053,8 +1096,18 @@ function SortableRow({
   isActive?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
+  /** Other pages this block can be moved or copied to. */
+  pageTargets?: Array<{ idx: number; label: string }>;
+  onSendToPage?: (toPageIdx: number, mode: 'move' | 'copy') => void;
   children: React.ReactNode;
 }) {
+  // The page picker keeps the toolbar visible while it is open — a native <select> list draws
+  // outside the row, and the hover-only toolbar would otherwise vanish under the pointer.
+  const [sendOpen, setSendOpen] = React.useState(false);
+  const [sendTo, setSendTo] = React.useState<number>(pageTargets[0]?.idx ?? -1);
+  React.useEffect(() => {
+    if (!pageTargets.some((t) => t.idx === sendTo)) setSendTo(pageTargets[0]?.idx ?? -1);
+  }, [pageTargets, sendTo]);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const style: React.CSSProperties = React.useMemo(
@@ -1087,8 +1140,64 @@ function SortableRow({
       </div>
 
       {/* Top-right controls: Layout variant + Drag handle + Edit + Delete */}
-      <div className="pointer-events-none absolute right-2 top-2 z-10 hidden items-center gap-1 group-hover:flex">
+      <div className={cn('pointer-events-none absolute right-2 top-2 z-10 items-center gap-1', sendOpen ? 'flex' : 'hidden group-hover:flex')}>
         {variantControl}
+        {/* Move / copy to another page (Amy, 2026-10-23) — only when there IS another page. */}
+        {pageTargets.length > 0 && onSendToPage && (
+          <div className="relative">
+            <button
+              type="button"
+              aria-label="Move or copy to another page"
+              aria-expanded={sendOpen}
+              className="pointer-events-auto inline-flex items-center rounded-md border border-white/20 bg-black/60 p-1.5 text-white hover:bg-black/80"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSendOpen((v) => !v);
+              }}
+              title="Move or copy to another page"
+            >
+              <ArrowRightLeft className="h-4 w-4" />
+            </button>
+            {sendOpen && (
+              <div
+                className="pointer-events-auto absolute right-0 top-full z-20 mt-1 w-60 rounded-lg border border-white/15 bg-neutral-950/95 p-3 text-xs text-white shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <label className="mb-1 block text-white/70" htmlFor={`send-${id}`}>Send this section to</label>
+                <select
+                  id={`send-${id}`}
+                  value={sendTo}
+                  onChange={(e) => setSendTo(Number(e.target.value))}
+                  className="mb-2 w-full rounded-md border border-white/20 bg-black/60 px-2 py-1.5 text-sm text-white"
+                >
+                  {pageTargets.map((t) => (
+                    <option key={t.idx} value={t.idx}>{t.label}</option>
+                  ))}
+                </select>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="flex-1 rounded-md bg-sky-600 px-2 py-1.5 font-medium hover:bg-sky-500"
+                    onClick={() => { if (sendTo > -1) onSendToPage(sendTo, 'move'); setSendOpen(false); }}
+                    title="Take it off this page and put it at the end of the other page"
+                  >
+                    Move
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 rounded-md border border-white/20 px-2 py-1.5 hover:bg-white/10"
+                    onClick={() => { if (sendTo > -1) onSendToPage(sendTo, 'copy'); setSendOpen(false); }}
+                    title="Keep it here and put a copy at the end of the other page"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="mt-2 text-[11px] text-white/50">It goes to the end of that page. Undo from the bottom toolbar.</p>
+              </div>
+            )}
+          </div>
+        )}
         {/* DRAG HANDLE — plain button (no TooltipTrigger/asChild) */}
         <button
           type="button"

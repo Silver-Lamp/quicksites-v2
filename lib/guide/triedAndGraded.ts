@@ -190,6 +190,7 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<h2>What we’ve graded</h2>' +
           '<div class="not-prose mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' +
           guideCard('/body-map', 'Body map', 'Every claim, by part of the body', 'Tap the lungs, the heart, the muscles — see what each claim is graded.') +
+          guideCard('/non-alcoholic-spirits', 'Non-alcoholic spirits', 'Do “functional” spirits do anything?', 'Lion’s mane in a serving is a sliver of the trial dose. The real win is the missing alcohol.') +
           guideCard('/oregano-oil-parasites', 'Oregano oil · parasites', 'Does a “parasite cleanse” work?', 'One small study of oregano oil, no control group. The ad’s symptom list is not a test.') +
           guideCard('/decalcify-pineal-gland', 'Haritaki · pineal gland', 'Can you decalcify your pineal gland?', 'The ads say a fruit dissolves it. Nobody has ever tested that.') +
           guideCard('/red-light-therapy', 'Red light therapy', 'Does red light therapy work?', 'Clinic lasers for knee arthritis: yes, modestly. A pen from an ad: untested.') +
@@ -570,6 +571,34 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<p>Rife was real, built real microscopes, and was covered by real newspapers. The cancer cure is not in the record: the one clinic’s results come from his own report, its records were never published, and in 1938 a newspaper that covered him noted he stopped short of claiming a cure. The suppression story — bribes, fires, poisonings — appears in retellings, mostly after a 1987 book, not in documents we could find.</p>' +
           '<p><strong>If you or someone you love has cancer, please talk to an oncologist.</strong> People have died relying on Rife devices instead of treatment.</p>' +
           '<p>Whether a frequency can kill a microbe at all is a question a dish can answer, safely. <a href="/rife-tested">That test is open to anyone</a>.</p>',
+      },
+    ],
+  },
+  {
+    slug: 'non-alcoholic-spirits',
+    navLabel: 'NA spirits',
+    title: 'Functional Non-Alcoholic Spirits: Does the Lion’s Mane Do Anything?',
+    description: 'Little Saints and other “functional” spirits add lion’s mane, reishi and damiana. What the trials show, how much a serving holds, and the real health win.',
+    blocks: [
+      { kind: 'hero', headline: 'Do “functional” non-alcoholic spirits do anything?', subheadline: 'The mushrooms, the doses in the trials, and the health effect that is real.' },
+      {
+        kind: 'text',
+        html:
+          '<p><strong>Short answer:</strong> the clearest health effect of a non-alcoholic spirit is the alcohol it replaces. The added mushrooms and herbs are a different story — the trials that found anything gave several grams a day for weeks, and a serving of a spirit holds a small fraction of that. Nobody has tested the drinks themselves.</p>' +
+          '<h2>The example: Little Saints</h2>' +
+          '<p>Little Saints makes zero-proof spirits and canned cocktails. In its own words (littlesaints.com, read 2026-10-24): St. Ember is “Enhanced with organic Lion’s Mane for clarity and elevated presence”; St. Juniper adds “Lion’s Mane for clarity and Damiana for heart-opening presence” and is “crafted to soften your edges and lift your spirits”; the canned cocktails use reishi “for a grounded calm”. A retailer lists St. Ember at 100 mg of lion’s mane extract per serving. The company also says its spirits are “backed by neuroscientists”; we found no published study of the drinks.</p>' +
+          '<h2>The dose problem</h2>' +
+          '<p>The lion’s mane trial with the clearest result gave older adults 3 grams of mushroom powder every day for 16 weeks — and the benefit faded within a month of stopping. The reishi trial gave 5.4 grams of extract a day for 8 weeks. Extracts are more concentrated than powder, so a milligram figure isn’t directly comparable, but one serving of a drink, now and then, is not what any trial tested.</p>',
+      },
+      { kind: 'evidence', topic: 'functional-spirits', claimIds: [], title: 'The claims, graded' },
+      {
+        kind: 'text',
+        html:
+          '<h2>The health effect that is real</h2>' +
+          '<p>If a non-alcoholic spirit takes the place of a drink you would otherwise have had, that is a genuine gain: the World Health Organization’s position is that no level of alcohol is safe for health, and that alcohol causes at least seven kinds of cancer (<a href="https://www.who.int/europe/news/item/04-01-2023-no-level-of-alcohol-consumption-is-safe-for-our-health">WHO, 2023</a>). That benefit comes from what isn’t in the glass, whatever is added to it.</p>' +
+          '<h2>Worth knowing</h2>' +
+          '<ul><li>Some “functional” drinks add ingredients that do act on the body at real doses — check the label if you are pregnant, on medication, or avoiding a particular herb.</li><li>“Clarity”, “calm” and “lift your spirits” describe a feeling, and a pleasant ritual can produce that feeling on its own — which is exactly what a placebo-controlled trial is for.</li></ul>' +
+          '<p>Related: <a href="/body-map">every claim on the body map</a>.</p>',
       },
     ],
   },

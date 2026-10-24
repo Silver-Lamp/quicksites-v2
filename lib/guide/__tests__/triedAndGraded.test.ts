@@ -155,6 +155,16 @@ describe('Tried & Graded copy rules', () => {
     const unquoted = text(html(p)).replace(/“[^”]*”/g, '');
     expect(unquoted).not.toMatch(/\b(oregano oil|it|black seed oil) (kills|clears|removes|flushes)\b/i);
   });
+  it('functional spirits: the drink itself is ungraded by any study, the dose gap is stated, and the alcohol point is cited', () => {
+    const { FUNCTIONAL_SPIRITS_CLAIMS, FUNCTIONAL_SPIRITS_STUDIES } = require('@/lib/evidence/topics/functionalSpirits');
+    const g = (id: string) => gradeClaim(FUNCTIONAL_SPIRITS_CLAIMS.find((c: { id: string }) => c.id === id).evidence, FUNCTIONAL_SPIRITS_STUDIES);
+    expect(g('little-saints-serving')).toBe('no_evidence');
+    expect(g('lions-mane-healthy-focus')).toBe('tested_no_effect');
+    const p = GUIDE_PAGES.find((x) => x.slug === 'non-alcoholic-spirits')!;
+    expect(html(p)).toMatch(/who\.int/);
+    expect(html(p)).toMatch(/3 grams/);
+    expect(html(p)).not.toMatch(/href="https?:\/\/[^"]*littlesaints/i);
+  });
   it('urolithin A: the grades the trials produce, nulls included', () => {
     const g = (id: string) => gradeClaim(UROLITHIN_A_CLAIMS.find((c) => c.id === id)!.evidence, UROLITHIN_A_STUDIES);
     expect(g('endurance')).toBe('early'); // secondary outcomes only

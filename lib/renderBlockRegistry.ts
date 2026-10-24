@@ -129,6 +129,7 @@ export const DYNAMIC_RENDERERS: Record<
   cta: () => import('@/components/admin/templates/render-blocks/cta'),
   story: () => import('@/components/admin/templates/render-blocks/story'),
   evidence_claims: () => import('@/components/admin/templates/render-blocks/evidence-claims'),
+  body_map: () => import('@/components/admin/templates/render-blocks/body-map'),
   testimonial: () => import('@/components/admin/templates/render-blocks/testimonial'),
   footer: () => import('@/components/admin/templates/render-blocks/footer'),
   service_areas: () => import('@/components/admin/templates/render-blocks/service-areas'),

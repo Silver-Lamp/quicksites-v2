@@ -61,6 +61,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   service_offer: 'interactive', // single service/product CTA (planned)
   story: 'content', // alternating image+text brand storytelling
   evidence_claims: 'content', // graded health claims, derived from lib/evidence records at render
+  body_map: 'content', // every graded claim placed on a body outline (lib/evidence/bodyMap.ts)
   about_that: 'content', // HiveJournal narrated-audio embed (loader script only)
   audio_faq: 'interactive', // HiveJournal /ask — grounded owner-voice Q&A on the page
   bill_estimator: 'interactive',

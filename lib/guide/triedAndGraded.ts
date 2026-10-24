@@ -190,6 +190,7 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<h2>What we’ve graded</h2>' +
           '<div class="not-prose mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' +
           guideCard('/body-map', 'Body map', 'Every claim, by part of the body', 'Tap the lungs, the heart, the muscles — see what each claim is graded.') +
+          guideCard('/decalcify-pineal-gland', 'Haritaki · pineal gland', 'Can you decalcify your pineal gland?', 'The ads say a fruit dissolves it. Nobody has ever tested that.') +
           guideCard('/red-light-therapy', 'Red light therapy', 'Does red light therapy work?', 'Clinic lasers for knee arthritis: yes, modestly. A pen from an ad: untested.') +
           guideCard('/urolithin-a', 'Urolithin A · Mitopure', 'Does urolithin A work?', 'Four placebo-controlled trials. Some results held, some didn’t.') +
           guideCard('/mullein-for-smokers', 'Mullein', 'Mullein for smokers', 'Nobody has tested it. That’s why we’re running a study.') +
@@ -568,6 +569,35 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<p>Rife was real, built real microscopes, and was covered by real newspapers. The cancer cure is not in the record: the one clinic’s results come from his own report, its records were never published, and in 1938 a newspaper that covered him noted he stopped short of claiming a cure. The suppression story — bribes, fires, poisonings — appears in retellings, mostly after a 1987 book, not in documents we could find.</p>' +
           '<p><strong>If you or someone you love has cancer, please talk to an oncologist.</strong> People have died relying on Rife devices instead of treatment.</p>' +
           '<p>Whether a frequency can kill a microbe at all is a question a dish can answer, safely. <a href="/rife-tested">That test is open to anyone</a>.</p>',
+      },
+    ],
+  },
+  {
+    slug: 'decalcify-pineal-gland',
+    title: 'Can You Decalcify Your Pineal Gland? Haritaki, Fluoride and the Ads, Checked',
+    description: 'Ads for haritaki capsules promise a “decalcified” pineal gland and less fluoride. What is true, what has never been tested, and the Vatican pine cone.',
+    blocks: [
+      { kind: 'hero', headline: 'Can you decalcify your pineal gland?', subheadline: 'Part of the story is true. The part you’d pay for has never been tested.' },
+      {
+        kind: 'text',
+        html:
+          '<p><strong>Short answer:</strong> the pineal gland — a pea-sized gland deep in the brain that makes the sleep hormone melatonin — really does calcify as people age, and fluoride really does collect in that calcified tissue. But no study has ever tested haritaki on the pineal gland, and no treatment of any kind has been shown to reverse pineal calcification.</p>' +
+          '<h2>What the ads say</h2>' +
+          '<p>In 2026, Facebook ads from pages called “The Decalcified Mind” and “Yogi Wisdom” sold <em>Peptiques Haritaki Third Eye</em> capsules (trypeptiques.com) with a story: a fruit “the yogis called the King of Medicines” that “dissolves the shell off the gland and pulls the fluoride and the metals out of you”, after which “the dreams come back first, vivid and in color.” We read them on 2026-10-24.</p>' +
+          '<h2>What is true</h2>' +
+          '<ul><li><strong>The pineal gland calcifies.</strong> On brain CT scans of 216 people aged 2 to 89, three in four had a calcified pineal, with more of it in older age groups (<a href="https://pubmed.ncbi.nlm.nih.gov/34866062/">2022</a>). Doctors treat it as a normal finding of ageing.</li>' +
+          '<li><strong>Fluoride collects there.</strong> In pineal glands from 11 elderly cadavers, fluoride had built up in step with the calcium (<a href="https://pubmed.ncbi.nlm.nih.gov/11275672/">2001</a>). That shows it is there — not that it does harm, and not that anything takes it out.</li></ul>',
+      },
+      { kind: 'evidence', topic: 'haritaki-pineal', claimIds: [], title: 'The claims, graded' },
+      {
+        kind: 'text',
+        html:
+          '<h2>What haritaki has been tested for</h2>' +
+          '<p>Haritaki (<em>Terminalia chebula</em>) is a real fruit with a long place in Ayurvedic medicine, and it has been studied in people — in mouthwashes and toothpastes for gum health, and for joint comfort. We found no study, in people or in animals, of haritaki and the pineal gland, calcification or fluoride (PubMed, searched 2026-10-24).</p>' +
+          '<h2>The Vatican pine cone</h2>' +
+          '<p>One ad leads with the <em>Pigna</em>, the giant bronze pine cone in a Vatican courtyard, and says the Church built it as a monument to the pineal gland. It is an ancient Roman fountain from the 1st or 2nd century AD that stood near the Pantheon, was moved to Old St Peter’s, and has stood in its courtyard since 1608. It is about 3.4 to 4 metres tall, not “three stories” (<a href="https://en.wikipedia.org/wiki/Fontana_della_Pigna">Fontana della Pigna</a>; <a href="https://ir.ua.edu/handle/123456789/2105">Greenlee</a>). The gland, for its part, is named after pine cones in general.</p>' +
+          '<h2>If you are worried about sleep or fluoride</h2>' +
+          '<ul><li>For poor sleep, a doctor can look for the common, treatable causes — and melatonin itself is sold over the counter and has been tested.</li><li>For fluoride in your water, your local water utility publishes its levels.</li><li>Heavy-metal poisoning is diagnosed with a blood test, not a supplement.</li></ul>',
       },
     ],
   },

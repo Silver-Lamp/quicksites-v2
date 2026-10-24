@@ -11,7 +11,7 @@ import { gradeClaim, type EvidenceGrade } from '@/lib/evidence/grade';
 import { EVIDENCE_TOPICS } from '@/lib/evidence/topics';
 
 export type BodyRegionId =
-  | 'head' | 'ears' | 'nose' | 'throat' | 'lungs' | 'heart' | 'immune' | 'muscles' | 'joints' | 'skin' | 'whole_life';
+  | 'head' | 'ears' | 'nose' | 'throat' | 'lungs' | 'heart' | 'gut' | 'immune' | 'muscles' | 'joints' | 'skin' | 'whole_life';
 
 export type BodyRegion = { id: BodyRegionId; label: string; blurb: string };
 
@@ -23,6 +23,7 @@ export const BODY_REGIONS: BodyRegion[] = [
   { id: 'throat', label: 'Throat', blurb: 'Claims about cough and the throat.' },
   { id: 'lungs', label: 'Lungs & chest', blurb: 'Claims about the lungs, mucus and a smoker’s chest.' },
   { id: 'heart', label: 'Heart & blood vessels', blurb: 'Claims about the heart, circulation and stroke.' },
+  { id: 'gut', label: 'Gut & digestion', blurb: 'Claims about the gut, digestion and parasites.' },
   { id: 'immune', label: 'Immune system', blurb: 'Claims about immune cells.' },
   { id: 'muscles', label: 'Muscles & movement', blurb: 'Claims about strength, endurance and walking.' },
   { id: 'joints', label: 'Joints & arthritis', blurb: 'Claims about joint pain and arthritis.' },
@@ -34,6 +35,7 @@ export const BODY_REGIONS: BodyRegion[] = [
 export const CLAIM_REGIONS: Record<string, Record<string, BodyRegionId>> = {
   mullein: { cough: 'throat', 'smokers-lungs': 'lungs', 'ear-pain-combo': 'ears', 'episiotomy-cream': 'skin' },
   'haritaki-pineal': { 'calcification-sleep': 'head', 'fluoride-free-diet': 'head', 'haritaki-decalcifies': 'head', 'haritaki-fluoride-metals': 'whole_life', 'haritaki-dreams': 'head' },
+  'oregano-parasites': { 'symptom-signs': 'gut', 'oregano-parasites': 'gut', 'black-seed-parasites': 'gut', 'maju-softgels': 'gut' },
   'red-light': { 'knee-oa-pain': 'joints', 'laser-acupuncture': 'joints', 'infrabeam-pen': 'joints', 'skin-collagen': 'skin' },
   'sea-moss': { 'smokers-lungs': 'lungs', mucus: 'lungs', 'carrageenan-spray': 'nose' },
   'urolithin-a': { endurance: 'muscles', walking: 'muscles', strength: 'muscles', power: 'muscles', immune: 'immune', 'blood-vessels': 'heart' },
@@ -48,6 +50,7 @@ export const TOPIC_PAGE: Record<string, string> = {
   mullein: '/does-mullein-work',
   'sea-moss': '/sea-moss-for-smokers',
   'red-light': '/red-light-therapy',
+  'oregano-parasites': '/oregano-oil-parasites',
   'haritaki-pineal': '/decalcify-pineal-gland',
   'urolithin-a': '/urolithin-a',
   'blue-zones': '/blue-zones-habits-graded',

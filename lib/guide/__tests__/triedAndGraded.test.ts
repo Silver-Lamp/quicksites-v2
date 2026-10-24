@@ -165,6 +165,17 @@ describe('Tried & Graded copy rules', () => {
     expect(html(p)).toMatch(/3 grams/);
     expect(html(p)).not.toMatch(/href="https?:\/\/[^"]*littlesaints/i);
   });
+  it('wormwood cleanse: the product and its ingredients are ungraded by any human study, the borrowed facts are cited', () => {
+    const { WORMWOOD_CLEANSE_CLAIMS, WORMWOOD_CLEANSE_STUDIES } = require('@/lib/evidence/topics/wormwoodCleanse');
+    const g = (id: string) => gradeClaim(WORMWOOD_CLEANSE_CLAIMS.find((c: { id: string }) => c.id === id).evidence, WORMWOOD_CLEANSE_STUDIES);
+    expect(g('sanlava-softgels')).toBe('no_evidence');
+    expect(g('wormwood-parasites')).toBe('lab_only');
+    const p = GUIDE_PAGES.find((x) => x.slug === 'wormwood-black-walnut-parasite-cleanse')!;
+    expect(html(p)).toMatch(/specimencoll/); // three stool samples, cited
+    expect(html(p)).toMatch(/malaria/);
+    expect(html(p)).not.toMatch(/href="https?:\/\/[^"]*sanlava/i);
+    expect(html(p)).not.toMatch(/505|378-5409/); // never repeat the ad's phone number
+  });
   it('urolithin A: the grades the trials produce, nulls included', () => {
     const g = (id: string) => gradeClaim(UROLITHIN_A_CLAIMS.find((c) => c.id === id)!.evidence, UROLITHIN_A_STUDIES);
     expect(g('endurance')).toBe('early'); // secondary outcomes only

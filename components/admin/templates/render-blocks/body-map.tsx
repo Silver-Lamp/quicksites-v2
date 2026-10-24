@@ -31,6 +31,7 @@ const SPOTS: Partial<Record<BodyRegionId, { x: number; y: number }>> = {
   immune: { x: 120, y: 205 },
   skin: { x: 57, y: 236 },
   muscles: { x: 99, y: 320 },
+  joints: { x: 141, y: 345 },
 };
 
 const PRIMARY = 'hsl(var(--primary))';

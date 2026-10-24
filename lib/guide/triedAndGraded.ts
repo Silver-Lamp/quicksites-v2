@@ -190,6 +190,7 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<h2>What we’ve graded</h2>' +
           '<div class="not-prose mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' +
           guideCard('/body-map', 'Body map', 'Every claim, by part of the body', 'Tap the lungs, the heart, the muscles — see what each claim is graded.') +
+          guideCard('/red-light-therapy', 'Red light therapy', 'Does red light therapy work?', 'Clinic lasers for knee arthritis: yes, modestly. A pen from an ad: untested.') +
           guideCard('/urolithin-a', 'Urolithin A · Mitopure', 'Does urolithin A work?', 'Four placebo-controlled trials. Some results held, some didn’t.') +
           guideCard('/mullein-for-smokers', 'Mullein', 'Mullein for smokers', 'Nobody has tested it. That’s why we’re running a study.') +
           guideCard('/sea-moss-for-smokers', 'Sea moss', 'Sea moss for a smoker’s lungs', 'No human study, of lungs or anything else.') +
@@ -568,6 +569,58 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<p><strong>If you or someone you love has cancer, please talk to an oncologist.</strong> People have died relying on Rife devices instead of treatment.</p>' +
           '<p>Whether a frequency can kill a microbe at all is a question a dish can answer, safely. <a href="/rife-tested">That test is open to anyone</a>.</p>',
       },
+    ],
+  },
+  {
+    slug: 'red-light-therapy',
+    navLabel: 'Red light',
+    title: 'Does Red Light Therapy Work? Every Claim, Graded',
+    description: 'Red and near-infrared light therapy, graded by the trials: knee arthritis, laser acupuncture, skin and collagen — and why a gadget from an ad is different.',
+    blocks: [
+      { kind: 'hero', headline: 'Does red light therapy work?', subheadline: 'Some of it has real trials behind it. The device in the ad is a different question.' },
+      {
+        kind: 'text',
+        html:
+          '<p><strong>Short answer:</strong> for knee arthritis, light from a <em>clinic</em> laser, at a measured dose, applied over weeks, eased pain more than a placebo laser in pooled trials — modestly, and with researchers still disagreeing about how sure to be. Laser on acupuncture points did nothing. For skin there is one decent trial. None of that tells you whether a particular handheld device works.</p>' +
+          '<h2>Clinic light is not the same as a gadget</h2>' +
+          '<p>The trials that found an effect used lasers with a stated wavelength and power, delivering a measured amount of energy to each spot — the 2019 review names 4–8 joules per spot at 785–860 nm, which is near-infrared and mostly invisible, not the red you can see. A device that does not state its wavelength and output cannot be matched to those doses, so the trials say nothing about it either way.</p>',
+      },
+      { kind: 'evidence', topic: 'red-light', claimIds: ['knee-oa-pain', 'laser-acupuncture', 'skin-collagen'], title: 'What the research shows' },
+      {
+        kind: 'text',
+        html:
+          '<h2>The ad that brought this up</h2>' +
+          '<p>A Facebook advert for a red-light “pen” promises to erase arthritis pain. We set each of its claims beside the record: <a href="/infrabeam-red-light-pen">the InfraBeam pen’s claims, checked</a>.</p>' +
+          '<h2>Before you buy any device</h2>' +
+          '<ul><li>Look for the <strong>wavelength</strong> (nm) and <strong>power</strong> (mW) on the label — without them nobody can compare it to a trial.</li><li>Check the <strong>FDA database</strong> for a clearance under the product’s own name.</li><li>Don’t shine bright light into eyes — yours, a child’s or a pet’s.</li><li>For arthritis, exercise and physical therapy have far more evidence than any light; ask a clinician.</li></ul>',
+      },
+    ],
+  },
+  {
+    slug: 'infrabeam-red-light-pen',
+    title: 'InfraBeam Red Light Pen: The Ad’s Claims, Checked',
+    description: 'A Facebook ad calls the InfraBeam pen “NASA’s Arthritis Pain-Erasing Miracle Pen”. Each claim in the ad, set beside the research and the FDA database.',
+    blocks: [
+      { kind: 'hero', headline: 'The InfraBeam pen: the ad’s claims, checked', subheadline: 'What the advert says, and what the record says.' },
+      {
+        kind: 'text',
+        html:
+          '<p>In October 2026 a Facebook advert from “PrimePath Solutions” led to a page marked “Advertorial” selling a red-light pen called InfraBeam (article.buyinfrabeam.com). We read it on 2026-10-24. Its claims, in its own words, and what we found:</p>' +
+          '<h2>“NASA’s Arthritis Pain-Erasing Miracle Pen”</h2>' +
+          '<p>NASA did fund research into medical uses of LED light: between 1995 and 2003, eight NASA small-business contracts paid for work that began as plant-growth lighting for the Space Shuttle and went on to wound healing in rats and to mouth sores caused by cancer treatment (<a href="https://spinoff.nasa.gov/Nasa-Research-Illuminates-Medical-Uses-Of-Light">NASA Spinoff</a>). That work produced a different device from a different company. We found nothing linking NASA to this pen.</p>' +
+          '<h2>“even bone up to 2 inches beneath your skin”</h2>' +
+          '<p>How far light gets into the body depends on its wavelength, beam, skin pigment and the tissue in the way; near-infrared travels further than visible red (<a href="https://pubmed.ncbi.nlm.nih.gov/38194210/">a 2024 measurement in people</a>). The ad gives no wavelength and no power, so there is nothing to check the 2-inch figure against, and we found no study of this device.</p>' +
+          '<h2>“Immediate Relief … with just a few minutes of use each day”</h2>' +
+          '<p>The trials in which light eased knee arthritis pain gave clinic-laser treatments over weeks, and the largest effect showed up two to four weeks <em>after</em> treatment ended. None measured relief within minutes, and none tested a pen.</p>' +
+          '<h2>“Safe for all ages, including pets, with no harmful side effects”</h2>' +
+          '<p>The knee trials reported no adverse events — in adults, with clinic lasers. We found no study of this device in children or in animals. Whatever the device, do not shine bright light into eyes.</p>' +
+          '<h2>“promotes youthful skin by boosting collagen”</h2>' +
+          '<p>One randomised trial found better skin texture and collagen density after 30 full-face sessions with large light panels. That is a different device, dose and area from a pen.</p>' +
+          '<h2>FDA</h2>' +
+          '<p>We found no FDA clearance (510(k)) and no device listing under the name InfraBeam or PrimePath (FDA databases, searched 2026-10-24). A device can be cleared under another name; the ad names none.</p>',
+      },
+      { kind: 'evidence', topic: 'red-light', claimIds: ['infrabeam-pen', 'knee-oa-pain'], title: 'The grades' },
+      { kind: 'text', html: '<p>More on the science: <a href="/red-light-therapy">does red light therapy work?</a></p>' },
     ],
   },
   {

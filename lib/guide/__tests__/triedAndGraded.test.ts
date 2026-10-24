@@ -123,6 +123,17 @@ describe('Tried & Graded copy rules', () => {
     }
     expect(html(GUIDE_PAGES.find((x) => x.slug === 'sea-moss-for-smokers')!)).toMatch(/thyroid/);
   });
+  it('red light: the pen is ungraded by any trial, the clinic-laser claim names its dose, and the ad is quoted, never repeated as ours', () => {
+    const { RED_LIGHT_CLAIMS, RED_LIGHT_STUDIES } = require('@/lib/evidence/topics/redLight');
+    const g = (id: string) => gradeClaim(RED_LIGHT_CLAIMS.find((c: { id: string }) => c.id === id).evidence, RED_LIGHT_STUDIES);
+    expect(g('infrabeam-pen')).toBe('no_evidence');
+    expect(g('laser-acupuncture')).toBe('tested_no_effect');
+    expect(RED_LIGHT_CLAIMS.find((c: { id: string }) => c.id === 'knee-oa-pain').note).toMatch(/very low/);
+    const p = GUIDE_PAGES.find((x) => x.slug === 'infrabeam-red-light-pen')!;
+    const unquoted = text(html(p)).replace(/“[^”]*”/g, '');
+    expect(unquoted).not.toMatch(/\b(erases?|miracle|pain-erasing|immediate relief)\b/i);
+    expect(html(p)).not.toMatch(/buyinfrabeam\.com["'/]|href="https?:\/\/[^"]*infrabeam/i); // named, never linked
+  });
   it('urolithin A: the grades the trials produce, nulls included', () => {
     const g = (id: string) => gradeClaim(UROLITHIN_A_CLAIMS.find((c) => c.id === id)!.evidence, UROLITHIN_A_STUDIES);
     expect(g('endurance')).toBe('early'); // secondary outcomes only

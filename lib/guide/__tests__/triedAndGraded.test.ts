@@ -134,6 +134,16 @@ describe('Tried & Graded copy rules', () => {
     expect(unquoted).not.toMatch(/\b(erases?|miracle|pain-erasing|immediate relief)\b/i);
     expect(html(p)).not.toMatch(/buyinfrabeam\.com["'/]|href="https?:\/\/[^"]*infrabeam/i); // named, never linked
   });
+  it('pineal: every haritaki claim is ungraded by any study, the true kernel is cited, and the product is named, never linked', () => {
+    const { HARITAKI_PINEAL_CLAIMS, HARITAKI_PINEAL_STUDIES } = require('@/lib/evidence/topics/haritakiPineal');
+    for (const c of HARITAKI_PINEAL_CLAIMS.filter((x: { id: string }) => x.id.startsWith('haritaki-'))) expect(gradeClaim(c.evidence, HARITAKI_PINEAL_STUDIES)).toBe('no_evidence');
+    const p = GUIDE_PAGES.find((x) => x.slug === 'decalcify-pineal-gland')!;
+    expect(html(p)).toMatch(/pubmed\.ncbi\.nlm\.nih\.gov\/34866062/);
+    expect(html(p)).toMatch(/pubmed\.ncbi\.nlm\.nih\.gov\/11275672/);
+    expect(html(p)).not.toMatch(/href="https?:\/\/[^"]*peptiques/i);
+    const unquoted = text(html(p)).replace(/“[^”]*”/g, '');
+    expect(unquoted).not.toMatch(/\b(haritaki|it) (dissolves|decalcifies|removes|pulls)\b/i);
+  });
   it('urolithin A: the grades the trials produce, nulls included', () => {
     const g = (id: string) => gradeClaim(UROLITHIN_A_CLAIMS.find((c) => c.id === id)!.evidence, UROLITHIN_A_STUDIES);
     expect(g('endurance')).toBe('early'); // secondary outcomes only

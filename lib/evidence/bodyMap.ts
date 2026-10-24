@@ -17,7 +17,7 @@ export type BodyRegion = { id: BodyRegionId; label: string; blurb: string };
 
 /** In display order. `whole_life` is not a body part and is drawn beside the figure, not on it. */
 export const BODY_REGIONS: BodyRegion[] = [
-  { id: 'head', label: 'Head & brain', blurb: 'Claims about the brain, focus and sleep.' },
+  { id: 'head', label: 'Head & brain', blurb: 'Claims about the brain, the pineal gland, dreams and sleep.' },
   { id: 'ears', label: 'Ears', blurb: 'Claims about ear pain.' },
   { id: 'nose', label: 'Nose', blurb: 'Claims about colds and the nose.' },
   { id: 'throat', label: 'Throat', blurb: 'Claims about cough and the throat.' },
@@ -27,12 +27,13 @@ export const BODY_REGIONS: BodyRegion[] = [
   { id: 'muscles', label: 'Muscles & movement', blurb: 'Claims about strength, endurance and walking.' },
   { id: 'joints', label: 'Joints & arthritis', blurb: 'Claims about joint pain and arthritis.' },
   { id: 'skin', label: 'Skin & wound healing', blurb: 'Claims about wounds and skin.' },
-  { id: 'whole_life', label: 'Whole life', blurb: 'Habits studied against how long people live — not one body part.' },
+  { id: 'whole_life', label: 'Whole body & life', blurb: 'Claims about the whole body, and habits studied against how long people live.' },
 ];
 
 /** topic key → (claim id → region). Every claim of every topic must appear exactly once. */
 export const CLAIM_REGIONS: Record<string, Record<string, BodyRegionId>> = {
   mullein: { cough: 'throat', 'smokers-lungs': 'lungs', 'ear-pain-combo': 'ears', 'episiotomy-cream': 'skin' },
+  'haritaki-pineal': { 'calcification-sleep': 'head', 'fluoride-free-diet': 'head', 'haritaki-decalcifies': 'head', 'haritaki-fluoride-metals': 'whole_life', 'haritaki-dreams': 'head' },
   'red-light': { 'knee-oa-pain': 'joints', 'laser-acupuncture': 'joints', 'infrabeam-pen': 'joints', 'skin-collagen': 'skin' },
   'sea-moss': { 'smokers-lungs': 'lungs', mucus: 'lungs', 'carrageenan-spray': 'nose' },
   'urolithin-a': { endurance: 'muscles', walking: 'muscles', strength: 'muscles', power: 'muscles', immune: 'immune', 'blood-vessels': 'heart' },
@@ -47,6 +48,7 @@ export const TOPIC_PAGE: Record<string, string> = {
   mullein: '/does-mullein-work',
   'sea-moss': '/sea-moss-for-smokers',
   'red-light': '/red-light-therapy',
+  'haritaki-pineal': '/decalcify-pineal-gland',
   'urolithin-a': '/urolithin-a',
   'blue-zones': '/blue-zones-habits-graded',
 };

@@ -191,6 +191,7 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<div class="not-prose mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' +
           guideCard('/body-map', 'Body map', 'Every claim, by part of the body', 'Tap the lungs, the heart, the muscles — see what each claim is graded.') +
           guideCard('/non-alcoholic-spirits', 'Non-alcoholic spirits', 'Do “functional” spirits do anything?', 'Lion’s mane in a serving is a sliver of the trial dose. The real win is the missing alcohol.') +
+          guideCard('/wormwood-black-walnut-parasite-cleanse', 'Wormwood · black walnut', 'The “hidden parasites” ad', 'A funeral director’s story, a Nobel Prize, and no trial of the product.') +
           guideCard('/oregano-oil-parasites', 'Oregano oil · parasites', 'Does a “parasite cleanse” work?', 'One small study of oregano oil, no control group. The ad’s symptom list is not a test.') +
           guideCard('/decalcify-pineal-gland', 'Haritaki · pineal gland', 'Can you decalcify your pineal gland?', 'The ads say a fruit dissolves it. Nobody has ever tested that.') +
           guideCard('/red-light-therapy', 'Red light therapy', 'Does red light therapy work?', 'Clinic lasers for knee arthritis: yes, modestly. A pen from an ad: untested.') +
@@ -603,6 +604,41 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
     ],
   },
   {
+    slug: 'wormwood-black-walnut-parasite-cleanse',
+    title: 'Wormwood, Black Walnut and Clove: The “Hidden Parasites” Ad, Checked',
+    description: 'An ad told as a funeral director’s story sells wormwood, black walnut and clove softgels. The Nobel Prize, the Bible, the stool test — and the evidence.',
+    blocks: [
+      { kind: 'hero', headline: 'The “hidden parasites” ad, checked', subheadline: 'Wormwood, black walnut and clove — and the story used to sell them.' },
+      {
+        kind: 'text',
+        html:
+          '<p><strong>Short answer:</strong> no study has tested wormwood, black walnut or clove against parasites in a person. Wormwood has only been tried on parasites in laboratory dishes. The real facts the ad borrows — a Nobel Prize, a Bible verse, a roundworm’s egg count — are each about something else.</p>' +
+          '<h2>What the ad says</h2>' +
+          '<p>A 2026 Facebook ad posted under the name “Shelly Helston” is written as a retired funeral director’s story: 41 years, “over 9,000” bodies, “worms dug into the gut wall, sealed behind a gray film, in people whose doctors swore their tests were clean.” It describes a spouse with bloating, tiredness, 3am waking and brain fog, says ivermectin, fenbendazole and health-store cleanses each worked “for about three weeks”, and leads to a store selling Sanlava Organics “Wormwood Black Walnut Cloves (6600 mg) | Flush Out Hidden Parasites &amp; Larva”, which says it “Targets Adults, Larvae &amp; Eggs.” We read it on 2026-10-24. We can’t check the story; a story is not a study.</p>' +
+          '<h2>The borrowed facts</h2>' +
+          '<ul>' +
+          '<li><strong>“In 2015 it won a Nobel Prize in Medicine.”</strong> Half of the 2015 prize went to Tu Youyou for artemisinin, made from <em>sweet</em> wormwood (<em>Artemisia annua</em>) — a medicine for <em>malaria</em>, a blood parasite, not gut worms. The other half went to William Campbell and Satoshi Ōmura for avermectin, the parent of ivermectin, which came from a soil bacterium (<a href="https://www.insidescience.org/news/william-c-campbell-satoshi-omura-and-youyou-tu-win-nobel">Inside Science</a>). Neither prize was for a wormwood supplement.</li>' +
+          '<li><strong>“A plant named in the Bible seven times … tied to cleaning something rotten out of the body.”</strong> In scripture, wormwood is a picture of bitterness and judgment — “gall and wormwood” — not of cleansing (<a href="https://www.esv.org/Deuteronomy+29:18;Jeremiah+9:15;Lamentations+3:15;Lamentations+3:19;Revelation+8:11/">the verses</a>).</li>' +
+          '<li><strong>“One female of these lays up to 200,000 eggs a day.”</strong> True of the roundworm <em>Ascaris</em> (<a href="https://www.cdc.gov/dpdx/ascariasis/index.html">CDC</a>), which is diagnosed with a stool test and cleared by prescription medicine in one to three days (<a href="https://www.cdc.gov/sth/about/ascariasis.html">CDC</a>).</li>' +
+          '<li><strong>“The test was never built to find them.”</strong> One stool test can miss parasites — which is why the CDC asks for three samples a few days apart (<a href="https://www.cdc.gov/dpdx/diagnosticprocedures/stool/specimencoll.html">CDC</a>).</li>' +
+          '</ul>',
+      },
+      { kind: 'evidence', topic: 'wormwood-cleanse', claimIds: [], title: 'The claims, graded' },
+      {
+        kind: 'text',
+        html:
+          '<h2>What wormwood has been tested for</h2>' +
+          '<p>Wormwood (<em>Artemisia absinthium</em>) has small human trials — for Crohn’s disease, an inflammatory bowel condition, not for parasites. That is a different question from the one the ad asks.</p>' +
+          '<h2>“It worked for about three weeks”</h2>' +
+          '<p>Symptoms like bloating and tiredness come and go on their own. A remedy that seems to work for a few weeks and then stops, again and again, is also exactly what a remedy that does nothing looks like — which is why trials compare against a placebo.</p>' +
+          '<h2>Safety</h2>' +
+          '<ul><li>Don’t take medicines made for animals. In 2021 the FDA warned after people were hospitalized from taking ivermectin intended for horses (<a href="https://www.nbcnews.com/news/ncna1277371">NBC News</a>).</li><li>Ask a doctor before taking any herbal supplement for a suspected infection — especially if you are pregnant or on other medicines.</li><li>The store pre-selects a monthly subscription; a one-time purchase is a smaller link below.</li></ul>' +
+          '<h2>If you think you have parasites</h2>' +
+          '<p>See a doctor and ask for stool tests — three of them. If a parasite is found, there is a proven medicine for it. More: <a href="/oregano-oil-parasites">the oregano-oil “parasite cleanse” ad, checked</a>.</p>',
+      },
+    ],
+  },
+  {
     slug: 'oregano-oil-parasites',
     title: 'Oregano Oil for Parasites: The “Parasite Cleanse” Ad, Checked',
     description: 'An ad lists six “signs” of gut parasites and sells oregano and black seed oil softgels. What the studies show, and how parasites are actually found.',
@@ -628,7 +664,7 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<h2>Reviews</h2>' +
           '<p>The ad quotes happy customers and a 4.6-star rating. Reviews tell you people liked a product; they cannot tell you it removed a parasite nobody tested for. We do not count testimonials as evidence — <a href="/how-we-grade">how we grade</a>.</p>' +
           '<h2>If you think you have parasites</h2>' +
-          '<ul><li>See a doctor, who can order a stool test — or a tape test for pinworm.</li><li>If a parasite is found, there are proven medicines for it, matched to the parasite.</li><li>Oregano oil is a strong oil: it can upset the stomach, and people on blood thinners or who are pregnant should ask a doctor first.</li></ul>',
+          '<ul><li>See a doctor, who can order a stool test — or a tape test for pinworm. More: <a href="/wormwood-black-walnut-parasite-cleanse">the wormwood “hidden parasites” ad, checked</a>.</li><li>If a parasite is found, there are proven medicines for it, matched to the parasite.</li><li>Oregano oil is a strong oil: it can upset the stomach, and people on blood thinners or who are pregnant should ask a doctor first.</li></ul>',
       },
     ],
   },

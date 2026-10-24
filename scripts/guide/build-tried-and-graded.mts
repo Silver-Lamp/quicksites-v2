@@ -32,6 +32,11 @@ function block(b: GuideBlock): any {
     x.content = { ...(x.content ?? {}), html: b.html };
     return x;
   }
+  if (b.kind === 'body_map') {
+    const x: any = createDefaultBlock('body_map' as any);
+    x.content = { ...(x.content ?? {}), ...(b.title ? { title: b.title } : {}) };
+    return x;
+  }
   const x: any = createDefaultBlock('evidence_claims' as any);
   x.content = { ...(x.content ?? {}), topic: b.topic, claim_ids: b.claimIds, ...(b.title ? { title: b.title } : {}), show_studies: true };
   return x;

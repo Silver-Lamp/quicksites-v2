@@ -1034,6 +1034,16 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Every graded claim placed on an abstract body outline (lib/evidence/bodyMap.ts). Stores only a
+  // title: the mapping and every grade come from the records at render.
+  body_map: {
+    label: 'Body Map (evidence)',
+    icon: '🫁',
+    schema: z.object({
+      title: z.string().optional(),
+    }),
+  },
+
   hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
 
   menu: { label: 'Menu', icon: '🍽️', schema: MenuBlockSchema },

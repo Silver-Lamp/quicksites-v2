@@ -17,7 +17,7 @@ function pickContent(block: any, override?: any): Content {
 
 // Alpha tints with the site's own text colour, so the badge reads on a light or dark site without
 // leaning on `dark:` (CLAUDE.md §7; sectionShellColor.test.ts counts renderers that do).
-const BADGE: Record<EvidenceGrade, string> = {
+export const GRADE_BADGE: Record<EvidenceGrade, string> = {
   established: 'bg-emerald-500/20 border-emerald-500/40',
   promising: 'bg-sky-500/20 border-sky-500/40',
   early: 'bg-amber-500/20 border-amber-500/40',
@@ -56,7 +56,7 @@ export default function EvidenceClaimsRender({ block, content, previewOnly }: { 
             <li key={cl.id} className="py-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-lg font-medium leading-snug">{cl.claim}</span>
-                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold text-foreground ${BADGE[g]}`} data-grade={g}>
+                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold text-foreground ${GRADE_BADGE[g]}`} data-grade={g}>
                   {GRADE_LABEL[g]}
                 </span>
               </div>

@@ -822,6 +822,7 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
   `publish-tried-and-graded.mts` (the build commits the draft; the publish re-mints the served copies). Plan + mullein study:
   `docs/LONGEVITY_PLAN.md`, `docs/studies/MULLEIN_SMOKERS_PROTOCOL.md`; shared shape proposed as
   `crosstalk/contracts/evidence-grade.md`.
+  **Body map (2026-10-24)**: the `body_map` block draws an abstract body outline whose regions list every graded claim about that part of the body (`lib/evidence/bodyMap.ts` — topic → claim → region; grades derived at render; a test fails if a claim is left off the map). A region says what a claim is ABOUT, never that a product works there. Page `/body-map`. Adding a topic means adding its claims to `CLAIM_REGIONS` and its page to `TOPIC_PAGE`.
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
   ⚠️ **The sidebar used to jump to the top on every navigation (fixed 2026-10-05).** Route-driven
   selection in `AdminNavSections` took the FIRST row whose href was a prefix of the path — a short

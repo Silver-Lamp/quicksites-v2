@@ -792,6 +792,7 @@ export const DEFAULT_BLOCK_CONTENT = {
   },
   // Empty topic → renders nothing in public, a hint in the editor.
   evidence_claims: { topic: '', claim_ids: [], show_studies: true },
+  body_map: {},
   story: {
     sections: [
       {

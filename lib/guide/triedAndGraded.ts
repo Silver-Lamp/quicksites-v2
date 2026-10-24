@@ -148,7 +148,8 @@ export const NOT_AFFILIATED_BZ = '“Blue Zones” and “Power 9” are tradema
 export type GuideBlock =
   | { kind: 'hero'; headline: string; subheadline: string }
   | { kind: 'text'; html: string }
-  | { kind: 'evidence'; topic: string; claimIds: string[]; title?: string };
+  | { kind: 'evidence'; topic: string; claimIds: string[]; title?: string }
+  | { kind: 'body_map'; title?: string };
 
 export type GuidePage = { slug: string; navLabel?: string; title: string; description: string; blocks: GuideBlock[] };
 
@@ -188,6 +189,7 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           eyebrow('Guides') +
           '<h2>What we’ve graded</h2>' +
           '<div class="not-prose mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">' +
+          guideCard('/body-map', 'Body map', 'Every claim, by part of the body', 'Tap the lungs, the heart, the muscles — see what each claim is graded.') +
           guideCard('/urolithin-a', 'Urolithin A · Mitopure', 'Does urolithin A work?', 'Four placebo-controlled trials. Some results held, some didn’t.') +
           guideCard('/mullein-for-smokers', 'Mullein', 'Mullein for smokers', 'Nobody has tested it. That’s why we’re running a study.') +
           guideCard('/sea-moss-for-smokers', 'Sea moss', 'Sea moss for a smoker’s lungs', 'No human study, of lungs or anything else.') +
@@ -565,6 +567,22 @@ export function guidePages(opts: { affiliateLinksLive: boolean }): GuidePage[] {
           '<p>Rife was real, built real microscopes, and was covered by real newspapers. The cancer cure is not in the record: the one clinic’s results come from his own report, its records were never published, and in 1938 a newspaper that covered him noted he stopped short of claiming a cure. The suppression story — bribes, fires, poisonings — appears in retellings, mostly after a 1987 book, not in documents we could find.</p>' +
           '<p><strong>If you or someone you love has cancer, please talk to an oncologist.</strong> People have died relying on Rife devices instead of treatment.</p>' +
           '<p>Whether a frequency can kill a microbe at all is a question a dish can answer, safely. <a href="/rife-tested">That test is open to anyone</a>.</p>',
+      },
+    ],
+  },
+  {
+    slug: 'body-map',
+    navLabel: 'Body map',
+    title: 'Body Map: Every Health Claim We Grade, by Part of the Body',
+    description: 'Tap a part of the body to see every supplement and habit claim we have graded about it — lungs, heart, muscles, immune system — and what the evidence says.',
+    blocks: [
+      { kind: 'hero', headline: 'Every claim, by part of the body', subheadline: 'Tap the lungs, the heart or the muscles to see what each claim is graded.' },
+      { kind: 'body_map' },
+      {
+        kind: 'text',
+        html:
+          '<p>A place on the body shows what a claim is <em>about</em>, not that a product works there. The grade beside each claim is calculated from the studies by fixed rules — <a href="/how-we-grade">how we grade</a>. A claim nobody has tested is marked “Not yet tested” and never given a grade.</p>' +
+          '<p>Habits studied against how long people live, rather than one part of the body, are under <strong>Whole life</strong>.</p>',
       },
     ],
   },

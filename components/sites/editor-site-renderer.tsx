@@ -5,6 +5,7 @@ import * as React from 'react';
 import type { Block } from '@/types/blocks';
 import RenderBlock from '@/components/admin/templates/render-block';
 import SiteRenderer from '@/components/sites/site-renderer'; // fallback
+import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 
 const QS_DEBUG = process.env.QSITES_DEBUG === '1';
 
@@ -112,6 +113,13 @@ export default function EditorSiteRenderer({
     );
   }
 
+  // ⚠️ THE THEME WAS NEVER APPLIED HERE (found 2026-10-23: "'shuffle the look' isn't doing so").
+  // The public SiteRenderer wraps its body in TemplateThemeWrapper (accent, palette, typeface,
+  // radius, backdrop); this renderer — the one /preview uses — returned a bare <main>, so a
+  // shuffle changed and SAVED the theme while the preview painted nothing of it. The mode the
+  // viewer picked wins over the stored one, so the palette follows the Light/Dark toggle.
+  const themed = React.useMemo(() => ({ ...(site as any), color_mode: colorMode }), [site, colorMode]);
+
   // Respect per-page visibility flags; default ON when undefined
   const showHeader = current?.show_header !== false;
   const showFooter = current?.show_footer !== false;
@@ -121,6 +129,7 @@ export default function EditorSiteRenderer({
   const footerBlock = resolveFooterBlock(site, current);
 
   return (
+    <TemplateThemeWrapper mode="site" renderHeader={false} renderFooter={false} template={themed as any}>
     <main
       id={id ?? 'editor-site-renderer'}
       className={className}
@@ -178,5 +187,6 @@ export default function EditorSiteRenderer({
         </div>
       )}
     </main>
+    </TemplateThemeWrapper>
   );
 }

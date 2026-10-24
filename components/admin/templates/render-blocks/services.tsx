@@ -3,7 +3,10 @@
 
 import { isEditorContext } from '@/lib/editor/isEditorContext';
 
+import * as React from 'react';
 import type { ReactNode } from 'react';
+import { detailFor, readServiceDetails, type ServiceDetail, type ServiceDetails } from '@/lib/sites/serviceDetails';
+import { platformBaseFromPathname, rebaseSiteHref } from '@/lib/sites/platformBase';
 import type { Block } from '@/types/blocks';
 import SectionShell from '@/components/ui/section-shell';
 import { isPersonTemplate } from '@/lib/sites/personSite';
@@ -42,6 +45,57 @@ function normList(v: unknown): string[] {
   return Array.from(new Set(mapped));
 }
 
+/**
+ * A service name that opens its description (Amy, 2026-10-23). Hover with a mouse, tap on a phone,
+ * Enter/Space by keyboard; Escape or a tap elsewhere closes it. With a page of its own, the pop-up
+ * links there; with only a page and no description, the name is simply a link.
+ */
+function ServiceLabel({ text, detail, base }: { text: string; detail: ServiceDetail | null; base: string }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLSpanElement | null>(null);
+  const id = React.useId();
+  React.useEffect(() => {
+    if (!open) return;
+    const away = (e: Event) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  if (!detail) return <>{text}</>;
+  const href = detail.page_slug ? rebaseSiteHref(`/${detail.page_slug}`, base) : '';
+  if (!detail.description) {
+    return href ? <a href={href} className="underline decoration-dotted underline-offset-4 hover:decoration-solid">{text}</a> : <>{text}</>;
+  }
+  return (
+    <span ref={ref} className="relative inline-block" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)} data-service-detail="">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((v) => !v)}
+        className="cursor-pointer text-left underline decoration-dotted underline-offset-4 hover:decoration-solid focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
+      >
+        {text}
+      </button>
+      {open && (
+        <span
+          id={id}
+          role="tooltip"
+          className="absolute left-0 top-full z-30 mt-2 block w-72 max-w-[80vw] rounded-lg border border-border bg-card p-4 text-sm leading-relaxed text-card-foreground shadow-xl"
+        >
+          <span className="block whitespace-pre-line">{detail.description}</span>
+          {href ? (
+            <a href={href} className="mt-3 inline-block font-medium text-primary underline underline-offset-2">
+              More about {text.split(' — ')[0]} →
+            </a>
+          ) : null}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export default function ServicesRender({
   block,
   compact = false,
@@ -62,6 +116,10 @@ export default function ServicesRender({
     fromBlock;
 
   const cfg = ((block?.content ?? {}) as any) || {};
+  const details: ServiceDetails = React.useMemo(() => readServiceDetails((template as any)?.data ?? template), [template]);
+  const [base, setBase] = React.useState('');
+  React.useEffect(() => { try { setBase(platformBaseFromPathname(window.location.pathname)); } catch { /* no window */ } }, []);
+  const L = (text: string, key: string = text) => <ServiceLabel text={text} detail={detailFor(details, key)} base={base} />;
 
   /**
    * ⚠️ ONE ITEM IS NOT A LIST, AND NUMBERING IT MAKES THE PAGE LOOK BROKEN.
@@ -185,7 +243,7 @@ export default function ServicesRender({
                 {!singleService && (
                   <span className="text-primary font-bold">{String(i + 1).padStart(2, '0')}</span>
                 )}
-                <span className="font-semibold">{label}</span>
+                <span className="font-semibold">{L(label, item)}</span>
               </div>
               {meta && <div className="mt-1 text-sm text-muted-foreground">{meta}</div>}
             </div>
@@ -205,7 +263,7 @@ export default function ServicesRender({
                 {!singleService && (
                   <span className="text-primary font-bold tabular-nums">{String(i + 1).padStart(2, '0')}</span>
                 )}
-                {label}
+                {L(label, item)}
               </span>
               {meta && <span className="text-muted-foreground shrink-0">{meta}</span>}
             </li>
@@ -220,7 +278,7 @@ export default function ServicesRender({
         {items.map((item, i) => (
           <li key={`${i}-${item}`} className="flex items-baseline gap-2 text-foreground">
             <span className="text-primary" aria-hidden>▹</span>
-            <span>{item}</span>
+            <span>{L(item)}</span>
           </li>
         ))}
       </ul>
@@ -241,7 +299,7 @@ export default function ServicesRender({
           >
             {items.map((item, i) => (
               <li key={`${i}-${item}`} className="list-disc list-inside marker:text-muted-foreground">
-                {item}
+                {L(item)}
               </li>
             ))}
           </ul>

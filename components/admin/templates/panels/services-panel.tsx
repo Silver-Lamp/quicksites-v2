@@ -17,16 +17,33 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 
-type Row = { id: string; value: string };
+import { createDefaultBlock } from '@/lib/createDefaultBlock';
+import { syncNavInData } from '@/lib/editor/navSync';
+import {
+  detailFor,
+  detailsForRows,
+  readServiceDetails,
+  servicePageHtml,
+  servicePageSlug,
+  type ServiceDetails,
+} from '@/lib/sites/serviceDetails';
+
+/** A service row: its name, plus the description and page that go with it (lib/sites/serviceDetails.ts). */
+type Row = { id: string; value: string; description: string; page_slug: string; wantPage: boolean; open: boolean };
 
 const makeId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
     : `row_${Math.random().toString(36).slice(2)}`;
 
-function rowsFrom(vals: string[]): Row[] {
-  return (vals || []).map((v) => ({ id: makeId(), value: String(v || '') }));
+function rowsFrom(vals: string[], details: ServiceDetails = {}): Row[] {
+  return (vals || []).map((v) => {
+    const d = detailFor(details, String(v || '')) ?? {};
+    return { id: makeId(), value: String(v || ''), description: d.description ?? '', page_slug: d.page_slug ?? '', wantPage: false, open: false };
+  });
 }
+const detailSig = (rows: Array<{ value: string; description: string; page_slug: string; wantPage?: boolean }>) =>
+  JSON.stringify(rows.filter((r) => r.value.trim()).map((r) => [r.value.trim(), r.description.trim(), r.page_slug, !!r.wantPage]));
 function clean(vals: string[]) {
   return Array.from(new Set(vals.map((s) => s.trim()).filter(Boolean)));
 }
@@ -70,6 +87,7 @@ export default function ServicesPanel({
   const meta = (template?.data as any)?.meta ?? {};
   const contact = meta?.contact ?? {};
   const persisted = (template?.data as any)?.services ?? template.services ?? [];
+  const persistedDetails = readServiceDetails(template?.data);
 
   // Initial company source of truth
   const templateCompanyId: string | undefined =
@@ -78,7 +96,7 @@ export default function ServicesPanel({
     (template?.data?.company_id as string | undefined);
 
   // ---- Local UI state ----
-  const [draft, setDraft] = React.useState<Row[]>(rowsFrom(persisted));
+  const [draft, setDraft] = React.useState<Row[]>(rowsFrom(persisted, persistedDetails));
   const [touched, setTouched] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
@@ -124,9 +142,9 @@ export default function ServicesPanel({
 
   // ---- Sync when template changes ----
   React.useEffect(() => {
-    setDraft(rowsFrom(persisted as string[]));
+    setDraft(rowsFrom(persisted as string[], persistedDetails));
     setTouched(false);
-  }, [JSON.stringify(persisted)]);
+  }, [JSON.stringify(persisted), JSON.stringify(persistedDetails)]);
 
   React.useEffect(() => {
     setCompanyField(templateCompanyId ?? '');
@@ -134,19 +152,49 @@ export default function ServicesPanel({
 
   const isDirty =
     touched &&
-    JSON.stringify(clean(draft.map((r) => r.value))) !==
-      JSON.stringify(clean(persisted as string[]));
+    (JSON.stringify(clean(draft.map((r) => r.value))) !== JSON.stringify(clean(persisted as string[])) ||
+      detailSig(draft) !== detailSig(rowsFrom(persisted as string[], persistedDetails)));
 
   // ---- Save services list ----
   const save = async () => {
     const cleaned = clean(draft.map((r) => r.value));
     setSaving(true);
     try {
+      // A service that asked for its own page gets one now, starting with its description
+      // (Amy, 2026-10-23). Created once: after that the page is the owner's to edit, so a later
+      // description change updates the pop-up, never text they may have rewritten on the page.
+      let data: any = { ...(template.data as any) };
+      const pages: any[] = Array.isArray(data.pages) ? [...data.pages] : [];
+      const slugs = pages.map((p) => String(p?.slug ?? ''));
+      const rows = draft.filter((r) => r.value.trim()).map((r) => ({ ...r }));
+      for (const r of rows) {
+        if (!r.wantPage || r.page_slug) continue;
+        const slug = servicePageSlug(r.value, slugs);
+        slugs.push(slug);
+        const text: any = createDefaultBlock('text' as any);
+        text.content = { ...(text.content ?? {}), format: 'html', html: servicePageHtml(r.value, r.description) };
+        delete text.content.value;
+        pages.push({
+          id: makeId(),
+          slug,
+          title: r.value.trim(),
+          path: `/${slug}`,
+          show_header: true,
+          show_footer: true,
+          blocks: [text],
+          content_blocks: [JSON.parse(JSON.stringify(text))],
+        });
+        data = syncNavInData({ ...data, pages }, { kind: 'add', slug, title: r.value.trim() });
+        r.page_slug = slug;
+        r.wantPage = false;
+      }
+      const service_details = detailsForRows(rows.map((r) => ({ name: r.value, description: r.description, page_slug: r.page_slug })));
       onChange({
         data: {
-          ...(template.data as any),
+          ...data,
+          pages: Array.isArray(data.pages) ? data.pages : pages,
           services: cleaned,
-          meta: { ...((template.data as any)?.meta ?? {}), services: cleaned },
+          meta: { ...(data?.meta ?? {}), services: cleaned, service_details },
         },
         services: cleaned,
       });
@@ -160,7 +208,7 @@ export default function ServicesPanel({
         } catch {}
       });
 
-      setDraft(rowsFrom(cleaned));
+      setDraft(rows.map((r) => ({ ...r, open: false })));
       setTouched(false);
     } finally {
       setSaving(false);
@@ -168,7 +216,7 @@ export default function ServicesPanel({
   };
 
   const cancel = () => {
-    setDraft(rowsFrom(persisted as string[]));
+    setDraft(rowsFrom(persisted as string[], persistedDetails));
     setTouched(false);
     setAiError(null);
   };
@@ -206,7 +254,7 @@ export default function ServicesPanel({
 
       const current = draft.map((r) => r.value);
       const merged = new Set(mode === 'replace' ? suggested : [...current, ...suggested]);
-      setDraft(rowsFrom(Array.from(merged)));
+      setDraft(rowsFrom(Array.from(merged), detailsForRows(draft.map((r) => ({ name: r.value, description: r.description, page_slug: r.page_slug })))));
       setTouched(true);
     } catch (e: any) {
       setAiError(e?.message || 'AI suggestion failed');
@@ -354,7 +402,7 @@ export default function ServicesPanel({
   const applyServicesVersion = (which: 'original' | 'generated') => {
     const s = which === 'original' ? copyVersions?.original?.services : copyVersions?.generated?.services;
     if (!Array.isArray(s) || !s.length) return;
-    setDraft(rowsFrom(s.map((x: any) => String(x))));
+    setDraft(rowsFrom(s.map((x: any) => String(x)), persistedDetails));
     setTouched(true);
   };
 
@@ -535,7 +583,8 @@ export default function ServicesPanel({
         )}
 
         {draft.map((row) => (
-          <div key={row.id} className="flex gap-2 items-center">
+          <div key={row.id} className="space-y-2">
+          <div className="flex gap-2 items-center">
             <Input
               value={row.value}
               placeholder={
@@ -565,13 +614,60 @@ export default function ServicesPanel({
             >
               Remove
             </button>
+            <button
+              type="button"
+              onClick={() => setDraft((prev) => prev.map((r) => (r.id === row.id ? { ...r, open: !r.open } : r)))}
+              className="whitespace-nowrap text-sm text-sky-300 underline-offset-2 hover:underline"
+              aria-expanded={row.open}
+            >
+              {row.open ? 'Hide details' : row.description || row.page_slug ? 'Details ✓' : 'Details'}
+            </button>
+          </div>
+          {row.open && (
+            <div className="ml-1 space-y-2 rounded border border-white/10 bg-white/[0.03] p-3">
+              <label className="block text-xs text-white/70">
+                Description — shows when a visitor taps or hovers this service
+                <textarea
+                  value={row.description}
+                  rows={3}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDraft((prev) => prev.map((r) => (r.id === row.id ? { ...r, description: v } : r)));
+                    setTouched(true);
+                  }}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  placeholder="What you do, who it's for, what they get."
+                  className="mt-1 w-full rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-white"
+                />
+              </label>
+              {row.page_slug ? (
+                <p className="text-xs text-white/70">
+                  Has its own page: <code>/{row.page_slug}</code>. The pop-up links to it. Edit that page’s text on the page itself.
+                </p>
+              ) : (
+                <label className="flex items-start gap-2 text-xs text-white/80">
+                  <input
+                    type="checkbox"
+                    checked={row.wantPage}
+                    onChange={(e) => {
+                      const v = e.target.checked;
+                      setDraft((prev) => prev.map((r) => (r.id === row.id ? { ...r, wantPage: v } : r)));
+                      setTouched(true);
+                    }}
+                    className="mt-0.5"
+                  />
+                  <span>Give this service its own page — created on Save with this description on it, and added to your menu.</span>
+                </label>
+              )}
+            </div>
+          )}
           </div>
         ))}
 
         <button
           type="button"
           onClick={() => {
-            setDraft((p) => [...p, { id: makeId(), value: '' }]);
+            setDraft((p) => [...p, { id: makeId(), value: '', description: '', page_slug: '', wantPage: false, open: false }]);
             setTouched(true);
           }}
           className="text-sm text-green-400 underline"
